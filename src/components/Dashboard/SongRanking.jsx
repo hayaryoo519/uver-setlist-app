@@ -1,0 +1,181 @@
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+
+const SongRanking = ({ songs }) => {
+    const [limit, setLimit] = useState(5);
+    const [expandedSongs, setExpandedSongs] = useState(new Set());
+    const [liveLimits, setLiveLimits] = useState({});
+
+    if (!songs || songs.length === 0) return <div className="no-data">No songs collected yet.</div>;
+
+    const displayedSongs = songs.slice(0, limit);
+
+    const toggleExpand = (songTitle) => {
+        setExpandedSongs(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(songTitle)) {
+                newSet.delete(songTitle);
+            } else {
+                newSet.add(songTitle);
+                // Initialize live limit for this song
+                if (!liveLimits[songTitle]) {
+                    setLiveLimits(prev => ({ ...prev, [songTitle]: 10 }));
+                }
+            }
+            return newSet;
+        });
+    };
+
+    const showMoreLives = (songTitle) => {
+        setLiveLimits(prev => ({
+            ...prev,
+            [songTitle]: (prev[songTitle] || 10) + 10
+        }));
+    };
+
+    return (
+        <div className="song-ranking">
+            {displayedSongs.map((song, index) => {
+                const isExpanded = expandedSongs.has(song.title);
+                const hasLives = song.lives && song.lives.length > 0;
+                const liveLimit = liveLimits[song.title] || 10;
+                const displayedLives = hasLives ? song.lives.slice(0, liveLimit) : [];
+                const hasMoreLives = hasLives && song.lives.length > liveLimit;
+
+                return (
+                    <div key={song.title} style={{ marginBottom: '10px' }}>
+                        <div
+                            onClick={() => hasLives && toggleExpand(song.title)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '10px',
+                                backgroundColor: 'rgba(255,255,255,0.05)',
+                                borderRadius: '8px',
+                                cursor: hasLives ? 'pointer' : 'default',
+                                transition: 'background 0.2s'
+                            }}
+                            onMouseEnter={(e) => hasLives && (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
+                        >
+                            <div style={{
+                                width: '30px',
+                                height: '30px',
+                                borderRadius: '50%',
+                                backgroundColor: index < 3 ? 'var(--primary-color)' : '#333',
+                                color: index < 3 ? '#000' : '#fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 'bold',
+                                marginRight: '15px'
+                            }}>
+                                {index + 1}
+                            </div>
+                            <div style={{ flexGrow: 1, fontWeight: '500' }}>
+                                {song.title}
+                            </div>
+                            <div style={{ color: 'var(--accent-color)', fontWeight: 'bold', marginRight: '10px' }}>
+                                {song.count}回
+                            </div>
+                            {hasLives && (
+                                isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />
+                            )}
+                        </div>
+
+                        {isExpanded && hasLives && (
+                            <div style={{
+                                marginTop: '5px',
+                                marginLeft: '45px',
+                                padding: '10px',
+                                backgroundColor: 'rgba(0,0,0,0.2)',
+                                borderRadius: '8px',
+                                borderLeft: '3px solid var(--primary-color)'
+                            }}>
+                                {displayedLives.map((live, idx) => (
+                                    <Link
+                                        key={`${live.id}-${idx}`}
+                                        to={`/live/${live.id}`}
+                                        style={{
+                                            display: 'block',
+                                            padding: '8px 0',
+                                            borderBottom: idx < displayedLives.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                                            color: 'inherit',
+                                            textDecoration: 'none',
+                                            transition: 'color 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--primary-color)')}
+                                        onMouseLeave={(e) => (e.currentTarget.style.color = 'inherit')}
+                                    >
+                                        <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{live.date}</div>
+                                        <div style={{ fontSize: '0.9rem', fontWeight: '500' }}>{live.tourTitle}</div>
+                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>@ {live.venue}</div>
+                                    </Link>
+                                ))}
+
+                                {hasMoreLives && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            showMoreLives(song.title);
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            padding: '8px',
+                                            marginTop: '10px',
+                                            background: 'transparent',
+                                            border: '1px solid var(--border-color)',
+                                            color: '#888',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            fontSize: '0.85rem'
+                                        }}
+                                    >
+                                        さらに表示 ({song.lives.length - liveLimit}件)
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
+
+            {songs.length > limit ? (
+                <button
+                    onClick={() => setLimit(prev => prev + 5)}
+                    style={{
+                        width: '100%',
+                        padding: '10px',
+                        background: 'transparent',
+                        border: '1px solid var(--border-color)',
+                        color: '#888',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        marginTop: '10px'
+                    }}
+                >
+                    Show More
+                </button>
+            ) : limit > 5 && (
+                <button
+                    onClick={() => setLimit(5)}
+                    style={{
+                        width: '100%',
+                        padding: '10px',
+                        background: 'transparent',
+                        border: '1px solid var(--border-color)',
+                        color: '#888',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        marginTop: '10px'
+                    }}
+                >
+                    Show Less
+                </button>
+            )}
+        </div>
+    );
+};
+
+export default SongRanking;
