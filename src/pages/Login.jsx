@@ -18,10 +18,14 @@ const Login = () => {
         setIsLoading(true);
 
         try {
-            await login(email, password);
-            navigate('/mypage');
+            const result = await login(email, password);
+            if (result.success) {
+                navigate('/mypage');
+            } else {
+                setError(result.message || 'Failed to login. Please check your credentials.');
+            }
         } catch (err) {
-            setError('Failed to login. Please check your credentials.');
+            setError('An unexpected error occurred.');
         } finally {
             setIsLoading(false);
         }

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, User, Music, LogIn } from 'lucide-react';
+import { Menu, X, User, Music, LogIn, LogOut, Shield } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Navbar = () => {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const location = useLocation();
+    const { currentUser, logout } = useAuth();
 
     // Handle scroll effect
     useEffect(() => {
@@ -41,12 +43,25 @@ const Navbar = () => {
                         <Link to="/lives" className="nav-link">
                             <Music size={18} /> Archive
                         </Link>
-                        <Link to="/mypage" className="nav-link">
-                            <User size={18} /> My Page
-                        </Link>
-                        <Link to="/login" className="nav-btn-primary" style={{ textDecoration: 'none' }}>
-                            <LogIn size={18} /> Login
-                        </Link>
+                        {currentUser && (
+                            <Link to="/mypage" className="nav-link">
+                                <User size={18} /> My Page
+                            </Link>
+                        )}
+                        {currentUser?.role === 'admin' && (
+                            <Link to="/admin" className="nav-link" style={{ color: '#fbbf24' }}>
+                                <Shield size={18} /> Admin Panel
+                            </Link>
+                        )}
+                        {currentUser ? (
+                            <button onClick={logout} className="nav-btn-primary" style={{ textDecoration: 'none' }}>
+                                <LogOut size={18} /> Logout
+                            </button>
+                        ) : (
+                            <Link to="/login" className="nav-btn-primary" style={{ textDecoration: 'none' }}>
+                                <LogIn size={18} /> Login
+                            </Link>
+                        )}
                     </div>
 
                     {/* Mobile Menu Toggle */}
@@ -64,9 +79,13 @@ const Navbar = () => {
                 <div className="mobile-nav-links">
                     <Link to="/" className="mobile-nav-link">Home</Link>
                     <Link to="/lives" className="mobile-nav-link">Archive</Link>
-                    <Link to="/mypage" className="mobile-nav-link">My Page</Link>
+                    {currentUser && <Link to="/mypage" className="mobile-nav-link">My Page</Link>}
                     <div className="mobile-nav-divider"></div>
-                    <Link to="/login" className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>Login / Sign Up</Link>
+                    {currentUser ? (
+                        <button onClick={logout} className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>Logout</button>
+                    ) : (
+                        <Link to="/login" className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>Login / Sign Up</Link>
+                    )}
                 </div>
             </div>
 

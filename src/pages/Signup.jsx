@@ -5,12 +5,13 @@ import AuthLayout from '../components/Auth/AuthLayout';
 import { Mail, Lock, User, ArrowRight, Loader } from 'lucide-react';
 
 const Signup = () => {
+    const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const { signup } = useAuth();
+    const { register } = useAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -24,10 +25,15 @@ const Signup = () => {
         setIsLoading(true);
 
         try {
-            await signup(email, password);
-            navigate('/mypage');
+            const result = await register(username, email, password);
+            if (result.success) {
+                navigate('/mypage');
+            } else {
+                setError(result.message || 'Failed to create an account.');
+            }
         } catch (err) {
-            setError('Failed to create an account.');
+            console.error("Signup Catch Error:", err);
+            setError('An unexpected error occurred: ' + (err.message || String(err)));
         } finally {
             setIsLoading(false);
         }
@@ -50,6 +56,33 @@ const Signup = () => {
                 </div>
             )}
             <form onSubmit={handleSubmit}>
+                <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '8px' }}>Username</label>
+                    <div style={{ position: 'relative' }}>
+                        <User size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                        <input
+                            type="text"
+                            required
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            placeholder="UVERcrew Name"
+                            style={{
+                                width: '100%',
+                                padding: '12px 12px 12px 40px',
+                                background: 'rgba(0,0,0,0.2)',
+                                border: '1px solid #334155',
+                                borderRadius: '8px',
+                                color: '#fff',
+                                fontSize: '1rem',
+                                outline: 'none',
+                                transition: 'border-color 0.2s'
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = 'var(--primary-color)'}
+                            onBlur={(e) => e.target.style.borderColor = '#334155'}
+                        />
+                    </div>
+                </div>
+
                 <div style={{ marginBottom: '20px' }}>
                     <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '8px' }}>Email</label>
                     <div style={{ position: 'relative' }}>
