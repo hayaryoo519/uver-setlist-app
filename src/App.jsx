@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import MyPage from './pages/MyPage';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import AdminPage from './pages/AdminPage';
 import ScrollToTop from './components/ScrollToTop';
 
 // Wrapper for pages that need the Main Layout (Navbar, etc.)
@@ -35,6 +36,7 @@ function App() {
               <Route path="/lives" element={<LiveList />} />
               <Route path="/live/:id" element={<LiveDetail />} />
               <Route path="/mypage" element={<MyPage />} />
+              <Route path="/admin" element={<AdminPage />} />
             </Route>
           </Routes>
         </Router>
