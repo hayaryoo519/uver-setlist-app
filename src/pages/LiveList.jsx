@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Home, Calendar, MapPin, ArrowRight, Loader } from 'lucide-react';
+import { Search, MapPin, Calendar, Tag, Check, Plus } from 'lucide-react';
+import { useAttendance } from '../hooks/useAttendance';
 import FilterPanel, { PRESET_FILTERS } from '../components/FilterPanel';
 import SEO from '../components/SEO';
-import { getAttendedLives, toggleAttendance } from '../utils/storage';
 
 const LiveList = () => {
     const [lives, setLives] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [filters, setFilters] = useState({ text: '', tags: [] });
-    const [attendedLiveIds, setAttendedLiveIds] = useState([]);
+    const [filters, setFilters] = useState({ text: '', tags: [], venue: '' });
+    // Use Attendance Hook
+    const { attendedIds, addLive, removeLive, isAttended, loading: attendanceLoading } = useAttendance();
 
     useEffect(() => {
         fetchLives();
-        setAttendedLiveIds(getAttendedLives());
     }, []);
 
     const fetchLives = async () => {
@@ -35,11 +35,19 @@ const LiveList = () => {
         }
     };
 
-    const handleToggleAttendance = (e, liveId) => {
-        e.preventDefault(); // Prevent Link navigation
-        const updated = toggleAttendance(liveId);
-        setAttendedLiveIds(updated);
+    const handleToggleAttendance = async (e, liveId) => {
+        e.preventDefault();
+        if (isAttended(liveId)) {
+            await removeLive(liveId);
+        } else {
+            await addLive(liveId);
+        }
     };
+
+    const uniqueVenues = useMemo(() => {
+        const venues = lives.map(live => live.venue).filter(Boolean);
+        return [...new Set(venues)].sort();
+    }, [lives]);
 
     const filteredLives = useMemo(() => {
         return lives.filter(live => {
@@ -62,6 +70,11 @@ const LiveList = () => {
                     return filter ? filter.match(live) : true;
                 });
                 if (!matchAllTags) return false;
+            }
+
+            // 3. Venue Filter
+            if (filters.venue && live.venue !== filters.venue) {
+                return false;
             }
 
             return true;
@@ -96,7 +109,7 @@ const LiveList = () => {
                 </h1>
 
                 {/* Filter Panel */}
-                <FilterPanel filters={filters} onChange={setFilters} />
+                <FilterPanel filters={filters} onChange={setFilters} venues={uniqueVenues} />
 
                 {/* Results */}
                 <div className="space-y-4">
@@ -146,11 +159,11 @@ const LiveList = () => {
                                             <button
                                                 onClick={(e) => handleToggleAttendance(e, live.id)}
                                                 className={`px-4 py-2 rounded-full text-sm font-bold transition-all duration-200 flex items-center gap-2 whitespace-nowrap z-10 relative
-                                                    ${attendedLiveIds.includes(live.id)
+                                                    ${isAttended(live.id)
                                                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-500/30'
                                                         : 'bg-slate-700 text-slate-300 border border-transparent hover:bg-slate-600'}`}
                                             >
-                                                {attendedLiveIds.includes(live.id) ? (
+                                                {isAttended(live.id) ? (
                                                     <><Check size={14} /> Attended</>
                                                 ) : (
                                                     <><Plus size={14} /> I Was There</>

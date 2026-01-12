@@ -33,7 +33,7 @@ const AdminPage = () => {
     const [songSearchTerm, setSongSearchTerm] = useState('');
     const [showSongModal, setShowSongModal] = useState(false);
     const [editingSong, setEditingSong] = useState(null);
-    const [songFormData, setSongFormData] = useState({ title: '' });
+    const [songFormData, setSongFormData] = useState({ title: '', album: '', release_year: '', mv_url: '', author: '' });
 
 
     // Initial Fetch
@@ -120,7 +120,7 @@ const AdminPage = () => {
             });
             if (res.ok) {
                 fetchSongs(); setShowSongModal(false);
-                setEditingSong(null); setSongFormData({ title: '' });
+                setEditingSong(null); setSongFormData({ title: '', album: '', release_year: '', mv_url: '', author: '' });
             } else alert("Failed to save song");
         } catch (err) { console.error(err); alert("Error saving song"); }
     };
@@ -137,7 +137,13 @@ const AdminPage = () => {
 
     const openEditSong = (song) => {
         setEditingSong(song);
-        setSongFormData({ title: song.title });
+        setSongFormData({
+            title: song.title,
+            album: song.album || '',
+            release_year: song.release_year || '',
+            mv_url: song.mv_url || '',
+            author: song.author || ''
+        });
         setShowSongModal(true);
     };
 
@@ -301,7 +307,7 @@ const AdminPage = () => {
                                     />
                                 </div>
                                 <button className="btn-primary" style={{ width: 'auto' }} onClick={() => {
-                                    setEditingSong(null); setSongFormData({ title: '' });
+                                    setEditingSong(null); setSongFormData({ title: '', album: '', release_year: '', mv_url: '', author: '' });
                                     setShowSongModal(true);
                                 }}>
                                     <Plus size={18} /> Add Song
@@ -396,7 +402,21 @@ const AdminPage = () => {
                             </div>
 
                             <div className="form-group"><label>Date</label><input type="date" required value={liveFormData.date} onChange={e => setLiveFormData({ ...liveFormData, date: e.target.value })} /></div>
-                            <div className="form-group"><label>Venue</label><input type="text" required value={liveFormData.venue} onChange={e => setLiveFormData({ ...liveFormData, venue: e.target.value })} /></div>
+                            <div className="form-group">
+                                <label>Venue</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={liveFormData.venue}
+                                    onChange={e => setLiveFormData({ ...liveFormData, venue: e.target.value })}
+                                    list="venue-suggestions"
+                                />
+                                <datalist id="venue-suggestions">
+                                    {[...new Set(lives.map(l => l.venue))].sort().map(venue => (
+                                        <option key={venue} value={venue} />
+                                    ))}
+                                </datalist>
+                            </div>
                             <div className="modal-actions"><button type="button" onClick={() => setShowLiveModal(false)} className="btn-cancel">Cancel</button><button type="submit" className="btn-primary">Save Live</button></div>
                         </form>
                     </div>
@@ -410,6 +430,11 @@ const AdminPage = () => {
                         <h2>{editingSong ? 'Edit Song' : 'Add New Song'}</h2>
                         <form onSubmit={handleSongSubmit}>
                             <div className="form-group"><label>Song Title</label><input type="text" required value={songFormData.title} onChange={e => setSongFormData({ ...songFormData, title: e.target.value })} /></div>
+                            <div className="form-group"><label>Album</label><input type="text" value={songFormData.album} onChange={e => setSongFormData({ ...songFormData, album: e.target.value })} /></div>
+                            <div className="form-group"><label>Release Year</label><input type="number" value={songFormData.release_year} onChange={e => setSongFormData({ ...songFormData, release_year: e.target.value })} /></div>
+                            <div className="form-group"><label>Author (Lyrics/Music)</label><input type="text" value={songFormData.author} onChange={e => setSongFormData({ ...songFormData, author: e.target.value })} /></div>
+                            <div className="form-group"><label>MV URL</label><input type="text" placeholder="https://youtube.com/..." value={songFormData.mv_url} onChange={e => setSongFormData({ ...songFormData, mv_url: e.target.value })} /></div>
+
                             <div className="modal-actions"><button type="button" onClick={() => setShowSongModal(false)} className="btn-cancel">Cancel</button><button type="submit" className="btn-primary">Save Song</button></div>
                         </form>
                     </div>

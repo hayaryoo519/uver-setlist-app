@@ -28,20 +28,19 @@ router.get('/', async (req, res) => {
 // CREATE a Song
 router.post('/', authorize, async (req, res) => {
     try {
-        const { title } = req.body;
+        const { title, album, release_year, mv_url, author } = req.body;
 
         // Check duplicate?
         const check = await db.query("SELECT * FROM songs WHERE title = $1", [title]);
         if (check.rows.length > 0) {
-            // If exists, just return it (idempotent-ish) or error?
-            // For Setlist flow, returning it is convenient. For Admin add, maybe warning?
-            // We'll return it.
+            // If exists, update it? Or just return?
+            // Let's just return for now as title is main identifier
             return res.json(check.rows[0]);
         }
 
         const newSong = await db.query(
-            "INSERT INTO songs (title) VALUES ($1) RETURNING *",
-            [title]
+            "INSERT INTO songs (title, album, release_year, mv_url, author) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+            [title, album, release_year, mv_url, author]
         );
 
         res.json(newSong.rows[0]);
@@ -55,11 +54,11 @@ router.post('/', authorize, async (req, res) => {
 router.put('/:id', authorize, async (req, res) => {
     try {
         const { id } = req.params;
-        const { title } = req.body;
+        const { title, album, release_year, mv_url, author } = req.body;
 
         const updateSong = await db.query(
-            "UPDATE songs SET title = $1 WHERE id = $2 RETURNING *",
-            [title, id]
+            "UPDATE songs SET title = $1, album = $2, release_year = $3, mv_url = $4, author = $5 WHERE id = $6 RETURNING *",
+            [title, album, release_year, mv_url, author, id]
         );
 
         if (updateSong.rows.length === 0) {

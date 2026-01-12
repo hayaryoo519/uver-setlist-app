@@ -1,24 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getAttendedLives, getUserProfile, saveUserProfile } from '../utils/storage';
-import { useLiveStatsLogic } from '../hooks/useLiveStats';
+import { getUserProfile, saveUserProfile } from '../utils/storage';
+import { useLiveStats } from '../hooks/useLiveStats';
 import LiveGraph from '../components/Dashboard/LiveGraph';
-import VenueTypeBar from '../components/Dashboard/VenueTypePie';
+import VenueTypePie from '../components/Dashboard/VenueTypePie';
+import AlbumDistribution from '../components/Dashboard/AlbumDistribution';
 import SongRanking from '../components/Dashboard/SongRanking';
 import MyPageOnboarding from '../components/Dashboard/MyPageOnboarding';
-import { Twitter, Instagram, Youtube, Globe, Music, Calendar, MapPin, Filter } from 'lucide-react';
+import { Twitter, Instagram, Youtube, Globe, Music, Calendar, MapPin, Filter, Disc, Building2 } from 'lucide-react';
 import SEO from '../components/SEO';
 
 function MyPage() {
-    const [attendedLiveIds, setAttendedLiveIds] = useState([]);
     const [userProfile, setUserProfile] = useState({ twitter: '', instagram: '', youtube: '', website: '' });
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [tempProfile, setTempProfile] = useState({});
     const [modalFilter, setModalFilter] = useState(null);
     const [yearRange, setYearRange] = useState([2005, 2024]);
 
+    const { loading, ...stats } = useLiveStats();
+
     useEffect(() => {
-        setAttendedLiveIds(getAttendedLives());
         const savedProfile = getUserProfile();
         if (savedProfile) {
             setUserProfile(prev => ({ ...prev, ...savedProfile }));
@@ -59,7 +60,11 @@ function MyPage() {
     const getFilteredLives = () => {
         if (!modalFilter) return [];
         if (modalFilter.type === 'year') {
-            return stats.myLives.filter(live => live.date.startsWith(modalFilter.value));
+            return stats.myLives.filter(live => {
+                // handle both DB date str and local
+                const d = live.date || live.attended_at;
+                return d && d.startsWith(modalFilter.value);
+            });
         }
         if (modalFilter.type === 'venueType') {
             return stats.myLives.filter(live => live.type === modalFilter.value);
@@ -67,7 +72,12 @@ function MyPage() {
         return [];
     };
 
-    const stats = useLiveStatsLogic(attendedLiveIds);
+    // Loading State
+    if (loading) return (
+        <div className="container" style={{ paddingTop: '100px', textAlign: 'center' }}>
+            <p style={{ color: '#888' }}>Loading your records...</p>
+        </div>
+    );
 
     const filteredYearlyStats = (stats.yearlyStats || []).filter(
         d => d.year >= yearRange[0] && d.year <= yearRange[1]
@@ -148,17 +158,21 @@ function MyPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginBottom: '50px', alignItems: 'start' }}>
                 <div className="dashboard-panel">
                     <h3>Venue Types <span style={{ fontSize: '0.8rem', color: '#888' }}>(クリックで絞り込み)</span></h3>
-                    <VenueTypeBar data={stats.venueTypeStats} onBarClick={handleVenueTypeClick} />
+                    <VenueTypePie data={stats.venueTypeStats} onBarClick={handleVenueTypeClick} />
                 </div>
                 <div className="dashboard-panel">
                     <h3>Top Songs Heard</h3>
                     <SongRanking songs={stats.songRanking} />
                 </div>
+                <div className="dashboard-panel">
+                    <h3>Songs by Album</h3>
+                    <AlbumDistribution data={stats.albumStats} />
+                </div>
                 <div className="dashboard-panel" style={{ gridColumn: '1 / -1' }}>
                     <h3>Recent History</h3>
                     <div className="live-list-compact">
                         {stats.myLives.slice().reverse().slice(0, 5).map((live) => (
-                            <Link key={live.id} to={`/live/${live.id}`} className="compact-live-item">
+                            <Link key={live.id} to={`/ live / ${live.id} `} className="compact-live-item">
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                                     <div className="date">{live.date}</div>
                                     <div style={{ fontSize: '0.8rem', color: '#64748b' }}>@ {live.venue}</div>
@@ -284,7 +298,7 @@ function MyPage() {
                     >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <h2 style={{ margin: 0 }}>
-                                {modalFilter.type === 'year' ? `${modalFilter.value}年のライブ` : `${modalFilter.value} 会場`}
+                                {modalFilter.type === 'year' ? `${modalFilter.value} 年のライブ` : `${modalFilter.value} 会場`}
                             </h2>
                             <button
                                 onClick={closeModal}
@@ -307,7 +321,7 @@ function MyPage() {
                             {getFilteredLives().map((live) => (
                                 <Link
                                     key={live.id}
-                                    to={`/live/${live.id}`}
+                                    to={`/ live / ${live.id} `}
                                     className="compact-live-item"
                                     onClick={closeModal}
                                 >
@@ -322,144 +336,144 @@ function MyPage() {
             )}
 
             <style>{`
-                .stat-card {
-                    background: var(--card-bg);
-                    padding: 20px;
-                    border-radius: 12px;
-                    border: 1px solid var(--border-color);
-                    position: relative;
-                    overflow: hidden;
-                }
-                .stat-card::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 4px;
-                    height: 100%;
-                    background: var(--primary-color);
-                }
-                .stat-icon {
-                    color: var(--primary-color);
-                    margin-bottom: 10px;
-                }
-                .stat-label {
-                    color: #94a3b8;
-                    font-size: 0.9rem;
-                    margin-bottom: 5px;
-                }
-                .stat-value {
-                    font-size: 2.5rem;
-                    font-weight: 800;
-                    color: var(--text-color);
-                    line-height: 1;
-                }
-                .dashboard-panel {
-                    background: var(--card-bg);
-                    padding: 25px;
-                    border-radius: 16px;
-                    border: 1px solid var(--border-color);
-                }
-                .text-gold {
-                     color: var(--primary-color);
-                }
-                .compact-live-item {
-                    display: block;
-                    padding: 12px;
-                    border-bottom: 1px solid rgba(255,255,255,0.05);
-                    color: inherit;
-                    text-decoration: none;
-                    transition: background 0.2s;
-                }
-                .compact-live-item:hover {
-                    background: rgba(255,255,255,0.03);
-                    text-decoration: none;
-                }
-                .compact-live-item .date {
-                    font-size: 0.8rem;
-                    color: var(--accent-color);
-                }
-                .compact-live-item .title {
-                    font-weight: 500;
-                }
-                .social-icon {
-                    color: #fff;
-                    transition: color 0.2s, transform 0.2s;
-                }
-                .social-icon:hover {
-                    color: var(--primary-color);
-                    transform: translateY(-3px);
-                }
-                .edit-btn {
-                    background: none;
-                    border: 1px solid #444;
-                    color: #888;
-                    padding: 2px 8px;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-size: 0.8rem;
-                    transition: all 0.2s;
-                }
-                .edit-btn:hover {
-                    border-color: var(--primary-color);
-                    color: var(--primary-color);
-                }
-                .edit-profile-form {
-                    max-width: 400px;
-                    margin: 0 auto;
-                    background: rgba(0,0,0,0.2);
-                    padding: 20px;
-                    border-radius: 8px;
-                    border: 1px solid var(--border-color);
-                }
-                .form-group {
-                    margin-bottom: 15px;
-                    text-align: left;
-                }
-                .form-group label {
-                    display: block;
-                    margin-bottom: 5px;
-                    color: #ccc;
-                    font-size: 0.9rem;
-                    display: flex;
-                    align-items: center;
-                    gap: 5px;
-                }
-                .form-group input {
-                    width: 100%;
-                    padding: 8px 12px;
-                    background: var(--bg-color);
-                    border: 1px solid var(--border-color);
-                    border-radius: 4px;
-                    color: white;
-                    font-family: inherit;
-                }
-                .form-group input:focus {
-                    outline: none;
-                    border-color: var(--primary-color);
-                }
-                .form-actions {
-                    display: flex;
-                    justify-content: flex-end;
-                    gap: 10px;
-                    margin-top: 20px;
-                }
-                .save-btn, .cancel-btn {
-                    padding: 8px 16px;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-weight: 500;
-                    border: none;
-                }
-                .save-btn {
-                    background: var(--primary-color);
-                    color: black;
-                }
-                .cancel-btn {
-                    background: #333;
-                    color: white;
-                }
-            `}</style>
+    .stat - card {
+    background: var(--card - bg);
+    padding: 20px;
+    border - radius: 12px;
+    border: 1px solid var(--border - color);
+    position: relative;
+    overflow: hidden;
+}
+                .stat - card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100 %;
+    background: var(--primary - color);
+}
+                .stat - icon {
+    color: var(--primary - color);
+    margin - bottom: 10px;
+}
+                .stat - label {
+    color: #94a3b8;
+    font - size: 0.9rem;
+    margin - bottom: 5px;
+}
+                .stat - value {
+    font - size: 2.5rem;
+    font - weight: 800;
+    color: var(--text - color);
+    line - height: 1;
+}
+                .dashboard - panel {
+    background: var(--card - bg);
+    padding: 25px;
+    border - radius: 16px;
+    border: 1px solid var(--border - color);
+}
+                .text - gold {
+    color: var(--primary - color);
+}
+                .compact - live - item {
+    display: block;
+    padding: 12px;
+    border - bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: inherit;
+    text - decoration: none;
+    transition: background 0.2s;
+}
+                .compact - live - item:hover {
+    background: rgba(255, 255, 255, 0.03);
+    text - decoration: none;
+}
+                .compact - live - item.date {
+    font - size: 0.8rem;
+    color: var(--accent - color);
+}
+                .compact - live - item.title {
+    font - weight: 500;
+}
+                .social - icon {
+    color: #fff;
+    transition: color 0.2s, transform 0.2s;
+}
+                .social - icon:hover {
+    color: var(--primary - color);
+    transform: translateY(-3px);
+}
+                .edit - btn {
+    background: none;
+    border: 1px solid #444;
+    color: #888;
+    padding: 2px 8px;
+    border - radius: 4px;
+    cursor: pointer;
+    font - size: 0.8rem;
+    transition: all 0.2s;
+}
+                .edit - btn:hover {
+    border - color: var(--primary - color);
+    color: var(--primary - color);
+}
+                .edit - profile - form {
+    max - width: 400px;
+    margin: 0 auto;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    border - radius: 8px;
+    border: 1px solid var(--border - color);
+}
+                .form - group {
+    margin - bottom: 15px;
+    text - align: left;
+}
+                .form - group label {
+    display: block;
+    margin - bottom: 5px;
+    color: #ccc;
+    font - size: 0.9rem;
+    display: flex;
+    align - items: center;
+    gap: 5px;
+}
+                .form - group input {
+    width: 100 %;
+    padding: 8px 12px;
+    background: var(--bg - color);
+    border: 1px solid var(--border - color);
+    border - radius: 4px;
+    color: white;
+    font - family: inherit;
+}
+                .form - group input:focus {
+    outline: none;
+    border - color: var(--primary - color);
+}
+                .form - actions {
+    display: flex;
+    justify - content: flex - end;
+    gap: 10px;
+    margin - top: 20px;
+}
+                .save - btn, .cancel - btn {
+    padding: 8px 16px;
+    border - radius: 6px;
+    cursor: pointer;
+    font - weight: 500;
+    border: none;
+}
+                .save - btn {
+    background: var(--primary - color);
+    color: black;
+}
+                .cancel - btn {
+    background: #333;
+    color: white;
+}
+`}</style>
         </div>
     );
 }

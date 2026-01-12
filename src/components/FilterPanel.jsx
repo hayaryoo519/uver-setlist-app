@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Tag } from 'lucide-react';
+import { Search, Tag, MapPin } from 'lucide-react';
 
 export const PRESET_FILTERS = [
     { id: 'xmas', label: 'Xmas / Christmas', match: (live) => (live.title && (live.title.toLowerCase().includes('xmas') || live.title.includes('クリスマス'))) },
@@ -11,7 +11,7 @@ export const PRESET_FILTERS = [
     { id: 'women', label: 'Women Only', match: (live) => (live.title && (live.title.includes('女祭り') || live.title.includes('QUEEN'))) },
 ];
 
-const FilterPanel = ({ filters, onChange }) => {
+const FilterPanel = ({ filters, onChange, venues }) => {
 
     const toggleTag = (tagId) => {
         const newTags = filters.tags.includes(tagId)
@@ -40,6 +40,28 @@ const FilterPanel = ({ filters, onChange }) => {
                     />
                 </div>
 
+                {/* Venue Filter */}
+                <div className="relative">
+                    <div className="absolute left-4 top-3.5 text-slate-400 pointer-events-none">
+                        <MapPin size={20} />
+                    </div>
+                    <select
+                        value={filters.venue || ''}
+                        onChange={(e) => onChange({ ...filters, venue: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-600 rounded-lg py-3 pl-12 pr-4 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all appearance-none cursor-pointer text-slate-300"
+                    >
+                        <option value="">All Venues</option>
+                        {(venues || []).map(venue => (
+                            <option key={venue} value={venue}>{venue}</option>
+                        ))}
+                    </select>
+                    <div className="absolute right-4 top-4 text-slate-500 pointer-events-none">
+                        <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </div>
+                </div>
+
                 {/* Preset Tags */}
                 <div>
                     <div className="flex items-center gap-2 mb-3 text-slate-400 text-sm font-medium uppercase tracking-wider">
@@ -54,8 +76,8 @@ const FilterPanel = ({ filters, onChange }) => {
                                     key={filter.id}
                                     onClick={() => toggleTag(filter.id)}
                                     className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border ${isActive
-                                            ? 'bg-blue-600 border-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)] transform scale-105'
-                                            : 'bg-slate-800 border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-200'
+                                        ? 'bg-blue-600 border-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)] transform scale-105'
+                                        : 'bg-slate-800 border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-200'
                                         }`}
                                 >
                                     {filter.label}
