@@ -9,6 +9,14 @@ const PORT = 5173;
 app.use('/api', createProxyMiddleware({
     target: 'http://localhost:4000',
     changeOrigin: true,
+    logLevel: 'debug',
+    onProxyReq: (proxyReq, req, res) => {
+        console.log(`[Proxy] ${req.method} ${req.url} -> ${proxyReq.path}`);
+    },
+    onError: (err, req, res) => {
+        console.error('[Proxy Error]', err.message);
+        res.status(500).send('Proxy Error');
+    }
 }));
 
 // Serve static files
