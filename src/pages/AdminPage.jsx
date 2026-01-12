@@ -395,7 +395,10 @@ const AdminPage = () => {
                                     onChange={e => setLiveFormData({ ...liveFormData, type: e.target.value })}
                                     style={{ width: '100%', padding: '10px', background: '#0f172a', border: '1px solid #475569', borderRadius: '6px', color: '#fff' }}
                                 >
-                                    <option value="ONEMAN">One Man / Tour</option>
+                                    <option value="ONEMAN">Generic / One Man</option>
+                                    <option value="ARENA">Arena / Dome</option>
+                                    <option value="HALL">Hall</option>
+                                    <option value="LIVEHOUSE">Live House</option>
                                     <option value="FESTIVAL">Festival</option>
                                     <option value="EVENT">Event / Tai-ban</option>
                                 </select>
@@ -408,7 +411,22 @@ const AdminPage = () => {
                                     type="text"
                                     required
                                     value={liveFormData.venue}
-                                    onChange={e => setLiveFormData({ ...liveFormData, venue: e.target.value })}
+                                    onChange={e => {
+                                        const venue = e.target.value;
+                                        let type = liveFormData.type;
+                                        const v = venue.toLowerCase();
+
+                                        // Auto-detect type from venue name
+                                        if (v.includes('arena') || v.includes('dome') || v.includes('アリーナ') || v.includes('ドーム')) {
+                                            type = 'ARENA';
+                                        } else if (v.includes('zepp') || v.includes('coast') || v.includes('ax') || v.includes('hatch') || v.includes('pit')) {
+                                            type = 'LIVEHOUSE';
+                                        } else if (v.includes('hall') || v.includes('kaikan') || v.includes('会館') || v.includes('ホール')) {
+                                            type = 'HALL';
+                                        }
+
+                                        setLiveFormData({ ...liveFormData, venue, type });
+                                    }}
                                     list="venue-suggestions"
                                 />
                                 <datalist id="venue-suggestions">

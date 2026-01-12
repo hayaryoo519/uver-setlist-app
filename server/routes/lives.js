@@ -5,7 +5,28 @@ const authorize = require('../middleware/authorization');
 // GET All Lives
 router.get('/', async (req, res) => {
     try {
-        const result = await db.query('SELECT * FROM lives ORDER BY date DESC');
+        let query;
+        if (req.query.include_setlists === 'true') {
+            query = `
+                SELECT l.*, 
+                       COALESCE(
+                           JSON_AGG(
+                               JSON_BUILD_OBJECT('id', s.id, 'title', s.title, 'position', sl.position) 
+                               ORDER BY sl.position
+                           ) FILTER (WHERE s.id IS NOT NULL), 
+                           '[]'
+                       ) as setlist
+                FROM lives l
+                LEFT JOIN setlists sl ON l.id = sl.live_id
+                LEFT JOIN songs s ON sl.song_id = s.id
+                GROUP BY l.id
+                ORDER BY l.date DESC
+            `;
+        } else {
+            query = 'SELECT * FROM lives ORDER BY date DESC';
+        }
+
+        const result = await db.query(query);
         res.json(result.rows);
     } catch (err) {
         console.error(err.message);
