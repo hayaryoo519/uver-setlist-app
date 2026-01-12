@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useGlobalStats } from '../hooks/useGlobalStats';
-import { Calendar, Music, MapPin, ArrowRight, List, TrendingUp, Activity, Filter } from 'lucide-react';
+import { Calendar, Music, MapPin, ArrowRight, List, TrendingUp, Activity, Filter, Disc } from 'lucide-react';
 import LiveGraph from '../components/Dashboard/LiveGraph';
+import AlbumDistribution from '../components/Dashboard/AlbumDistribution';
 import MainVisual from '../components/Visual/MainVisual';
 import SEO from '../components/SEO';
 
 function Dashboard() {
-    const stats = useGlobalStats();
+    const { loading, ...stats } = useGlobalStats();
     const [modalFilter, setModalFilter] = useState(null);
     const [expandedSong, setExpandedSong] = useState(null);
     const [graphMetric, setGraphMetric] = useState('liveCount');
@@ -36,6 +37,12 @@ function Dashboard() {
         return [];
     };
 
+    if (loading) return (
+        <div style={{ padding: '100px', textAlign: 'center', color: '#888' }}>
+            Loading Global Stats...
+        </div>
+    );
+
     const filteredGraphData = (stats.yearlyDetailedStats || []).filter(
         d => d.year >= yearRange[0] && d.year <= yearRange[1]
     );
@@ -59,6 +66,10 @@ function Dashboard() {
                                     Current / Latest Tour
                                 </div>
                                 <h2 style={{ margin: '5px 0', fontSize: '1.5rem' }}>{stats.currentTour.name}</h2>
+                                <div style={{ fontSize: '0.85rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                                    <Calendar size={14} />
+                                    {stats.currentTour.startDate} 〜 {stats.currentTour.endDate}
+                                </div>
                             </div>
                             <div style={{ textAlign: 'right' }}>
                                 <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{stats.currentTour.liveCount} 公演目</div>
@@ -216,28 +227,39 @@ function Dashboard() {
                                         <span style={{ fontWeight: '500' }}>{tour.name}</span>
                                         <span style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>{tour.liveCount}公演</span>
                                     </div>
-                                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                                        総披露曲数: {tour.totalSongs}曲
+                                    <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>総披露曲数: {tour.totalSongs}曲</span>
+                                        <span style={{ fontSize: '0.75rem' }}>{tour.startDate}〜{tour.endDate}</span>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* Recent Lives */}
-                    <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h2 className="section-title" style={{ marginBottom: 0 }}>Recent Lives</h2>
-                            <Link to="/lives" style={{ color: 'var(--accent-color)', fontSize: '0.9rem' }}>View All</Link>
+                    {/* Recent Lives & Album Graph */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+                        <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h2 className="section-title" style={{ marginBottom: 0 }}>Recent Lives</h2>
+                                <Link to="/lives" style={{ color: 'var(--accent-color)', fontSize: '0.9rem' }}>View All</Link>
+                            </div>
+                            <div className="dashboard-panel" style={{ padding: '0' }}>
+                                {stats.recentLives.map((live, index) => (
+                                    <Link key={live.id} to={`/live/${live.id}`} className="recent-live-item">
+                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{live.date}</div>
+                                        <div style={{ fontWeight: 'bold', margin: '4px 0' }}>{live.tourTitle}</div>
+                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>@ {live.venue}</div>
+                                    </Link>
+                                ))}
+                            </div>
                         </div>
-                        <div className="dashboard-panel" style={{ padding: '0' }}>
-                            {stats.recentLives.map((live, index) => (
-                                <Link key={live.id} to={`/live/${live.id}`} className="recent-live-item">
-                                    <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{live.date}</div>
-                                    <div style={{ fontWeight: 'bold', margin: '4px 0' }}>{live.tourTitle}</div>
-                                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>@ {live.venue}</div>
-                                </Link>
-                            ))}
+
+                        {/* New Album Graph Card */}
+                        <div className="dashboard-panel">
+                            <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Disc size={20} color="var(--primary-color)" /> Songs by Album (All Time)
+                            </h3>
+                            <AlbumDistribution data={stats.albumStats || []} />
                         </div>
                     </div>
                 </div>
@@ -367,8 +389,9 @@ function Dashboard() {
                             </>
                         ) : (
                             <>
-                                <div style={{ color: '#888', marginBottom: '20px' }}>
-                                    全{modalFilter.value.liveCount}公演 / 総披露{modalFilter.value.totalSongs}曲
+                                <div style={{ color: '#888', marginBottom: '20px', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>全{modalFilter.value.liveCount}公演 / 総披露{modalFilter.value.totalSongs}曲</span>
+                                    <span>{modalFilter.value.startDate} 〜 {modalFilter.value.endDate}</span>
                                 </div>
                                 <div>
                                     {modalFilter.value.songRanking.map((song, idx) => (

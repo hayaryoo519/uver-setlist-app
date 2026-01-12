@@ -1,141 +1,165 @@
-import { useMemo } from 'react';
-import { lives } from '../data/lives';
-import { setlists } from '../data/setlists';
-import { getAttendedLives } from '../utils/storage';
+import { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { setlists } from '../data/setlists'; // Keep using local setlist data for now
+import { lives as localLives } from '../data/lives'; // Fallback or reference
 
-export const useLiveStats = () => {
-    // In a real app, attendance might be passed in or fetched via context/store
-    // For now we read from storage on every render or expect standard usage
-    const attendedIds = getAttendedLives();
-
-    const stats = useMemo(() => {
-        const myLives = lives.filter(live => attendedIds.includes(live.id));
-
-        // Sort by date asc
-        myLives.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-        const firstLive = myLives.length > 0 ? myLives[0] : null;
-
-        // Song Counts
-        const songMap = new Map();
-        myLives.forEach(live => {
-            const list = setlists[live.id] || [];
-            list.forEach(song => {
-                const count = songMap.get(song.title) || 0;
-                songMap.set(song.title, count + 1);
-            });
-        });
-
-        const songRanking = Array.from(songMap.entries())
-            .map(([title, count]) => ({ title, count }))
-            .sort((a, b) => b.count - a.count);
-
-        // Yearly Stats
-        const yearlyMap = new Map();
-        myLives.forEach(live => {
-            const year = live.date.split('-')[0];
-            yearlyMap.set(year, (yearlyMap.get(year) || 0) + 1);
-        });
-
-        const yearlyStats = Array.from(yearlyMap.entries())
-            .map(([year, count]) => ({ year, count }))
-            .sort((a, b) => a.year.localeCompare(b.year)); // Sort by year
-
-        // Venue Type Stats
-        const typeMap = new Map();
-        myLives.forEach(live => {
-            const type = live.type || 'Unknown';
-            typeMap.set(type, (typeMap.get(type) || 0) + 1);
-        });
-
-        const venueTypeStats = Array.from(typeMap.entries())
-            .map(([type, count]) => ({ name: type, value: count }));
-
+// Logic to calculate stats from a list of Live Objects
+export const useLiveStatsLogic = (myLives, allSongs = []) => {
+    if (!myLives || myLives.length === 0) {
         return {
-            totalLives: myLives.length,
-            firstLive,
-            songRanking,
-            uniqueSongs: songMap.size,
-            yearlyStats,
-            venueTypeStats,
-            myLives // Return raw list if needed
+            totalLives: 0,
+            uniqueSongs: 0,
+            venueTypeStats: [],
+            yearlyStats: [],
+            songRanking: [],
+            albumStats: [],
+            myLives: [],
+            firstLive: null
         };
-    }, [attendedIds]); // Dependency on simple array from storage might not trigger update if ref doesn't change?
-    // Note calls to getAttendedLives() inside component render is safe but we usually pass state.
-    // We will assume the consumer passes the attendedIds to this hook or we use state inside.
+    }
 
-    // Changing approach: Hook should probably take attendedIds as argument to be pure
-    return stats;
+    // Sort by date asc
+    const sortedLives = [...myLives].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Create a map for quick song metadata lookup
+    const songMetaMap = new Map();
+    allSongs.forEach(song => {
+        if (song.title) songMetaMap.set(song.title, song);
+    });
+
+    // Song Counts & Album Stats
+    const songMap = new Map();
+    const albumMap = new Map();
+
+    // We need to map the API live objects to the setlists.
+    sortedLives.forEach(live => {
+        const list = setlists[live.id] || [];
+        list.forEach(song => {
+            // Count Song
+            const count = songMap.get(song.title) || 0;
+            songMap.set(song.title, count + 1);
+
+            // Count Album (using metadata from DB)
+            const meta = songMetaMap.get(song.title);
+            if (meta && meta.album) {
+                const albumCount = albumMap.get(meta.album) || 0;
+                albumMap.set(meta.album, albumCount + 1);
+            } else {
+                // Unknown Album
+                const unknownCount = albumMap.get('Unknown') || 0;
+                albumMap.set('Unknown', unknownCount + 1);
+            }
+        });
+    });
+
+    const songRanking = Array.from(songMap.entries())
+        .map(([title, count]) => ({ title, count }))
+        .sort((a, b) => b.count - a.count);
+
+    // Unique Songs based on the setlists we found
+    const uniqueSongs = songMap.size;
+
+    // Album Stats Array
+    const albumStats = Array.from(albumMap.entries())
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
+
+    // Yearly Stats
+    const yearlyMap = new Map();
+    sortedLives.forEach(live => {
+        const dateStr = live.date || live.attended_at;
+        if (dateStr) {
+            const year = new Date(dateStr).getFullYear().toString();
+            yearlyMap.set(year, (yearlyMap.get(year) || 0) + 1);
+        }
+    });
+
+    const yearlyStats = [];
+    const startYear = 2005;
+    const currentYear = new Date().getFullYear();
+    for (let y = startYear; y <= currentYear; y++) {
+        const yearStr = y.toString();
+        yearlyStats.push({
+            year: y,
+            count: yearlyMap.get(yearStr) || 0
+        });
+    }
+
+    // Venue Type Stats
+    const typeMap = new Map();
+    sortedLives.forEach(live => {
+        const type = live.type || 'Hall'; // Default if missing
+        typeMap.set(type, (typeMap.get(type) || 0) + 1);
+    });
+
+    const venueTypeStats = Array.from(typeMap.entries())
+        .map(([type, count]) => ({ name: type, value: count }));
+
+    return {
+        totalLives: sortedLives.length,
+        uniqueSongs,
+        venueTypeStats,
+        yearlyStats,
+        songRanking,
+        albumStats, // New
+        myLives: sortedLives,
+        firstLive: sortedLives.length > 0 ? sortedLives[0] : null
+    };
 };
 
-// Revised hook that accepts ids
-export const useLiveStatsLogic = (attendedIds) => {
-    return useMemo(() => {
-        const myLives = lives.filter(live => attendedIds.includes(live.id));
+export const useLiveStats = () => {
+    const { currentUser } = useAuth();
+    const [attendedLives, setAttendedLives] = useState([]);
+    const [allSongs, setAllSongs] = useState([]); // Store fetched songs
+    const [loading, setLoading] = useState(true);
 
-        // Sort by date asc
-        myLives.sort((a, b) => new Date(a.date) - new Date(b.date));
+    useEffect(() => {
+        if (!currentUser) {
+            setLoading(false);
+            return;
+        }
 
-        const firstLive = myLives.length > 0 ? myLives[0] : null;
-
-        // Song Counts with Live Details
-        const songMap = new Map();
-        myLives.forEach(live => {
-            const list = setlists[live.id] || [];
-            list.forEach(song => {
-                if (!songMap.has(song.title)) {
-                    songMap.set(song.title, { count: 0, lives: [] });
+        const fetchData = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    setLoading(false);
+                    return;
                 }
-                const songData = songMap.get(song.title);
-                songData.count += 1;
-                songData.lives.push({
-                    id: live.id,
-                    date: live.date,
-                    venue: live.venue,
-                    tourTitle: live.tourTitle
+
+                // Fetch Attended Lives
+                const livesRes = await fetch('http://localhost:4000/api/users/me/attended_lives', {
+                    headers: { 'token': token }
                 });
-            });
-        });
 
-        const songRanking = Array.from(songMap.entries())
-            .map(([title, data]) => ({
-                title,
-                count: data.count,
-                lives: data.lives.sort((a, b) => new Date(b.date) - new Date(a.date)) // Sort by date desc
-            }))
-            .sort((a, b) => b.count - a.count);
+                // Fetch All Songs (Metadata)
+                const songsRes = await fetch('http://localhost:4000/api/songs', {
+                    headers: { 'token': token } // Optional auth if required
+                });
 
-        // Yearly Stats
-        const yearlyMap = new Map();
-        myLives.forEach(live => {
-            const year = live.date.split('-')[0];
-            yearlyMap.set(year, (yearlyMap.get(year) || 0) + 1);
-        });
-
-        // Ensure current year range or all years?
-        // Let's just return what we have
-        const yearlyStats = Array.from(yearlyMap.entries())
-            .map(([year, count]) => ({ year, count }))
-            .sort((a, b) => a.year.localeCompare(b.year));
-
-        // Venue Type Stats
-        const typeMap = new Map();
-        myLives.forEach(live => {
-            const type = live.type || 'Unknown';
-            typeMap.set(type, (typeMap.get(type) || 0) + 1);
-        });
-
-        const venueTypeStats = Array.from(typeMap.entries())
-            .map(([type, count]) => ({ name: type, value: count }));
-
-        return {
-            totalLives: myLives.length,
-            firstLive,
-            songRanking,
-            uniqueSongs: songMap.size,
-            yearlyStats,
-            venueTypeStats,
-            myLives
+                if (livesRes.ok && songsRes.ok) {
+                    const livesData = await livesRes.json();
+                    const songsData = await songsRes.json();
+                    setAttendedLives(livesData);
+                    setAllSongs(songsData);
+                } else {
+                    console.error("Failed to fetch data");
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setLoading(false);
+            }
         };
-    }, [attendedIds]);
-}
+
+        fetchData();
+    }, [currentUser]);
+
+    // Memoize the logic result, including allSongs dependency
+    const stats = useMemo(() => useLiveStatsLogic(attendedLives, allSongs), [attendedLives, allSongs]);
+
+    return {
+        ...stats,
+        loading
+    };
+};
