@@ -125,7 +125,11 @@ function LiveDetail() {
                                         {String(song.position || index + 1).padStart(2, '0')}
                                     </span>
                                     <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: '1.1rem', fontWeight: '500' }}>{song.title}</div>
+                                        <div style={{ fontSize: '1.1rem', fontWeight: '500' }}>
+                                            <Link to={`/song/${song.song_id}`} className="hover:text-blue-400 hover:underline transition-colors text-white">
+                                                {song.title}
+                                            </Link>
+                                        </div>
                                     </div>
                                     {song.note && song.note !== 'Encore' && (
                                         <span style={{
