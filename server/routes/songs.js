@@ -25,6 +25,44 @@ router.get('/', async (req, res) => {
     }
 });
 
+// GET Song Statistics (Detail Page)
+router.get('/:id/stats', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const query = `
+            SELECT
+              s.*,
+              COALESCE(
+                JSON_AGG(
+                  JSON_BUILD_OBJECT(
+                    'id', l.id,
+                    'tour_name', l.tour_name,
+                    'title', l.title,
+                    'date', l.date,
+                    'venue', l.venue,
+                    'type', l.type
+                  ) ORDER BY l.date DESC
+                ) FILTER (WHERE l.id IS NOT NULL), '[]'
+              ) as performances
+            FROM songs s
+            LEFT JOIN setlists sl ON s.id = sl.song_id
+            LEFT JOIN lives l ON sl.live_id = l.id AND l.status = 'FINISHED'
+            WHERE s.id = $1
+            GROUP BY s.id
+        `;
+        const result = await db.query(query, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json("Song not found");
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
+    }
+});
+
 // CREATE a Song
 router.post('/', authorize, async (req, res) => {
     try {

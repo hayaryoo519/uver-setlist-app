@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic } from 'lucide-react';
+import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SetlistEditor from '../components/Admin/SetlistEditor';
@@ -7,8 +7,13 @@ import SetlistEditor from '../components/Admin/SetlistEditor';
 const AdminPage = () => {
     const { currentUser } = useAuth();
 
-    // Tab State: 'users' | 'lives' | 'songs'
+    // Tab State: 'users' | 'lives' | 'songs' | 'import'
     const [activeTab, setActiveTab] = useState('lives');
+
+    // --- IMPORT STATE ---
+    const [importFile, setImportFile] = useState(null);
+    const [importResult, setImportResult] = useState(null);
+    const [isImporting, setIsImporting] = useState(false);
 
     // --- USERS STATE ---
     const [users, setUsers] = useState([]);
@@ -41,7 +46,47 @@ const AdminPage = () => {
         if (activeTab === 'users') fetchUsers();
         if (activeTab === 'lives') fetchLives();
         if (activeTab === 'songs') fetchSongs();
+        if (activeTab === 'import') setImportResult(null); // Reset import result
     }, [activeTab]);
+
+    // --- API CALLS: IMPORT ---
+    const handleCSVImport = async () => {
+        if (!importFile) {
+            alert('Please select a CSV file');
+            return;
+        }
+
+        setIsImporting(true);
+        setImportResult(null);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', importFile);
+
+            const token = localStorage.getItem('token');
+            const res = await fetch('http://localhost:4000/api/import/csv', {
+                method: 'POST',
+                headers: { token },
+                body: formData
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                setImportResult({ success: true, ...data });
+                setImportFile(null);
+                // Refresh lives list
+                if (activeTab === 'import') fetchLives();
+            } else {
+                setImportResult({ success: false, message: data.message || 'Import failed' });
+            }
+        } catch (err) {
+            console.error(err);
+            setImportResult({ success: false, message: 'Error: ' + err.message });
+        } finally {
+            setIsImporting(false);
+        }
+    };
 
 
     // --- API CALLS: LIVES ---
@@ -247,6 +292,13 @@ const AdminPage = () => {
                         <span className="card-badge">{users.length}</span>
                     </div>
                 </div>
+
+                <div className={`admin-card ${activeTab === 'import' ? 'active' : ''}`} onClick={() => setActiveTab('import')}>
+                    <div className="card-header">
+                        <h2 className="card-title"><Upload size={24} color="#94a3b8" /> Import</h2>
+                        <span className="card-badge">CSV</span>
+                    </div>
+                </div>
             </div>
 
             {/* --- CONTENT AREA --- */}
@@ -374,6 +426,88 @@ const AdminPage = () => {
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* IMPORT CONTENT */}
+                {activeTab === 'import' && (
+                    <div className="tab-content fade-in">
+                        <h3 style={{ marginBottom: '20px' }}>CSV Import</h3>
+
+                        <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '30px', borderRadius: '12px', border: '1px solid #334155', marginBottom: '20px' }}>
+                            <h4 style={{ marginBottom: '15px', color: '#cbd5e1' }}>CSVフォーマット</h4>
+                            <pre style={{ background: '#0f172a', padding: '15px', borderRadius: '8px', overflow: 'auto', fontSize: '0.85rem', color: '#94a3b8' }}>
+                                {`live_date,venue,prefecture,tour,tags,order_no,song
+2025-11-15,大阪城ホール,大阪府,BOOM GOES THE WORLD,,1,PHOENIX AX
+2025-11-15,大阪城ホール,大阪府,BOOM GOES THE WORLD,Encore,2,CORE PRIDE`}
+                            </pre>
+                            <div style={{ marginTop: '15px', fontSize: '0.9rem', color: '#94a3b8' }}>
+                                <p>• 同じ日付・会場の行は同一ライブとして扱われます</p>
+                                <p>• 日付が未来の場合、自動的に <code style={{ background: '#1e293b', padding: '2px 6px', borderRadius: '4px' }}>status=SCHEDULED</code> が設定されます</p>
+                                <p>• 会場名から自動的にタイプ（ARENA/HALL/LIVEHOUSE）が判定されます</p>
+                                <p>• tagsに"Encore"を指定すると、アンコール曲として登録されます</p>
+                            </div>
+                        </div>
+
+                        <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '30px', borderRadius: '12px', border: '1px solid #334155' }}>
+                            <h4 style={{ marginBottom: '15px', color: '#cbd5e1' }}>ファイルアップロード</h4>
+
+                            <input
+                                type="file"
+                                accept=".csv"
+                                onChange={(e) => setImportFile(e.target.files[0])}
+                                style={{
+                                    display: 'block',
+                                    marginBottom: '15px',
+                                    padding: '10px',
+                                    background: '#0f172a',
+                                    border: '1px solid #475569',
+                                    borderRadius: '6px',
+                                    color: '#fff',
+                                    width: '100%'
+                                }}
+                            />
+
+                            {importFile && (
+                                <div style={{ marginBottom: '15px', color: '#94a3b8', fontSize: '0.9rem' }}>
+                                    選択ファイル: <strong style={{ color: '#fff' }}>{importFile.name}</strong>
+                                </div>
+                            )}
+
+                            <button
+                                onClick={handleCSVImport}
+                                disabled={!importFile || isImporting}
+                                className="btn-primary"
+                                style={{ opacity: (!importFile || isImporting) ? 0.5 : 1, cursor: (!importFile || isImporting) ? 'not-allowed' : 'pointer' }}
+                            >
+                                {isImporting ? <><Loader size={18} className="animate-spin" /> インポート中...</> : <><Upload size={18} /> CSVをインポート</>}
+                            </button>
+
+                            {importResult && (
+                                <div style={{
+                                    marginTop: '20px',
+                                    padding: '15px',
+                                    borderRadius: '8px',
+                                    background: importResult.success ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                    border: `1px solid ${importResult.success ? '#22c55e' : '#ef4444'}`
+                                }}>
+                                    <h5 style={{ color: importResult.success ? '#22c55e' : '#ef4444', marginBottom: '10px' }}>
+                                        {importResult.success ? '✓ インポート成功' : '✗ インポート失敗'}
+                                    </h5>
+                                    {importResult.success && importResult.stats && (
+                                        <div style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>
+                                            <p>• 新規ライブ: {importResult.stats.livesCreated}件</p>
+                                            <p>• 更新ライブ: {importResult.stats.livesUpdated}件</p>
+                                            <p>• 新規楽曲: {importResult.stats.songsAdded}件</p>
+                                            <p>• 処理行数: {importResult.stats.totalRows}行</p>
+                                        </div>
+                                    )}
+                                    {!importResult.success && (
+                                        <p style={{ color: '#fca5a5' }}>{importResult.message}</p>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
