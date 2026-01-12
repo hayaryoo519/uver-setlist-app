@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, MapPin, Calendar, Tag, Check, Plus } from 'lucide-react';
+import { Search, MapPin, Calendar, Tag, Check, Plus, ArrowRight, Loader, Home } from 'lucide-react';
 import { useAttendance } from '../hooks/useAttendance';
 import FilterPanel, { PRESET_FILTERS } from '../components/FilterPanel';
 import SEO from '../components/SEO';
@@ -18,7 +18,7 @@ const LiveList = () => {
 
     const fetchLives = async () => {
         try {
-            const res = await fetch('http://localhost:4000/api/lives');
+            const res = await fetch('/api/lives');
             const data = await res.json();
             // Sort by Date Descending
             if (Array.isArray(data)) {
@@ -58,7 +58,7 @@ const LiveList = () => {
                     live.tour_name.toLowerCase().includes(lowerText) ||
                     (live.title && live.title.toLowerCase().includes(lowerText)) ||
                     live.venue.toLowerCase().includes(lowerText) ||
-                    live.date.includes(lowerText);
+                    new Date(live.date).toISOString().includes(lowerText);
 
                 if (!matchText) return false;
             }
@@ -119,7 +119,7 @@ const LiveList = () => {
                         </div>
                     ) : (
                         filteredLives.map(live => (
-                            <Link to={`/lives/${live.id}`} key={live.id} className="block group">
+                            <Link to={`/live/${live.id}`} key={live.id} className="block group">
                                 <div className="bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-blue-500/50 rounded-xl p-6 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-900/20 relative overflow-hidden">
                                     <div className="absolute top-0 left-0 w-1 h-full bg-blue-600 transform origin-bottom scale-y-0 group-hover:scale-y-100 transition-transform duration-300"></div>
 
@@ -128,7 +128,7 @@ const LiveList = () => {
                                         <div className="md:w-32 flex-shrink-0">
                                             <div className="flex items-center gap-2 text-slate-400 mb-2">
                                                 <Calendar size={14} />
-                                                <span className="text-sm font-mono">{live.date.split('T')[0]}</span>
+                                                <span className="text-sm font-mono">{new Date(live.date).toISOString().split('T')[0]}</span>
                                             </div>
                                             <span className={`text-xs font-bold px-2 py-1 rounded text-slate-900 inline-block
                                                 ${live.type === 'FESTIVAL' ? 'bg-purple-400' :

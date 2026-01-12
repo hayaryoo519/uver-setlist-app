@@ -1,17 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { lives } from '../data/lives';
-import { setlists } from '../data/setlists';
 import { isAttended, toggleAttendance } from '../utils/storage';
 import SEO from '../components/SEO';
 
 function LiveDetail() {
     const { id } = useParams();
-    const live = lives.find((l) => l.id === id);
-    const setlist = setlists[id];
+    const [live, setLive] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [attended, setAttended] = useState(false);
 
     useEffect(() => {
+        // Fetch Live Data
+        const fetchLive = async () => {
+            try {
+                const res = await fetch(`/api/lives/${id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setLive(data);
+                } else {
+                    setLive(null);
+                }
+            } catch (e) {
+                console.error("Failed to fetch live detail", e);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchLive();
         setAttended(isAttended(id));
     }, [id]);
 
@@ -20,15 +35,22 @@ function LiveDetail() {
         setAttended(!attended);
     };
 
-    if (!live) {
-        return <div className="container">Live not found</div>;
+    if (loading) {
+        return <div className="container" style={{ paddingTop: '100px', textAlign: 'center' }}>Loading...</div>;
     }
+
+    if (!live) {
+        return <div className="container" style={{ paddingTop: '100px', textAlign: 'center' }}>Live not found</div>;
+    }
+
+    const setlist = live.setlist || [];
+    const mainTitle = live.tour_name || live.title || "Unknown Live";
 
     return (
         <div className="container" style={{ paddingTop: '100px' }}>
             <SEO
-                title={`${live.tourTitle} (${live.date})`}
-                description={`UVERworld ${live.tourTitle} @ ${live.venue} Setlist and Live Report.`}
+                title={`${mainTitle} (${new Date(live.date).toLocaleDateString()})`}
+                description={`UVERworld ${mainTitle} @ ${live.venue} Setlist and Live Report.`}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <Link to="/lives" style={{ color: '#94a3b8' }}>&larr; Back to Archive</Link>
@@ -36,8 +58,10 @@ function LiveDetail() {
             </div>
 
             <div style={{ marginBottom: '30px' }}>
-                <h1 style={{ marginBottom: '10px' }}>{live.tourTitle}</h1>
-                <div style={{ color: '#94a3b8', marginBottom: '16px' }}>{live.date} @ {live.venue}</div>
+                <h1 style={{ marginBottom: '10px' }}>{mainTitle}</h1>
+                <div style={{ color: '#94a3b8', marginBottom: '16px' }}>
+                    {new Date(live.date).toLocaleDateString()} @ {live.venue}
+                </div>
 
                 <button
                     onClick={handleToggleAttendance}
@@ -58,13 +82,13 @@ function LiveDetail() {
             </div>
 
             <div className="setlist">
-                {setlist ? (
+                {setlist.length > 0 ? (
                     setlist.map((song, index) => {
                         const isEncore = song.note === 'Encore';
                         const showEncoreHeader = isEncore && (index === 0 || setlist[index - 1].note !== 'Encore');
 
                         return (
-                            <React.Fragment key={song.order}>
+                            <React.Fragment key={index}>
                                 {showEncoreHeader && (
                                     <div style={{
                                         textAlign: 'center',
@@ -98,7 +122,7 @@ function LiveDetail() {
                                         fontFamily: 'monospace',
                                         fontSize: '0.9rem'
                                     }}>
-                                        {String(song.order).padStart(2, '0')}
+                                        {String(song.position || index + 1).padStart(2, '0')}
                                     </span>
                                     <div style={{ flex: 1 }}>
                                         <div style={{ fontSize: '1.1rem', fontWeight: '500' }}>{song.title}</div>
