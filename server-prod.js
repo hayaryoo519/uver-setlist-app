@@ -5,7 +5,7 @@ const path = require('path');
 const app = express();
 const PORT = 5173;
 
-// API Proxy
+// API Proxy - must be first
 app.use('/api', createProxyMiddleware({
     target: 'http://localhost:4000',
     changeOrigin: true,
@@ -14,8 +14,8 @@ app.use('/api', createProxyMiddleware({
 // Serve static files
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// SPA fallback - must be last
-app.get('/*', (req, res) => {
+// SPA fallback - catch all other routes
+app.use((req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
