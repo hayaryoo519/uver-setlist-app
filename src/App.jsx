@@ -11,6 +11,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import AdminPage from './pages/AdminPage';
 import ScrollToTop from './components/ScrollToTop';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Wrapper for pages that need the Main Layout (Navbar, etc.)
 const LayoutRoute = () => (
@@ -30,13 +31,19 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
 
-            {/* Main App Pages (With Layout) */}
+            {/* Protected Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<LayoutRoute />}>
+                <Route path="/mypage" element={<MyPage />} />
+                <Route path="/admin" element={<AdminPage />} />
+              </Route>
+            </Route>
+
+            {/* Public Routes (With Layout) */}
             <Route element={<LayoutRoute />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/lives" element={<LiveList />} />
               <Route path="/live/:id" element={<LiveDetail />} />
-              <Route path="/mypage" element={<MyPage />} />
-              <Route path="/admin" element={<AdminPage />} />
             </Route>
           </Routes>
         </Router>
