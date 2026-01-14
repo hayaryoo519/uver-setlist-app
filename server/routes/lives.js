@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const db = require('../db');
-const authorize = require('../middleware/authorization');
+const { authorize, adminCheck } = require('../middleware/authorization');
 
 // GET All Lives with Advanced Filters
 router.get('/', async (req, res) => {
@@ -146,7 +146,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // CREATE a Live (Admin only)
-router.post('/', authorize, async (req, res) => {
+router.post('/', authorize, adminCheck, async (req, res) => {
     try {
         const { tour_name, title, date, venue, type = 'ONEMAN' } = req.body;
 
@@ -162,8 +162,8 @@ router.post('/', authorize, async (req, res) => {
     }
 });
 
-// UPDATE a Live
-router.put('/:id', authorize, async (req, res) => {
+// UPDATE a Live (Admin only)
+router.put('/:id', authorize, adminCheck, async (req, res) => {
     try {
         const { id } = req.params;
         const { tour_name, title, date, venue, type } = req.body;
@@ -184,8 +184,8 @@ router.put('/:id', authorize, async (req, res) => {
     }
 });
 
-// UPDATE Setlist for a Live
-router.put('/:id/setlist', authorize, async (req, res) => {
+// UPDATE Setlist for a Live (Admin only)
+router.put('/:id/setlist', authorize, adminCheck, async (req, res) => {
     try {
         const { id } = req.params;
         const { songs } = req.body; // Expect array of song_ids
@@ -217,8 +217,8 @@ router.put('/:id/setlist', authorize, async (req, res) => {
     }
 });
 
-// DELETE a Live
-router.delete('/:id', authorize, async (req, res) => {
+// DELETE a Live (Admin only)
+router.delete('/:id', authorize, adminCheck, async (req, res) => {
     try {
         const { id } = req.params;
         const deleteLive = await db.query("DELETE FROM lives WHERE id = $1", [id]);
