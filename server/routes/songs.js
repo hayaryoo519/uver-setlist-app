@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const db = require('../db');
-const authorize = require('../middleware/authorization');
+const { authorize, adminCheck } = require('../middleware/authorization');
 
 // GET All Songs (for search/autocomplete)
 router.get('/', async (req, res) => {
@@ -114,8 +114,8 @@ router.get('/:id/stats', async (req, res) => {
     }
 });
 
-// CREATE a Song
-router.post('/', authorize, async (req, res) => {
+// CREATE a Song (Admin only)
+router.post('/', authorize, adminCheck, async (req, res) => {
     try {
         const { title, album, release_year, mv_url, author } = req.body;
 
@@ -139,8 +139,8 @@ router.post('/', authorize, async (req, res) => {
     }
 });
 
-// UPDATE a Song
-router.put('/:id', authorize, async (req, res) => {
+// UPDATE a Song (Admin only)
+router.put('/:id', authorize, adminCheck, async (req, res) => {
     try {
         const { id } = req.params;
         const { title, album, release_year, mv_url, author } = req.body;
@@ -161,8 +161,8 @@ router.put('/:id', authorize, async (req, res) => {
     }
 });
 
-// DELETE a Song
-router.delete('/:id', authorize, async (req, res) => {
+// DELETE a Song (Admin only)
+router.delete('/:id', authorize, adminCheck, async (req, res) => {
     try {
         const { id } = req.params;
         const deleteSong = await db.query("DELETE FROM songs WHERE id = $1", [id]);

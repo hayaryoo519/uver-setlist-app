@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const db = require('../db');
-const authorize = require('../middleware/authorization');
+const { authorize, adminCheck } = require('../middleware/authorization');
 const multer = require('multer');
 const csv = require('csv-parser');
 const { Readable } = require('stream');
@@ -8,8 +8,8 @@ const { Readable } = require('stream');
 // Configure multer for memory storage
 const upload = multer({ storage: multer.memoryStorage() });
 
-// POST /api/import/csv - Import lives and setlists from CSV
-router.post('/csv', authorize, upload.single('file'), async (req, res) => {
+// POST /api/import/csv - Import lives and setlists from CSV (Admin Only)
+router.post('/csv', authorize, adminCheck, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'No file uploaded' });
