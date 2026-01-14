@@ -5,8 +5,8 @@ const LiveGraph = ({ data, onBarClick, dataKey = "count" }) => {
     if (!data || data.length === 0) return <div className="no-data">No Data</div>;
 
     const handleClick = (data) => {
-        if (onBarClick && data && data.year) {
-            onBarClick(data.year);
+        if (onBarClick && data) {
+            onBarClick(data);
         }
     };
 
@@ -29,11 +29,7 @@ const LiveGraph = ({ data, onBarClick, dataKey = "count" }) => {
                         radius={[4, 4, 0, 0]}
                         onClick={handleClick}
                         cursor="pointer"
-                    >
-                        {data.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={index % 2 === 0 ? 'var(--primary-color)' : 'var(--accent-color)'} />
-                        ))}
-                    </Bar>
+                    />
                 </BarChart>
             </ResponsiveContainer>
         </div>

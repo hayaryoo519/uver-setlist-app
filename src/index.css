@@ -8,15 +8,33 @@
   /* Deep Black */
   --text-color: #f0f0f0;
   --primary-color: #d4af37;
-  /* Gold */
-  --secondary-color: #b91c1c;
-  /* Crimson Red */
-  --accent-color: #fbbf24;
-  /* Amber Gold */
-  --card-bg: #1a1a1a;
-  --border-color: #333;
-  --glass-bg: rgba(26, 26, 26, 0.8);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+  font-family: 'Noto Sans JP', 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  --primary-color: #fbbf24;
+  /* Amber-400 (Goldish) */
+  --secondary-color: #ef4444;
+  /* Red-500 (Vibrant Red) */
+  --accent-color: #60a5fa;
+  /* Blue-400 */
+  --bg-color: #0f172a;
+  /* Slate-900 */
+  --card-bg: #1e293b;
+  /* Slate-800 */
+  --text-color: #f8fafc;
+  /* Slate-50 */
+  --border-color: #334155;
+  /* Slate-700 */
+
+  color-scheme: dark;
+  color: var(--text-color);
+  background-color: var(--bg-color);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
@@ -75,8 +93,17 @@ h3 {
   font-size: 1.5rem;
   color: var(--text-color);
 }
+
 @keyframes pulse {
-  0% { opacity: 0.6; }
-  50% { opacity: 0.3; }
-  100% { opacity: 0.6; }
+  0% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+
+  100% {
+    opacity: 0.6;
+  }
 }

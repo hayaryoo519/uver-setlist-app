@@ -21,7 +21,7 @@ router.post('/register', async (req, res) => {
 
         // 3. Insert into DB
         const newUser = await db.query(
-            "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING *",
+            "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING *",
             [username, email, bcryptPassword]
         );
 
@@ -47,7 +47,7 @@ router.post('/login', async (req, res) => {
             return res.status(401).json("Password or Email is incorrect");
         }
 
-        const validPassword = await bcrypt.compare(password, user.rows[0].password_hash);
+        const validPassword = await bcrypt.compare(password, user.rows[0].password);
         if (!validPassword) {
             return res.status(401).json("Password or Email is incorrect");
         }
