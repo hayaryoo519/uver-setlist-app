@@ -322,18 +322,20 @@ const AdminPage = () => {
                                 <tbody>
                                     {lives.map(live => (
                                         <tr key={live.id}>
-                                            <td>{new Date(live.date).toLocaleDateString()}</td>
+                                            <td style={{ width: '120px' }}>{new Date(live.date).toLocaleDateString()}</td>
                                             <td>
                                                 <div style={{ fontWeight: 'bold' }}>{live.tour_name}</div>
                                                 {live.title && <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{live.title}</div>}
                                             </td>
                                             <td style={{ color: '#cbd5e1' }}>{live.venue}</td>
-                                            <td className="actions-cell">
-                                                <button onClick={() => openSetlistEditor(live)} className="action-btn" title="Edit Setlist" style={{ color: '#3b82f6', marginRight: '5px' }}>
-                                                    <ListMusic size={18} />
-                                                </button>
-                                                <button onClick={() => openEditLive(live)} className="action-btn edit"><Edit2 size={18} /></button>
-                                                <button onClick={() => handleDeleteLive(live.id)} className="action-btn delete"><Trash2 size={18} /></button>
+                                            <td style={{ width: '150px' }}>
+                                                <div className="actions-wrapper">
+                                                    <button onClick={() => openSetlistEditor(live)} className="action-btn" title="Edit Setlist" style={{ color: '#3b82f6' }}>
+                                                        <ListMusic size={18} />
+                                                    </button>
+                                                    <button onClick={() => openEditLive(live)} className="action-btn edit" title="Edit Live"><Edit2 size={18} /></button>
+                                                    <button onClick={() => handleDeleteLive(live.id)} className="action-btn delete" title="Delete"><Trash2 size={18} /></button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -374,9 +376,11 @@ const AdminPage = () => {
                                         <tr key={song.id}>
                                             <td style={{ width: '80px', color: '#94a3b8' }}>#{song.id}</td>
                                             <td style={{ fontWeight: 'bold' }}>{song.title}</td>
-                                            <td className="actions-cell" style={{ width: '120px' }}>
-                                                <button onClick={() => openEditSong(song)} className="action-btn edit"><Edit2 size={18} /></button>
-                                                <button onClick={() => handleDeleteSong(song.id)} className="action-btn delete"><Trash2 size={18} /></button>
+                                            <td style={{ width: '120px' }}>
+                                                <div className="actions-wrapper">
+                                                    <button onClick={() => openEditSong(song)} className="action-btn edit" title="Edit"><Edit2 size={18} /></button>
+                                                    <button onClick={() => handleDeleteSong(song.id)} className="action-btn delete" title="Delete"><Trash2 size={18} /></button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -413,14 +417,16 @@ const AdminPage = () => {
                                 <tbody>
                                     {processedUsers.map(user => (
                                         <tr key={user.id}>
-                                            <td>#{user.id}</td>
+                                            <td style={{ width: '60px' }}>#{user.id}</td>
                                             <td style={{ fontWeight: 'bold' }}>{user.username}</td>
                                             <td style={{ color: '#cbd5e1' }}>{user.email}</td>
-                                            <td><span className={`role-badge ${user.role}`}>{user.role}</span></td>
-                                            <td style={{ color: '#94a3b8' }}>{new Date(user.created_at).toLocaleDateString()}</td>
-                                            <td className="actions-cell">
-                                                <button onClick={() => handleRoleUpdate(user.id, user.role)} className="action-btn promote"><ShieldAlert size={18} /></button>
-                                                <button onClick={() => handleDeleteUser(user.id)} disabled={currentUser && user.id === currentUser.id} className={`action-btn delete ${currentUser && user.id === currentUser.id ? 'disabled' : ''}`}><Trash2 size={18} /></button>
+                                            <td style={{ width: '100px' }}><span className={`role-badge ${user.role}`}>{user.role}</span></td>
+                                            <td style={{ color: '#94a3b8', width: '120px' }}>{new Date(user.created_at).toLocaleDateString()}</td>
+                                            <td style={{ width: '120px' }}>
+                                                <div className="actions-wrapper">
+                                                    <button onClick={() => handleRoleUpdate(user.id, user.role)} className="action-btn promote" title="Update Role"><ShieldAlert size={18} /></button>
+                                                    <button onClick={() => handleDeleteUser(user.id)} disabled={currentUser && user.id === currentUser.id} className={`action-btn delete ${currentUser && user.id === currentUser.id ? 'disabled' : ''}`} title="Delete"><Trash2 size={18} /></button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -614,16 +620,17 @@ const AdminPage = () => {
                 .table-header-panel { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 10px; }
                 .table-container { background: rgba(15, 23, 42, 0.6); border-radius: 12px; border: 1px solid #334155; overflow: hidden; }
                 .admin-table { width: 100%; border-collapse: collapse; text-align: left; }
-                .admin-table th { background: rgba(0,0,0,0.2); color: #94a3b8; padding: 15px 20px; font-weight: normal; }
-                .admin-table td { padding: 15px 20px; border-bottom: 1px solid #334155; }
-                .admin-table tr:hover { background: rgba(255,255,255,0.05); }
-                .actions-cell { display: flex; gap: 10px; }
-                .action-btn { background: none; border: none; cursor: pointer; padding: 5px; border-radius: 4px; transition: background 0.2s; }
-                .action-btn:hover { background: rgba(255,255,255,0.1); }
-                .action-btn.edit { color: #60a5fa; }
-                .action-btn.delete { color: #ef4444; }
-                .action-btn.promote { color: #fbbf24; }
-                .action-btn.disabled { opacity: 0.3; cursor: not-allowed; }
+                .admin-table th { background: rgba(0,0,0,0.2); color: #94a3b8; padding: 15px 20px; font-weight: normal; border-bottom: 2px solid #334155; }
+                .admin-table td { padding: 15px 20px; border-bottom: 1px solid #1e293b; vertical-align: middle; }
+                .admin-table tr:hover { background: rgba(255,255,255,0.02); }
+                .actions-wrapper { display: flex; gap: 8px; justify-content: flex-start; align-items: center; }
+                .action-btn { background: none; border: none; cursor: pointer; padding: 6px; border-radius: 6px; transition: all 0.2s; color: #94a3b8; display: flex; align-items: center; justify-content: center; }
+                .action-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+                .action-btn.edit:hover { color: #60a5fa; background: rgba(96, 165, 250, 0.1); }
+                .action-btn.delete:hover { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+                .action-btn.promote:hover { color: #fbbf24; background: rgba(251, 191, 36, 0.1); }
+                .action-btn.disabled { opacity: 0.1; cursor: not-allowed; }
+                .action-btn.disabled:hover { background: none; color: #94a3b8; }
                 .role-badge { padding: 4px 8px; border-radius: 4px; fontSize: 0.8rem; }
                 .role-badge.admin { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
                 .role-badge.user { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
