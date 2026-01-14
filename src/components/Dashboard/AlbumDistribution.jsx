@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Cartes
 
 const COLORS = ['#d4af37', '#fbbf24', '#b91c1c', '#3b82f6', '#10b981', '#6366f1', '#8b5cf6'];
 
-const AlbumDistribution = ({ data }) => {
+const AlbumDistribution = ({ data, onBarClick }) => {
     if (!data || data.length === 0) return <div className="no-data">No Album Data</div>;
 
     // Filter out "Unknown" if desired, or keep it.
@@ -27,9 +27,9 @@ const AlbumDistribution = ({ data }) => {
                         contentStyle={{ backgroundColor: '#1e293b', borderColor: '#333', color: '#fff' }}
                         cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                     />
-                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]} onClick={onBarClick} style={{ cursor: 'pointer' }}>
                         {data.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} cursor="pointer" />
                         ))}
                     </Bar>
                 </BarChart>

@@ -14,6 +14,7 @@ const MainVisual = () => {
                     あの日の感動を、永遠に。
                 </p>
             </div>
+
             <div className="scroll-indicator">
                 <span>SCROLL</span>
                 <div className="line"></div>

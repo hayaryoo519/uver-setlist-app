@@ -16,12 +16,11 @@ export const useAttendance = () => {
         const fetchIds = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const res = await fetch('http://localhost:4000/api/users/me/attended_lives', {
+                const res = await fetch('/api/users/me/attended_lives', {
                     headers: { 'token': token }
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    // data is array of objects {id, ...}
                     setAttendedIds(new Set(data.map(live => live.id)));
                 }
             } catch (err) {
@@ -31,22 +30,27 @@ export const useAttendance = () => {
             }
         };
 
-        fetchIds();
+        if (currentUser) {
+            fetchIds();
+        } else {
+            setLoading(false);
+        }
     }, [currentUser]);
 
     const addLive = async (liveId) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:4000/api/users/me/attended_lives', {
+            const res = await fetch('/api/users/me/attended_lives', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'token': token
                 },
-                body: JSON.stringify({ liveId })
+                body: JSON.stringify({ liveId: Number(liveId) })
             });
+
             if (res.ok) {
-                setAttendedIds(prev => new Set(prev).add(liveId));
+                setAttendedIds(prev => new Set(prev).add(Number(liveId)));
                 return true;
             }
             return false;
@@ -59,7 +63,7 @@ export const useAttendance = () => {
     const removeLive = async (liveId) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:4000/api/users/me/attended_lives/${liveId}`, {
+            const res = await fetch(`/api/users/me/attended_lives/${liveId}`, {
                 method: 'DELETE',
                 headers: { 'token': token }
             });
