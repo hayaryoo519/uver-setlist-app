@@ -14,6 +14,12 @@ function Dashboard() {
     const [graphMetric, setGraphMetric] = useState('liveCount');
     const [yearRange, setYearRange] = useState([2005, 2024]); // Hardcoded for now, can be dynamic
 
+    const formatDate = (dateStr) => {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.');
+    };
+
     const handleYearClick = (data) => {
         if (!data || !data.year) return;
         const year = data.year.toString();
@@ -43,7 +49,7 @@ function Dashboard() {
                 songMap[song.title].count++;
                 songMap[song.title].lives.push({
                     id: live.id,
-                    date: live.date,
+                    date: formatDate(live.date),
                     venue: live.venue,
                     title: live.title || live.tour_name
                 });
@@ -66,8 +72,8 @@ function Dashboard() {
                 name: year,
                 liveCount: uniqueLives.size,
                 totalSongs: totalSongsCount,
-                startDate: `${year}-01-01`,
-                endDate: `${year}-12-31`,
+                startDate: formatDate(`${year}-01-01`),
+                endDate: formatDate(`${year}-12-31`),
                 songRanking: sortedSongs
             }
         });
@@ -113,7 +119,7 @@ function Dashboard() {
                     songMap[song.title].count++;
                     songMap[song.title].lives.push({
                         id: live.id,
-                        date: live.date,
+                        date: formatDate(live.date),
                         venue: live.venue,
                         title: live.title || live.tour_name
                     });
@@ -136,8 +142,8 @@ function Dashboard() {
                 name: albumName,
                 liveCount: uniqueLives.size,
                 totalSongs: totalSongsCount,
-                startDate: yearRange[0],
-                endDate: yearRange[1],
+                startDate: formatDate(`${yearRange[0]}-01-01`),
+                endDate: formatDate(`${yearRange[1]}-12-31`),
                 songRanking: sortedSongs
             }
         });
@@ -422,53 +428,59 @@ function Dashboard() {
                     <div>
                         <h2 className="section-title" style={{ marginBottom: '20px' }}>Top Songs <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 'normal' }}>(Top 10)</span></h2>
                         <div className="dashboard-panel" style={{ padding: 0 }}>
-                            {(stats.globalSongRanking || []).slice(0, 10).map((song, index) => (
-                                <Link
-                                    to={song.id ? `/song/${song.id}` : '#'}
-                                    key={index}
-                                    style={{ textDecoration: 'none', color: 'inherit' }}
-                                >
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            padding: '15px 20px',
-                                            borderBottom: '1px solid rgba(255,255,255,0.05)',
-                                        }}
-                                        className="hover-opacity"
+                            {(!stats.globalSongRanking || stats.globalSongRanking.length === 0) ? (
+                                <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                                    No Song Data Available
+                                </div>
+                            ) : (
+                                (stats.globalSongRanking || []).slice(0, 10).map((song, index) => (
+                                    <Link
+                                        to={song.id ? `/song/${song.id}` : '#'}
+                                        key={index}
+                                        style={{ textDecoration: 'none', color: 'inherit' }}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, minWidth: 0 }}>
-                                            <div style={{
-                                                width: '24px',
-                                                height: '24px',
-                                                borderRadius: '50%',
-                                                background: index < 3 ? 'linear-gradient(135deg, #fbbf24, #d97706)' : 'rgba(255,255,255,0.1)',
-                                                color: index < 3 ? '#000' : '#fff',
+                                        <div
+                                            style={{
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontWeight: 'bold',
-                                                fontSize: '0.8rem',
-                                                flexShrink: 0
-                                            }}>
-                                                {index + 1}
+                                                justifyContent: 'space-between',
+                                                padding: '15px 20px',
+                                                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                            }}
+                                            className="hover-opacity"
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, minWidth: 0 }}>
+                                                <div style={{
+                                                    width: '24px',
+                                                    height: '24px',
+                                                    borderRadius: '50%',
+                                                    background: index < 3 ? 'linear-gradient(135deg, #fbbf24, #d97706)' : 'rgba(255,255,255,0.1)',
+                                                    color: index < 3 ? '#000' : '#fff',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '0.8rem',
+                                                    flexShrink: 0
+                                                }}>
+                                                    {index + 1}
+                                                </div>
+                                                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    <div style={{ fontWeight: '500' }}>{song.title}</div>
+                                                </div>
                                             </div>
-                                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                <div style={{ fontWeight: '500' }}>{song.title}</div>
+                                            <div style={{ textAlign: 'right', paddingLeft: '15px' }}>
+                                                <div style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>
+                                                    {song.count} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: '#64748b' }}>Plays</span>
+                                                </div>
+                                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                                    {song.percentage}%
+                                                </div>
                                             </div>
                                         </div>
-                                        <div style={{ textAlign: 'right', paddingLeft: '15px' }}>
-                                            <div style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>
-                                                {song.count} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: '#64748b' }}>Plays</span>
-                                            </div>
-                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                                                {song.percentage}%
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Link>
-                            ))}
+                                    </Link>
+                                ))
+                            )}
                         </div>
                     </div>
 
@@ -481,13 +493,19 @@ function Dashboard() {
                                 <Link to="/lives" style={{ color: 'var(--accent-color)', fontSize: '0.9rem' }}>View All</Link>
                             </div>
                             <div className="dashboard-panel" style={{ padding: '0' }}>
-                                {(stats.recentLives || []).map((live, index) => (
-                                    <Link key={live.id} to={`/live/${live.id}`} className="recent-live-item">
-                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{live.date}</div>
-                                        <div style={{ fontWeight: 'bold', margin: '4px 0' }}>{live.tourTitle}</div>
-                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>@ {live.venue}</div>
-                                    </Link>
-                                ))}
+                                {(!stats.recentLives || stats.recentLives.length === 0) ? (
+                                    <div style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+                                        No recent live records.
+                                    </div>
+                                ) : (
+                                    (stats.recentLives || []).map((live, index) => (
+                                        <Link key={live.id} to={`/live/${live.id}`} className="recent-live-item">
+                                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{live.date}</div>
+                                            <div style={{ fontWeight: 'bold', margin: '4px 0' }}>{live.tourTitle}</div>
+                                            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>@ {live.venue}</div>
+                                        </Link>
+                                    ))
+                                )}
                             </div>
                         </div>
 
