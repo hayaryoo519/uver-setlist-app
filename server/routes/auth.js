@@ -25,15 +25,18 @@ router.post('/register', async (req, res) => {
             [username, email, bcryptPassword]
         );
 
-        // 4. Generate Token
-        const token = jwt.sign({ user_id: newUser.rows[0].id }, process.env.JWT_SECRET || 'secret_key', { expiresIn: "1h" });
+        // 4. Generate Token (Include role for stateless authorization)
+        const token = jwt.sign(
+            { user_id: newUser.rows[0].id, role: newUser.rows[0].role },
+            process.env.JWT_SECRET || 'secret_key',
+            { expiresIn: "1h" }
+        );
 
         res.json({ token, user: { id: newUser.rows[0].id, username: newUser.rows[0].username, email: newUser.rows[0].email, role: newUser.rows[0].role } });
 
     } catch (err) {
-        console.error("Full Error Object:", err);
-        const errorDetails = JSON.stringify(err, Object.getOwnPropertyNames(err));
-        res.status(500).json({ message: "Server Error Details: " + errorDetails });
+        console.error("Register Error:", err);
+        res.status(500).json({ message: "Internal Server Error" });
     }
 });
 
@@ -52,12 +55,15 @@ router.post('/login', async (req, res) => {
             return res.status(401).json("Password or Email is incorrect");
         }
 
-        const token = jwt.sign({ user_id: user.rows[0].id }, process.env.JWT_SECRET || 'secret_key', { expiresIn: "1h" });
+        const token = jwt.sign(
+            { user_id: user.rows[0].id, role: user.rows[0].role },
+            process.env.JWT_SECRET || 'secret_key',
+            { expiresIn: "1h" }
+        );
         res.json({ token, user: { id: user.rows[0].id, username: user.rows[0].username, email: user.rows[0].email, role: user.rows[0].role } });
     } catch (err) {
         console.error("Login Error:", err);
-        const errorDetails = JSON.stringify(err, Object.getOwnPropertyNames(err));
-        res.status(500).json({ message: "Server Error Details: " + errorDetails });
+        res.status(500).json({ message: "Internal Server Error" });
     }
 });
 
