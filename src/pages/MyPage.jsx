@@ -26,6 +26,16 @@ function MyPage() {
         }
     }, []);
 
+    // Set default year range based on data
+    useEffect(() => {
+        if (!loading && stats.myLives.length > 0) {
+            const years = stats.myLives.map(live => new Date(live.date).getFullYear());
+            const minYear = Math.min(...years);
+            const currentYear = new Date().getFullYear();
+            setYearRange([minYear, currentYear]);
+        }
+    }, [loading, stats.myLives]);
+
     const handleEditClick = () => {
         setTempProfile({ ...userProfile });
         setIsEditingProfile(true);
@@ -90,100 +100,105 @@ function MyPage() {
 
             <h1 style={{ marginBottom: '30px', fontSize: '2.5rem' }}>My <span className="text-gold">UVER</span> Records</h1>
 
-            {/* Summary Cards */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '20px',
-                marginBottom: '40px'
-            }}>
-                <div className="stat-card">
-                    <div className="stat-icon"><Calendar size={24} /></div>
-                    <div className="stat-label">Total Lives</div>
-                    <div className="stat-value">{stats.totalLives}</div>
-                </div>
-                <div className="stat-card">
-                    <div className="stat-icon"><Music size={24} /></div>
-                    <div className="stat-label">Songs Collected</div>
-                    <div className="stat-value">{stats.uniqueSongs}</div>
-                </div>
-                {stats.firstLive && (
-                    <div className="stat-card" style={{ gridColumn: 'span 2' }}>
-                        <div className="stat-icon"><MapPin size={24} /></div>
-                        <div className="stat-label">First Live</div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-color)' }}>
-                            {stats.firstLive.date} @ {stats.firstLive.venue}
+            {stats.totalLives > 0 ? (
+                <>
+                    {/* Summary Cards */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '20px',
+                        marginBottom: '40px'
+                    }}>
+                        <div className="stat-card">
+                            <div className="stat-icon"><Calendar size={24} /></div>
+                            <div className="stat-label">Total Lives</div>
+                            <div className="stat-value">{stats.totalLives}</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-icon"><Music size={24} /></div>
+                            <div className="stat-label">Songs Collected</div>
+                            <div className="stat-value">{stats.uniqueSongs}</div>
+                        </div>
+                        {stats.firstLive && (
+                            <div className="stat-card" style={{ gridColumn: 'span 2' }}>
+                                <div className="stat-icon"><MapPin size={24} /></div>
+                                <div className="stat-label">First Live</div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-color)' }}>
+                                    {stats.firstLive.date} @ {stats.firstLive.venue}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Yearly Attendance Graph (Full Width) */}
+                    <div className="dashboard-panel" style={{ marginBottom: '30px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <div>
+                                <h3>Yearly Attendance <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 'normal' }}>(クリックで絞り込み)</span></h3>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Filter size={14} />
+                                期間: {yearRange[0]} - {yearRange[1]}
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <input
+                                    type="range"
+                                    min="2005"
+                                    max="2024"
+                                    value={yearRange[0]}
+                                    onChange={(e) => setYearRange([parseInt(e.target.value), yearRange[1]])}
+                                    style={{ width: '80px', accentColor: 'var(--primary-color)' }}
+                                />
+                                <input
+                                    type="range"
+                                    min="2005"
+                                    max="2024"
+                                    value={yearRange[1]}
+                                    onChange={(e) => setYearRange([yearRange[0], parseInt(e.target.value)])}
+                                    style={{ width: '80px', accentColor: 'var(--primary-color)' }}
+                                />
+                            </div>
+                        </div>
+
+                        <LiveGraph data={filteredYearlyStats} onBarClick={handleYearClick} />
+                    </div>
+
+                    {/* Secondary Metrics Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginBottom: '50px', alignItems: 'start' }}>
+                        <div className="dashboard-panel">
+                            <h3>Venue Types <span style={{ fontSize: '0.8rem', color: '#888' }}>(クリックで絞り込み)</span></h3>
+                            <VenueTypePie data={stats.venueTypeStats} onBarClick={handleVenueTypeClick} />
+                        </div>
+                        <div className="dashboard-panel">
+                            <h3>Top Songs Heard</h3>
+                            <SongRanking songs={stats.songRanking} />
+                        </div>
+                        <div className="dashboard-panel">
+                            <h3>Songs by Album</h3>
+                            <AlbumDistribution data={stats.albumStats} />
+                        </div>
+                        <div className="dashboard-panel" style={{ gridColumn: '1 / -1' }}>
+                            <h3>Recent History</h3>
+                            <div className="live-list-compact">
+                                {stats.myLives.slice().reverse().slice(0, 5).map((live) => (
+                                    <Link key={live.id} to={`/live/${live.id}`} className="compact-live-item">
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                                            <div className="date">{live.date}</div>
+                                            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>@ {live.venue}</div>
+                                        </div>
+                                        <div className="title" style={{ marginTop: '4px' }}>{live.tourTitle}</div>
+                                    </Link>
+                                ))}
+                            </div>
                         </div>
                     </div>
-                )}
-            </div>
-
-            {/* Yearly Attendance Graph (Full Width) */}
-            <div className="dashboard-panel" style={{ marginBottom: '30px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <div>
-                        <h3>Yearly Attendance <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 'normal' }}>(クリックで絞り込み)</span></h3>
-                    </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Filter size={14} />
-                        期間: {yearRange[0]} - {yearRange[1]}
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <input
-                            type="range"
-                            min="2005"
-                            max="2024"
-                            value={yearRange[0]}
-                            onChange={(e) => setYearRange([parseInt(e.target.value), yearRange[1]])}
-                            style={{ width: '80px', accentColor: 'var(--primary-color)' }}
-                        />
-                        <input
-                            type="range"
-                            min="2005"
-                            max="2024"
-                            value={yearRange[1]}
-                            onChange={(e) => setYearRange([yearRange[0], parseInt(e.target.value)])}
-                            style={{ width: '80px', accentColor: 'var(--primary-color)' }}
-                        />
-                    </div>
-                </div>
-
-                <LiveGraph data={filteredYearlyStats} onBarClick={handleYearClick} />
-            </div>
-
-            {/* Secondary Metrics Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginBottom: '50px', alignItems: 'start' }}>
-                <div className="dashboard-panel">
-                    <h3>Venue Types <span style={{ fontSize: '0.8rem', color: '#888' }}>(クリックで絞り込み)</span></h3>
-                    <VenueTypePie data={stats.venueTypeStats} onBarClick={handleVenueTypeClick} />
-                </div>
-                <div className="dashboard-panel">
-                    <h3>Top Songs Heard</h3>
-                    <SongRanking songs={stats.songRanking} />
-                </div>
-                <div className="dashboard-panel">
-                    <h3>Songs by Album</h3>
-                    <AlbumDistribution data={stats.albumStats} />
-                </div>
-                <div className="dashboard-panel" style={{ gridColumn: '1 / -1' }}>
-                    <h3>Recent History</h3>
-                    <div className="live-list-compact">
-                        {stats.myLives.slice().reverse().slice(0, 5).map((live) => (
-                            <Link key={live.id} to={`/ live / ${live.id} `} className="compact-live-item">
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                                    <div className="date">{live.date}</div>
-                                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>@ {live.venue}</div>
-                                </div>
-                                <div className="title" style={{ marginTop: '4px' }}>{live.tourTitle}</div>
-                            </Link>
-                        ))}
-                        {stats.myLives.length === 0 && <div className="no-data">No data yet.</div>}
-                    </div>
-                </div>
-            </div>
+                </>
+            ) : (
+                <MyPageOnboarding />
+            )}
 
             {/* User Social Links */}
             <div className="social-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '40px', textAlign: 'center' }}>
@@ -336,144 +351,144 @@ function MyPage() {
             )}
 
             <style>{`
-    .stat - card {
-    background: var(--card - bg);
-    padding: 20px;
-    border - radius: 12px;
-    border: 1px solid var(--border - color);
-    position: relative;
-    overflow: hidden;
-}
-                .stat - card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100 %;
-    background: var(--primary - color);
-}
-                .stat - icon {
-    color: var(--primary - color);
-    margin - bottom: 10px;
-}
-                .stat - label {
-    color: #94a3b8;
-    font - size: 0.9rem;
-    margin - bottom: 5px;
-}
-                .stat - value {
-    font - size: 2.5rem;
-    font - weight: 800;
-    color: var(--text - color);
-    line - height: 1;
-}
-                .dashboard - panel {
-    background: var(--card - bg);
-    padding: 25px;
-    border - radius: 16px;
-    border: 1px solid var(--border - color);
-}
-                .text - gold {
-    color: var(--primary - color);
-}
-                .compact - live - item {
-    display: block;
-    padding: 12px;
-    border - bottom: 1px solid rgba(255, 255, 255, 0.05);
-    color: inherit;
-    text - decoration: none;
-    transition: background 0.2s;
-}
-                .compact - live - item:hover {
-    background: rgba(255, 255, 255, 0.03);
-    text - decoration: none;
-}
-                .compact - live - item.date {
-    font - size: 0.8rem;
-    color: var(--accent - color);
-}
-                .compact - live - item.title {
-    font - weight: 500;
-}
-                .social - icon {
-    color: #fff;
-    transition: color 0.2s, transform 0.2s;
-}
-                .social - icon:hover {
-    color: var(--primary - color);
-    transform: translateY(-3px);
-}
-                .edit - btn {
-    background: none;
-    border: 1px solid #444;
-    color: #888;
-    padding: 2px 8px;
-    border - radius: 4px;
-    cursor: pointer;
-    font - size: 0.8rem;
-    transition: all 0.2s;
-}
-                .edit - btn:hover {
-    border - color: var(--primary - color);
-    color: var(--primary - color);
-}
-                .edit - profile - form {
-    max - width: 400px;
-    margin: 0 auto;
-    background: rgba(0, 0, 0, 0.2);
-    padding: 20px;
-    border - radius: 8px;
-    border: 1px solid var(--border - color);
-}
-                .form - group {
-    margin - bottom: 15px;
-    text - align: left;
-}
-                .form - group label {
-    display: block;
-    margin - bottom: 5px;
-    color: #ccc;
-    font - size: 0.9rem;
-    display: flex;
-    align - items: center;
-    gap: 5px;
-}
-                .form - group input {
-    width: 100 %;
-    padding: 8px 12px;
-    background: var(--bg - color);
-    border: 1px solid var(--border - color);
-    border - radius: 4px;
-    color: white;
-    font - family: inherit;
-}
-                .form - group input:focus {
-    outline: none;
-    border - color: var(--primary - color);
-}
-                .form - actions {
-    display: flex;
-    justify - content: flex - end;
-    gap: 10px;
-    margin - top: 20px;
-}
-                .save - btn, .cancel - btn {
-    padding: 8px 16px;
-    border - radius: 6px;
-    cursor: pointer;
-    font - weight: 500;
-    border: none;
-}
-                .save - btn {
-    background: var(--primary - color);
-    color: black;
-}
-                .cancel - btn {
-    background: #333;
-    color: white;
-}
-`}</style>
+                .stat-card {
+                    background: var(--card-bg);
+                    padding: 20px;
+                    border-radius: 12px;
+                    border: 1px solid var(--border-color);
+                    position: relative;
+                    overflow: hidden;
+                }
+                .stat-card::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 4px;
+                    height: 100%;
+                    background: var(--primary-color);
+                }
+                .stat-icon {
+                    color: var(--primary-color);
+                    margin-bottom: 10px;
+                }
+                .stat-label {
+                    color: #94a3b8;
+                    font-size: 0.9rem;
+                    margin-bottom: 5px;
+                }
+                .stat-value {
+                    font-size: 2.5rem;
+                    font-weight: 800;
+                    color: var(--text-color);
+                    line-height: 1;
+                }
+                .dashboard-panel {
+                    background: var(--card-bg);
+                    padding: 25px;
+                    border-radius: 16px;
+                    border: 1px solid var(--border-color);
+                }
+                .text-gold {
+                    color: var(--primary-color);
+                }
+                .compact-live-item {
+                    display: block;
+                    padding: 12px;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                    color: inherit;
+                    text-decoration: none;
+                    transition: background 0.2s;
+                }
+                .compact-live-item:hover {
+                    background: rgba(255, 255, 255, 0.03);
+                    text-decoration: none;
+                }
+                .compact-live-item.date {
+                    font-size: 0.8rem;
+                    color: var(--accent-color);
+                }
+                .compact-live-item.title {
+                    font-weight: 500;
+                }
+                .social-icon {
+                    color: #fff;
+                    transition: color 0.2s, transform 0.2s;
+                }
+                .social-icon:hover {
+                    color: var(--primary-color);
+                    transform: translateY(-3px);
+                }
+                .edit-btn {
+                    background: none;
+                    border: 1px solid #444;
+                    color: #888;
+                    padding: 2px 8px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 0.8rem;
+                    transition: all 0.2s;
+                }
+                .edit-btn:hover {
+                    border-color: var(--primary-color);
+                    color: var(--primary-color);
+                }
+                .edit-profile-form {
+                    max-width: 400px;
+                    margin: 0 auto;
+                    background: rgba(0, 0, 0, 0.2);
+                    padding: 20px;
+                    border-radius: 8px;
+                    border: 1px solid var(--border-color);
+                }
+                .form-group {
+                    margin-bottom: 15px;
+                    text-align: left;
+                }
+                .form-group label {
+                    display: block;
+                    margin-bottom: 5px;
+                    color: #ccc;
+                    font-size: 0.9rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                }
+                .form-group input {
+                    width: 100%;
+                    padding: 8px 12px;
+                    background: var(--bg-color);
+                    border: 1px solid var(--border-color);
+                    border-radius: 4px;
+                    color: white;
+                    font-family: inherit;
+                }
+                .form-group input:focus {
+                    outline: none;
+                    border-color: var(--primary-color);
+                }
+                .form-actions {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 10px;
+                    margin-top: 20px;
+                }
+                .save-btn, .cancel-btn {
+                    padding: 8px 16px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-weight: 500;
+                    border: none;
+                }
+                .save-btn {
+                    background: var(--primary-color);
+                    color: black;
+                }
+                .cancel-btn {
+                    background: #333;
+                    color: white;
+                }
+            `}</style>
         </div>
     );
 }

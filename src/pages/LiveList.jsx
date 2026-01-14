@@ -7,25 +7,53 @@ import SEO from '../components/SEO';
 
 const LiveList = () => {
     const [lives, setLives] = useState([]);
+    const [availableSongs, setAvailableSongs] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [filters, setFilters] = useState({ text: '', tags: [], venue: '' });
+    // filters state: songIds is array of integers, album is string
+    const [filters, setFilters] = useState({ text: '', tags: [], venue: '', songIds: [], album: '' });
     // Use Attendance Hook
     const { attendedIds, addLive, removeLive, isAttended, loading: attendanceLoading } = useAttendance();
 
     useEffect(() => {
-        fetchLives();
+        // Fetch Dictionary Data (Songs)
+        const fetchSongs = async () => {
+            try {
+                const res = await fetch('/api/songs');
+                const data = await res.json();
+                setAvailableSongs(data);
+            } catch (error) {
+                console.error('Error fetching songs:', error);
+            }
+        };
+        fetchSongs();
     }, []);
 
+    useEffect(() => {
+        // Fetch Lives (server-side filter for complex relations)
+        fetchLives();
+    }, [filters.songIds, filters.album]);
+
     const fetchLives = async () => {
+        setIsLoading(true);
         try {
-            const res = await fetch('/api/lives');
+            const params = new URLSearchParams();
+            if (filters.songIds.length > 0) {
+                params.append('songIds', filters.songIds.join(','));
+            }
+            if (filters.album) {
+                params.append('album', filters.album);
+            }
+
+            // Note: We fetch ALL lives (filtered by heavy constraints) 
+            // and do lightweight filtering (Title, Venue, Tags) on client.
+            const res = await fetch(`/api/lives?${params.toString()}`);
             const data = await res.json();
-            // Sort by Date Descending
+
             if (Array.isArray(data)) {
+                // Ensure date object for sorting (though backend sends ISO string)
                 data.sort((a, b) => new Date(b.date) - new Date(a.date));
                 setLives(data);
             } else {
-                console.error("API returned non-array:", data);
                 setLives([]);
             }
         } catch (error) {
@@ -45,6 +73,8 @@ const LiveList = () => {
     };
 
     const uniqueVenues = useMemo(() => {
+        // Derive venues from currently loaded lives (or ideally all lives if we had them)
+        // For hybrid approach, this works fine (shows venues matching song criteria)
         const venues = lives.map(live => live.venue).filter(Boolean);
         return [...new Set(venues)].sort();
     }, [lives]);
@@ -73,13 +103,16 @@ const LiveList = () => {
             }
 
             // 3. Venue Filter
+            // Note: If venue logic moves to backend, remove this. Keeping client-side for now.
             if (filters.venue && live.venue !== filters.venue) {
                 return false;
             }
 
             return true;
         });
-    }, [lives, filters]);
+    }, [lives, filters.text, filters.tags, filters.venue]);
+
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     if (isLoading) {
         return (
@@ -95,21 +128,42 @@ const LiveList = () => {
 
             <div className="max-w-4xl mx-auto px-4">
                 {/* Header Navigation */}
-                <div className="flex justify-between items-center mb-8">
+                <div className="flex justify-between items-center mb-6">
                     <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
                         <Home size={18} /> Back to Dashboard
                     </Link>
-                    <Link to="/mypage" className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold transition-colors">
-                        My Page
-                    </Link>
+                    <div className="flex gap-4">
+                        <button
+                            onClick={() => setIsFilterOpen(!isFilterOpen)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all border
+                            ${isFilterOpen ? 'bg-slate-700 border-slate-600 text-white' : 'bg-transparent border-slate-700 text-slate-400 hover:text-white hover:border-slate-500'}`}
+                        >
+                            <Search size={16} /> Filters
+                        </button>
+                        <Link to="/mypage" className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold transition-colors">
+                            My Page
+                        </Link>
+                    </div>
                 </div>
 
-                <h1 className="text-4xl font-bold mb-8 text-center font-oswald text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-                    LIVE ARCHIVE
-                </h1>
+                <div className="flex items-end justify-between mb-8 border-b border-slate-800 pb-4">
+                    <h1 className="text-4xl font-bold font-oswald text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 leading-none">
+                        LIVE ARCHIVE
+                    </h1>
+                    <div className="text-slate-500 text-sm font-mono">
+                        {filteredLives.length} EVENTS FOUND
+                    </div>
+                </div>
 
-                {/* Filter Panel */}
-                <FilterPanel filters={filters} onChange={setFilters} venues={uniqueVenues} />
+                {/* Collapsible Filter Panel */}
+                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isFilterOpen ? 'max-h-[800px] opacity-100 mb-8' : 'max-h-0 opacity-0 mb-0'}`}>
+                    <FilterPanel
+                        filters={filters}
+                        onChange={setFilters}
+                        venues={uniqueVenues}
+                        songs={availableSongs}
+                    />
+                </div>
 
                 {/* Results */}
                 <div className="space-y-4">
@@ -120,53 +174,62 @@ const LiveList = () => {
                     ) : (
                         filteredLives.map(live => (
                             <Link to={`/live/${live.id}`} key={live.id} className="block group">
-                                <div className="bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-blue-500/50 rounded-xl p-6 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-900/20 relative overflow-hidden">
-                                    <div className="absolute top-0 left-0 w-1 h-full bg-blue-600 transform origin-bottom scale-y-0 group-hover:scale-y-100 transition-transform duration-300"></div>
+                                <div className="bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-blue-500/50 rounded-xl p-5 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-900/20 relative overflow-hidden">
+                                    {/* Left accent border */}
+                                    <div className="absolute top-0 left-0 w-1 h-full bg-slate-700 group-hover:bg-blue-500 transition-colors duration-300"></div>
 
-                                    <div className="flex flex-col md:flex-row md:items-center gap-4">
-                                        {/* Date & Type */}
-                                        <div className="md:w-32 flex-shrink-0">
-                                            <div className="flex items-center gap-2 text-slate-400 mb-2">
-                                                <Calendar size={14} />
-                                                <span className="text-sm font-mono">{new Date(live.date).toISOString().split('T')[0]}</span>
+                                    <div className="flex flex-col md:flex-row md:items-center gap-4 pl-3">
+                                        {/* Date Section */}
+                                        <div className="md:w-28 flex-shrink-0 flex flex-col justify-center">
+                                            <div className="text-2xl font-bold font-oswald text-slate-300 group-hover:text-white leading-none">
+                                                {new Date(live.date).toISOString().split('T')[0].replaceAll('-', '.')}
                                             </div>
-                                            <span className={`text-xs font-bold px-2 py-1 rounded text-slate-900 inline-block
-                                                ${live.type === 'FESTIVAL' ? 'bg-purple-400' :
-                                                    live.type === 'EVENT' ? 'bg-orange-400' :
-                                                        'bg-emerald-400'}`}>
-                                                {live.type || 'ONEMAN'}
-                                            </span>
+                                            <div className="flex items-center gap-1 mt-2">
+                                                <span className={`text-[10px] w-full text-center font-bold px-1 py-0.5 rounded text-white
+                                                    ${live.type === 'FESTIVAL' ? 'bg-purple-600' :
+                                                        live.type === 'EVENT' ? 'bg-orange-600' :
+                                                            live.type === 'ARENA' ? 'bg-blue-600' :
+                                                                'bg-emerald-600'}`}>
+                                                    {live.type || 'ONEMAN'}
+                                                </span>
+                                            </div>
                                         </div>
 
                                         {/* Main Info */}
-                                        <div className="flex-1 min-w-0">
+                                        <div className="flex-1 min-w-0 border-l border-slate-700/50 md:pl-4">
                                             <h2 className="text-xl font-bold text-white mb-1 truncate group-hover:text-blue-400 transition-colors">
                                                 {live.tour_name}
                                             </h2>
-                                            {live.title && (
-                                                <div className="text-blue-200 text-sm font-medium mb-1">
-                                                    {live.title}
+                                            {live.title && live.title !== live.tour_name && (
+                                                <div className="text-blue-200 text-sm font-medium mb-1 flex items-center gap-1">
+                                                    <Tag size={12} /> {live.title}
                                                 </div>
                                             )}
-                                            <div className="flex items-center gap-2 text-slate-400 text-sm">
-                                                <MapPin size={14} />
-                                                <span>{live.venue}</span>
+                                            <div className="flex items-center gap-4 mt-2">
+                                                <div className="flex items-center gap-1.5 text-slate-400 text-sm group-hover:text-slate-300">
+                                                    <MapPin size={14} className="text-secondary-color" />
+                                                    <span className="font-medium">{live.venue}</span>
+                                                </div>
+                                                {/* Placeholder for Setlist Count if available in future */}
+                                                {/* <div className="flex items-center gap-1.5 text-slate-500 text-xs">
+                                                    <Music size={12} /> 20 Songs
+                                                </div> */}
                                             </div>
                                         </div>
 
                                         {/* Actions */}
-                                        <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-4 pl-2 md:pl-0 md:border-none border-t border-slate-700/50 pt-3 md:pt-0">
                                             <button
                                                 onClick={(e) => handleToggleAttendance(e, live.id)}
-                                                className={`px-4 py-2 rounded-full text-sm font-bold transition-all duration-200 flex items-center gap-2 whitespace-nowrap z-10 relative
+                                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap z-10 relative
                                                     ${isAttended(live.id)
                                                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-500/30'
                                                         : 'bg-slate-700 text-slate-300 border border-transparent hover:bg-slate-600'}`}
                                             >
                                                 {isAttended(live.id) ? (
-                                                    <><Check size={14} /> Attended</>
+                                                    <><Check size={12} /> 参戦済み</>
                                                 ) : (
-                                                    <><Plus size={14} /> I Was There</>
+                                                    <><Plus size={12} /> 参戦記録をつける</>
                                                 )}
                                             </button>
 
@@ -181,8 +244,8 @@ const LiveList = () => {
                     )}
                 </div>
 
-                <div className="mt-8 text-center text-slate-500 text-sm">
-                    Showing {filteredLives.length} events
+                <div className="mt-8 text-center text-slate-600 text-xs">
+                    END OF ARCHIVE
                 </div>
             </div>
         </div>

@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { isAttended, toggleAttendance } from '../utils/storage';
+import { useAttendance } from '../hooks/useAttendance';
 import SEO from '../components/SEO';
 
 function LiveDetail() {
     const { id } = useParams();
+    const liveId = parseInt(id, 10);
     const [live, setLive] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [attended, setAttended] = useState(false);
+    const { isAttended, addLive, removeLive, loading: attendanceLoading } = useAttendance();
 
     useEffect(() => {
         // Fetch Live Data
@@ -27,12 +28,19 @@ function LiveDetail() {
             }
         };
         fetchLive();
-        setAttended(isAttended(id));
     }, [id]);
 
-    const handleToggleAttendance = () => {
-        toggleAttendance(id);
-        setAttended(!attended);
+    const handleToggleAttendance = async () => {
+        let success;
+        if (isAttended(liveId)) {
+            success = await removeLive(liveId);
+        } else {
+            success = await addLive(liveId);
+        }
+
+        if (!success) {
+            alert("更新に失敗しました。ログイン状態を確認してください。");
+        }
     };
 
     if (loading) {
@@ -65,19 +73,21 @@ function LiveDetail() {
 
                 <button
                     onClick={handleToggleAttendance}
+                    disabled={attendanceLoading}
                     style={{
                         padding: '10px 20px',
                         borderRadius: '999px',
                         border: 'none',
-                        cursor: 'pointer',
-                        backgroundColor: attended ? 'var(--accent-color)' : '#334155',
-                        color: attended ? '#0f172a' : 'white',
+                        cursor: attendanceLoading ? 'wait' : 'pointer',
+                        backgroundColor: isAttended(liveId) ? 'var(--accent-color)' : '#334155',
+                        color: isAttended(liveId) ? '#0f172a' : 'white',
                         fontWeight: 'bold',
                         fontSize: '1rem',
-                        transition: 'all 0.2s'
+                        transition: 'all 0.2s',
+                        opacity: attendanceLoading ? 0.7 : 1
                     }}
                 >
-                    {attended ? '✓ 参戦済み' : '+ 参戦記録をつける'}
+                    {isAttended(liveId) ? '✓ 参戦済み' : '+ 参戦記録をつける'}
                 </button>
             </div>
 

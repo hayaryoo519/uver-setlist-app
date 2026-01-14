@@ -2,31 +2,114 @@ const router = require('express').Router();
 const db = require('../db');
 const authorize = require('../middleware/authorization');
 
-// GET All Lives
+// GET All Lives with Advanced Filters
 router.get('/', async (req, res) => {
     try {
-        let query;
-        if (req.query.include_setlists === 'true') {
-            query = `
-                SELECT l.*, 
-                       COALESCE(
-                           JSON_AGG(
-                               JSON_BUILD_OBJECT('id', s.id, 'title', s.title, 'position', sl.position) 
-                               ORDER BY sl.position
-                           ) FILTER (WHERE s.id IS NOT NULL), 
-                           '[]'
-                       ) as setlist
+        const {
+            search,
+            startDate,
+            endDate,
+            prefecture,
+            album,
+            songIds,
+            include_setlists
+        } = req.query;
+
+        let paramIndex = 1;
+        let params = [];
+        let whereClauses = [];
+        let havingClause = '';
+
+        // 1. Build Filter Conditions for CTE
+        if (search) {
+            whereClauses.push(`(l.title ILIKE $${paramIndex} OR l.venue ILIKE $${paramIndex} OR l.tour_name ILIKE $${paramIndex})`);
+            params.push(`%${search}%`);
+            paramIndex++;
+        }
+
+        if (startDate) {
+            whereClauses.push(`l.date >= $${paramIndex}`);
+            params.push(startDate);
+            paramIndex++;
+        }
+
+        if (endDate) {
+            whereClauses.push(`l.date <= $${paramIndex}`);
+            params.push(endDate);
+            paramIndex++;
+        }
+
+        if (prefecture) {
+            whereClauses.push(`l.prefecture = $${paramIndex}`);
+            params.push(prefecture);
+            paramIndex++;
+        }
+
+        if (album) {
+            whereClauses.push(`s.album = $${paramIndex}`);
+            params.push(album);
+            paramIndex++;
+        }
+
+        let songIdList = [];
+        if (songIds) {
+            songIdList = songIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+            if (songIdList.length > 0) {
+                whereClauses.push(`s.id = ANY($${paramIndex}::int[])`);
+                params.push(songIdList);
+                paramIndex++;
+
+                // Ensure ALL selected songs are present (AND logic)
+                havingClause = `HAVING COUNT(DISTINCT s.id) >= ${songIdList.length}`;
+            }
+        }
+
+        const whereSql = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
+
+        // 2. Construct Query with CTE for filtering
+        // We use DISTINCT l.id in the CTE to get the list of matching lives
+        let query = `
+            WITH filtered_lives AS (
+                SELECT l.id
                 FROM lives l
                 LEFT JOIN setlists sl ON l.id = sl.live_id
                 LEFT JOIN songs s ON sl.song_id = s.id
+                ${whereSql}
                 GROUP BY l.id
-                ORDER BY l.date DESC
+                ${havingClause}
+            )
+            SELECT l.*
+        `;
+
+        if (include_setlists === 'true') {
+            query += `,
+                   COALESCE(
+                       JSON_AGG(
+                           JSON_BUILD_OBJECT('id', s_full.id, 'title', s_full.title, 'position', sl_full.position) 
+                           ORDER BY sl_full.position
+                       ) FILTER (WHERE s_full.id IS NOT NULL), 
+                       '[]'
+                   ) as setlist
             `;
-        } else {
-            query = 'SELECT * FROM lives ORDER BY date DESC';
         }
 
-        const result = await db.query(query);
+        query += `
+            FROM lives l
+            JOIN filtered_lives fl ON l.id = fl.id
+        `;
+
+        // If including setlists, we need to join again to get the full setlist details
+        if (include_setlists === 'true') {
+            query += `
+                LEFT JOIN setlists sl_full ON l.id = sl_full.live_id
+                LEFT JOIN songs s_full ON sl_full.song_id = s_full.id
+                GROUP BY l.id
+            `;
+        }
+
+        query += ` ORDER BY l.date DESC`;
+
+        const result = await db.query(query, params);
         res.json(result.rows);
     } catch (err) {
         console.error(err.message);
