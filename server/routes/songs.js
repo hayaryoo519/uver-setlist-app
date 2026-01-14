@@ -29,6 +29,8 @@ router.get('/', async (req, res) => {
 router.get('/:id/stats', async (req, res) => {
     try {
         const { id } = req.params;
+
+        // 1. Get Song and Performance Data
         const query = `
             SELECT
               s.*,
@@ -43,10 +45,13 @@ router.get('/:id/stats', async (req, res) => {
                     'type', l.type
                   ) ORDER BY l.date DESC
                 ) FILTER (WHERE l.id IS NOT NULL), '[]'
-              ) as performances
+              ) as performances,
+              COUNT(l.id)::int as total_performances,
+              MIN(l.date) as first_performed_at,
+              MAX(l.date) as last_performed_at
             FROM songs s
             LEFT JOIN setlists sl ON s.id = sl.song_id
-            LEFT JOIN lives l ON sl.live_id = l.id AND l.status = 'FINISHED'
+            LEFT JOIN lives l ON sl.live_id = l.id
             WHERE s.id = $1
             GROUP BY s.id
         `;
@@ -56,7 +61,53 @@ router.get('/:id/stats', async (req, res) => {
             return res.status(404).json("Song not found");
         }
 
-        res.json(result.rows[0]);
+        const song = result.rows[0];
+
+        // 2. Calculate Rarity Metrics
+        let daysSinceLast = null;
+        let playRate = 0;
+        let isRare = false;
+        let totalPossibleLives = 0;
+
+        if (song.last_performed_at) {
+            const now = new Date();
+            const lastDate = new Date(song.last_performed_at);
+            const diffTime = Math.abs(now - lastDate);
+            daysSinceLast = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            // Calculate Play Rate (Frequency)
+            // Get total number of lives held since the song's debut
+            if (song.first_performed_at) {
+                const countRes = await db.query(
+                    "SELECT COUNT(*)::int as count FROM lives WHERE date >= $1",
+                    [song.first_performed_at]
+                );
+                totalPossibleLives = countRes.rows[0].count;
+
+                if (totalPossibleLives > 0) {
+                    playRate = (song.total_performances / totalPossibleLives) * 100;
+                }
+            }
+
+            // Rare Definition:
+            // 1. Revival: Not played in > 2 years (730 days)
+            // 2. Low Frequency: Play Rate < 5%
+            const isRevival = daysSinceLast > 730;
+            const isLowFreq = playRate < 5.0 && totalPossibleLives > 10; // Avoid identifying new songs with few lives as rare immediately
+
+            isRare = isRevival || isLowFreq;
+        }
+
+        // Add calculated fields to response
+        const responseData = {
+            ...song,
+            days_since_last: daysSinceLast,
+            play_rate: parseFloat(playRate.toFixed(1)),
+            is_rare: isRare,
+            total_possible_lives: totalPossibleLives
+        };
+
+        res.json(responseData);
     } catch (err) {
         console.error(err.message);
         res.status(500).send("Server Error");

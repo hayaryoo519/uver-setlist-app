@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, User, Music, LogIn, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import GlobalSearch from '../Search/GlobalSearch';
 
 const Navbar = () => {
     const [isScrolled, setIsScrolled] = useState(false);
@@ -40,6 +41,7 @@ const Navbar = () => {
 
                     {/* Desktop Menu */}
                     <div className="nav-links desktop-only">
+                        <GlobalSearch />
                         <Link to="/lives" className="nav-link">
                             <Music size={18} /> Archive
                         </Link>
