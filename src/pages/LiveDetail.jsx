@@ -136,7 +136,11 @@ function LiveDetail() {
                                     </span>
                                     <div style={{ flex: 1 }}>
                                         <div style={{ fontSize: '1.1rem', fontWeight: '500' }}>
-                                            <Link to={`/song/${song.song_id}`} className="hover:text-blue-400 hover:underline transition-colors text-white">
+                                            <Link
+                                                // Remove spaces for clean URL (e.g. "CORE PRIDE" -> "COREPRIDE")
+                                                to={`/song/${encodeURIComponent(song.title.replace(/\s+/g, ''))}`}
+                                                className="hover:text-blue-400 hover:underline transition-colors text-white"
+                                            >
                                                 {song.title}
                                             </Link>
                                         </div>
