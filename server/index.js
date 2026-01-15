@@ -17,6 +17,7 @@ app.use('/api/lives', require('./routes/lives'));
 app.use('/api/songs', require('./routes/songs'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/import', require('./routes/import'));
+app.use('/api/external', require('./routes/external_api'));
 app.get('/', (req, res) => {
     res.send('UVERworld Setlist API is running');
 });

@@ -102,6 +102,11 @@ export const useGlobalStats = () => {
                     venue: live.venue,
                     title: live.title // Added title for Day/Night distinction
                 });
+
+                // Capture ID if available
+                if (song.id && !tourData[title].songCounts[song.title].id) {
+                    tourData[title].songCounts[song.title].id = song.id;
+                }
             });
         });
 
@@ -117,8 +122,9 @@ export const useGlobalStats = () => {
                 const songRanking = Object.entries(data.songCounts)
                     .map(([songTitle, songInfo]) => ({
                         title: songTitle,
+                        // id: songInfo.id, // ID no longer strictly needed for linking!
                         count: songInfo.count,
-                        lives: songInfo.lives.map(l => ({ ...l, date: formatDate(l.date) })), // Format dates in list
+                        lives: songInfo.lives.map(l => ({ ...l, date: formatDate(l.date) })),
                         percentage: ((songInfo.count / data.count) * 100).toFixed(1)
                     }))
                     .sort((a, b) => b.count - a.count);
