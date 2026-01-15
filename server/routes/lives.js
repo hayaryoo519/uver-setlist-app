@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const db = require('../db');
 const { authorize, adminCheck } = require('../middleware/authorization');
+const { normalizeVenueName } = require('../utils/songTranslations');
 
 // GET All Lives with Advanced Filters
 router.get('/', async (req, res) => {
@@ -148,7 +149,13 @@ router.get('/:id', async (req, res) => {
 // CREATE a Live (Admin only)
 router.post('/', authorize, adminCheck, async (req, res) => {
     try {
-        const { tour_name, title, date, venue, type = 'ONEMAN' } = req.body;
+        const { tour_name, title, date, venue: rawVenue, type = 'ONEMAN' } = req.body;
+
+        // Normalize venue name (translate English to Japanese if applicable)
+        const venue = normalizeVenueName(rawVenue);
+
+        // DEBUG: Log venue translation attempt
+        console.log(`[Venue Translation] Input: "${rawVenue}" -> Output: "${venue}"${rawVenue !== venue ? ' (TRANSLATED)' : ''}`);
 
         const newLive = await db.query(
             "INSERT INTO lives (tour_name, title, date, venue, type) VALUES ($1, $2, $3, $4, $5) RETURNING *",

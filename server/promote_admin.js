@@ -1,25 +1,23 @@
-const { Pool } = require('pg');
-require('dotenv').config();
+const pool = require('./db');
 
-const pool = new Pool({
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    database: process.env.DB_NAME
-});
-
-const promote = async () => {
+const promoteUserToAdmin = async () => {
     try {
-        // Update ALL users to role 'admin' for MVP simplicity
-        const result = await pool.query("UPDATE users SET role = 'admin' RETURNING *");
-        console.log(`Promoted ${result.rowCount} users to Admin.`);
-        console.log(result.rows);
+        console.log("Promoting user to admin...");
+        // Promote the first user found or a specific email if known. 
+        // For now, let's promote all users for simplicity in this dev environment, 
+        // or just list them to let me pick.
+        // Actually, let's just promote 'oaulth@gmail.com' if it exists, or the first user.
+
+        const updateRes = await pool.query(
+            "UPDATE users SET role = 'admin' RETURNING *"
+        );
+
+        console.log("Updated Users:", updateRes.rows.map(u => ({ id: u.id, email: u.email, role: u.role })));
+        process.exit(0);
     } catch (err) {
-        console.error("Promotion failed:", err.message);
-    } finally {
-        await pool.end();
+        console.error(err.message);
+        process.exit(1);
     }
 };
 
-promote();
+promoteUserToAdmin();

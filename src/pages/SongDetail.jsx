@@ -55,7 +55,10 @@ const SongDetail = () => {
     useEffect(() => {
         const fetchSong = async () => {
             try {
-                const res = await fetch(`/api/songs/${id}/stats`);
+                // Ensure spaces are removed to match Dashboard link format (CORE PRIDE -> COREPRIDE)
+                const spacelessId = id.toString().replace(/\s+/g, '');
+                const encodedId = encodeURIComponent(spacelessId);
+                const res = await fetch(`/api/songs/${encodedId}/stats`);
                 if (res.ok) {
                     const data = await res.json();
                     setSong(data);

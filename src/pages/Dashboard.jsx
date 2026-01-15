@@ -754,21 +754,23 @@ function Dashboard() {
                                         >
                                             <div style={{ flex: 1 }}>
                                                 <div style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    {song.id ? (
-                                                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                            <span style={{ color: 'white' }}>{song.title}</span>
-                                                            <Link
-                                                                to={`/song/${song.id}#performance-history`}
-                                                                onClick={(e) => { e.stopPropagation(); closeModal(); }}
-                                                                style={{ color: '#94a3b8', textDecoration: 'underline', fontSize: '0.8rem', marginLeft: '8px', cursor: 'pointer' }}
-                                                                className="hover:text-blue-400"
-                                                            >
-                                                                詳細ページ
-                                                            </Link>
-                                                        </div>
-                                                    ) : (
-                                                        song.title
-                                                    )}
+                                                    <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                                                        <Link
+                                                            // Remove spaces for clean URL (e.g. "CORE PRIDE" -> "COREPRIDE")
+                                                            to={`/song/${encodeURIComponent(song.title.replace(/\s+/g, ''))}#performance-history`}
+                                                            onClick={(e) => { e.stopPropagation(); closeModal(); }}
+                                                            style={{
+                                                                color: 'white',
+                                                                textDecoration: 'none',
+                                                                flex: 1,
+                                                                display: 'flex',
+                                                                alignItems: 'center'
+                                                            }}
+                                                            className="hover:text-blue-400"
+                                                        >
+                                                            {song.title}
+                                                        </Link>
+                                                    </div>
                                                 </div>
                                                 <div style={{
                                                     height: '4px',
