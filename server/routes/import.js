@@ -53,23 +53,27 @@ async function processCSVData(rows, res) {
         const livesMap = new Map();
 
         for (const row of rows) {
+            // Priority: Explicit live_id > (Date + Venue)
             const key = `${row.live_date}_${row.venue}`;
             if (!livesMap.has(key)) {
                 livesMap.set(key, {
                     date: row.live_date,
                     venue: row.venue,
                     prefecture: row.prefecture || null,
-                    tour_name: row.tour,
-                    title: row.tour, // Use tour as title
+                    tour_name: row.tour || row.tour_name || 'Unknown Tour',
+                    title: row.title || row.tour || row.tour_name, // Use title if provided, else fallback to tour
+                    type: row.type || null,
                     songs: []
                 });
             }
 
-            livesMap.get(key).songs.push({
-                title: row.song,
-                order: parseInt(row.order_no),
-                note: row.tags || null
-            });
+            if (row.song || row.song_title) {
+                livesMap.get(key).songs.push({
+                    title: row.song || row.song_title,
+                    order: parseInt(row.order_no || row.position),
+                    note: row.tags || row.note || null
+                });
+            }
         }
 
         let livesCreated = 0;
@@ -83,15 +87,17 @@ async function processCSVData(rows, res) {
             const now = new Date();
             const status = liveDate > now ? 'SCHEDULED' : 'FINISHED';
 
-            // Auto-detect type from venue
-            const venue = liveData.venue.toLowerCase();
-            let type = 'ONEMAN';
-            if (venue.includes('arena') || venue.includes('dome') || venue.includes('アリーナ') || venue.includes('ドーム')) {
-                type = 'ARENA';
-            } else if (venue.includes('zepp') || venue.includes('coast') || venue.includes('ax') || venue.includes('hatch')) {
-                type = 'LIVEHOUSE';
-            } else if (venue.includes('hall') || venue.includes('ホール')) {
-                type = 'HALL';
+            // Auto-detect type from venue if not provided
+            let type = liveData.type || 'ONEMAN';
+            if (!liveData.type) {
+                const venue = liveData.venue.toLowerCase();
+                if (venue.includes('arena') || venue.includes('dome') || venue.includes('アリーナ') || venue.includes('ドーム')) {
+                    type = 'ARENA';
+                } else if (venue.includes('zepp') || venue.includes('coast') || venue.includes('ax') || venue.includes('hatch')) {
+                    type = 'LIVEHOUSE';
+                } else if (venue.includes('hall') || venue.includes('ホール')) {
+                    type = 'HALL';
+                }
             }
 
             // Check if live exists

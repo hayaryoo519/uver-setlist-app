@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload } from 'lucide-react';
+import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SetlistEditor from '../components/Admin/SetlistEditor';
@@ -7,7 +7,7 @@ import SetlistEditor from '../components/Admin/SetlistEditor';
 const AdminPage = () => {
     const { currentUser } = useAuth();
 
-    // Tab State: 'users' | 'lives' | 'songs' | 'import'
+    // Tab State: 'users' | 'lives' | 'songs' | 'import' | 'collect'
     const [activeTab, setActiveTab] = useState('lives');
 
     // --- IMPORT STATE ---
@@ -40,13 +40,20 @@ const AdminPage = () => {
     const [editingSong, setEditingSong] = useState(null);
     const [songFormData, setSongFormData] = useState({ title: '', album: '', release_year: '', mv_url: '', author: '' });
 
+    // --- COLLECT (SETLIST.FM) STATE ---
+    const [sfmResults, setSfmResults] = useState([]);
+    const [isSearchingSFM, setIsSearchingSFM] = useState(false);
+    const [sfmSearchYear, setSfmSearchYear] = useState(new Date().getFullYear());
+    const [sfmPreviewData, setSfmPreviewData] = useState(null);
+    const [isImportingSFM, setIsImportingSFM] = useState(false);
+
 
     // Initial Fetch
     useEffect(() => {
         if (activeTab === 'users') fetchUsers();
         if (activeTab === 'lives') fetchLives();
         if (activeTab === 'songs') fetchSongs();
-        if (activeTab === 'import') setImportResult(null); // Reset import result
+        if (activeTab === 'import' || activeTab === 'collect') setImportResult(null);
     }, [activeTab]);
 
     // --- API CALLS: IMPORT ---
@@ -87,6 +94,151 @@ const AdminPage = () => {
             setIsImporting(false);
         }
     };
+
+    // --- API CALLS: COLLECT (SETLIST.FM) ---
+    const handleSetlistFMSearch = async () => {
+        setIsSearchingSFM(true);
+        setSfmResults([]);
+        try {
+            const token = localStorage.getItem('token');
+            let allResults = [];
+            let page = 1;
+            let totalPages = 1;
+
+            do {
+                // Respect API Rate Limits: Add 1s delay between requests
+                if (page > 1) {
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                }
+
+                const res = await fetch(`http://localhost:4000/api/external/setlistfm/search?year=${sfmSearchYear}&page=${page}`, {
+                    headers: { token }
+                });
+                const data = await res.json();
+
+                if (res.ok && data.setlist) {
+                    allResults = [...allResults, ...data.setlist];
+                    const itemsPerPage = data.itemsPerPage || 20;
+                    totalPages = Math.ceil(data.total / itemsPerPage);
+                    page++;
+                } else if (page === 1) {
+                    // Only alert on first page failure
+                    alert(data.message || 'No results found or error occurred');
+                    break;
+                } else {
+                    // Log error but keep what we have
+                    console.warn(`Stopped fetching at page ${page} due to error:`, data);
+                    break;
+                }
+            } while (page <= totalPages);
+
+            // Check for duplicates against existing lives in DB
+            // Wrap in try-catch so duplicate detection failure doesn't break search
+            let resultsWithDuplicateInfo = allResults;
+            try {
+                const livesRes = await fetch('http://localhost:4000/api/lives');
+                if (livesRes.ok) {
+                    const existingLives = await livesRes.json();
+
+                    // Create a Set of normalized keys (YYYY-MM-DD_venue)
+                    const existingKeys = new Set();
+                    for (const live of existingLives) {
+                        const dateStr = new Date(live.date).toISOString().split('T')[0]; // YYYY-MM-DD
+                        const key = `${dateStr}_${live.venue.toLowerCase()}`;
+                        existingKeys.add(key);
+                    }
+
+                    // Mark duplicates in results
+                    resultsWithDuplicateInfo = allResults.map(result => {
+                        // Convert DD-MM-YYYY to YYYY-MM-DD for comparison
+                        const parts = result.eventDate.split('-');
+                        const dateStr = `${parts[2]}-${parts[1]}-${parts[0]}`; // YYYY-MM-DD
+                        const key = `${dateStr}_${result.venue.name.toLowerCase()}`;
+
+                        return {
+                            ...result,
+                            alreadyImported: existingKeys.has(key)
+                        };
+                    });
+                }
+            } catch (dupErr) {
+                console.warn('Duplicate check failed, continuing without:', dupErr);
+            }
+
+            setSfmResults(resultsWithDuplicateInfo);
+
+        } catch (err) {
+            console.error(err);
+            alert('Failed to fetch from setlist.fm');
+        } finally {
+            setIsSearchingSFM(false);
+        }
+    };
+
+    const handleImportFromSetlistFM = async (sfmSetlist) => {
+        setIsImportingSFM(true);
+        try {
+            const token = localStorage.getItem('token');
+
+            // Format data for our internal API
+            // Note: Our import API currently takes CSV. We should probably add a JSON import endpoint or 
+            // format it as single record inserts. For simplicity, let's use the standard POST /lives and then /setlist.
+
+            // 1. Create/Update Live
+            const liveData = {
+                tour_name: sfmSetlist.tour?.name || 'Unknown Tour',
+                title: sfmSetlist.eventDate, // Temporary title
+                date: sfmSetlist.eventDate.split('-').reverse().join('-'), // DD-MM-YYYY to YYYY-MM-DD
+                venue: sfmSetlist.venue.name,
+                type: 'ONEMAN' // Default
+            };
+
+            const liveRes = await fetch('http://localhost:4000/api/lives', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', token },
+                body: JSON.stringify(liveData)
+            });
+            const newLive = await liveRes.json();
+
+            if (!liveRes.ok) throw new Error('Failed to create live event');
+
+            // 2. Add songs to setlist
+            const songs = [];
+            if (sfmSetlist.sets && sfmSetlist.sets.set) {
+                const flatSongs = sfmSetlist.sets.set.flatMap(s => s.song);
+                for (const sfmSong of flatSongs) {
+                    // Try to finding/creating song is handled by our upcoming logic or we just push titles?
+                    // Actually, the current POST /api/lives/setlist expects IDs. 
+                    // So we need to ensure songs exist first.
+
+                    const songRes = await fetch('http://localhost:4000/api/songs', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', token },
+                        body: JSON.stringify({ title: sfmSong.name })
+                    });
+                    const sData = await songRes.json();
+                    if (songRes.ok) songs.push(sData.id);
+                }
+            }
+
+            if (songs.length > 0) {
+                await fetch(`http://localhost:4000/api/lives/${newLive.id}/setlist`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', token },
+                    body: JSON.stringify({ songs })
+                });
+            }
+
+            alert('Import successful!');
+            fetchLives();
+        } catch (err) {
+            console.error(err);
+            alert('Error during import: ' + err.message);
+        } finally {
+            setIsImportingSFM(false);
+        }
+    };
+
 
 
     // --- API CALLS: LIVES ---
@@ -261,6 +413,110 @@ const AdminPage = () => {
     }, [songs, songSearchTerm]);
 
 
+    // --- BULK IMPORT STATE ---
+    const [selectedSfmSetlists, setSelectedSfmSetlists] = useState([]);
+
+    // Toggle single selection
+    const toggleSfmSelection = (setlistId) => {
+        setSelectedSfmSetlists(prev =>
+            prev.includes(setlistId) ? prev.filter(id => id !== setlistId) : [...prev, setlistId]
+        );
+    };
+
+    // Toggle select all
+    const toggleSelectAllSfm = () => {
+        if (selectedSfmSetlists.length === sfmResults.length) {
+            setSelectedSfmSetlists([]);
+        } else {
+            setSelectedSfmSetlists(sfmResults.map(r => r.id));
+        }
+    };
+
+    // --- BULK IMPORT HANDLER ---
+    const handleBulkImport = async () => {
+        if (!window.confirm(`Are you sure you want to import ${selectedSfmSetlists.length} setlists?`)) return;
+
+        setIsImportingSFM(true);
+        let successCount = 0;
+        let failCount = 0;
+
+        try {
+            // Filter the full results to get the selected objects
+            const selectedObjects = sfmResults.filter(r => selectedSfmSetlists.includes(r.id));
+
+            for (const setlist of selectedObjects) {
+                try {
+                    // Reuse the existing single import logic, but we need to await it carefully
+                    // Note: refactoring handleImportFromSetlistFM to return success status would be cleaner,
+                    // but for now we'll wrap the logic here or call it and catch errors.
+                    // Since handleImportFromSetlistFM uses setIsImportingSFM internally, we should probably refactor it
+                    // or just copy the core logic. Copying logic to avoid state conflicts during loop.
+
+                    const token = localStorage.getItem('token');
+
+                    // 1. Create/Update Live
+                    const liveData = {
+                        tour_name: setlist.tour?.name || 'Unknown Tour',
+                        title: setlist.eventDate,
+                        date: setlist.eventDate.split('-').reverse().join('-'),
+                        venue: setlist.venue.name,
+                        type: 'ONEMAN'
+                    };
+
+                    const liveRes = await fetch('http://localhost:4000/api/lives', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', token },
+                        body: JSON.stringify(liveData)
+                    });
+                    const newLive = await liveRes.json();
+
+                    if (liveRes.ok) {
+                        // 2. Add songs
+                        const songs = [];
+                        if (setlist.sets && setlist.sets.set) {
+                            const flatSongs = setlist.sets.set.flatMap(s => s.song);
+                            for (const sfmSong of flatSongs) {
+                                const songRes = await fetch('http://localhost:4000/api/songs', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', token },
+                                    body: JSON.stringify({ title: sfmSong.name })
+                                });
+                                const sData = await songRes.json();
+                                if (songRes.ok) songs.push(sData.id);
+                            }
+                        }
+
+                        if (songs.length > 0) {
+                            await fetch(`http://localhost:4000/api/lives/${newLive.id}/setlist`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json', token },
+                                body: JSON.stringify({ songs })
+                            });
+                        }
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
+
+                } catch (e) {
+                    console.error("Bulk Import Error for " + setlist.eventDate, e);
+                    failCount++;
+                }
+            }
+
+            alert(`Bulk Import Complete!\nSuccess: ${successCount}\nFailed: ${failCount}`);
+            fetchLives();
+            setSelectedSfmSetlists([]);
+
+        } catch (err) {
+            console.error(err);
+            alert('Error during bulk import');
+        } finally {
+            setIsImportingSFM(false);
+        }
+    };
+
+
     return (
         <div style={{ padding: '40px 20px', maxWidth: '1200px', margin: '0 auto', color: '#fff' }} className="fade-in">
             {/* Header */}
@@ -297,6 +553,13 @@ const AdminPage = () => {
                     <div className="card-header">
                         <h2 className="card-title"><Upload size={24} color="#94a3b8" /> Import</h2>
                         <span className="card-badge">CSV</span>
+                    </div>
+                </div>
+
+                <div className={`admin-card ${activeTab === 'collect' ? 'active' : ''}`} onClick={() => setActiveTab('collect')}>
+                    <div className="card-header">
+                        <h2 className="card-title"><Globe size={24} color="#94a3b8" /> Collect</h2>
+                        <span className="card-badge">API</span>
                     </div>
                 </div>
             </div>
@@ -517,6 +780,133 @@ const AdminPage = () => {
                         </div>
                     </div>
                 )}
+
+                {/* COLLECT CONTENT */}
+                {activeTab === 'collect' && (
+                    <div className="tab-content fade-in">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3 style={{ margin: 0 }}>Collect from setlist.fm</h3>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                {selectedSfmSetlists.length > 0 && (
+                                    <button
+                                        onClick={handleBulkImport}
+                                        className="btn-primary"
+                                        style={{ background: '#22c55e', borderColor: '#22c55e', marginRight: '10px' }}
+                                        disabled={isImportingSFM}
+                                    >
+                                        {isImportingSFM ? <Loader className="animate-spin" size={18} /> : <Download size={18} />}
+                                        Import Selected ({selectedSfmSetlists.length})
+                                    </button>
+                                )}
+                                <input
+                                    type="number"
+                                    value={sfmSearchYear}
+                                    onChange={e => setSfmSearchYear(e.target.value)}
+                                    style={{ padding: '8px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff', width: '100px' }}
+                                />
+                                <button onClick={handleSetlistFMSearch} className="btn-primary" disabled={isSearchingSFM}>
+                                    {isSearchingSFM ? <Loader className="animate-spin" size={18} /> : <Search size={18} />} Search
+                                </button>
+                            </div>
+                        </div>
+
+                        {sfmResults.length > 0 ? (
+                            <div className="table-container">
+                                <table className="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th style={{ width: '40px', textAlign: 'center' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedSfmSetlists.length === sfmResults.length && sfmResults.length > 0}
+                                                    onChange={toggleSelectAllSfm}
+                                                    style={{ transform: 'scale(1.2)', cursor: 'pointer' }}
+                                                />
+                                            </th>
+                                            <th>Date</th><th>Venue</th><th>Location</th><th>Tour</th><th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {sfmResults.map(result => {
+                                            const hasSongs = result.sets?.set?.length > 0;
+                                            const isSelected = selectedSfmSetlists.includes(result.id);
+                                            const isImported = result.alreadyImported;
+
+                                            // Conditional styling - priority: selected > imported > no songs > default
+                                            let bg = 'transparent';
+                                            let borderLeft = 'none';
+
+                                            if (isSelected) {
+                                                bg = 'rgba(59, 130, 246, 0.1)';
+                                            } else if (isImported) {
+                                                bg = 'rgba(34, 197, 94, 0.1)';
+                                                borderLeft = '3px solid #22c55e';
+                                            } else if (!hasSongs) {
+                                                bg = 'rgba(239, 68, 68, 0.1)';
+                                                borderLeft = '3px solid #ef4444';
+                                            }
+
+                                            return (
+                                                <tr key={result.id} style={{ background: bg, borderLeft: borderLeft, opacity: isImported ? 0.7 : 1 }}>
+                                                    <td style={{ textAlign: 'center' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            onChange={() => toggleSfmSelection(result.id)}
+                                                            style={{ transform: 'scale(1.2)', cursor: 'pointer' }}
+                                                            disabled={isImported}
+                                                        />
+                                                    </td>
+                                                    <td style={{ width: '120px' }}>{result.eventDate}</td>
+                                                    <td style={{ fontWeight: 'bold' }}>{result.venue.name}</td>
+                                                    <td style={{ color: '#cbd5e1' }}>{result.venue.city.name}, {result.venue.city.country.code}</td>
+                                                    <td>{result.tour?.name || '-'}</td>
+                                                    <td style={{ width: '220px' }}>
+                                                        <div className="actions-wrapper">
+                                                            {isImported && <span style={{ color: '#22c55e', fontSize: '0.8rem', marginRight: '5px', fontWeight: 'bold' }}>✓ Imported</span>}
+                                                            {!hasSongs && !isImported && <span style={{ color: '#ef4444', fontSize: '0.8rem', marginRight: '5px', fontWeight: 'bold' }}>No Songs</span>}
+                                                            <button
+                                                                onClick={() => setSfmPreviewData(result)}
+                                                                className="action-btn"
+                                                                title="View Setlist"
+                                                                style={{ color: '#3b82f6', marginRight: '5px' }}
+                                                            >
+                                                                <ListMusic size={18} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleImportFromSetlistFM(result)}
+                                                                className="action-btn promote"
+                                                                title="Import to DB"
+                                                                disabled={isImportingSFM}
+                                                            >
+                                                                {isImportingSFM ? <Loader className="animate-spin" size={18} /> : <Download size={18} />}
+                                                            </button>
+                                                            <a
+                                                                href={result.url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="action-btn"
+                                                                title="View on setlist.fm"
+                                                                style={{ color: '#94a3b8' }}
+                                                            >
+                                                                <ExternalLink size={18} />
+                                                            </a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div style={{ textAlign: 'center', padding: '100px 0', border: '1px dashed #334155', borderRadius: '12px', color: '#94a3b8' }}>
+                                <Globe size={48} style={{ marginBottom: '15px', opacity: 0.3 }} />
+                                <p>Enter a year and search for UVERworld setlists on setlist.fm</p>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* LIVE MODAL */}
@@ -607,6 +997,60 @@ const AdminPage = () => {
                     liveTitle={selectedLiveForSetlist.tour_name + (selectedLiveForSetlist.title ? ` - ${selectedLiveForSetlist.title}` : '')}
                     onClose={() => setShowSetlistEditor(false)}
                 />
+            )}
+
+            {/* SETLIST PREVIEW MODAL (setlist.fm) */}
+            {sfmPreviewData && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h2 style={{ margin: 0 }}>Setlist Preview</h2>
+                            <button onClick={() => setSfmPreviewData(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><X size={24} /></button>
+                        </div>
+
+                        <div style={{ marginBottom: '20px', padding: '15px', background: 'rgba(15, 23, 42, 0.5)', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '5px' }}>{sfmPreviewData.eventDate} @ {sfmPreviewData.venue.name}</div>
+                            <div style={{ color: '#94a3b8' }}>{sfmPreviewData.tour?.name || 'Unknown Tour'}</div>
+                        </div>
+
+                        <div className="setlist-preview">
+                            {sfmPreviewData.sets?.set?.length > 0 ? (
+                                sfmPreviewData.sets.set.map((set, setIndex) => (
+                                    <div key={setIndex} style={{ marginBottom: '15px' }}>
+                                        {set.encore ? (
+                                            <div style={{ fontSize: '0.9rem', color: '#94a3b8', borderBottom: '1px solid #334155', paddingBottom: '5px', marginBottom: '10px' }}>Encore {set.encore > 1 ? set.encore : ''}</div>
+                                        ) : (
+                                            <div style={{ fontSize: '0.9rem', color: '#94a3b8', borderBottom: '1px solid #334155', paddingBottom: '5px', marginBottom: '10px' }}>Set {setIndex + 1}</div>
+                                        )}
+                                        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                                            {set.song.map((song, songIndex) => (
+                                                <li key={songIndex} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '10px' }}>
+                                                    <span style={{ color: '#64748b', width: '25px', textAlign: 'right' }}>{songIndex + 1}.</span>
+                                                    <span>{song.name}</span>
+                                                    {song.info && <span style={{ fontSize: '0.8rem', color: '#94a3b8', marginLeft: '10px', fontStyle: 'italic' }}>({song.info})</span>}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ))
+                            ) : (
+                                <div style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>No songs listed.</div>
+                            )}
+                        </div>
+
+                        <div className="modal-actions">
+                            <button type="button" onClick={() => setSfmPreviewData(null)} className="btn-cancel">Close</button>
+                            <button
+                                type="button"
+                                onClick={() => { handleImportFromSetlistFM(sfmPreviewData); setSfmPreviewData(null); }}
+                                className="btn-primary"
+                                disabled={isImportingSFM}
+                            >
+                                <Download size={18} /> Import This Setlist
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             <style>{`

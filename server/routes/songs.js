@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const db = require('../db');
 const { authorize, adminCheck } = require('../middleware/authorization');
+const { normalizeSongTitle } = require('../utils/songTranslations');
 
 // GET All Songs (for search/autocomplete)
 router.get('/', async (req, res) => {
@@ -30,32 +31,75 @@ router.get('/:id/stats', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // 1. Get Song and Performance Data
-        const query = `
-            SELECT
-              s.*,
-              COALESCE(
-                JSON_AGG(
-                  JSON_BUILD_OBJECT(
-                    'id', l.id,
-                    'tour_name', l.tour_name,
-                    'title', l.title,
-                    'date', l.date,
-                    'venue', l.venue,
-                    'type', l.type
-                  ) ORDER BY l.date DESC
-                ) FILTER (WHERE l.id IS NOT NULL), '[]'
-              ) as performances,
-              COUNT(l.id)::int as total_performances,
-              MIN(l.date) as first_performed_at,
-              MAX(l.date) as last_performed_at
-            FROM songs s
-            LEFT JOIN setlists sl ON s.id = sl.song_id
-            LEFT JOIN lives l ON sl.live_id = l.id
-            WHERE s.id = $1
-            GROUP BY s.id
-        `;
-        const result = await db.query(query, [id]);
+        let query, queryParams;
+
+        // Check if `id` is a valid integer (ID lookup)
+        const isId = /^\d+$/.test(id);
+
+        if (isId) {
+            query = `
+                SELECT
+                  s.*,
+                  COALESCE(
+                    JSON_AGG(
+                      JSON_BUILD_OBJECT(
+                        'id', l.id,
+                        'tour_name', l.tour_name,
+                        'title', l.title,
+                        'date', l.date,
+                        'venue', l.venue,
+                        'type', l.type
+                      ) ORDER BY l.date DESC
+                    ) FILTER (WHERE l.id IS NOT NULL), '[]'
+                  ) as performances,
+                  COUNT(l.id)::int as total_performances,
+                  MIN(l.date) as first_performed_at,
+                  MAX(l.date) as last_performed_at
+                FROM songs s
+                LEFT JOIN setlists sl ON s.id = sl.song_id
+                LEFT JOIN lives l ON sl.live_id = l.id
+                WHERE s.id = $1
+                GROUP BY s.id
+            `;
+            queryParams = [id];
+        } else {
+            // Assume it's a title
+            // DECODE URI Component just in case, but usually browser sends decoded path to Express?
+            // Express decodes req.params automatically.
+            // If URL is /songs/COREPRIDE, id is "COREPRIDE".
+            // We need to match this against DB titles with spaces removed.
+
+            // Normalize: remove spaces from input (just in case) and DB field
+            const searchTitle = id.replace(/\s+/g, '').toLowerCase();
+
+            query = `
+                SELECT
+                  s.*,
+                  COALESCE(
+                    JSON_AGG(
+                      JSON_BUILD_OBJECT(
+                        'id', l.id,
+                        'tour_name', l.tour_name,
+                        'title', l.title,
+                        'date', l.date,
+                        'venue', l.venue,
+                        'type', l.type
+                      ) ORDER BY l.date DESC
+                    ) FILTER (WHERE l.id IS NOT NULL), '[]'
+                  ) as performances,
+                  COUNT(l.id)::int as total_performances,
+                  MIN(l.date) as first_performed_at,
+                  MAX(l.date) as last_performed_at
+                FROM songs s
+                LEFT JOIN setlists sl ON s.id = sl.song_id
+                LEFT JOIN lives l ON sl.live_id = l.id
+                WHERE REPLACE(LOWER(s.title), ' ', '') = $1
+                GROUP BY s.id
+            `;
+            queryParams = [searchTitle];
+        }
+
+        const result = await db.query(query, queryParams);
 
         if (result.rows.length === 0) {
             return res.status(404).json("Song not found");
@@ -117,9 +161,15 @@ router.get('/:id/stats', async (req, res) => {
 // CREATE a Song (Admin only)
 router.post('/', authorize, adminCheck, async (req, res) => {
     try {
-        const { title, album, release_year, mv_url, author } = req.body;
+        const { title: rawTitle, album, release_year, mv_url, author } = req.body;
 
-        // Check duplicate?
+        // Normalize title (translate Romaji/English to Japanese if applicable)
+        const title = normalizeSongTitle(rawTitle);
+
+        // DEBUG: Log translation attempt
+        console.log(`[Song Translation] Input: "${rawTitle}" -> Output: "${title}"${rawTitle !== title ? ' (TRANSLATED)' : ''}`);
+
+        // Check duplicate using the normalized title
         const check = await db.query("SELECT * FROM songs WHERE title = $1", [title]);
         if (check.rows.length > 0) {
             // If exists, update it? Or just return?
