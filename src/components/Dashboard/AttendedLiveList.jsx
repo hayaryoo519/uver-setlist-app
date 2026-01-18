@@ -139,6 +139,7 @@ const AttendedLiveList = ({ lives }) => {
                                 <div style={{ flex: 1 }}>
                                     <div style={{ fontWeight: 'bold', fontSize: '1rem', marginBottom: '4px', lineHeight: 1.3, color: 'white' }}>
                                         {live.tour_name}
+                                        {live.special_note && <span style={{ color: '#fbbf24', marginLeft: '8px' }}>({live.special_note})</span>}
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: '#94a3b8' }}>
                                         <MapPin size={12} />

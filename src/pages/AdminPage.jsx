@@ -1,14 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SetlistEditor from '../components/Admin/SetlistEditor';
 
 const AdminPage = () => {
     const { currentUser } = useAuth();
+    const navigate = useNavigate();
 
     // Tab State: 'users' | 'lives' | 'songs' | 'import' | 'collect'
     const [activeTab, setActiveTab] = useState('lives');
+    const location = useLocation();
+    const queryParams = new URLSearchParams(location.search);
+    const initialTab = queryParams.get('tab');
+    const editId = queryParams.get('edit');
+
+
 
     // --- IMPORT STATE ---
     const [importFile, setImportFile] = useState(null);
@@ -26,12 +33,16 @@ const AdminPage = () => {
     const [isLoadingLives, setIsLoadingLives] = useState(false);
     const [showLiveModal, setShowLiveModal] = useState(false);
     const [editingLive, setEditingLive] = useState(null);
-    const [liveFormData, setLiveFormData] = useState({ tour_name: '', title: '', date: '', venue: '', type: 'ONEMAN' });
+    const [liveFormData, setLiveFormData] = useState({ tour_name: '', title: '', date: '', venue: '', type: 'ONEMAN', special_note: '' });
     const [liveSearchTerm, setLiveSearchTerm] = useState('');
     const [liveSortConfig, setLiveSortConfig] = useState({ key: 'date', direction: 'desc' });
     const [liveYearFilter, setLiveYearFilter] = useState('ALL');
     const [selectedLiveIds, setSelectedLiveIds] = useState([]);
     const [isDeletingLives, setIsDeletingLives] = useState(false);
+
+    // --- IMPORT TO EXISTING LIVE STATE ---
+    const [activeLiveForImport, setActiveLiveForImport] = useState(null);
+    const [showImportModal, setShowImportModal] = useState(false);
 
     // --- SETLIST STATE ---
     const [showSetlistEditor, setShowSetlistEditor] = useState(false);
@@ -51,6 +62,7 @@ const AdminPage = () => {
     const [sfmResults, setSfmResults] = useState([]);
     const [isSearchingSFM, setIsSearchingSFM] = useState(false);
     const [sfmSearchYear, setSfmSearchYear] = useState(new Date().getFullYear());
+    const [sfmSearchKeyword, setSfmSearchKeyword] = useState('');
     const [sfmPreviewData, setSfmPreviewData] = useState(null);
     const [isImportingSFM, setIsImportingSFM] = useState(false);
 
@@ -60,7 +72,15 @@ const AdminPage = () => {
         if (activeTab === 'users') fetchUsers();
         if (activeTab === 'lives') fetchLives();
         if (activeTab === 'songs') fetchSongs();
-        if (activeTab === 'import' || activeTab === 'collect') setImportResult(null);
+        if (activeTab === 'users') fetchUsers();
+        if (activeTab === 'lives') fetchLives();
+        if (activeTab === 'songs') fetchSongs();
+        // Reset keyword when switching to import/collect to avoid carrying over from modal
+        if (activeTab === 'collect') {
+            setSfmSearchKeyword('');
+            setImportResult(null);
+        }
+        if (activeTab === 'import') setImportResult(null);
     }, [activeTab]);
 
     // --- API CALLS: IMPORT ---
@@ -78,7 +98,7 @@ const AdminPage = () => {
             formData.append('file', importFile);
 
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:4000/api/import/csv', {
+            const res = await fetch('/api/import/csv', {
                 method: 'POST',
                 headers: { token },
                 body: formData
@@ -103,7 +123,13 @@ const AdminPage = () => {
     };
 
     // --- API CALLS: COLLECT (SETLIST.FM) ---
-    const handleSetlistFMSearch = async () => {
+    const handleSetlistFMSearch = async (overrideKeyword) => {
+        const keywordToUse = typeof overrideKeyword === 'string' ? overrideKeyword : sfmSearchKeyword;
+        if (!sfmSearchYear) {
+            alert('Please enter a year');
+            return;
+        }
+
         setIsSearchingSFM(true);
         setSfmResults([]);
         try {
@@ -113,12 +139,10 @@ const AdminPage = () => {
             let totalPages = 1;
 
             do {
-                // Respect API Rate Limits: Add 1s delay between requests
-                if (page > 1) {
-                    await new Promise(resolve => setTimeout(resolve, 1500));
-                }
+                // Respect API Rate Limits
+                if (page > 1) { await new Promise(resolve => setTimeout(resolve, 1500)); }
 
-                const res = await fetch(`http://localhost:4000/api/external/setlistfm/search?year=${sfmSearchYear}&page=${page}`, {
+                const res = await fetch(`/api/external/setlistfm/search?year=${sfmSearchYear}&keyword=${encodeURIComponent(keywordToUse)}&page=${page}`, {
                     headers: { token }
                 });
                 const data = await res.json();
@@ -129,59 +153,208 @@ const AdminPage = () => {
                     totalPages = Math.ceil(data.total / itemsPerPage);
                     page++;
                 } else if (page === 1) {
-                    // Only alert on first page failure
-                    alert(data.message || 'No results found or error occurred');
+                    // Handle 404 or other errors as "No results found" gracefully
+                    if (res.status === 404) {
+                        setSfmResults([]);
+                    } else {
+                        alert(data.message || 'Error occurred during search');
+                    }
                     break;
                 } else {
-                    // Log error but keep what we have
-                    console.warn(`Stopped fetching at page ${page} due to error:`, data);
-                    alert(`Note: Stopped fetching at page ${page} due to API limit or error. Showing partial results.`);
                     break;
                 }
-            } while (page <= totalPages);
+            } while (page <= totalPages && page <= 10); // Check up to 10 pages (~200 items) to cover full year tours
 
-            // Check for duplicates against existing lives in DB
-            // Wrap in try-catch so duplicate detection failure doesn't break search
-            let resultsWithDuplicateInfo = allResults;
-            try {
-                const livesRes = await fetch('http://localhost:4000/api/lives');
-                if (livesRes.ok) {
-                    const existingLives = await livesRes.json();
+            // Pre-process results with Heuristics and Duplicate Check
+            const existingMap = new Map();
+            lives.forEach(live => {
+                const dateStr = new Date(live.date).toISOString().split('T')[0];
+                const key = `${dateStr}_${live.venue.toLowerCase()}`;
+                existingMap.set(key, live);
+            });
 
-                    // Create a Set of normalized keys (YYYY-MM-DD_venue)
-                    const existingKeys = new Set();
-                    for (const live of existingLives) {
-                        const dateStr = new Date(live.date).toISOString().split('T')[0]; // YYYY-MM-DD
-                        const key = `${dateStr}_${live.venue.toLowerCase()}`;
-                        existingKeys.add(key);
-                    }
+            const processedResults = allResults.map(result => {
+                const parts = result.eventDate.split('-');
+                const dateStr = `${parts[2]}-${parts[1]}-${parts[0]}`; // YYYY-MM-DD
+                const key = `${dateStr}_${result.venue.name.toLowerCase()}`;
 
-                    // Mark duplicates in results
-                    resultsWithDuplicateInfo = allResults.map(result => {
-                        // Convert DD-MM-YYYY to YYYY-MM-DD for comparison
-                        const parts = result.eventDate.split('-');
-                        const dateStr = `${parts[2]}-${parts[1]}-${parts[0]}`; // YYYY-MM-DD
-                        const key = `${dateStr}_${result.venue.name.toLowerCase()}`;
 
-                        return {
-                            ...result,
-                            alreadyImported: existingKeys.has(key)
-                        };
-                    });
+                let displayTourName = result.tour?.name;
+                let suggestedType = 'ONEMAN';
+
+                // Venue Type Auto-Detection
+                const vName = result.venue.name.toLowerCase();
+                if (vName.includes('arena') || vName.includes('dome') || vName.includes('アリーナ') || vName.includes('ドーム')) {
+                    suggestedType = 'ARENA';
+                } else if (vName.includes('zepp') || vName.includes('coast') || vName.includes('hatch') || vName.includes('pit') || vName.includes('ax')) {
+                    suggestedType = 'LIVEHOUSE';
+                } else if (vName.includes('hall') || vName.includes('kaikan') || vName.includes('会館') || vName.includes('ホール')) {
+                    suggestedType = 'HALL';
                 }
-            } catch (dupErr) {
-                console.warn('Duplicate check failed, continuing without:', dupErr);
-            }
 
-            setSfmResults(resultsWithDuplicateInfo);
+                let specialNote = null;
+
+                // BIRTHDAY-BASED 生誕祭 CHECK (applies to all events)
+                const dateParts = result.eventDate.split('-');
+                const month = parseInt(dateParts[1]);
+                const day = parseInt(dateParts[0]);
+                const year = dateParts[2];
+
+                const memberBirthdays = {
+                    '12-21': 'TAKUYA∞',
+                    '11-05': '真太郎',
+                    '02-22': '克哉',
+                    '03-08': '彰',
+                    '02-14': '信人',
+                    '09-25': '誠果'
+                };
+
+                const monthDay = `${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+                const memberName = memberBirthdays[monthDay];
+
+                if (memberName) {
+                    // Birthday match! This is a 生誕祭
+                    specialNote = `${memberName} 生誕祭`;
+                    suggestedType = 'EVENT';
+                }
+
+                // HEURISTICS FOR MISSING TOUR NAMES OR SPECIAL EVENTS
+                if (!displayTourName || displayTourName.trim() === '') {
+                    if (suggestedType === 'ONEMAN') suggestedType = 'EVENT'; // Only default to EVENT if no specific venue type detected
+                    if (result.info) {
+                        displayTourName = result.info;
+                    } else {
+                        // HEURISTICS FOR COMMON MISSING FESTIVALS / SPECIAL EVENTS
+                        const vName = result.venue.name.toLowerCase();
+
+                        if (vName.includes('makuhari messe') && month === 12 && day >= 28) {
+                            displayTourName = `COUNTDOWN JAPAN ${year.slice(-2)}/${(parseInt(year) + 1).toString().slice(-2)}`;
+                            suggestedType = 'FESTIVAL';
+                        } else if (vName.includes('saitama super arena') && month === 5 && day <= 6) {
+                            displayTourName = `VIVA LA ROCK ${year}`;
+                            suggestedType = 'FESTIVAL';
+                        } else if (vName.includes('soga') && month === 8) {
+                            displayTourName = `ROCK IN JAPAN FESTIVAL ${year}`;
+                            suggestedType = 'FESTIVAL';
+                        } else if (vName.includes('hitachinaka') && month === 9) {
+                            displayTourName = `ROCK IN JAPAN FESTIVAL ${year} in HITACHINAKA`;
+                            suggestedType = 'FESTIVAL';
+                        } else if (vName.includes('maizuru') && month === 4) {
+                            displayTourName = `MAIZURU PLAYBACK FES. ${year}`;
+                            suggestedType = 'FESTIVAL';
+                        } else if (vName.includes('soga') && month === 5) { // JAPAN JAM usually at Soga in May
+                            displayTourName = `JAPAN JAM ${year}`;
+                            suggestedType = 'FESTIVAL';
+                        } else if (vName.includes('iwamizawa') && month === 7) {
+                            displayTourName = `JOIN ALIVE ${year}`;
+                            suggestedType = 'FESTIVAL';
+                        } else if (vName.includes('tarukawa') && month === 8) { // RISING SUN usually mid-August
+                            displayTourName = `RISING SUN ROCK FESTIVAL ${year} in EZO`;
+                            suggestedType = 'FESTIVAL';
+                        } else if (vName.includes('sanuki') && month === 8) { // MONSTER baSH usually late August
+                            displayTourName = `MONSTER baSH ${year}`;
+                            suggestedType = 'FESTIVAL';
+                        } else {
+                            const fullText = (result.info || "") + " " + (result.tour?.name || "") + " " + result.venue.name;
+
+                            if (fullText.includes('男祭り') || fullText.toLowerCase().includes('otokomatsuri')) {
+                                specialNote = '男祭り';
+                                displayTourName = `UVERworld 男祭り ${year}`;
+                                suggestedType = 'EVENT';
+                            } else if (fullText.includes('女祭り') || fullText.toLowerCase().includes('onnamatsuri')) {
+                                specialNote = '女祭り';
+                                displayTourName = `UVERworld 女祭り ${year}`;
+                                suggestedType = 'EVENT';
+                            } else if (fullText.includes('生誕祭') || fullText.toLowerCase().includes('seitansai')) {
+                                specialNote = result.info || '生誕祭';
+                                displayTourName = `${result.info || 'Member'} 生誕祭 ${year}`;
+                                suggestedType = 'EVENT';
+                            } else if (fullText.toLowerCase().includes('xmas') || fullText.includes('クリスマス')) {
+                                specialNote = 'Xmas';
+                                displayTourName = `UVERworld PREMIUM LIVE on Xmas ${year}`;
+                                suggestedType = 'EVENT';
+                            } else {
+                                displayTourName = result.tour?.name || `${result.venue.name} Event`;
+                            }
+                        }
+                    }
+                } else {
+                    // Tour name exists, check for special events in info/venue
+                    const fullText = (result.info || "") + " " + result.venue.name;
+
+                    if (!specialNote) { // Don't override birthday detection
+                        if (fullText.includes('男祭り') || fullText.toLowerCase().includes('otokomatsuri')) {
+                            specialNote = '男祭り';
+                            suggestedType = 'EVENT';
+                        } else if (fullText.includes('女祭り') || fullText.toLowerCase().includes('onnamatsuri')) {
+                            specialNote = '女祭り';
+                            suggestedType = 'EVENT';
+                        } else if (fullText.toLowerCase().includes('xmas') || fullText.includes('クリスマス')) {
+                            specialNote = 'Xmas';
+                            suggestedType = 'EVENT';
+                        }
+                    }
+                }
+
+                const existingLive = existingMap.get(key);
+                return {
+                    ...result,
+                    alreadyImported: !!existingLive,
+                    existingLive,
+                    tour: { ...result.tour, name: displayTourName },
+                    suggestedType,
+                    specialNote
+                };
+            });
+
+            setSfmResults(processedResults);
 
         } catch (err) {
             console.error(err);
-            alert('Failed to fetch from setlist.fm');
+            alert('Failed to search setlist.fm');
         } finally {
             setIsSearchingSFM(false);
         }
     };
+
+    // Sync alreadyImported status when lives list updates (e.g. after import or delete)
+    useEffect(() => {
+        setSfmResults(prevResults => {
+            if (prevResults.length === 0) return prevResults;
+
+            // Recalculate duplicate status since 'lives' changed
+            const existingMap = new Map();
+            lives.forEach(live => {
+                const dateStr = new Date(live.date).toISOString().split('T')[0];
+                const key = `${dateStr}_${live.venue.toLowerCase()}`;
+                existingMap.set(key, live);
+            });
+
+            const nextResults = prevResults.map(result => {
+                // Convert DD-MM-YYYY to YYYY-MM-DD for comparison
+                const parts = result.eventDate.split('-');
+                const dateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                const key = `${dateStr}_${result.venue.name.toLowerCase()}`;
+
+                const existingLive = existingMap.get(key);
+                const isImported = !!existingLive;
+
+                // Optimization: If status hasn't changed, keep original object
+                if (result.alreadyImported === isImported && result.existingLiveId === (existingLive ? existingLive.id : null)) {
+                    return result;
+                }
+
+                return {
+                    ...result,
+                    alreadyImported: isImported,
+                    existingLiveId: existingLive ? existingLive.id : null,
+                    existingLive: existingLive
+                };
+            });
+
+            return nextResults;
+        });
+    }, [lives]);
 
     const handleImportFromSetlistFM = async (sfmSetlist) => {
         setIsImportingSFM(true);
@@ -193,15 +366,29 @@ const AdminPage = () => {
             // format it as single record inserts. For simplicity, let's use the standard POST /lives and then /setlist.
 
             // 1. Create/Update Live
+            let finalTourName = sfmSetlist.tour?.name;
+            if (!finalTourName || finalTourName.trim() === '') {
+                // Fallback for festivals or events without tour names
+                if (sfmSetlist.info) {
+                    finalTourName = sfmSetlist.info;
+                } else {
+                    finalTourName = `${sfmSetlist.venue.name} Event`;
+                }
+            }
+
             const liveData = {
-                tour_name: sfmSetlist.tour?.name || 'Unknown Tour',
-                title: sfmSetlist.eventDate, // Temporary title
+                tour_name: finalTourName, // Improved name logic
+                title: '', // Empty subtitle by default per user request
                 date: sfmSetlist.eventDate.split('-').reverse().join('-'), // DD-MM-YYYY to YYYY-MM-DD
                 venue: sfmSetlist.venue.name,
-                type: 'ONEMAN' // Default
+                type: sfmSetlist.suggestedType || (sfmSetlist.tour?.name ? 'ONEMAN' : 'EVENT'),
+                special_note: sfmSetlist.specialNote || null
             };
 
-            const liveRes = await fetch('http://localhost:4000/api/lives', {
+            // Refine type detection if possible
+            // if (sfmSetlist.tour?.name) liveData.type = 'ONEMAN'; // Removed to respect suggestedType
+
+            const liveRes = await fetch('/api/lives', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', token },
                 body: JSON.stringify(liveData)
@@ -219,7 +406,7 @@ const AdminPage = () => {
                     // Actually, the current POST /api/lives/setlist expects IDs. 
                     // So we need to ensure songs exist first.
 
-                    const songRes = await fetch('http://localhost:4000/api/songs', {
+                    const songRes = await fetch('/api/songs', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', token },
                         body: JSON.stringify({ title: sfmSong.name })
@@ -230,7 +417,7 @@ const AdminPage = () => {
             }
 
             if (songs.length > 0) {
-                await fetch(`http://localhost:4000/api/lives/${newLive.id}/setlist`, {
+                await fetch(`/api/lives/${newLive.id}/setlist`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', token },
                     body: JSON.stringify({ songs })
@@ -253,7 +440,7 @@ const AdminPage = () => {
     const fetchLives = async () => {
         setIsLoadingLives(true);
         try {
-            const res = await fetch('http://localhost:4000/api/lives');
+            const res = await fetch('/api/lives?include_setlists=true');
             const data = await res.json();
             setLives(data);
         } catch (err) { console.error(err); } finally { setIsLoadingLives(false); }
@@ -261,7 +448,7 @@ const AdminPage = () => {
 
     const handleLiveSubmit = async (e) => {
         e.preventDefault();
-        const url = editingLive ? `http://localhost:4000/api/lives/${editingLive.id}` : 'http://localhost:4000/api/lives';
+        const url = editingLive ? `/api/lives/${editingLive.id}` : '/api/lives';
         const method = editingLive ? 'PUT' : 'POST';
         try {
             const token = localStorage.getItem('token');
@@ -271,31 +458,95 @@ const AdminPage = () => {
             });
             if (res.ok) {
                 fetchLives(); setShowLiveModal(false);
-                setEditingLive(null); setLiveFormData({ tour_name: '', title: '', date: '', venue: '', type: 'ONEMAN' });
-            } else alert("Failed to save live");
-        } catch (err) { console.error(err); alert("Error saving live"); }
+                setEditingLive(null); setLiveFormData({ tour_name: '', title: '', date: '', venue: '', type: 'ONEMAN', special_note: '' });
+            } else {
+                const errorData = await res.json().catch(() => ({}));
+                alert(`Failed to save live: ${res.status} ${errorData.message || ''}`);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error saving live: " + err.message);
+        }
     };
 
     const handleDeleteLive = async (id) => {
         if (!window.confirm("Delete this live event?")) return;
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:4000/api/lives/${id}`, { method: 'DELETE', headers: { token } });
+            const res = await fetch(`/api/lives/${id}`, { method: 'DELETE', headers: { token } });
             if (res.ok) fetchLives();
-        } catch (err) { console.error(err); }
+            else alert('Failed to delete live');
+        } catch (err) { console.error(err); alert('Error deleting live'); }
     };
+
+    // --- DEEP LINKING EFFECTS ---
+    useEffect(() => {
+        if (initialTab) {
+            setActiveTab(initialTab);
+        }
+    }, [initialTab]);
+
+    useEffect(() => {
+        if (editId && lives.length > 0) {
+            const liveToEdit = lives.find(l => l.id === parseInt(editId, 10));
+            if (liveToEdit) {
+                openEditLive(liveToEdit);
+            }
+        }
+    }, [editId, lives]);
+
+    // --- DELETE CONFIRMATION MODAL STATE ---
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    const handleDeleteSelectedLives = () => {
+        if (selectedLiveIds.length === 0) return;
+        setShowDeleteConfirm(true);
+    };
+
+    const executeDeleteLives = async () => {
+        setShowDeleteConfirm(false); // Close modal first
+        setIsDeletingLives(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/lives/batch-delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', token },
+                body: JSON.stringify({ ids: selectedLiveIds })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                alert(`Successfully deleted ${data.count} lives.`);
+                setSelectedLiveIds([]);
+                fetchLives();
+            } else {
+                const errorData = await res.json().catch(() => ({}));
+                alert(`Failed to delete selected lives: ${res.status} ${errorData.message || ''}`);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error during bulk delete: " + err.message);
+        } finally {
+            setIsDeletingLives(false);
+        }
+    };
+
 
     const openEditLive = (live) => {
         setEditingLive(live);
         setLiveFormData({
             tour_name: live.tour_name,
             title: live.title || '',
-            date: live.date.split('T')[0],
+            date: new Date(live.date).toLocaleDateString('en-CA'), // YYYY-MM-DD in local time
             venue: live.venue,
-            type: live.type || 'ONEMAN'
+            type: live.type || 'ONEMAN',
+            special_note: live.special_note || ''
         });
         setShowLiveModal(true);
     };
+
+
+
 
     const openSetlistEditor = (live) => {
         setSelectedLiveForSetlist(live);
@@ -317,41 +568,66 @@ const AdminPage = () => {
         }
     };
 
-    const handleBulkDeleteLives = async () => {
-        if (!confirm(`Are you sure you want to delete ${selectedLiveIds.length} live events? This cannot be undone.`)) return;
 
-        setIsDeletingLives(true);
-        let successCount = 0;
-        const token = localStorage.getItem('token');
 
-        // Note: Ideally the backend should support bulk delete. For MVP, we'll do concurrent requests.
-        try {
-            await Promise.all(selectedLiveIds.map(async (id) => {
-                try {
-                    const res = await fetch(`/api/lives/${id}`, { method: 'DELETE', headers: { token } });
-                    if (res.ok) successCount++;
-                } catch (e) {
-                    console.error(`Failed to delete live ${id}`, e);
-                }
-            }));
 
-            alert(`Deleted ${successCount} events.`);
-            setSelectedLiveIds([]);
-            fetchLives();
-        } catch (err) {
-            console.error(err);
-            alert("Error during bulk delete");
-        } finally {
-            setIsDeletingLives(false);
-        }
+    // --- API CALLS: IMPORT TO EXISTING LIVE ---
+    const openImportModal = (live) => {
+        setActiveLiveForImport(live);
+        setSfmSearchYear(new Date(live.date).getFullYear());
+        // Clean tour name for search (remove extra details if needed, but try full first)
+        setSfmSearchKeyword(live.tour_name || '');
+        setSfmResults([]); // Clear previous results
+        setShowImportModal(true);
+        // Optional: Auto-search?
+        // handleSetlistFMSearch(new Date(live.date).getFullYear());
     };
 
+    const handleImportToExistingLive = async (setlistData) => {
+        if (!activeLiveForImport) return;
+        if (!confirm(`Import setlist for "${activeLiveForImport.tour_name}"? Existing setlist will be overwritten.`)) return;
+
+        try {
+            const token = localStorage.getItem('token');
+            const songs = setlistData.sets.set.flatMap(s => s.song).map((s, i) => ({
+                title: s.name,
+                order: i + 1 // Simplified order, ideally flatten properly
+            }));
+
+            // Flatten properly for Encore handling if needed, but flatMap is ok for MVP structure
+            // Actually, let's process accurate order across sets
+            let flatSongs = [];
+            let orderCounter = 1;
+            setlistData.sets.set.forEach(set => {
+                set.song.forEach(song => {
+                    flatSongs.push({ title: song.name, order: orderCounter++ });
+                });
+            });
+
+            const res = await fetch(`/api/lives/${activeLiveForImport.id}/import-setlist`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', token },
+                body: JSON.stringify({ songs: flatSongs })
+            });
+
+            if (res.ok) {
+                alert("Setlist imported successfully!");
+                setShowImportModal(false);
+                fetchLives(); // Refresh list to show checkmark
+            } else {
+                alert("Failed to import setlist");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error importing setlist");
+        }
+    };
 
     // --- API CALLS: SONGS ---
     const fetchSongs = async () => {
         setIsLoadingSongs(true);
         try {
-            const res = await fetch('http://localhost:4000/api/songs');
+            const res = await fetch('/api/songs');
             const data = await res.json();
             setSongs(data);
         } catch (err) { console.error(err); } finally { setIsLoadingSongs(false); }
@@ -359,26 +635,39 @@ const AdminPage = () => {
 
     const handleSongSubmit = async (e) => {
         e.preventDefault();
-        const url = editingSong ? `http://localhost:4000/api/songs/${editingSong.id}` : 'http://localhost:4000/api/songs';
+        const url = editingSong ? `/api/songs/${editingSong.id}` : '/api/songs';
         const method = editingSong ? 'PUT' : 'POST';
+
+        // Sanitize data: convert empty strings to null for integer/optional fields
+        const payload = {
+            ...songFormData,
+            release_year: songFormData.release_year === '' ? null : parseInt(songFormData.release_year),
+            album: songFormData.album === '' ? null : songFormData.album,
+            mv_url: songFormData.mv_url === '' ? null : songFormData.mv_url,
+            author: songFormData.author === '' ? null : songFormData.author
+        };
+
         try {
             const token = localStorage.getItem('token');
             const res = await fetch(url, {
                 method, headers: { 'Content-Type': 'application/json', token },
-                body: JSON.stringify(songFormData)
+                body: JSON.stringify(payload)
             });
             if (res.ok) {
                 fetchSongs(); setShowSongModal(false);
                 setEditingSong(null); setSongFormData({ title: '', album: '', release_year: '', mv_url: '', author: '' });
-            } else alert("Failed to save song");
-        } catch (err) { console.error(err); alert("Error saving song"); }
+            } else {
+                const data = await res.json().catch(() => ({}));
+                alert(`Failed to save song: ${data.message || res.statusText}`);
+            }
+        } catch (err) { console.error(err); alert("Error saving song: " + err.message); }
     };
 
     const handleDeleteSong = async (id) => {
         if (!window.confirm("Delete this song? (If it's in a setlist, this might fail)")) return;
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:4000/api/songs/${id}`, { method: 'DELETE', headers: { token } });
+            const res = await fetch(`/api/songs/${id}`, { method: 'DELETE', headers: { token } });
             if (res.ok) fetchSongs();
             else { const d = await res.json(); alert(d.message || "Failed"); }
         } catch (err) { console.error(err); }
@@ -411,7 +700,8 @@ const AdminPage = () => {
             items = items.filter(l =>
                 l.tour_name.toLowerCase().includes(lower) ||
                 l.venue.toLowerCase().includes(lower) ||
-                (l.title && l.title.toLowerCase().includes(lower))
+                (l.title && l.title.toLowerCase().includes(lower)) ||
+                (l.special_note && l.special_note.toLowerCase().includes(lower))
             );
         }
 
@@ -445,7 +735,7 @@ const AdminPage = () => {
         setIsLoadingUsers(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:4000/api/users', { headers: { token: token } });
+            const response = await fetch('/api/users', { headers: { token: token } });
             if (response.ok) { const data = await response.json(); setUsers(data); }
         } catch (err) { console.error(err); } finally { setIsLoadingUsers(false); }
     };
@@ -454,9 +744,9 @@ const AdminPage = () => {
         if (!window.confirm("Are you sure you want to delete this user?")) return;
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:4000/api/users/${userId}`, { method: 'DELETE', headers: { token: token } });
+            const response = await fetch(`/api/users/${userId}`, { method: 'DELETE', headers: { token: token } });
             if (response.ok) fetchUsers();
-            else { const msg = await response.json(); alert(msg || "Failed to delete user"); }
+            else { const msg = await response.json().catch(() => "Failed"); alert(typeof msg === 'string' ? msg : "Failed to delete user"); }
         } catch (err) { console.error(err); }
     };
 
@@ -465,7 +755,7 @@ const AdminPage = () => {
         if (!window.confirm(`Change role to ${newRole}?`)) return;
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:4000/api/users/${userId}/role`, {
+            const response = await fetch(`/api/users/${userId}/role`, {
                 method: 'PUT', headers: { 'Content-Type': 'application/json', token: token },
                 body: JSON.stringify({ role: newRole })
             });
@@ -586,16 +876,38 @@ const AdminPage = () => {
         }
     };
 
+    // --- IMPORT RESULT MODAL STATE ---
+    const [importResultData, setImportResultData] = useState(null); // { success: number, failed: number }
+
+    const closeImportResultModal = () => {
+        setImportResultData(null);
+        setSelectedSfmSetlists([]);
+        fetchLives();
+    };
+
     // --- BULK IMPORT HANDLER ---
     const handleBulkImport = async () => {
-        // Removed window.confirm to avoid blocking issues
         setIsImportingSFM(true);
         let successCount = 0;
         let failCount = 0;
 
         try {
             // Filter the full results to get the selected objects
-            const selectedObjects = sfmResults.filter(r => selectedSfmSetlists.includes(r.id));
+            // Also filter out already imported ones to prevent duplicates
+            let selectedObjects = sfmResults.filter(r => selectedSfmSetlists.includes(r.id));
+
+            const alreadyImportedCount = selectedObjects.filter(r => r.alreadyImported).length;
+            if (alreadyImportedCount > 0) {
+                // For now, simpler handling: automatically skip duplicates without blocking confirm
+                selectedObjects = selectedObjects.filter(r => !r.alreadyImported);
+            }
+
+            if (selectedObjects.length === 0) {
+                // If all selected were duplicates and filtered out
+                setIsImportingSFM(false);
+                setImportResultData({ success: 0, failed: 0, message: 'All selected items were already imported.' });
+                return;
+            }
 
             for (const setlist of selectedObjects) {
                 try {
@@ -603,11 +915,12 @@ const AdminPage = () => {
 
                     // 1. Create/Update Live
                     const liveData = {
-                        tour_name: setlist.tour?.name || 'Unknown Tour',
-                        title: setlist.eventDate,
+                        tour_name: setlist.tour?.name,
+                        title: '', // Empty subtitle by default
                         date: setlist.eventDate.split('-').reverse().join('-'),
                         venue: setlist.venue.name,
-                        type: 'ONEMAN'
+                        type: setlist.suggestedType || 'ONEMAN',
+                        special_note: setlist.specialNote || ''
                     };
 
                     const liveRes = await fetch('/api/lives', {
@@ -652,9 +965,8 @@ const AdminPage = () => {
                 }
             }
 
-            alert(`Bulk Import Complete!\nSuccess: ${successCount}\nFailed: ${failCount}`);
-            fetchLives();
-            setSelectedSfmSetlists([]);
+            setImportResultData({ success: successCount, failed: failCount });
+            // fetchLives and clear selection will happen when modal is closed
 
         } catch (err) {
             console.error(err);
@@ -723,16 +1035,52 @@ const AdminPage = () => {
                         </div>
                         <div className="collect-panel" style={{ padding: '20px' }}>
                             <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                                <input
-                                    type="number"
+                                <select
                                     value={sfmSearchYear}
                                     onChange={(e) => setSfmSearchYear(e.target.value)}
-                                    placeholder="Year"
-                                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #334155', background: '#1e293b', color: '#fff' }}
+                                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #334155', background: '#1e293b', color: '#fff', width: '100px', cursor: 'pointer' }}
+                                >
+                                    {[...Array(new Date().getFullYear() - 2000 + 2)].map((_, i) => {
+                                        const y = new Date().getFullYear() + 1 - i;
+                                        return <option key={y} value={y}>{y}</option>
+                                    })}
+                                </select>
+                                <input
+                                    type="text"
+                                    value={sfmSearchKeyword}
+                                    onChange={(e) => setSfmSearchKeyword(e.target.value)}
+                                    placeholder="Optional: Keyword (Tour/Venue)"
+                                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #334155', background: '#1e293b', color: '#fff', width: '250px' }}
                                 />
                                 <button className="btn-primary" onClick={handleSetlistFMSearch} disabled={isSearchingSFM}>
                                     {isSearchingSFM ? <Loader className="spin" size={18} /> : <Search size={18} />} Search
                                 </button>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
+                                {['男祭り', '女祭り', '生誕祭', 'Xmas', 'PREMIUM LIVE', 'Festival', '武道館', '横浜アリーナ', '大阪城ホール', 'マリンメッセ'].map(tag => (
+                                    <button
+                                        key={tag}
+                                        onClick={() => {
+                                            setSfmSearchKeyword(tag);
+                                            handleSetlistFMSearch(tag);
+                                        }}
+                                        style={{
+                                            padding: '4px 10px',
+                                            fontSize: '0.8rem',
+                                            borderRadius: '15px',
+                                            border: '1px solid #475569',
+                                            background: sfmSearchKeyword === tag ? 'var(--primary-color)' : '#334155',
+                                            color: '#fff',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        #{tag}
+                                    </button>
+                                ))}
+                                {sfmSearchKeyword && (
+                                    <button onClick={() => setSfmSearchKeyword('')} style={{ color: '#ef4444', background: 'none', border: 'none', fontSize: '0.8rem', cursor: 'pointer' }}>Clear</button>
+                                )}
                             </div>
 
                             {sfmResults.length > 0 && (
@@ -747,14 +1095,25 @@ const AdminPage = () => {
                                         {selectedSfmSetlists.length === sfmResults.length ? 'Deselect All' : 'Select All'}
                                     </button>
                                     {selectedSfmSetlists.length > 0 && (
-                                        <button className="btn-primary" onClick={(e) => { e.stopPropagation(); handleBulkImport(); }} style={{ fontSize: '0.9rem', padding: '5px 10px' }}>
-                                            Import Selected ({selectedSfmSetlists.length})
+                                        <button
+                                            className="btn-primary"
+                                            onClick={(e) => { e.stopPropagation(); handleBulkImport(); }}
+                                            style={{ fontSize: '0.9rem', padding: '5px 10px' }}
+                                            disabled={isImportingSFM}
+                                        >
+                                            {isImportingSFM ? <Loader className="spin" size={16} /> : <Download size={16} />} Import Selected ({selectedSfmSetlists.length})
                                         </button>
                                     )}
                                 </div>
                             )}
 
                             <div className="search-results" style={{ display: 'grid', gap: '10px', maxHeight: '600px', overflowY: 'auto' }}>
+                                {sfmResults.length === 0 && !isSearchingSFM && (
+                                    <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', border: '1px dashed #334155', borderRadius: '8px' }}>
+                                        <p style={{ fontSize: '1.1rem', marginBottom: '8px' }}>No setlists found for {sfmSearchYear}</p>
+                                        <p style={{ fontSize: '0.9rem' }}>Try checking the year or clearing the keyword.</p>
+                                    </div>
+                                )}
                                 {sfmResults.map(setlist => (
                                     <div key={setlist.id} className="admin-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', border: selectedSfmSetlists.includes(setlist.id) ? '1px solid var(--primary-color)' : '1px solid #334155' }} onClick={() => toggleSfmSelection(setlist.id)}>
                                         <div style={{ width: '20px', height: '20px', marginRight: '15px', borderRadius: '4px', border: '1px solid #64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', background: selectedSfmSetlists.includes(setlist.id) ? 'var(--primary-color)' : 'transparent' }}>
@@ -763,7 +1122,10 @@ const AdminPage = () => {
 
                                         <div style={{ flex: 1 }}>
                                             <div style={{ fontWeight: 'bold' }}>{setlist.eventDate} @ {setlist.venue.name}</div>
-                                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{setlist.tour?.name || 'No Tour'}</div>
+                                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                                                {setlist.tour?.name || 'No Tour'}
+                                                {setlist.specialNote && <span style={{ color: '#fbbf24', marginLeft: '8px' }}>({setlist.specialNote})</span>}
+                                            </div>
                                             <div style={{ display: 'flex', gap: '10px' }}>
                                                 {setlist.alreadyImported && <span style={{ color: '#fbbf24', fontSize: '0.8rem' }}>⚠ Already Imported</span>}
                                                 {(!setlist.sets?.set || setlist.sets.set.length === 0) && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>⚠ No Songs Listed</span>}
@@ -779,6 +1141,16 @@ const AdminPage = () => {
                                             >
                                                 <ListMusic size={18} />
                                             </button>
+                                            {setlist.alreadyImported && setlist.existingLive && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); openEditLive(setlist.existingLive); }}
+                                                    className="action-btn"
+                                                    title="Edit Live Details"
+                                                    style={{ color: '#fbbf24' }}
+                                                >
+                                                    <Edit2 size={18} />
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
@@ -817,12 +1189,24 @@ const AdminPage = () => {
                     <div className="tab-content fade-in">
                         <div className="table-header-panel">
                             <h3>Live Events</h3>
-                            <button className="btn-primary" style={{ width: 'auto' }} onClick={() => {
-                                setEditingLive(null); setLiveFormData({ tour_name: '', title: '', date: '', venue: '', type: 'ONEMAN' });
-                                setShowLiveModal(true);
-                            }}>
-                                <Plus size={18} /> Add New Live
-                            </button>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                {selectedLiveIds.length > 0 && (
+                                    <button
+                                        className="btn-primary"
+                                        style={{ width: 'auto', background: '#ef4444', color: '#fff' }}
+                                        onClick={handleDeleteSelectedLives}
+                                        disabled={isDeletingLives}
+                                    >
+                                        {isDeletingLives ? <Loader className="spin" size={18} /> : <Trash2 size={18} />} Delete Selected ({selectedLiveIds.length})
+                                    </button>
+                                )}
+                                <button className="btn-primary" style={{ width: 'auto' }} onClick={() => {
+                                    setEditingLive(null); setLiveFormData({ tour_name: '', title: '', date: '', venue: '', type: 'ONEMAN', special_note: '' });
+                                    setShowLiveModal(true);
+                                }}>
+                                    <Plus size={18} /> Add New Live
+                                </button>
+                            </div>
                         </div>
 
                         <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -860,17 +1244,7 @@ const AdminPage = () => {
                                 <option value="venue-desc">Venue (Z-A)</option>
                             </select>
 
-                            {selectedLiveIds.length > 0 && (
-                                <button
-                                    className="btn-primary"
-                                    style={{ background: '#ef4444', color: '#fff', border: 'none', marginLeft: 'auto' }}
-                                    onClick={handleBulkDeleteLives}
-                                    disabled={isDeletingLives}
-                                >
-                                    {isDeletingLives ? <Loader className="spin" size={16} /> : <Trash2 size={16} />}
-                                    Delete Selected ({selectedLiveIds.length})
-                                </button>
-                            )}
+
                         </div>
 
                         <div className="table-container">
@@ -922,6 +1296,7 @@ const AdminPage = () => {
                                                 ) : <ArrowUpDown size={14} style={{ opacity: 0.3 }} />}
                                             </div>
                                         </th>
+                                        <th style={{ width: '80px', textAlign: 'center' }}>Setlist</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -942,16 +1317,46 @@ const AdminPage = () => {
                                             </td>
                                             <td style={{ width: '120px' }}>{new Date(live.date).toLocaleDateString()}</td>
                                             <td>
-                                                <div style={{ fontWeight: 'bold' }}>{live.tour_name}</div>
-                                                {live.title && <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{live.title}</div>}
+                                                <div style={{ fontWeight: 'bold' }}>
+                                                    {live.tour_name}
+                                                    {live.special_note && <span style={{ color: '#fbbf24', marginLeft: '8px' }}>({live.special_note})</span>}
+                                                </div>
+                                                <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{live.title}</div>
+                                                {live.type && <span className="badge">{live.type}</span>}
                                             </td>
-                                            <td style={{ color: '#cbd5e1' }}>{live.venue}</td>
-                                            <td style={{ width: '150px' }}>
+                                            <td>{live.venue}</td>
+                                            <td style={{ textAlign: 'center' }}>
+                                                {live.setlist && live.setlist.length > 0 ? (
+                                                    <div className="flex items-center justify-center gap-1" title={`${live.setlist.length} songs`}>
+                                                        <Check size={16} className="text-emerald-400" />
+                                                        <span className="text-xs text-slate-400">({live.setlist.length})</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center justify-center" title="No setlist">
+                                                        <X size={16} className="text-slate-600" />
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td style={{ width: '180px' }}>
                                                 <div className="actions-wrapper">
+                                                    <button onClick={() => openEditLive(live)} className="action-btn" title="Edit Live" style={{ color: '#fbbf24' }}>
+                                                        <Edit2 size={18} />
+                                                    </button>
                                                     <button onClick={() => openSetlistEditor(live)} className="action-btn" title="Edit Setlist" style={{ color: '#3b82f6' }}>
                                                         <ListMusic size={18} />
                                                     </button>
-                                                    <button onClick={() => openEditLive(live)} className="action-btn edit" title="Edit Live"><Edit2 size={18} /></button>
+                                                    <button onClick={() => {
+                                                        const dateObj = new Date(live.date);
+                                                        const dateStr = dateObj.toLocaleDateString('en-GB').split('/').join('-'); // DD-MM-YYYY approx or just use standard query
+                                                        // Actually SetlistFM query works with YYYY-MM-DD
+                                                        const y = dateObj.getFullYear();
+                                                        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+                                                        const d = String(dateObj.getDate()).padStart(2, '0');
+                                                        const query = `UVERworld ${y}-${m}-${d}`;
+                                                        window.open(`https://www.setlist.fm/search?query=${encodeURIComponent(query)}`, '_blank');
+                                                    }} className="action-btn" title="Search on Setlist.fm" style={{ color: '#8b5cf6' }}>
+                                                        <Search size={18} />
+                                                    </button>
                                                     <button onClick={() => handleDeleteLive(live.id)} className="action-btn delete" title="Delete"><Trash2 size={18} /></button>
                                                 </div>
                                             </td>
@@ -1252,6 +1657,18 @@ const AdminPage = () => {
                                     ))}
                                 </datalist>
                             </div>
+                            <div className="form-group">
+                                <label>Special Note (Optional)</label>
+                                <input
+                                    type="text"
+                                    placeholder="例: TAKUYA∞ 生誕祭、男祭り、Xmas"
+                                    value={liveFormData.special_note || ''}
+                                    onChange={e => setLiveFormData({ ...liveFormData, special_note: e.target.value })}
+                                />
+                                <small style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: '5px', display: 'block' }}>
+                                    特別イベント情報（生誕祭、男祭り、女祭り、Xmas等）
+                                </small>
+                            </div>
                             <div className="modal-actions"><button type="button" onClick={() => setShowLiveModal(false)} className="btn-cancel">Cancel</button><button type="submit" className="btn-primary">Save Live</button></div>
                         </form>
                     </div>
@@ -1283,6 +1700,10 @@ const AdminPage = () => {
                     liveDate={new Date(selectedLiveForSetlist.date).toLocaleDateString()}
                     liveTitle={selectedLiveForSetlist.tour_name + (selectedLiveForSetlist.title ? ` - ${selectedLiveForSetlist.title}` : '')}
                     onClose={() => setShowSetlistEditor(false)}
+                    onEditLive={() => {
+                        setShowSetlistEditor(false);
+                        openEditLive(selectedLiveForSetlist);
+                    }}
                 />
             )}
 
@@ -1381,6 +1802,133 @@ const AdminPage = () => {
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
                 .fade-in { animation: fadeIn 0.3s ease-out; }
             `}</style>
+            {/* IMPORT MODAL FOR EXISTING LIVE */}
+            {showImportModal && activeLiveForImport && (
+                <div className="modal-overlay" onClick={() => setShowImportModal(false)}>
+                    <div className="modal-content large" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3>Find Setlist for: {activeLiveForImport.tour_name} ({new Date(activeLiveForImport.date).toLocaleDateString()})</h3>
+                            <button onClick={() => setShowImportModal(false)} className="close-btn"><X size={24} /></button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="control-bar" style={{ display: 'flex', gap: '10px' }}>
+                                <input
+                                    type="number"
+                                    value={sfmSearchYear}
+                                    onChange={(e) => setSfmSearchYear(e.target.value)}
+                                    placeholder="Year"
+                                    style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '4px', width: '80px' }}
+                                />
+                                <input
+                                    type="text"
+                                    value={sfmSearchKeyword}
+                                    onChange={(e) => setSfmSearchKeyword(e.target.value)}
+                                    placeholder="Tour Name / Keyword"
+                                    style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '4px', flex: 1 }}
+                                />
+                                <button onClick={handleSetlistFMSearch} disabled={isSearchingSFM} className="btn-primary">
+                                    {isSearchingSFM ? <Loader className="spin" size={16} /> : <Search size={16} />} Search
+                                </button>
+                            </div>
+
+                            <div className="sfm-results-list" style={{ marginTop: '20px', maxHeight: '600px', overflowY: 'auto' }}>
+                                {sfmResults.length === 0 && !isSearchingSFM && (
+                                    <p style={{ color: '#94a3b8', textAlign: 'center' }}>Search to find setlists...</p>
+                                )}
+                                {sfmResults.map(setlist => (
+                                    <div key={setlist.id} className="sfm-card" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                            <div>
+                                                <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#fff' }}>{setlist.venue?.name}</div>
+                                                <div style={{ color: '#94a3b8' }}>{setlist.eventDate} - {setlist.tour?.name || 'No Tour Name'}</div>
+                                                <div style={{ marginTop: '8px' }}>
+                                                    {setlist.sets?.set?.length > 0 ? (
+                                                        <span className="badge" style={{ background: '#059669', color: '#fff' }}>
+                                                            {setlist.sets.set.reduce((acc, s) => acc + s.song.length, 0)} songs
+                                                        </span>
+                                                    ) : (
+                                                        <span className="badge" style={{ background: '#f59e0b', color: '#000' }}>⚠ No Songs Listed</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => handleImportToExistingLive(setlist)}
+                                                className="btn-primary"
+                                                style={{ padding: '6px 12px', fontSize: '0.9rem' }}
+                                                disabled={!setlist.sets?.set?.length}
+                                            >
+                                                <Download size={16} /> Import This
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* DELETE CONFIRMATION MODAL */}
+            {showDeleteConfirm && (
+                <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Confirm Deletion</h2>
+
+                        <div style={{ marginBottom: '30px', textAlign: 'center' }}>
+                            <ShieldAlert size={56} color="var(--secondary-color)" style={{ margin: '0 auto 15px', display: 'block' }} />
+                            <p style={{ fontSize: '1.1rem', marginBottom: '10px' }}>
+                                Are you sure you want to delete <strong>{selectedLiveIds.length}</strong> lives?
+                            </p>
+                            <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>This action cannot be undone.</p>
+                        </div>
+
+                        <div className="modal-actions" style={{ justifyContent: 'center' }}>
+                            <button className="btn-cancel" onClick={() => setShowDeleteConfirm(false)}>Cancel</button>
+                            <button
+                                className="btn-primary"
+                                style={{ background: 'var(--secondary-color)', color: '#fff', border: 'none' }}
+                                onClick={executeDeleteLives}
+                            >
+                                <Trash2 size={16} /> Delete Forever
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* IMPORT RESULT MODAL */}
+            {importResultData && (
+                <div className="modal-overlay" onClick={closeImportResultModal}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Import Complete</h2>
+
+                        <div style={{ marginBottom: '30px', textAlign: 'center' }}>
+                            <Check size={56} color="var(--primary-color)" style={{ margin: '0 auto 15px', display: 'block' }} />
+                            <p style={{ fontSize: '1.2rem', marginBottom: '15px' }}>
+                                Processed <strong>{importResultData.success + importResultData.failed}</strong> items.
+                            </p>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '0.95rem' }}>
+                                <div style={{ color: '#22c55e' }}>
+                                    Success: <strong>{importResultData.success}</strong>
+                                </div>
+                                <div style={{ color: '#ef4444' }}>
+                                    Failed: <strong>{importResultData.failed}</strong>
+                                </div>
+                            </div>
+                            {importResultData.message && <p style={{ marginTop: '15px', opacity: 0.8 }}>{importResultData.message}</p>}
+                        </div>
+
+                        <div className="modal-actions" style={{ justifyContent: 'center' }}>
+                            <button
+                                className="btn-primary"
+                                style={{ width: '100%' }}
+                                onClick={closeImportResultModal}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -25,7 +25,7 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
     };
 
     const clearFilters = () => {
-        onChange({ text: '', tags: [], venue: '', songIds: [], album: '' });
+        onChange({ text: '', tags: [], venue: '', songIds: [], album: '', startDate: '', endDate: '' });
     };
 
     // Derived Lists
@@ -97,95 +97,31 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
                 {/* Advanced Filters Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-                    {/* Venue Filter (grouped by prefecture) */}
-                    <div className="relative">
-                        <MapPin className="absolute left-4 top-3.5 text-slate-400 pointer-events-none" size={18} />
-                        <select
-                            value={filters.venue || ''}
-                            onChange={(e) => onChange({ ...filters, venue: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-600 rounded-lg py-3 pl-10 pr-8 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all appearance-none cursor-pointer text-sm"
-                        >
-                            <option value="">すべての会場</option>
-                            {(() => {
-                                // Prefecture name mapping: Romaji → Kanji
-                                const prefectureNameMap = {
-                                    'Hokkaido': '北海道',
-                                    'Aomori': '青森県',
-                                    'Iwate': '岩手県',
-                                    'Miyagi': '宮城県',
-                                    'Akita': '秋田県',
-                                    'Yamagata': '山形県',
-                                    'Fukushima': '福島県',
-                                    'Ibaraki': '茨城県',
-                                    'Tochigi': '栃木県',
-                                    'Gunma': '群馬県',
-                                    'Saitama': '埼玉県',
-                                    'Chiba': '千葉県',
-                                    'Tokyo': '東京都',
-                                    'Kanagawa': '神奈川県',
-                                    'Niigata': '新潟県',
-                                    'Toyama': '富山県',
-                                    'Ishikawa': '石川県',
-                                    'Fukui': '福井県',
-                                    'Yamanashi': '山梨県',
-                                    'Nagano': '長野県',
-                                    'Gifu': '岐阜県',
-                                    'Shizuoka': '静岡県',
-                                    'Aichi': '愛知県',
-                                    'Mie': '三重県',
-                                    'Shiga': '滋賀県',
-                                    'Kyoto': '京都府',
-                                    'Osaka': '大阪府',
-                                    'Hyogo': '兵庫県',
-                                    'Nara': '奈良県',
-                                    'Wakayama': '和歌山県',
-                                    'Tottori': '鳥取県',
-                                    'Shimane': '島根県',
-                                    'Okayama': '岡山県',
-                                    'Hiroshima': '広島県',
-                                    'Yamaguchi': '山口県',
-                                    'Tokushima': '徳島県',
-                                    'Kagawa': '香川県',
-                                    'Ehime': '愛媛県',
-                                    'Kochi': '高知県',
-                                    'Fukuoka': '福岡県',
-                                    'Saga': '佐賀県',
-                                    'Nagasaki': '長崎県',
-                                    'Kumamoto': '熊本県',
-                                    'Oita': '大分県',
-                                    'Miyazaki': '宮崎県',
-                                    'Kagoshima': '鹿児島県',
-                                    'Okinawa': '沖縄県',
-                                    'その他': 'その他'
-                                };
-
-                                const grouped = (venues || []).reduce((acc, item) => {
-                                    const pref = item.prefecture || 'その他';
-                                    if (!acc[pref]) acc[pref] = [];
-                                    acc[pref].push(item.venue);
-                                    return acc;
-                                }, {});
-
-                                return Object.entries(grouped)
-                                    .sort(([a], [b]) => {
-                                        // Always put 'その他' at the bottom
-                                        if (a === 'その他') return 1;
-                                        if (b === 'その他') return -1;
-                                        const aJa = prefectureNameMap[a] || a;
-                                        const bJa = prefectureNameMap[b] || b;
-                                        return aJa.localeCompare(bJa, 'ja');
-                                    })
-                                    .map(([prefecture, venueList]) => (
-                                        <optgroup key={prefecture} label={prefectureNameMap[prefecture] || prefecture}>
-                                            {venueList.sort().map(venue => (
-                                                <option key={venue} value={venue}>{venue}</option>
-                                            ))}
-                                        </optgroup>
-                                    ));
-                            })()}
-                        </select>
-                        <div className="absolute right-3 top-4 text-slate-500 pointer-events-none">▼</div>
+                    {/* Date Range Filter */}
+                    <div className="flex gap-2">
+                        <div className="relative flex-1">
+                            <input
+                                type="date"
+                                placeholder="From"
+                                value={filters.startDate || ''}
+                                onChange={(e) => onChange({ ...filters, startDate: e.target.value })}
+                                className="w-full bg-slate-900 border border-slate-600 rounded-lg py-3 px-3 text-white text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-slate-500"
+                            />
+                            <div className="absolute right-0 top-[-20px] text-xs text-slate-500">Since</div>
+                        </div>
+                        <div className="relative flex-1">
+                            <input
+                                type="date"
+                                placeholder="To"
+                                value={filters.endDate || ''}
+                                onChange={(e) => onChange({ ...filters, endDate: e.target.value })}
+                                className="w-full bg-slate-900 border border-slate-600 rounded-lg py-3 px-3 text-white text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-slate-500"
+                            />
+                            <div className="absolute right-0 top-[-20px] text-xs text-slate-500">Until</div>
+                        </div>
                     </div>
+
+                    {/* Venue Filter Removed per user request */}
 
                     {/* Album Filter */}
                     <div className="relative">
@@ -293,7 +229,7 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
                     </div>
 
                     {/* Clear Button - Show only if filters active */}
-                    {(filters.text || filters.venue || filters.album || filters.songIds.length > 0 || filters.tags.length > 0) && (
+                    {(filters.text || filters.venue || filters.album || filters.songIds.length > 0 || filters.tags.length > 0 || filters.startDate || filters.endDate) && (
                         <button
                             onClick={clearFilters}
                             className="text-slate-400 hover:text-white text-sm underline decoration-slate-600 hover:decoration-white underline-offset-4 transition-colors"
