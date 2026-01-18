@@ -1,0 +1,68 @@
+{
+  "id": "1b5f1108",
+  "versionId": "g4b5dab06",
+  "eventDate": "28-12-2024",
+  "lastUpdated": "2024-12-29T02:35:16.153+0000",
+  "artist": {
+    "mbid": "a107bff6-58da-4302-83ad-317e86a1811c",
+    "name": "UVERworld",
+    "sortName": "UVERworld",
+    "disambiguation": "",
+    "url": "https://www.setlist.fm/setlists/uverworld-53d62365.html"
+  },
+  "venue": {
+    "id": "63d1d257",
+    "name": "Makuhari Messe Kokusai Tenjijou Hall 1-2-3",
+    "city": {
+      "id": "2113015",
+      "name": "Chiba",
+      "state": "Chiba",
+      "stateCode": "04",
+      "coords": {
+        "lat": 35.362,
+        "long": 140.622
+      },
+      "country": {
+        "code": "JP",
+        "name": "Japan"
+      }
+    },
+    "url": "https://www.setlist.fm/venue/makuhari-messe-kokusai-tenjijou-hall-1-2-3-chiba-japan-63d1d257.html"
+  },
+  "sets": {
+    "set": [
+      {
+        "song": [
+          {
+            "name": "THE ONE"
+          },
+          {
+            "name": "Touch off"
+          },
+          {
+            "name": "PHOENIX"
+          },
+          {
+            "name": "MMH"
+          },
+          {
+            "name": "Zero HERE ~SE~"
+          },
+          {
+            "name": "IMPACT"
+          },
+          {
+            "name": "Eye's Sentry"
+          },
+          {
+            "name": "EN"
+          },
+          {
+            "name": "UNKNOWN ORCHESTRA"
+          }
+        ]
+      }
+    ]
+  },
+  "url": "https://www.setlist.fm/setlist/uverworld/2024/makuhari-messe-kokusai-tenjijou-hall-1-2-3-chiba-japan-1b5f1108.html"
+}
