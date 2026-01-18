@@ -23,7 +23,7 @@ router.get('/', async (req, res) => {
 
         // 1. Build Filter Conditions for CTE
         if (search) {
-            whereClauses.push(`(l.title ILIKE $${paramIndex} OR l.venue ILIKE $${paramIndex} OR l.tour_name ILIKE $${paramIndex})`);
+            whereClauses.push(`(l.title ILIKE $${paramIndex} OR l.venue ILIKE $${paramIndex} OR l.tour_name ILIKE $${paramIndex} OR l.special_note ILIKE $${paramIndex})`);
             params.push(`%${search}%`);
             paramIndex++;
         }
@@ -156,7 +156,7 @@ router.get('/:id', async (req, res) => {
 // CREATE a Live (Admin only)
 router.post('/', authorize, adminCheck, async (req, res) => {
     try {
-        const { tour_name, title, date, venue: rawVenue, type = 'ONEMAN' } = req.body;
+        const { tour_name, title, date, venue: rawVenue, type = 'ONEMAN', special_note } = req.body;
 
         // Normalize venue name (translate English to Japanese if applicable)
         const venue = normalizeVenueName(rawVenue);
@@ -165,8 +165,8 @@ router.post('/', authorize, adminCheck, async (req, res) => {
         console.log(`[Venue Translation] Input: "${rawVenue}" -> Output: "${venue}"${rawVenue !== venue ? ' (TRANSLATED)' : ''}`);
 
         const newLive = await db.query(
-            "INSERT INTO lives (tour_name, title, date, venue, type) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-            [tour_name, title, date, venue, type]
+            "INSERT INTO lives (tour_name, title, date, venue, type, special_note) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+            [tour_name, title, date, venue, type, special_note]
         );
 
         res.json(newLive.rows[0]);
@@ -180,21 +180,25 @@ router.post('/', authorize, adminCheck, async (req, res) => {
 router.put('/:id', authorize, adminCheck, async (req, res) => {
     try {
         const { id } = req.params;
-        const { tour_name, title, date, venue, type } = req.body;
+        const { tour_name, title, date, venue, type, special_note } = req.body;
+
+        console.log(`[UPDATE LIVE] ID: ${id}, Body:`, req.body);
 
         const updateLive = await db.query(
-            "UPDATE lives SET tour_name = $1, title = $2, date = $3, venue = $4, type = $5 WHERE id = $6 RETURNING *",
-            [tour_name, title, date, venue, type, id]
+            "UPDATE lives SET tour_name = $1, title = $2, date = $3, venue = $4, type = $5, special_note = $6 WHERE id = $7 RETURNING *",
+            [tour_name, title, date, venue, type, special_note, id]
         );
 
         if (updateLive.rows.length === 0) {
+            console.warn(`[UPDATE LIVE] Live not found: ${id}`);
             return res.status(404).json("Live not found");
         }
 
+        console.log("Live updated successfully:", updateLive.rows[0]);
         res.json(updateLive.rows[0]);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Server Error");
+        console.error("[UPDATE LIVE ERROR]", err.message);
+        res.status(500).send("Server Error: " + err.message);
     }
 });
 
@@ -227,6 +231,70 @@ router.put('/:id/setlist', authorize, adminCheck, async (req, res) => {
     } catch (err) {
         await db.query("ROLLBACK");
         console.error(err.message);
+        res.status(500).send("Server Error");
+    }
+});
+
+// IMPORT Setlist from SetlistFM logic (Admin only)
+router.post('/:id/import-setlist', authorize, adminCheck, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { songs } = req.body; // Expect array of { title, order } objects from SetlistFM
+
+        if (!songs || !Array.isArray(songs)) {
+            return res.status(400).json({ message: "Invalid songs data" });
+        }
+
+        await db.query("BEGIN");
+
+        // 1. Delete existing setlist
+        await db.query("DELETE FROM setlists WHERE live_id = $1", [id]);
+
+        // 2. Process each song
+        for (const song of songs) {
+            // Check if song exists
+            let songId;
+            const songRes = await db.query("SELECT id FROM songs WHERE title = $1", [song.title]);
+
+            if (songRes.rows.length > 0) {
+                songId = songRes.rows[0].id;
+            } else {
+                // Create new song
+                const newSong = await db.query("INSERT INTO songs (title) VALUES ($1) RETURNING id", [song.title]);
+                songId = newSong.rows[0].id;
+            }
+
+            // Insert into setlists
+            await db.query(
+                "INSERT INTO setlists (live_id, song_id, position) VALUES ($1, $2, $3)",
+                [id, songId, song.order || 1] // Fallback order if missing, but usually provided
+            );
+        }
+
+        await db.query("COMMIT");
+        res.json({ message: "Setlist imported successfully", count: songs.length });
+
+    } catch (err) {
+        await db.query("ROLLBACK");
+        console.error("Import Setlist Error:", err);
+        res.status(500).json({ message: "Failed to import setlist" });
+    }
+});
+
+// BATCH DELETE Lives (Admin only)
+router.post('/batch-delete', authorize, adminCheck, async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json("Invalid IDs provided");
+        }
+
+        const deleteQuery = "DELETE FROM lives WHERE id = ANY($1::int[])";
+        const result = await db.query(deleteQuery, [ids]);
+
+        res.json({ message: "Lives deleted", count: result.rowCount });
+    } catch (err) {
+        console.error("Batch delete error:", err.message);
         res.status(500).send("Server Error");
     }
 });
