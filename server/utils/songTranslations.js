@@ -26,6 +26,7 @@ const songTranslations = {
     "Endscape": "endscape",
     "Shaka Beach ~Laka Laka La~": "シャカビーチ〜Laka Laka La〜",
     "Shaka Beach": "シャカビーチ〜Laka Laka La〜",
+    "Shaka Beach: Laka Laka La": "シャカビーチ〜Laka Laka La〜",
     "Ukiyo CROSSING": "浮世CROSSING",
     "Ukiyo Crossing": "浮世CROSSING",
 
@@ -34,6 +35,7 @@ const songTranslations = {
     "GEKIDOU": "激動",
     "Just break the limit!": "Just break the limit!",
     "Koishikute": "恋いしくて",
+    "恋しくて": "恋いしくて",
     "Hakanaku mo Towa no Kanashi": "儚くも永久のカナシ",
 
     // 2009
@@ -72,6 +74,7 @@ const songTranslations = {
 
     // 2015
     "Boku no Kotoba de wa Nai Kore wa Bokutachi no Kotoba": "僕の言葉ではない これは僕達の言葉",
+    "Boku no Kotoba de wanai Kore wa Bokutachi no Kotoba": "僕の言葉ではない これは僕達の言葉",
     "I LOVE THE WORLD": "I LOVE THE WORLD",
     "I Love The World": "I LOVE THE WORLD",
 
@@ -163,6 +166,7 @@ const songTranslations = {
     "Byouteki Kikyuu Nikki": "病的希求日記",
     "counting song - H": "counting song - H",
     "Kamiatsume": "神集め",
+    "Kami Atsume": "神集め",
     "Kokoro ga Sasu Basho to Kuchiguse": "心が指す場所と口癖　そして君がついて来る",
     "Otonoha": "オトノハ",
 
@@ -196,19 +200,23 @@ const songTranslations = {
     "WANNA be BRILLIANT": "WANNA be BRILLIANT",
     "Kimi no Mama": "君のまま",
     "Wakasa yue Entelecheia": "若さ故エンテレケイア",
+    "Wakasa Yue Enterekeia": "若さ故エンテレケイア",
 
     // LAST era
     "Ultimate": "Ultimate",
     "NO.1": "NO.1",
     "6tsu no Kaze": "6つの風",
+    "6-tsu no Kaze": "6つの風",
     "Choutaisaku +81": "超大作＋81",
     "MONDO PIECE": "MONDO PIECE",
     "Mondo Piece": "MONDO PIECE",
     "Panic World": "パニックワールド",
     "Chimimoryo March": "魑魅魍魎マーチ",
+    "Chimimouryou March": "魑魅魍魎マーチ",
     "Kyouchi Mantra": "境地・マントラ",
     "Itsuka Kanarazu Shinu Koto o Wasureruna": "いつか必ず死ぬことを忘れるな",
     "Isseki o Toujiru": "一石を投じる　Tokyo midnight sun",
+    "Isseki wo Toujiru Tokyo midnight sun": "一石を投じる　Tokyo midnight sun",
 
     // LIFE 6 SENSE era
     "ace of ace": "ace of ace",
@@ -234,6 +242,7 @@ const songTranslations = {
     "LIFE": "LIFE",
     "DEJAVU": "DEJAVU",
     "Nanokame no Ketsui": "7日目の決意",
+    "7 Nichi Me no Ketsui": "7日目の決意",
     "AWAKE": "AWAKE",
     "Burst": "Burst",
     "Rush": "Rush",
@@ -267,10 +276,21 @@ const songTranslations = {
     "Sirius": "シリウス",
     "SHOUT LOVE": "SHOUT LOVE",
     "Shout Love": "SHOUT LOVE",
+    "Honno Sukoshi": "ほんの少し",
+    "honno sukoshi": "ほんの少し",
+    "Madara Chou": "マダラ蝶",
+    "Kokorozashi": "志 -kokorozashi-",
+    "Itsuka Kanarazu Shinu Koto wo Wasureru Na": "いつか必ず死ぬことを忘れるな",
+    "Shousha Okubyoumono": "勝者臆病者",
+    "Muimininaruyoru": "無意味になる夜",
+    "Raichoue": "来鳥江",
+    "Iwanakute mo Tsutawaru Are wa Sukoshi Uso da": "言わなくても伝わる あれは少し嘘だ",
+    "Kokoro ga Sasu Basho to Kuchiguse Soshite Kimi ga Tsuite Kuru": "心が指す場所と口癖 そして君がついて来る",
     "IDEAL REALITY": "IDEAL REALITY",
     "Ideal Reality": "IDEAL REALITY",
     "LONE WOLF": "LONE WOLF",
     "奏全域": "奏全域",
+    "Sou Zen'iki": "奏全域",
     "Shuuen": "終焉",
     "Collide": "Collide",
     "TYCOON": "TYCOON",
@@ -340,16 +360,44 @@ const songTranslations = {
     "AWAYOKUBA-Kiru": "AWAYOKUBA-斬る",
     "NOWHERE boy": "NOWHERE boy",
     "バーベル~皇帝の新しい服~": "バーベル～皇帝の新しい服 album ver.～",
+    "Barbell ~ Koutei no Atarashii Fuku": "バーベル～皇帝の新しい服 album ver.～",
     "Barbell": "バーベル～皇帝の新しい服 album ver.～",
+    "~Nagare · Kuukyo · THIS WORD~": "～流れ・空虚・THIS WORD～",
+    "Nagare Kuukyo THIS WORD": "～流れ・空虚・THIS WORD～",
+    "ANOMALY 奏者": "ANOMALY奏者",
+    "ANOMALY": "ANOMALY奏者",
+    "= (Equal)": "=",
+    "Equal": "=",
+    "Prime": "PRIME",
+    "THE ONE (SE)": "THE ONE",
+    "THE ONE SE": "THE ONE",
+    "to the world (SE)": "to the world",
+    "to the world SE": "to the world",
+    "Wa'on": "和音",
+    "アイ・アム　Riri": "アイ・アム Riri",
+    "ﾊｲ!問題作": "ハイ!問題作",
+    "モノクローム〜気付けなかったdevotion〜": "モノクローム〜気付けなかったdevotion〜",
+    "モノクローム～気付けなかったdevotion～": "モノクローム〜気付けなかったdevotion〜",
+    "志 -kokorozashi-": "志-kokorozashi-",
+    "心が指す場所と口癖 そして君がついて来る": "心が指す場所と口癖　そして君がついて来る",
+    "超大作+81": "超大作＋81",
+    "零 HERE ~SE~": "零 HERE ～SE～",
+    "零HERE ~SE~": "零 HERE ～SE～",
+    "零HERE～SE～": "零 HERE ～SE～",
 
     // Ø CHOIR SE
     "零 HERE ~SE~": "零HERE～SE～",
     "Zero HERE SE": "零HERE～SE～",
     "Zero HERE ~SE~": "零HERE～SE～",
     "ANOMALY Souja": "ANOMALY奏者",
+    "ANOMALY sousha": "ANOMALY奏者",
     "ENIGMASIS": "ENIGMASIS",
     "High Light!": "High Light!",
     "WINGS ever": "WINGS ever",
+    "Uberworld": ".über cozy universe",
+    "über cozy universe": ".über cozy universe",
+    ".uber cozy universe": ".über cozy universe",
+    ".über cozy universe": ".über cozy universe",
 
     // ============================================
     // VARIATIONS / ALTERNATE SPELLINGS
@@ -656,7 +704,7 @@ const venueTranslations = {
     // 東北
     "Hirosaki Shimin Kaikan": "弘前市民会館",
     "TOSAI CLASSIC HALL IWATE": "トーサイクラシックホール岩手",
-    "SENDAI GIGS": "SENDAI GIGS",
+    "SENDAI GIGS": "仙台GIGS",
     "Obihiro Shimin Bunka Hall": "帯広市民文化ホール",
 
     // 関東

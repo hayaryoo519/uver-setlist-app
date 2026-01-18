@@ -171,12 +171,12 @@ export const useLiveStats = () => {
                 }
 
                 // Fetch Attended Lives
-                const livesRes = await fetch('http://localhost:4000/api/users/me/attended_lives', {
+                const livesRes = await fetch('/api/users/me/attended_lives', {
                     headers: { 'token': token }
                 });
 
                 // Fetch All Songs (Metadata)
-                const songsRes = await fetch('http://localhost:4000/api/songs', {
+                const songsRes = await fetch('/api/songs', {
                     headers: { 'token': token } // Optional auth if required
                 });
 

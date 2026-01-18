@@ -18,17 +18,36 @@ router.get('/setlistfm/search', authorize, adminCheck, async (req, res) => {
         // Search for UVERworld setlists
         // Documentation: https://api.setlist.fm/rest/1.0/search/setlists
         // Note: MBID search was returning 404, so we use artistName which is working.
+
+        const params = {
+            artistName: 'UVERworld',
+            year: year || undefined,
+            tourName: req.query.keyword || undefined,
+            p: req.query.page || 1
+        };
+        console.log("Searching SetlistFM with params:", params);
+
         const response = await axios.get(`${SETLIST_FM_API_URL}/search/setlists`, {
-            params: {
-                artistName: 'UVERworld',
-                year: year || new Date().getFullYear(),
-                p: req.query.page || 1
-            },
+            params,
             headers: {
                 'x-api-key': apiKey,
                 'Accept': 'application/json'
             }
         });
+
+        if (response.data.setlist) {
+            const dec28 = response.data.setlist.find(s => s.eventDate === '28-12-2024');
+            if (dec28) {
+                console.log("DEBUG 12/28 DATA:", JSON.stringify({
+                    tour: dec28.tour,
+                    info: dec28.info,
+                    venue: dec28.venue,
+                    sets: dec28.sets
+                }, null, 2));
+            }
+        }
+
+        console.log(`SetlistFM Response: ${response.status} - Found ${response.data.setlist ? response.data.setlist.length : 0} items`);
 
         res.json(response.data);
     } catch (err) {

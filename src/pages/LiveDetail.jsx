@@ -67,6 +67,11 @@ function LiveDetail() {
 
             <div style={{ marginBottom: '30px' }}>
                 <h1 style={{ marginBottom: '10px' }}>{mainTitle}</h1>
+                {live.special_note && (
+                    <div style={{ color: '#fbbf24', fontSize: '0.9rem', marginBottom: '8px', fontWeight: '500' }}>
+                        {live.special_note}
+                    </div>
+                )}
                 <div style={{ color: '#94a3b8', marginBottom: '16px' }}>
                     {new Date(live.date).toLocaleDateString()} @ {live.venue}
                 </div>
