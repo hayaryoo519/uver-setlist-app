@@ -10,7 +10,7 @@ const LiveList = () => {
     const [availableSongs, setAvailableSongs] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     // filters state: songIds is array of integers, album is string
-    const [filters, setFilters] = useState({ text: '', tags: [], venue: '', songIds: [], album: '' });
+    const [filters, setFilters] = useState({ text: '', tags: [], venue: '', songIds: [], album: '', startDate: '', endDate: '' });
     // Use Attendance Hook
     const { attendedIds, addLive, removeLive, isAttended, loading: attendanceLoading } = useAttendance();
 
@@ -31,7 +31,7 @@ const LiveList = () => {
     useEffect(() => {
         // Fetch Lives (server-side filter for complex relations)
         fetchLives();
-    }, [filters.songIds, filters.album]);
+    }, [filters.songIds, filters.album, filters.startDate, filters.endDate]);
 
     const fetchLives = async () => {
         setIsLoading(true);
@@ -42,6 +42,12 @@ const LiveList = () => {
             }
             if (filters.album) {
                 params.append('album', filters.album);
+            }
+            if (filters.startDate) {
+                params.append('startDate', filters.startDate);
+            }
+            if (filters.endDate) {
+                params.append('endDate', filters.endDate);
             }
 
             // Note: We fetch ALL lives (filtered by heavy constraints) 
@@ -82,17 +88,7 @@ const LiveList = () => {
         }
     };
 
-    const uniqueVenues = useMemo(() => {
-        // Derive venues with prefectures from currently loaded lives
-        // Returns array of { venue, prefecture } for grouped dropdown
-        const venueMap = new Map();
-        lives.forEach(live => {
-            if (live.venue && !venueMap.has(live.venue)) {
-                venueMap.set(live.venue, live.prefecture || 'その他');
-            }
-        });
-        return Array.from(venueMap.entries()).map(([venue, prefecture]) => ({ venue, prefecture }));
-    }, [lives]);
+    // uniqueVenues calculation removed per user request (Filter removed)
 
     const filteredLives = useMemo(() => {
         return lives.filter(live => {
@@ -175,7 +171,6 @@ const LiveList = () => {
                     <FilterPanel
                         filters={filters}
                         onChange={setFilters}
-                        venues={uniqueVenues}
                         songs={availableSongs}
                     />
                 </div>
@@ -197,15 +192,16 @@ const LiveList = () => {
                                         {/* Date Section */}
                                         <div className="md:w-28 flex-shrink-0 flex flex-col justify-center">
                                             <div className="text-2xl font-bold font-oswald text-slate-300 group-hover:text-white leading-none">
-                                                {new Date(live.date).toISOString().split('T')[0].replaceAll('-', '.')}
+                                                {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.')}
                                             </div>
                                             <div className="flex items-center gap-1 mt-2">
                                                 <span className={`text-[10px] w-full text-center font-bold px-1 py-0.5 rounded text-white
                                                     ${live.type === 'FESTIVAL' ? 'bg-purple-600' :
                                                         live.type === 'EVENT' ? 'bg-orange-600' :
-                                                            live.type === 'ARENA' ? 'bg-blue-600' :
-                                                                'bg-emerald-600'}`}>
-                                                    {live.type || 'ONEMAN'}
+                                                            'bg-emerald-600'}`}>
+                                                    {live.type === 'FESTIVAL' ? 'FESTIVAL' :
+                                                        live.type === 'EVENT' ? 'EVENT' :
+                                                            'ONE MAN'}
                                                 </span>
                                             </div>
                                         </div>
