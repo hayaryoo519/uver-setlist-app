@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
-import { Music, Calendar, MapPin, Play, Clock, ArrowLeft, Loader, Sparkles } from 'lucide-react';
+import { Music, Calendar, MapPin, Play, Clock, ArrowLeft, Loader, Sparkles, Disc } from 'lucide-react';
 import SEO from '../components/SEO';
+import { DISCOGRAPHY } from '../data/discography';
 
 const SongDetail = () => {
     const { id } = useParams();
@@ -116,7 +117,7 @@ const SongDetail = () => {
 
             <div className="max-w-4xl mx-auto px-4">
                 <Link to="/lives" className="inline-flex items-center text-slate-400 hover:text-white mb-6 transition-colors">
-                    <ArrowLeft size={18} className="mr-2" /> Back to Archives
+                    <ArrowLeft size={18} className="mr-2" /> アーカイブに戻る
                 </Link>
 
                 {/* Header */}
@@ -131,9 +132,15 @@ const SongDetail = () => {
                                 <span>SONG ANALYTICS</span>
                             </div>
                             {song.is_rare && (
-                                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-red-500/20 border border-amber-500/50 text-amber-400 text-sm font-bold shadow-[0_0_15px_rgba(245,158,11,0.2)] animate-pulse">
-                                    <Sparkles size={14} />
-                                    <span>RARE SONG</span>
+                                <div className="relative group">
+                                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-red-500/20 border border-amber-500/50 text-amber-400 text-sm font-bold shadow-[0_0_15px_rgba(245,158,11,0.2)] animate-pulse cursor-help">
+                                        <Sparkles size={14} />
+                                        <span>レア曲</span>
+                                    </div>
+                                    <div className="absolute top-full right-0 mt-2 w-64 p-3 bg-slate-800 border border-slate-600 rounded-lg text-xs text-slate-300 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 shadow-xl">
+                                        <div className="font-bold text-amber-400 mb-1">レア曲とは？</div>
+                                        <div>演奏率が低い（5%以下）または長期間演奏されていない（3年以上）曲のことです。ライブで聴けたらラッキー！✨</div>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -142,33 +149,40 @@ const SongDetail = () => {
                             {song.title}
                         </h1>
 
-                        <div className="flex flex-wrap gap-6 text-slate-300">
-                            {song.album && (
-                                <div className="flex items-center gap-2">
-                                    <span className="text-slate-500 text-xs uppercase tracking-wider">ALBUM</span>
-                                    <span>{song.album}</span>
-                                </div>
-                            )}
-                            {song.release_year && (
-                                <div className="flex items-center gap-2">
-                                    <span className="text-slate-500 text-xs uppercase tracking-wider">YEAR</span>
-                                    <span>{song.release_year}</span>
-                                </div>
-                            )}
-                        </div>
+                        {/* 収録作品セクション */}
+                        {song && (() => {
+                            const containingReleases = DISCOGRAPHY.filter(release =>
+                                release.songs.some(s => s === song.title || s.toLowerCase() === song.title.toLowerCase())
+                            );
+                            if (containingReleases.length > 0) {
+                                return (
+                                    <div className="mt-4 pt-4 border-t border-slate-700">
+                                        <div className="text-slate-500 text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
+                                            <Disc size={12} /> 収録作品
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {containingReleases.map(release => (
+                                                <Link
+                                                    to={`/songs#${encodeURIComponent(release.title)}`}
+                                                    key={release.title}
+                                                    className={`text-xs px-3 py-1.5 rounded-full border transition-all hover:scale-105 ${release.type === 'ALBUM'
+                                                        ? 'bg-amber-900/30 text-amber-300 border-amber-600/50 hover:bg-amber-800/40'
+                                                        : 'bg-slate-700/50 text-slate-300 border-slate-500/50 hover:bg-slate-600/50'
+                                                        }`}
+                                                >
+                                                    <span className="opacity-70 mr-1">{release.type === 'ALBUM' ? 'ALBUM' : 'SINGLE'}</span>
+                                                    {release.title} <span className="opacity-60">({release.date.split('.')[0]})</span>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })()}
 
 
                     </div>
-                </div>
-
-                <div className="flex justify-end mb-6">
-                    <button
-                        onClick={() => document.getElementById('performance-history')?.scrollIntoView({ behavior: 'smooth' })}
-                        className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-full font-bold uppercase text-sm tracking-wider transition-all transform hover:scale-105 shadow-lg shadow-blue-500/20 flex items-center gap-2"
-                    >
-                        <Calendar size={16} />
-                        View Performance History
-                    </button>
                 </div>
 
                 {/* Stats Grid */}
@@ -179,7 +193,7 @@ const SongDetail = () => {
                         : 'bg-slate-800 border-slate-700/50'
                         }`}>
                         <div className="text-slate-400 text-sm mb-2 flex items-center gap-2 uppercase tracking-wide">
-                            <Clock size={14} /> Time Since Last Performance
+                            <Clock size={14} /> 前回の演奏からの経過
                         </div>
                         {song.days_since_last !== null ? (
                             <div>
@@ -187,14 +201,14 @@ const SongDetail = () => {
                                     <span className={`text-5xl font-bold font-oswald ${song.is_rare ? 'text-amber-400' : 'text-white'}`}>
                                         {song.days_since_last}
                                     </span>
-                                    <span className="text-slate-500">days ago</span>
+                                    <span className="text-slate-500">日前</span>
                                 </div>
                                 <div className="text-sm text-slate-400 mt-2">
-                                    Last played on <span className="text-white font-mono">{lastPlayed.toISOString().split('T')[0]}</span>
+                                    前回の演奏: <span className="text-white font-mono">{lastPlayed.toISOString().split('T')[0]}</span>
                                 </div>
                             </div>
                         ) : (
-                            <div className="text-slate-500 italic">Never performed live</div>
+                            <div className="text-slate-500 italic">ライブ演奏なし</div>
                         )}
                         {song.is_rare && (
                             <div className="absolute top-4 right-4 text-amber-500/20">
@@ -205,11 +219,11 @@ const SongDetail = () => {
 
                     <div className="bg-slate-800 p-6 rounded-xl border border-slate-700/50 flex flex-col justify-center">
                         <div className="text-slate-400 text-sm mb-2 flex items-center gap-2 uppercase tracking-wide">
-                            <Play size={14} /> Total Plays
+                            <Play size={14} /> 総演奏回数
                         </div>
                         <div className="text-3xl font-bold text-white font-oswald flex items-baseline gap-2">
                             {song.total_performances}
-                            <span className="text-sm font-normal text-slate-500">times</span>
+                            <span className="text-sm font-normal text-slate-500">回</span>
                         </div>
                         {song.play_rate > 0 && (
                             <div className="w-full bg-slate-700 h-1.5 mt-3 rounded-full overflow-hidden">
@@ -220,19 +234,27 @@ const SongDetail = () => {
                             </div>
                         )}
                         <div className="text-xs text-slate-500 mt-2 flex justify-between">
-                            <span>Play Rate: <span className="text-blue-400 font-bold">{song.play_rate}%</span></span>
-                            <span>(of {song.total_possible_lives || '?'} lives)</span>
+                            <span>演奏率: <span className="text-blue-400 font-bold">{song.play_rate}%</span></span>
+                            {song.total_possible_lives > 0 && (
+                                <span>(全 {song.total_possible_lives} 公演中)</span>
+                            )}
                         </div>
                     </div>
 
                     <div className="bg-slate-800 p-6 rounded-xl border border-slate-700/50 flex flex-col justify-center">
                         <div className="text-slate-400 text-sm mb-2 flex items-center gap-2 uppercase tracking-wide">
-                            <Calendar size={14} /> Live Debut
+                            <Calendar size={14} /> 初披露
                         </div>
-                        <div className="text-lg font-bold text-white font-mono">
-                            {song.first_performed_at ? new Date(song.first_performed_at).toISOString().split('T')[0] : 'N/A'}
+                        <div className="text-lg font-bold font-mono">
+                            {song.first_performed_at ? (
+                                <span className="text-white">{new Date(song.first_performed_at).toISOString().split('T')[0]}</span>
+                            ) : (
+                                <span className="text-amber-400">ライブ未披露</span>
+                            )}
                         </div>
-                        <div className="text-xs text-slate-500 mt-1">First time played</div>
+                        {song.first_performed_at && (
+                            <div className="text-xs text-slate-500 mt-1">初めて演奏された日</div>
+                        )}
                     </div>
                 </div>
 
@@ -247,7 +269,7 @@ const SongDetail = () => {
                                 onChange={(e) => setFilterYear(e.target.value)}
                                 className="appearance-none bg-slate-800 border border-slate-700 rounded-lg py-2 px-4 pr-8 text-sm focus:outline-none focus:border-blue-500 transition-colors w-full md:w-auto"
                             >
-                                <option value="All">All Years</option>
+                                <option value="All">全期間</option>
                                 {uniqueYears.map(year => (
                                     <option key={year} value={year}>{year}</option>
                                 ))}
@@ -264,7 +286,7 @@ const SongDetail = () => {
                                 onChange={(e) => setFilterType(e.target.value)}
                                 className="appearance-none bg-slate-800 border border-slate-700 rounded-lg py-2 px-4 pr-8 text-sm focus:outline-none focus:border-blue-500 transition-colors w-full md:w-auto"
                             >
-                                <option value="All">All Types</option>
+                                <option value="All">全タイプ</option>
                                 {uniqueTypes.map(type => (
                                     <option key={type} value={type}>{type}</option>
                                 ))}
@@ -280,7 +302,7 @@ const SongDetail = () => {
                             className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm flex items-center gap-2 hover:bg-slate-700 transition-colors whitespace-nowrap"
                         >
                             <ArrowLeft size={14} className={`transition-transform ${sortOrder === 'oldest' ? '-rotate-90' : 'rotate-90'}`} />
-                            {sortOrder === 'newest' ? 'Newest' : 'Oldest'}
+                            {sortOrder === 'newest' ? '新しい順' : '古い順'}
                         </button>
                     </div>
                 </div>
@@ -288,7 +310,7 @@ const SongDetail = () => {
                 <div className="space-y-2">
                     {filteredPerformances.length === 0 ? (
                         <div className="text-slate-500 italic py-8 text-center bg-slate-800/20 rounded-lg">
-                            No performances found matching "{filterText}"
+                            演奏履歴がありません
                         </div>
                     ) : (
                         <>
@@ -327,7 +349,7 @@ const SongDetail = () => {
                                         onClick={() => setVisibleCount(prev => prev + 20)}
                                         className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-6 py-2 rounded-full text-sm font-medium transition-colors border border-slate-700 hover:border-slate-600"
                                     >
-                                        Show More ({filteredPerformances.length - visibleCount} remaining)
+                                        もっと見る (残り {filteredPerformances.length - visibleCount} 件)
                                     </button>
                                 </div>
                             )}
@@ -335,7 +357,7 @@ const SongDetail = () => {
                     )}
                 </div>
             </div>
-        </div >
+        </div>
     );
 };
 

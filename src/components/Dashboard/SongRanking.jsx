@@ -35,8 +35,8 @@ const SongRanking = ({ songs }) => {
     };
 
     return (
-        <div className="song-ranking">
-            {displayedSongs.map((song, index) => {
+        <div className="song-ranking" style={{ height: '100%', overflowY: 'auto', paddingRight: '5px' }}>
+            {songs.map((song, index) => {
                 const isExpanded = expandedSongs.has(song.title);
                 const hasLives = song.lives && song.lives.length > 0;
                 const liveLimit = liveLimits[song.title] || 10;
@@ -69,14 +69,15 @@ const SongRanking = ({ songs }) => {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontWeight: 'bold',
-                                marginRight: '15px'
+                                marginRight: '15px',
+                                flexShrink: 0
                             }}>
                                 {index + 1}
                             </div>
-                            <div style={{ flexGrow: 1, fontWeight: '500' }}>
+                            <div style={{ flexGrow: 1, fontWeight: '500', marginRight: '10px', wordBreak: 'break-all' }}>
                                 {song.title}
                             </div>
-                            <div style={{ color: 'var(--accent-color)', fontWeight: 'bold', marginRight: '10px' }}>
+                            <div style={{ color: 'var(--accent-color)', fontWeight: 'bold', marginRight: '10px', whiteSpace: 'nowrap' }}>
                                 {song.count}回
                             </div>
                             {hasLives && (
@@ -140,40 +141,6 @@ const SongRanking = ({ songs }) => {
                     </div>
                 );
             })}
-
-            {songs.length > limit ? (
-                <button
-                    onClick={() => setLimit(prev => prev + 5)}
-                    style={{
-                        width: '100%',
-                        padding: '10px',
-                        background: 'transparent',
-                        border: '1px solid var(--border-color)',
-                        color: '#888',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        marginTop: '10px'
-                    }}
-                >
-                    Show More
-                </button>
-            ) : limit > 5 && (
-                <button
-                    onClick={() => setLimit(5)}
-                    style={{
-                        width: '100%',
-                        padding: '10px',
-                        background: 'transparent',
-                        border: '1px solid var(--border-color)',
-                        color: '#888',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        marginTop: '10px'
-                    }}
-                >
-                    Show Less
-                </button>
-            )}
         </div>
     );
 };

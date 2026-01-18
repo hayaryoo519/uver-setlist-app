@@ -40,7 +40,28 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
         if (filters.album) {
             filtered = songs.filter(s => s.album === filters.album);
         }
-        return filtered.sort((a, b) => a.title.localeCompare(b.title));
+
+        // Deduplicate songs with similar titles (e.g., "Don't Think.Sing" vs "Don't Think. Sing")
+        // Normalize: lowercase, remove spaces/punctuation differences
+        const normalizeTitle = (title) => {
+            return title
+                .toLowerCase()
+                .replace(/[.\s\-~～・　]/g, '') // Remove dots, spaces, hyphens, tildes
+                .replace(/[（）()]/g, '')        // Remove parentheses
+                .trim();
+        };
+
+        const seen = new Map();
+        const deduplicated = filtered.filter(song => {
+            const normalized = normalizeTitle(song.title);
+            if (seen.has(normalized)) {
+                return false; // Skip duplicate
+            }
+            seen.set(normalized, true);
+            return true;
+        });
+
+        return deduplicated.sort((a, b) => a.title.localeCompare(b.title, 'ja'));
     }, [songs, filters.album]);
 
     // Handle song selection (multi-select not supported easily in pure select, so single for now or custom logic)
@@ -66,7 +87,7 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
                     <Search className="absolute left-4 top-3.5 text-slate-400" size={20} />
                     <input
                         type="text"
-                        placeholder="Search by keywords (e.g. Tour name, Venue, Year)..."
+                        placeholder="キーワード検索 (ツアー名, 会場, 年など)..."
                         value={filters.text}
                         onChange={handleTextChange}
                         className="w-full bg-slate-900 border border-slate-600 rounded-lg py-3 pl-12 pr-4 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-slate-500"
@@ -76,7 +97,7 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
                 {/* Advanced Filters Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-                    {/* Venue Filter */}
+                    {/* Venue Filter (grouped by prefecture) */}
                     <div className="relative">
                         <MapPin className="absolute left-4 top-3.5 text-slate-400 pointer-events-none" size={18} />
                         <select
@@ -84,10 +105,84 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
                             onChange={(e) => onChange({ ...filters, venue: e.target.value })}
                             className="w-full bg-slate-900 border border-slate-600 rounded-lg py-3 pl-10 pr-8 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all appearance-none cursor-pointer text-sm"
                         >
-                            <option value="">All Venues</option>
-                            {(venues || []).map(venue => (
-                                <option key={venue} value={venue}>{venue}</option>
-                            ))}
+                            <option value="">すべての会場</option>
+                            {(() => {
+                                // Prefecture name mapping: Romaji → Kanji
+                                const prefectureNameMap = {
+                                    'Hokkaido': '北海道',
+                                    'Aomori': '青森県',
+                                    'Iwate': '岩手県',
+                                    'Miyagi': '宮城県',
+                                    'Akita': '秋田県',
+                                    'Yamagata': '山形県',
+                                    'Fukushima': '福島県',
+                                    'Ibaraki': '茨城県',
+                                    'Tochigi': '栃木県',
+                                    'Gunma': '群馬県',
+                                    'Saitama': '埼玉県',
+                                    'Chiba': '千葉県',
+                                    'Tokyo': '東京都',
+                                    'Kanagawa': '神奈川県',
+                                    'Niigata': '新潟県',
+                                    'Toyama': '富山県',
+                                    'Ishikawa': '石川県',
+                                    'Fukui': '福井県',
+                                    'Yamanashi': '山梨県',
+                                    'Nagano': '長野県',
+                                    'Gifu': '岐阜県',
+                                    'Shizuoka': '静岡県',
+                                    'Aichi': '愛知県',
+                                    'Mie': '三重県',
+                                    'Shiga': '滋賀県',
+                                    'Kyoto': '京都府',
+                                    'Osaka': '大阪府',
+                                    'Hyogo': '兵庫県',
+                                    'Nara': '奈良県',
+                                    'Wakayama': '和歌山県',
+                                    'Tottori': '鳥取県',
+                                    'Shimane': '島根県',
+                                    'Okayama': '岡山県',
+                                    'Hiroshima': '広島県',
+                                    'Yamaguchi': '山口県',
+                                    'Tokushima': '徳島県',
+                                    'Kagawa': '香川県',
+                                    'Ehime': '愛媛県',
+                                    'Kochi': '高知県',
+                                    'Fukuoka': '福岡県',
+                                    'Saga': '佐賀県',
+                                    'Nagasaki': '長崎県',
+                                    'Kumamoto': '熊本県',
+                                    'Oita': '大分県',
+                                    'Miyazaki': '宮崎県',
+                                    'Kagoshima': '鹿児島県',
+                                    'Okinawa': '沖縄県',
+                                    'その他': 'その他'
+                                };
+
+                                const grouped = (venues || []).reduce((acc, item) => {
+                                    const pref = item.prefecture || 'その他';
+                                    if (!acc[pref]) acc[pref] = [];
+                                    acc[pref].push(item.venue);
+                                    return acc;
+                                }, {});
+
+                                return Object.entries(grouped)
+                                    .sort(([a], [b]) => {
+                                        // Always put 'その他' at the bottom
+                                        if (a === 'その他') return 1;
+                                        if (b === 'その他') return -1;
+                                        const aJa = prefectureNameMap[a] || a;
+                                        const bJa = prefectureNameMap[b] || b;
+                                        return aJa.localeCompare(bJa, 'ja');
+                                    })
+                                    .map(([prefecture, venueList]) => (
+                                        <optgroup key={prefecture} label={prefectureNameMap[prefecture] || prefecture}>
+                                            {venueList.sort().map(venue => (
+                                                <option key={venue} value={venue}>{venue}</option>
+                                            ))}
+                                        </optgroup>
+                                    ));
+                            })()}
                         </select>
                         <div className="absolute right-3 top-4 text-slate-500 pointer-events-none">▼</div>
                     </div>
@@ -100,7 +195,7 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
                             onChange={(e) => onChange({ ...filters, album: e.target.value, songIds: [] })} // Reset song when album changes? Maybe.
                             className="w-full bg-slate-900 border border-slate-600 rounded-lg py-3 pl-10 pr-8 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all appearance-none cursor-pointer text-sm"
                         >
-                            <option value="">All Albums</option>
+                            <option value="">すべてのアルバム</option>
                             {albums.map(album => (
                                 <option key={album} value={album}>{album}</option>
                             ))}
@@ -108,7 +203,7 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
                         <div className="absolute right-3 top-4 text-slate-500 pointer-events-none">▼</div>
                     </div>
 
-                    {/* Song Filter */}
+                    {/* Song Filter (grouped by album/single) */}
                     <div className="relative">
                         <div className="absolute left-4 top-3.5 text-slate-400 pointer-events-none">♫</div>
                         <select
@@ -117,10 +212,55 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
                             className="w-full bg-slate-900 border border-slate-600 rounded-lg py-3 pl-10 pr-8 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all appearance-none cursor-pointer text-sm"
                             disabled={songs.length === 0}
                         >
-                            <option value="">All Songs {filters.album ? `(in ${filters.album})` : ''}</option>
-                            {sortedSongs.map(song => (
-                                <option key={song.id} value={song.id}>{song.title}</option>
-                            ))}
+                            <option value="">すべての楽曲 {filters.album ? `(${filters.album})` : ''}</option>
+                            {(() => {
+                                // Group songs by album
+                                const grouped = sortedSongs.reduce((acc, song) => {
+                                    const album = song.album || 'その他';
+                                    if (!acc[album]) acc[album] = [];
+                                    acc[album].push(song);
+                                    return acc;
+                                }, {});
+
+                                // Define album order (newest first, with special categories at end)
+                                const albumOrder = [
+                                    'ENIGMASIS',
+                                    '30',
+                                    'UNSER',
+                                    'TYCOON',
+                                    'Ø CHOIR',
+                                    'THE ONE',
+                                    'LIFE 6 SENSE',
+                                    'LAST',
+                                    'AwakEVE',
+                                    'PROGLUTION',
+                                    'BUGRIGHT',
+                                    'Timeless',
+                                    'Single',
+                                    'Video',
+                                    'その他'
+                                ];
+
+                                return Object.entries(grouped)
+                                    .sort(([a], [b]) => {
+                                        const aIndex = albumOrder.indexOf(a);
+                                        const bIndex = albumOrder.indexOf(b);
+                                        // If both are in order list, sort by index
+                                        if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+                                        // If only one is in list, it comes first
+                                        if (aIndex !== -1) return -1;
+                                        if (bIndex !== -1) return 1;
+                                        // Otherwise alphabetical
+                                        return a.localeCompare(b, 'ja');
+                                    })
+                                    .map(([album, albumSongs]) => (
+                                        <optgroup key={album} label={album}>
+                                            {albumSongs.sort((a, b) => a.title.localeCompare(b.title, 'ja')).map(song => (
+                                                <option key={song.id} value={song.id}>{song.title}</option>
+                                            ))}
+                                        </optgroup>
+                                    ));
+                            })()}
                         </select>
                         <div className="absolute right-3 top-4 text-slate-500 pointer-events-none">▼</div>
                     </div>
@@ -131,7 +271,7 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
                     <div>
                         <div className="flex items-center gap-2 mb-3 text-slate-400 text-xs font-bold uppercase tracking-wider">
                             <Tag size={12} />
-                            <span>Quick Filters</span>
+                            <span>クイック絞り込み</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
                             {PRESET_FILTERS.map(filter => {
@@ -158,7 +298,7 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
                             onClick={clearFilters}
                             className="text-slate-400 hover:text-white text-sm underline decoration-slate-600 hover:decoration-white underline-offset-4 transition-colors"
                         >
-                            Reset Filters
+                            条件をクリア
                         </button>
                     )}
                 </div>
