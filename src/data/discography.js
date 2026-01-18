@@ -410,7 +410,7 @@ export const DISCOGRAPHY = [
         type: "SINGLE",
         title: "Eye's Sentry",
         date: "2024.03.06",
-        songs: ["Eye's Sentry", "High Light!", "Uberworld"]
+        songs: ["Eye's Sentry", "High Light!", ".über cozy universe"]
     },
     {
         type: "SINGLE",
