@@ -10,7 +10,7 @@ const AlbumDistribution = ({ data, onBarClick }) => {
     // For now, let's keep it but maybe sort it last or color it differently.
 
     return (
-        <div style={{ width: '100%', height: 350 }}>
+        <div style={{ width: '100%', height: '100%', minHeight: 0 }}>
             <ResponsiveContainer>
                 <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#444" />

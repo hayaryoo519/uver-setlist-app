@@ -111,7 +111,14 @@ router.get('/', async (req, res) => {
         query += ` ORDER BY l.date DESC`;
 
         const result = await db.query(query, params);
-        res.json(result.rows);
+
+        // Normalize venue names in response (translate romaji to Japanese)
+        const normalizedRows = result.rows.map(row => ({
+            ...row,
+            venue: normalizeVenueName(row.venue)
+        }));
+
+        res.json(normalizedRows);
     } catch (err) {
         console.error(err.message);
         res.status(500).json({ message: "Server Error" });
@@ -139,7 +146,7 @@ router.get('/:id', async (req, res) => {
             [id]
         );
 
-        res.json({ ...live, setlist: setlistRes.rows });
+        res.json({ ...live, venue: normalizeVenueName(live.venue), setlist: setlistRes.rows });
     } catch (err) {
         console.error(err.message);
         res.status(500).json({ message: "Server Error" });

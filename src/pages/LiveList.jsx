@@ -65,18 +65,33 @@ const LiveList = () => {
 
     const handleToggleAttendance = async (e, liveId) => {
         e.preventDefault();
+        e.stopPropagation();
+
+        let success;
         if (isAttended(liveId)) {
-            await removeLive(liveId);
+            success = await removeLive(liveId);
         } else {
-            await addLive(liveId);
+            success = await addLive(liveId);
+        }
+
+        if (!success) {
+            const shouldLogin = window.confirm("参戦記録をつけるにはログインが必要です。\nログインページに移動しますか？");
+            if (shouldLogin) {
+                window.location.href = '/login';
+            }
         }
     };
 
     const uniqueVenues = useMemo(() => {
-        // Derive venues from currently loaded lives (or ideally all lives if we had them)
-        // For hybrid approach, this works fine (shows venues matching song criteria)
-        const venues = lives.map(live => live.venue).filter(Boolean);
-        return [...new Set(venues)].sort();
+        // Derive venues with prefectures from currently loaded lives
+        // Returns array of { venue, prefecture } for grouped dropdown
+        const venueMap = new Map();
+        lives.forEach(live => {
+            if (live.venue && !venueMap.has(live.venue)) {
+                venueMap.set(live.venue, live.prefecture || 'その他');
+            }
+        });
+        return Array.from(venueMap.entries()).map(([venue, prefecture]) => ({ venue, prefecture }));
     }, [lives]);
 
     const filteredLives = useMemo(() => {
@@ -130,7 +145,7 @@ const LiveList = () => {
                 {/* Header Navigation */}
                 <div className="flex justify-between items-center mb-6">
                     <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
-                        <Home size={18} /> Back to Dashboard
+                        <Home size={18} /> ダッシュボードに戻る
                     </Link>
                     <div className="flex gap-4">
                         <button
@@ -138,7 +153,7 @@ const LiveList = () => {
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all border
                             ${isFilterOpen ? 'bg-slate-700 border-slate-600 text-white' : 'bg-transparent border-slate-700 text-slate-400 hover:text-white hover:border-slate-500'}`}
                         >
-                            <Search size={16} /> Filters
+                            <Search size={16} /> 絞り込み
                         </button>
                         <Link to="/mypage" className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold transition-colors">
                             My Page
@@ -151,7 +166,7 @@ const LiveList = () => {
                         LIVE ARCHIVE
                     </h1>
                     <div className="text-slate-500 text-sm font-mono">
-                        {filteredLives.length} EVENTS FOUND
+                        {filteredLives.length} 件の公演が見つかりました
                     </div>
                 </div>
 
@@ -169,7 +184,7 @@ const LiveList = () => {
                 <div className="space-y-4">
                     {filteredLives.length === 0 ? (
                         <div className="text-center py-20 text-slate-500 border border-dashed border-slate-700 rounded-xl">
-                            No live events found matching your criteria.
+                            条件に一致する公演は見つかりませんでした。
                         </div>
                     ) : (
                         filteredLives.map(live => (

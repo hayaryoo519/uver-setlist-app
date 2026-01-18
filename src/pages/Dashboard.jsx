@@ -12,7 +12,20 @@ function Dashboard() {
     const [modalFilter, setModalFilter] = useState(null);
     const [expandedSong, setExpandedSong] = useState(null);
     const [graphMetric, setGraphMetric] = useState('liveCount');
-    const [yearRange, setYearRange] = useState([2005, 2024]); // Hardcoded for now, can be dynamic
+    const [yearRange, setYearRange] = useState([2005, new Date().getFullYear() + 1]);
+
+    // Update year range dynamically based on data
+    React.useEffect(() => {
+        if (!loading && stats.yearlyDetailedStats && stats.yearlyDetailedStats.length > 0) {
+            const years = stats.yearlyDetailedStats.map(d => d.year);
+            const maxYear = Math.max(...years);
+            // Ensure we cover at least up to current year, or data max if future shows exist
+            const currentYear = new Date().getFullYear();
+            const targetMax = Math.max(maxYear, currentYear + 1);
+
+            setYearRange(prev => [prev[0], Math.max(maxYear, currentYear)]);
+        }
+    }, [loading, stats.yearlyDetailedStats]);
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '';
@@ -232,7 +245,7 @@ function Dashboard() {
                                             letterSpacing: '0.05em'
                                         }}>
                                             <span style={{ width: '8px', height: '8px', background: 'var(--primary-color)', borderRadius: '50%', display: 'inline-block' }}></span>
-                                            LATEST TOUR / 2023-2024
+                                            LATEST TOUR {stats.currentTour.startDate ? `/ ${stats.currentTour.startDate.split('.')[0]}` : ''}
                                         </div>
                                         <h2 style={{
                                             margin: '5px 0 15px 0',
@@ -399,7 +412,7 @@ function Dashboard() {
                                 <input
                                     type="range"
                                     min="2005"
-                                    max="2024"
+                                    max={Math.max(yearRange[1], new Date().getFullYear() + 1)}
                                     value={yearRange[0]}
                                     onChange={(e) => setYearRange([parseInt(e.target.value), yearRange[1]])}
                                     style={{ width: '80px', accentColor: 'var(--primary-color)' }}
@@ -407,7 +420,7 @@ function Dashboard() {
                                 <input
                                     type="range"
                                     min="2005"
-                                    max="2024"
+                                    max={Math.max(yearRange[1], new Date().getFullYear() + 1)}
                                     value={yearRange[1]}
                                     onChange={(e) => setYearRange([yearRange[0], parseInt(e.target.value)])}
                                     style={{ width: '80px', accentColor: 'var(--primary-color)' }}
@@ -541,36 +554,38 @@ function Dashboard() {
                                 <Disc size={20} color="var(--primary-color)" />
                                 Songs by Album ({yearRange[0]} - {yearRange[1]})
                             </h3>
-                            <AlbumDistribution data={(() => {
-                                if (!stats.allLives || !stats.songAlbumMap) return [];
+                            <div style={{ height: '400px' }}>
+                                <AlbumDistribution data={(() => {
+                                    if (!stats.allLives || !stats.songAlbumMap) return [];
 
-                                const targetLives = stats.allLives.filter(live => {
-                                    if (!live.date) return false;
-                                    const y = new Date(live.date).getFullYear();
-                                    return y >= yearRange[0] && y <= yearRange[1];
-                                });
-
-                                const map = new Map();
-                                targetLives.forEach(live => {
-                                    if (!live.setlist) return;
-                                    live.setlist.forEach(song => {
-                                        if (!song || !song.title) return;
-                                        // Try exact match first, then unknown
-                                        let album = stats.songAlbumMap.get(song.title);
-                                        if (!album) {
-                                            // Fallback: Check if map keys have slight variation? (Simpler to just default to Unknown)
-                                            album = 'Unknown';
-                                        }
-                                        map.set(album, (map.get(album) || 0) + 1);
+                                    const targetLives = stats.allLives.filter(live => {
+                                        if (!live.date) return false;
+                                        const y = new Date(live.date).getFullYear();
+                                        return y >= yearRange[0] && y <= yearRange[1];
                                     });
-                                });
 
-                                const result = Array.from(map.entries())
-                                    .map(([name, value]) => ({ name, value }))
-                                    .sort((a, b) => b.value - a.value);
+                                    const map = new Map();
+                                    targetLives.forEach(live => {
+                                        if (!live.setlist) return;
+                                        live.setlist.forEach(song => {
+                                            if (!song || !song.title) return;
+                                            // Try exact match first, then unknown
+                                            let album = stats.songAlbumMap.get(song.title);
+                                            if (!album) {
+                                                // Fallback: Check if map keys have slight variation? (Simpler to just default to Unknown)
+                                                album = 'Unknown';
+                                            }
+                                            map.set(album, (map.get(album) || 0) + 1);
+                                        });
+                                    });
 
-                                return result;
-                            })()} onBarClick={handleAlbumClick} />
+                                    const result = Array.from(map.entries())
+                                        .map(([name, value]) => ({ name, value }))
+                                        .sort((a, b) => b.value - a.value);
+
+                                    return result;
+                                })()} onBarClick={handleAlbumClick} />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -624,7 +639,7 @@ function Dashboard() {
                         ))}
                     </div>
                 </div>
-            </div>
+            </div >
 
             <style>{`
                 .stat-card {
@@ -680,162 +695,164 @@ function Dashboard() {
             `}</style>
 
             {/* Filter Modal */}
-            {modalFilter && (
-                <div
-                    onClick={closeModal}
-                    style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 1000
-                    }}
-                >
+            {
+                modalFilter && (
                     <div
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={closeModal}
                         style={{
-                            backgroundColor: 'var(--bg-color)',
-                            borderRadius: '12px',
-                            padding: '30px',
-                            maxWidth: '600px',
-                            width: '90%',
-                            maxHeight: '80vh',
-                            overflow: 'auto',
-                            border: '1px solid var(--border-color)'
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 1000
                         }}
                     >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h2 style={{ margin: 0 }}>
-                                {modalFilter.type === 'year' ? `${modalFilter.value.name}年の楽曲ランキング (Yearly Ranking)` :
-                                    modalFilter.type === 'album' ? `${modalFilter.value.name} (Album) Songs` :
-                                        `${modalFilter.value.name} 楽曲分析`}
-                            </h2>
-                            <button
-                                onClick={closeModal}
-                                style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: '#888',
-                                    fontSize: '1.5rem',
-                                    cursor: 'pointer',
-                                    padding: '0 10px'
-                                }}
-                            >
-                                ×
-                            </button>
-                        </div>
-
-                        {/* Unified View for Year / Album / Tour */}
-                        <>
-                            <div style={{ color: '#888', marginBottom: '20px', display: 'flex', justifyContent: 'space-between' }}>
-                                <span>全{modalFilter.value.liveCount}公演 / 総披露{modalFilter.value.totalSongs}曲</span>
-                                <span>{modalFilter.value.startDate} 〜 {modalFilter.value.endDate}</span>
+                        <div
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                                backgroundColor: 'var(--bg-color)',
+                                borderRadius: '12px',
+                                padding: '30px',
+                                maxWidth: '600px',
+                                width: '90%',
+                                maxHeight: '80vh',
+                                overflow: 'auto',
+                                border: '1px solid var(--border-color)'
+                            }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h2 style={{ margin: 0 }}>
+                                    {modalFilter.type === 'year' ? `${modalFilter.value.name}年の楽曲ランキング (Yearly Ranking)` :
+                                        modalFilter.type === 'album' ? `${modalFilter.value.name} (Album) Songs` :
+                                            `${modalFilter.value.name} 楽曲分析`}
+                                </h2>
+                                <button
+                                    onClick={closeModal}
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: '#888',
+                                        fontSize: '1.5rem',
+                                        cursor: 'pointer',
+                                        padding: '0 10px'
+                                    }}
+                                >
+                                    ×
+                                </button>
                             </div>
 
-                            <div>
-                                {modalFilter.value.songRanking.map((song, idx) => (
-                                    <div key={idx} style={{
-                                        borderBottom: '1px solid rgba(255,255,255,0.05)',
-                                    }}>
-                                        <div
-                                            onClick={() => setExpandedSong(expandedSong === idx ? null : idx)}
-                                            style={{
-                                                padding: '12px 0',
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                                                        <Link
-                                                            // Remove spaces for clean URL (e.g. "CORE PRIDE" -> "COREPRIDE")
-                                                            to={`/song/${encodeURIComponent(song.title.replace(/\s+/g, ''))}#performance-history`}
-                                                            onClick={(e) => { e.stopPropagation(); closeModal(); }}
-                                                            style={{
-                                                                color: 'white',
-                                                                textDecoration: 'none',
-                                                                flex: 1,
-                                                                display: 'flex',
-                                                                alignItems: 'center'
-                                                            }}
-                                                            className="hover:text-blue-400"
-                                                        >
-                                                            {song.title}
-                                                        </Link>
+                            {/* Unified View for Year / Album / Tour */}
+                            <>
+                                <div style={{ color: '#888', marginBottom: '20px', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>全{modalFilter.value.liveCount}公演 / 総披露{modalFilter.value.totalSongs}曲</span>
+                                    <span>{modalFilter.value.startDate} 〜 {modalFilter.value.endDate}</span>
+                                </div>
+
+                                <div>
+                                    {modalFilter.value.songRanking.map((song, idx) => (
+                                        <div key={idx} style={{
+                                            borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                        }}>
+                                            <div
+                                                onClick={() => setExpandedSong(expandedSong === idx ? null : idx)}
+                                                style={{
+                                                    padding: '12px 0',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                                                            <Link
+                                                                // Remove spaces for clean URL (e.g. "CORE PRIDE" -> "COREPRIDE")
+                                                                to={`/song/${encodeURIComponent(song.title.replace(/\s+/g, ''))}#performance-history`}
+                                                                onClick={(e) => { e.stopPropagation(); closeModal(); }}
+                                                                style={{
+                                                                    color: 'white',
+                                                                    textDecoration: 'none',
+                                                                    flex: 1,
+                                                                    display: 'flex',
+                                                                    alignItems: 'center'
+                                                                }}
+                                                                className="hover:text-blue-400"
+                                                            >
+                                                                {song.title}
+                                                            </Link>
+                                                        </div>
+                                                    </div>
+                                                    <div style={{
+                                                        height: '4px',
+                                                        background: '#333',
+                                                        width: '100%',
+                                                        marginTop: '8px',
+                                                        borderRadius: '2px',
+                                                        overflow: 'hidden'
+                                                    }}>
+                                                        <div style={{
+                                                            height: '100%',
+                                                            background: 'var(--primary-color)',
+                                                            width: `${song.percentage}%`
+                                                        }} />
                                                     </div>
                                                 </div>
-                                                <div style={{
-                                                    height: '4px',
-                                                    background: '#333',
-                                                    width: '100%',
-                                                    marginTop: '8px',
-                                                    borderRadius: '2px',
-                                                    overflow: 'hidden'
-                                                }}>
-                                                    <div style={{
-                                                        height: '100%',
-                                                        background: 'var(--primary-color)',
-                                                        width: `${song.percentage}%`
-                                                    }} />
+                                                <div style={{ textAlign: 'right', marginLeft: '20px' }}>
+                                                    <div style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>{song.count}回</div>
+                                                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>演奏率 {song.percentage}%</div>
                                                 </div>
                                             </div>
-                                            <div style={{ textAlign: 'right', marginLeft: '20px' }}>
-                                                <div style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>{song.count}回</div>
-                                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>演奏率 {song.percentage}%</div>
-                                            </div>
-                                        </div>
 
-                                        {expandedSong === idx && (
-                                            <div style={{
-                                                padding: '0 15px 15px 15px',
-                                                background: 'rgba(255,255,255,0.02)',
-                                                borderRadius: '8px',
-                                                marginBottom: '10px'
-                                            }}>
-                                                {song.lives.map(live => (
-                                                    <Link
-                                                        key={live.id}
-                                                        to={`/live/${live.id}`}
-                                                        onClick={closeModal}
-                                                        style={{
-                                                            display: 'block',
-                                                            padding: '8px 0',
-                                                            fontSize: '0.85rem',
-                                                            color: '#94a3b8',
-                                                            textDecoration: 'none',
-                                                            borderBottom: '1px solid rgba(255,255,255,0.03)'
-                                                        }}
-                                                    >
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                            <span>{live.date}</span>
-                                                            <span style={{ color: '#64748b' }}>@ {live.venue}</span>
-                                                        </div>
-                                                        {live.title && live.title !== modalFilter.value.name && (
-                                                            <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'right', marginTop: '2px' }}>
-                                                                {live.title}
+                                            {expandedSong === idx && (
+                                                <div style={{
+                                                    padding: '0 15px 15px 15px',
+                                                    background: 'rgba(255,255,255,0.02)',
+                                                    borderRadius: '8px',
+                                                    marginBottom: '10px'
+                                                }}>
+                                                    {song.lives.map(live => (
+                                                        <Link
+                                                            key={live.id}
+                                                            to={`/live/${live.id}`}
+                                                            onClick={closeModal}
+                                                            style={{
+                                                                display: 'block',
+                                                                padding: '8px 0',
+                                                                fontSize: '0.85rem',
+                                                                color: '#94a3b8',
+                                                                textDecoration: 'none',
+                                                                borderBottom: '1px solid rgba(255,255,255,0.03)'
+                                                            }}
+                                                        >
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                <span>{live.date}</span>
+                                                                <span style={{ color: '#64748b' }}>@ {live.venue}</span>
                                                             </div>
-                                                        )}
-                                                    </Link>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </>
+                                                            {live.title && live.title !== modalFilter.value.name && (
+                                                                <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'right', marginTop: '2px' }}>
+                                                                    {live.title}
+                                                                </div>
+                                                            )}
+                                                        </Link>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
 
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }
 
