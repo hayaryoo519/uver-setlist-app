@@ -343,8 +343,9 @@ const songTranslations = {
     "Barbell": "バーベル～皇帝の新しい服 album ver.～",
 
     // Ø CHOIR SE
-    "零 HERE ~SE~": "零 HERE ～SE～",
-    "Zero HERE SE": "零 HERE ～SE～",
+    "零 HERE ~SE~": "零HERE～SE～",
+    "Zero HERE SE": "零HERE～SE～",
+    "Zero HERE ~SE~": "零HERE～SE～",
     "ANOMALY Souja": "ANOMALY奏者",
     "ENIGMASIS": "ENIGMASIS",
     "High Light!": "High Light!",
@@ -635,6 +636,84 @@ const venueTranslations = {
     "Okinawa Convention Center": "沖縄コンベンションセンター",
     "Naha Civic Hall": "那覇市民会館",
     "Namura Hall": "なむーるホール",
+
+    // 大分
+    "iichiko Grand Theater": "iichiko総合文化センター グランシアタ",
+    "iichikoグランシアタ": "iichiko総合文化センター グランシアタ",
+    "iichiko Sogo Bunka Center": "iichiko総合文化センター",
+    "Oita iichiko": "iichiko総合文化センター グランシアタ",
+
+    // ============================================
+    // 追加会場 (Additional Venues from DB)
+    // ============================================
+
+    // 北海道
+    "Coach and Four Kushiro Bunka Hall": "釧路市民文化会館",
+    "Iwamizawa Kouen": "岩見沢公園",
+    "PENNY LANE 24": "PENNY LANE 24",
+    "Country Park": "つま恋リゾート 彩の郷",
+
+    // 東北
+    "Hirosaki Shimin Kaikan": "弘前市民会館",
+    "TOSAI CLASSIC HALL IWATE": "トーサイクラシックホール岩手",
+    "SENDAI GIGS": "SENDAI GIGS",
+    "Obihiro Shimin Bunka Hall": "帯広市民文化ホール",
+
+    // 関東
+    "Oomiya Sonic City": "大宮ソニックシティ",
+    "Mito Shimin Kaikan": "水戸市民会館",
+    "Kashiwa PALOOZA": "柏PALOOZA",
+    "Soga Sports Kouen": "蘇我スポーツ公園",
+    "Shinkiba Wakasu Kouen": "新木場若洲公園",
+    "Makuhari Messe Kokusai Tenjijou": "幕張メッセ国際展示場",
+    "Makuhari Messe Kokusai Tenjijou Hall 1-2-3": "幕張メッセ国際展示場 1-3ホール",
+    "Makuhari Messe Kokusai Tenjijou Hall 4-5-6-7": "幕張メッセ国際展示場 4-7ホール",
+    "Makuhari Messe Kokusai Tenjijou Hall 9-10-11": "幕張メッセ国際展示場 9-11ホール",
+    "Yoyogi Daiichi Taiikukan": "国立代々木競技場 第一体育館",
+    "Nissan Stadium": "日産スタジアム",
+
+    // 中部
+    "Nagano CLUB JUNK BOX": "長野CLUB JUNK BOX",
+    "HARD OFF ECO Stadium Niigata": "HARD OFF ECOスタジアム新潟",
+    "Nihon Gaishi Hall": "日本ガイシホール",
+    "Honda no Mori Hall": "本多の森ホール",
+    "Shizuoka Shimin Bunka Kaikan": "静岡市民文化会館",
+    "Phoenix Plaza": "フェニックスプラザ",
+
+    // 関西
+    "Osaka-jou Hall": "大阪城ホール",
+    "Karasuma Hantou Shibafu Hiroba": "唐船半島芝生広場",
+    "KYOTO PULSE PLAZA": "京都パルスプラザ",
+    "Biwako Hall": "滋賀県立芸術劇場 びわ湖ホール",
+    "MAIZURU P.B. Harbor Park": "舞鶴P.B.ハーバーパーク",
+    "Sun Arena": "サンアリーナ",
+
+    // 中国・四国
+    "Kurashiki Shimin Kaikan": "倉敷市民会館",
+    "Torigin Bunka Kaikan": "とりぎん文化会館",
+    "Shuunan-shi Bunka Kaikan": "周南市文化会館",
+    "Rexxam Hall": "レクザムホール",
+    "Sanuki Man-nou Kouen": "讃岐まんのう公園",
+    "Ehime-ken Kenmin Bunka Kaikan": "愛媛県県民文化会館",
+    "Kouchi Kenritsu Kenmin Bunka Hall": "高知県立県民文化ホール",
+
+    // 九州
+    "Shimin Kaikan Sears Home Yume Hall": "市民会館シアーズホーム夢ホール",
+    "Tarukawa Dock Open-Air Special Stages": "樽川ドック野外特設ステージ",
+    "Umi no Mori Kouen": "海の森公園",
+    "Kawashou Hall": "かわしょうホール",
+
+    // 海外
+    "Korea University Hwajeong Gymnasium": "高麗大学校 ファジョン体育館",
+    "The Pier-2 Art Center": "駁二アート特区",
+    "The Republik": "The Republik (ハワイ)",
+
+    // ライブハウス
+    "B-FLAT": "B-FLAT",
+    "Music Station": "ミュージックステーション",
+    "Music Town Oto Ichiba": "ミュージックタウン音市場",
+    "Example Fes Grounds": "フェス会場",
+    "Hitachi Kaihin Kouen": "国営ひたち海浜公園",
 };
 
 

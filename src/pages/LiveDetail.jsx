@@ -48,7 +48,7 @@ function LiveDetail() {
     }
 
     if (!live) {
-        return <div className="container" style={{ paddingTop: '100px', textAlign: 'center' }}>Live not found</div>;
+        return <div className="container" style={{ paddingTop: '100px', textAlign: 'center' }}>ライブが見つかりません</div>;
     }
 
     const setlist = live.setlist || [];
@@ -61,8 +61,8 @@ function LiveDetail() {
                 description={`UVERworld ${mainTitle} @ ${live.venue} Setlist and Live Report.`}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <Link to="/lives" style={{ color: '#94a3b8' }}>&larr; Back to Archive</Link>
-                <Link to="/mypage" style={{ color: 'var(--accent-color)' }}>My Page &rarr;</Link>
+                <Link to="/lives" style={{ color: '#94a3b8' }}>&larr; アーカイブに戻る</Link>
+                <Link to="/mypage" style={{ color: 'var(--accent-color)' }}>マイページ &rarr;</Link>
             </div>
 
             <div style={{ marginBottom: '30px' }}>
@@ -163,7 +163,7 @@ function LiveDetail() {
                     })
                 ) : (
                     <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                        <p>No setlist data available for this show.</p>
+                        <p>この公演のセットリストはありません。</p>
                     </div>
                 )}
             </div>

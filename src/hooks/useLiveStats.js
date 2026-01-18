@@ -13,6 +13,7 @@ export const useLiveStatsLogic = (myLives, allSongs = []) => {
             yearlyStats: [],
             songRanking: [],
             albumStats: [],
+            venueRanking: [],
             myLives: [],
             firstLive: null
         };
@@ -28,16 +29,38 @@ export const useLiveStatsLogic = (myLives, allSongs = []) => {
     });
 
     // Song Counts & Album Stats
-    const songMap = new Map();
+    const songStatsMap = new Map(); // title -> { count: 0, lives: [] }
     const albumMap = new Map();
 
     // We need to map the API live objects to the setlists.
     sortedLives.forEach(live => {
-        const list = setlists[live.id] || [];
+        // Generate key from date: YYYY-MM-DD -> live_YYYYMMDD_01
+        let list = [];
+        if (live.date) {
+            const d = new Date(live.date);
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const key = `live_${yyyy}${mm}${dd}_01`;
+            list = setlists[key] || [];
+        }
+
+        // Fallback: Check if live.id matches (for legacy or direct mapping)
+        if (list.length === 0 && setlists[live.id]) {
+            list = setlists[live.id];
+        }
+
         list.forEach(song => {
-            // Count Song
-            const count = songMap.get(song.title) || 0;
-            songMap.set(song.title, count + 1);
+            // Count Song & Store Live
+            if (!songStatsMap.has(song.title)) {
+                songStatsMap.set(song.title, { count: 0, lives: [] });
+            }
+            const stat = songStatsMap.get(song.title);
+            stat.count += 1;
+            // Avoid duplicate lives for same song (e.g. played twice in encore?)
+            // Usually not needed if we want to count performances, but for "which lives" unique is better?
+            // Let's just push for now. 
+            stat.lives.push(live);
 
             // Count Album (using metadata from DB)
             const meta = songMetaMap.get(song.title);
@@ -52,12 +75,20 @@ export const useLiveStatsLogic = (myLives, allSongs = []) => {
         });
     });
 
-    const songRanking = Array.from(songMap.entries())
-        .map(([title, count]) => ({ title, count }))
+    const songRanking = Array.from(songStatsMap.entries())
+        .map(([title, stat]) => {
+            const meta = songMetaMap.get(title);
+            return {
+                title,
+                count: stat.count,
+                lives: stat.lives,
+                album: meta ? meta.album : 'Unknown'
+            };
+        })
         .sort((a, b) => b.count - a.count);
 
     // Unique Songs based on the setlists we found
-    const uniqueSongs = songMap.size;
+    const uniqueSongs = songStatsMap.size;
 
     // Album Stats Array
     const albumStats = Array.from(albumMap.entries())
@@ -95,10 +126,22 @@ export const useLiveStatsLogic = (myLives, allSongs = []) => {
     const venueTypeStats = Array.from(typeMap.entries())
         .map(([type, count]) => ({ name: type, value: count }));
 
+    // Venue Stats (Ranking)
+    const venueMap = new Map();
+    sortedLives.forEach(live => {
+        const venue = live.venue || 'Unknown';
+        venueMap.set(venue, (venueMap.get(venue) || 0) + 1);
+    });
+
+    const venueRanking = Array.from(venueMap.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count);
+
     return {
         totalLives: sortedLives.length,
         uniqueSongs,
         venueTypeStats,
+        venueRanking, // New
         yearlyStats,
         songRanking,
         albumStats, // New
