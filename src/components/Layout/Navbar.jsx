@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, User, Music, LogIn, LogOut, Shield } from 'lucide-react';
+import { Menu, X, User, Calendar, LogIn, LogOut, Shield, ListMusic } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import GlobalSearch from '../Search/GlobalSearch';
 
 const Navbar = () => {
     const [isScrolled, setIsScrolled] = useState(false);
@@ -41,13 +40,15 @@ const Navbar = () => {
 
                     {/* Desktop Menu */}
                     <div className="nav-links desktop-only">
-                        <GlobalSearch />
+                        <Link to="/songs" className="nav-link">
+                            <ListMusic size={18} /> Discography
+                        </Link>
                         <Link to="/lives" className="nav-link">
-                            <Music size={18} /> Archive
+                            <Calendar size={18} /> Archive
                         </Link>
                         {currentUser && (
                             <Link to="/mypage" className="nav-link">
-                                <User size={18} /> My Page
+                                <User size={18} /> マイページ
                             </Link>
                         )}
                         {currentUser?.role === 'admin' && (
@@ -57,11 +58,11 @@ const Navbar = () => {
                         )}
                         {currentUser ? (
                             <button onClick={logout} className="nav-btn-primary" style={{ textDecoration: 'none' }}>
-                                <LogOut size={18} /> Logout
+                                <LogOut size={18} /> ログアウト
                             </button>
                         ) : (
                             <Link to="/login" className="nav-btn-primary" style={{ textDecoration: 'none' }}>
-                                <LogIn size={18} /> Login
+                                <LogIn size={18} /> ログイン
                             </Link>
                         )}
                     </div>
@@ -80,13 +81,14 @@ const Navbar = () => {
             <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}>
                 <div className="mobile-nav-links">
                     <Link to="/" className="mobile-nav-link">Home</Link>
+                    <Link to="/songs" className="mobile-nav-link">Discography</Link>
                     <Link to="/lives" className="mobile-nav-link">Archive</Link>
-                    {currentUser && <Link to="/mypage" className="mobile-nav-link">My Page</Link>}
+                    {currentUser && <Link to="/mypage" className="mobile-nav-link">マイページ</Link>}
                     <div className="mobile-nav-divider"></div>
                     {currentUser ? (
-                        <button onClick={logout} className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>Logout</button>
+                        <button onClick={logout} className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>ログアウト</button>
                     ) : (
-                        <Link to="/login" className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>Login / Sign Up</Link>
+                        <Link to="/login" className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>ログイン / 新規登録</Link>
                     )}
                 </div>
             </div>

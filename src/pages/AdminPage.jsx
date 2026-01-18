@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download } from 'lucide-react';
+import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SetlistEditor from '../components/Admin/SetlistEditor';
@@ -27,6 +27,11 @@ const AdminPage = () => {
     const [showLiveModal, setShowLiveModal] = useState(false);
     const [editingLive, setEditingLive] = useState(null);
     const [liveFormData, setLiveFormData] = useState({ tour_name: '', title: '', date: '', venue: '', type: 'ONEMAN' });
+    const [liveSearchTerm, setLiveSearchTerm] = useState('');
+    const [liveSortConfig, setLiveSortConfig] = useState({ key: 'date', direction: 'desc' });
+    const [liveYearFilter, setLiveYearFilter] = useState('ALL');
+    const [selectedLiveIds, setSelectedLiveIds] = useState([]);
+    const [isDeletingLives, setIsDeletingLives] = useState(false);
 
     // --- SETLIST STATE ---
     const [showSetlistEditor, setShowSetlistEditor] = useState(false);
@@ -36,6 +41,8 @@ const AdminPage = () => {
     const [songs, setSongs] = useState([]);
     const [isLoadingSongs, setIsLoadingSongs] = useState(false);
     const [songSearchTerm, setSongSearchTerm] = useState('');
+    const [songAlbumFilter, setSongAlbumFilter] = useState('ALL');
+    const [songSortConfig, setSongSortConfig] = useState({ key: 'title', direction: 'asc' });
     const [showSongModal, setShowSongModal] = useState(false);
     const [editingSong, setEditingSong] = useState(null);
     const [songFormData, setSongFormData] = useState({ title: '', album: '', release_year: '', mv_url: '', author: '' });
@@ -108,7 +115,7 @@ const AdminPage = () => {
             do {
                 // Respect API Rate Limits: Add 1s delay between requests
                 if (page > 1) {
-                    await new Promise(resolve => setTimeout(resolve, 800));
+                    await new Promise(resolve => setTimeout(resolve, 1500));
                 }
 
                 const res = await fetch(`http://localhost:4000/api/external/setlistfm/search?year=${sfmSearchYear}&page=${page}`, {
@@ -128,6 +135,7 @@ const AdminPage = () => {
                 } else {
                     // Log error but keep what we have
                     console.warn(`Stopped fetching at page ${page} due to error:`, data);
+                    alert(`Note: Stopped fetching at page ${page} due to API limit or error. Showing partial results.`);
                     break;
                 }
             } while (page <= totalPages);
@@ -294,6 +302,50 @@ const AdminPage = () => {
         setShowSetlistEditor(true);
     };
 
+    // --- BULK DELETE LIVES ---
+    const toggleLiveSelection = (id) => {
+        setSelectedLiveIds(prev =>
+            prev.includes(id) ? prev.filter(liveId => liveId !== id) : [...prev, id]
+        );
+    };
+
+    const toggleSelectAllLives = () => {
+        if (selectedLiveIds.length === processedLives.length) {
+            setSelectedLiveIds([]);
+        } else {
+            setSelectedLiveIds(processedLives.map(l => l.id));
+        }
+    };
+
+    const handleBulkDeleteLives = async () => {
+        if (!confirm(`Are you sure you want to delete ${selectedLiveIds.length} live events? This cannot be undone.`)) return;
+
+        setIsDeletingLives(true);
+        let successCount = 0;
+        const token = localStorage.getItem('token');
+
+        // Note: Ideally the backend should support bulk delete. For MVP, we'll do concurrent requests.
+        try {
+            await Promise.all(selectedLiveIds.map(async (id) => {
+                try {
+                    const res = await fetch(`/api/lives/${id}`, { method: 'DELETE', headers: { token } });
+                    if (res.ok) successCount++;
+                } catch (e) {
+                    console.error(`Failed to delete live ${id}`, e);
+                }
+            }));
+
+            alert(`Deleted ${successCount} events.`);
+            setSelectedLiveIds([]);
+            fetchLives();
+        } catch (err) {
+            console.error(err);
+            alert("Error during bulk delete");
+        } finally {
+            setIsDeletingLives(false);
+        }
+    };
+
 
     // --- API CALLS: SONGS ---
     const fetchSongs = async () => {
@@ -343,6 +395,49 @@ const AdminPage = () => {
         });
         setShowSongModal(true);
     };
+
+    // --- PROCESSED LIVES (FILTER & SORT) ---
+    const uniqueLiveYears = useMemo(() => {
+        const years = lives.map(l => new Date(l.date).getFullYear());
+        return [...new Set(years)].sort((a, b) => b - a);
+    }, [lives]);
+
+    const processedLives = useMemo(() => {
+        let items = [...lives];
+
+        // Search
+        if (liveSearchTerm) {
+            const lower = liveSearchTerm.toLowerCase();
+            items = items.filter(l =>
+                l.tour_name.toLowerCase().includes(lower) ||
+                l.venue.toLowerCase().includes(lower) ||
+                (l.title && l.title.toLowerCase().includes(lower))
+            );
+        }
+
+        // Year Filter
+        if (liveYearFilter !== 'ALL') {
+            const y = parseInt(liveYearFilter);
+            items = items.filter(l => new Date(l.date).getFullYear() === y);
+        }
+
+        // Sort
+        items.sort((a, b) => {
+            let aVal = a[liveSortConfig.key] || '';
+            let bVal = b[liveSortConfig.key] || '';
+
+            if (liveSortConfig.key === 'date') {
+                const dateA = new Date(aVal);
+                const dateB = new Date(bVal);
+                return liveSortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
+            }
+
+            const res = String(aVal).localeCompare(String(bVal), 'ja');
+            return liveSortConfig.direction === 'asc' ? res : -res;
+        });
+
+        return items;
+    }, [lives, liveSearchTerm, liveYearFilter, liveSortConfig]);
 
 
     // --- API CALLS: USERS ---
@@ -401,16 +496,75 @@ const AdminPage = () => {
         return items;
     }, [users, userSearchTerm, userSortConfig]);
 
+    // Get unique albums for filter
+    const uniqueAlbums = useMemo(() => {
+        if (!songs) return [];
+        const albums = songs.map(s => s.album).filter(Boolean);
+        return [...new Set(albums)].sort((a, b) => a.localeCompare(b, 'ja'));
+    }, [songs]);
+
+    // Album release year mapping for release order sorting
+    const albumReleaseYear = {
+        'Timeless': 2006,
+        'BUGRIGHT': 2007,
+        'PROGLUTION': 2008,
+        'AwakEVE': 2009,
+        'LAST': 2010,
+        'LIFE 6 SENSE': 2011,
+        'THE ONE': 2012,
+        'Ø CHOIR': 2014,
+        'TYCOON': 2017,
+        'UNSER': 2019,
+        '30': 2021,
+        'ENIGMASIS': 2023,
+        'EPIPHANY': 2025,
+        'Single': 9999,
+    };
+
     const processedSongs = useMemo(() => {
         if (!songs) return [];
         let items = [...songs];
+
+        // Search filter
         if (songSearchTerm) {
             const lower = songSearchTerm.toLowerCase();
-            items = items.filter(s => s.title.toLowerCase().includes(lower));
+            items = items.filter(s =>
+                s.title.toLowerCase().includes(lower) ||
+                (s.album && s.album.toLowerCase().includes(lower))
+            );
         }
-        items.sort((a, b) => a.title.localeCompare(b.title));
+
+        // Album filter
+        if (songAlbumFilter !== 'ALL') {
+            items = items.filter(s => s.album === songAlbumFilter);
+        }
+
+        // Sort
+        items.sort((a, b) => {
+            let aVal = a[songSortConfig.key] || '';
+            let bVal = b[songSortConfig.key] || '';
+
+            // Numeric sort for ID
+            if (songSortConfig.key === 'id') {
+                const result = Number(aVal) - Number(bVal);
+                return songSortConfig.direction === 'asc' ? result : -result;
+            }
+
+            // Release order sort (by album release year)
+            if (songSortConfig.key === 'release') {
+                const aYear = albumReleaseYear[a.album] || 10000;
+                const bYear = albumReleaseYear[b.album] || 10000;
+                const result = aYear - bYear;
+                return songSortConfig.direction === 'asc' ? result : -result;
+            }
+
+            // String sort for title/album
+            const result = String(aVal).localeCompare(String(bVal), 'ja');
+            return songSortConfig.direction === 'asc' ? result : -result;
+        });
+
         return items;
-    }, [songs, songSearchTerm]);
+    }, [songs, songSearchTerm, songAlbumFilter, songSortConfig]);
 
 
     // --- BULK IMPORT STATE ---
@@ -434,8 +588,7 @@ const AdminPage = () => {
 
     // --- BULK IMPORT HANDLER ---
     const handleBulkImport = async () => {
-        if (!window.confirm(`Are you sure you want to import ${selectedSfmSetlists.length} setlists?`)) return;
-
+        // Removed window.confirm to avoid blocking issues
         setIsImportingSFM(true);
         let successCount = 0;
         let failCount = 0;
@@ -446,12 +599,6 @@ const AdminPage = () => {
 
             for (const setlist of selectedObjects) {
                 try {
-                    // Reuse the existing single import logic, but we need to await it carefully
-                    // Note: refactoring handleImportFromSetlistFM to return success status would be cleaner,
-                    // but for now we'll wrap the logic here or call it and catch errors.
-                    // Since handleImportFromSetlistFM uses setIsImportingSFM internally, we should probably refactor it
-                    // or just copy the core logic. Copying logic to avoid state conflicts during loop.
-
                     const token = localStorage.getItem('token');
 
                     // 1. Create/Update Live
@@ -463,7 +610,7 @@ const AdminPage = () => {
                         type: 'ONEMAN'
                     };
 
-                    const liveRes = await fetch('http://localhost:4000/api/lives', {
+                    const liveRes = await fetch('/api/lives', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', token },
                         body: JSON.stringify(liveData)
@@ -476,7 +623,7 @@ const AdminPage = () => {
                         if (setlist.sets && setlist.sets.set) {
                             const flatSongs = setlist.sets.set.flatMap(s => s.song);
                             for (const sfmSong of flatSongs) {
-                                const songRes = await fetch('http://localhost:4000/api/songs', {
+                                const songRes = await fetch('/api/songs', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json', token },
                                     body: JSON.stringify({ title: sfmSong.name })
@@ -487,7 +634,7 @@ const AdminPage = () => {
                         }
 
                         if (songs.length > 0) {
-                            await fetch(`http://localhost:4000/api/lives/${newLive.id}/setlist`, {
+                            await fetch(`/api/lives/${newLive.id}/setlist`, {
                                 method: 'PUT',
                                 headers: { 'Content-Type': 'application/json', token },
                                 body: JSON.stringify({ songs })
@@ -496,6 +643,7 @@ const AdminPage = () => {
                         successCount++;
                     } else {
                         failCount++;
+                        console.error('Failed to create live', newLive);
                     }
 
                 } catch (e) {
@@ -567,6 +715,103 @@ const AdminPage = () => {
             {/* --- CONTENT AREA --- */}
             <div className="content-area">
 
+                {/* COLLECT CONTENT */}
+                {activeTab === 'collect' && (
+                    <div className="tab-content fade-in">
+                        <div className="table-header-panel">
+                            <h3>Collect from Setlist.fm</h3>
+                        </div>
+                        <div className="collect-panel" style={{ padding: '20px' }}>
+                            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                                <input
+                                    type="number"
+                                    value={sfmSearchYear}
+                                    onChange={(e) => setSfmSearchYear(e.target.value)}
+                                    placeholder="Year"
+                                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #334155', background: '#1e293b', color: '#fff' }}
+                                />
+                                <button className="btn-primary" onClick={handleSetlistFMSearch} disabled={isSearchingSFM}>
+                                    {isSearchingSFM ? <Loader className="spin" size={18} /> : <Search size={18} />} Search
+                                </button>
+                            </div>
+
+                            {sfmResults.length > 0 && (
+                                <div style={{ marginBottom: '15px', color: '#94a3b8' }}>
+                                    Found <strong>{sfmResults.length}</strong> setlists for {sfmSearchYear}
+                                </div>
+                            )}
+
+                            {sfmResults.length > 0 && (
+                                <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                                    <button className="btn-secondary" onClick={toggleSelectAllSfm} style={{ fontSize: '0.9rem', padding: '5px 10px' }}>
+                                        {selectedSfmSetlists.length === sfmResults.length ? 'Deselect All' : 'Select All'}
+                                    </button>
+                                    {selectedSfmSetlists.length > 0 && (
+                                        <button className="btn-primary" onClick={(e) => { e.stopPropagation(); handleBulkImport(); }} style={{ fontSize: '0.9rem', padding: '5px 10px' }}>
+                                            Import Selected ({selectedSfmSetlists.length})
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="search-results" style={{ display: 'grid', gap: '10px', maxHeight: '600px', overflowY: 'auto' }}>
+                                {sfmResults.map(setlist => (
+                                    <div key={setlist.id} className="admin-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', border: selectedSfmSetlists.includes(setlist.id) ? '1px solid var(--primary-color)' : '1px solid #334155' }} onClick={() => toggleSfmSelection(setlist.id)}>
+                                        <div style={{ width: '20px', height: '20px', marginRight: '15px', borderRadius: '4px', border: '1px solid #64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', background: selectedSfmSetlists.includes(setlist.id) ? 'var(--primary-color)' : 'transparent' }}>
+                                            {selectedSfmSetlists.includes(setlist.id) && <Check size={14} color="#fff" />}
+                                        </div>
+
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontWeight: 'bold' }}>{setlist.eventDate} @ {setlist.venue.name}</div>
+                                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{setlist.tour?.name || 'No Tour'}</div>
+                                            <div style={{ display: 'flex', gap: '10px' }}>
+                                                {setlist.alreadyImported && <span style={{ color: '#fbbf24', fontSize: '0.8rem' }}>⚠ Already Imported</span>}
+                                                {(!setlist.sets?.set || setlist.sets.set.length === 0) && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>⚠ No Songs Listed</span>}
+                                            </div>
+                                        </div>
+
+                                        <div className="actions-wrapper">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setSfmPreviewData(setlist); }}
+                                                className="action-btn"
+                                                title="View Setlist"
+                                                style={{ color: '#3b82f6' }}
+                                            >
+                                                <ListMusic size={18} />
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (window.confirm(`Import setlist for ${setlist.eventDate}?`)) {
+                                                        handleImportFromSetlistFM(setlist);
+                                                    }
+                                                }}
+                                                className="action-btn"
+                                                title="Import This Setlist"
+                                                style={{ color: '#22c55e' }}
+                                            >
+                                                <Download size={18} />
+                                            </button>
+                                            <a
+                                                href={setlist.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="action-btn"
+                                                title="Open on Setlist.fm"
+                                                style={{ color: '#94a3b8', display: 'flex', alignItems: 'center' }}
+                                            >
+                                                <ExternalLink size={18} />
+                                            </a>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+
                 {/* LIVES CONTENT */}
                 {activeTab === 'lives' && (
                     <div className="tab-content fade-in">
@@ -579,12 +824,122 @@ const AdminPage = () => {
                                 <Plus size={18} /> Add New Live
                             </button>
                         </div>
+
+                        <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <div style={{ position: 'relative' }}>
+                                <Search size={16} className="search-icon" />
+                                <input
+                                    type="text" placeholder="Search lives..."
+                                    value={liveSearchTerm} onChange={(e) => setLiveSearchTerm(e.target.value)}
+                                    className="search-input"
+                                />
+                            </div>
+                            <select
+                                value={liveYearFilter}
+                                onChange={(e) => setLiveYearFilter(e.target.value)}
+                                style={{ padding: '8px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff', cursor: 'pointer' }}
+                            >
+                                <option value="ALL">All Years</option>
+                                {uniqueLiveYears.map(y => (
+                                    <option key={y} value={y}>{y}</option>
+                                ))}
+                            </select>
+                            <select
+                                value={`${liveSortConfig.key}-${liveSortConfig.direction}`}
+                                onChange={(e) => {
+                                    const [key, dir] = e.target.value.split('-');
+                                    setLiveSortConfig({ key, direction: dir });
+                                }}
+                                style={{ padding: '8px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff', cursor: 'pointer' }}
+                            >
+                                <option value="date-desc">Date (Newest)</option>
+                                <option value="date-asc">Date (Oldest)</option>
+                                <option value="tour_name-asc">Tour (A-Z)</option>
+                                <option value="tour_name-desc">Tour (Z-A)</option>
+                                <option value="venue-asc">Venue (A-Z)</option>
+                                <option value="venue-desc">Venue (Z-A)</option>
+                            </select>
+
+                            {selectedLiveIds.length > 0 && (
+                                <button
+                                    className="btn-primary"
+                                    style={{ background: '#ef4444', color: '#fff', border: 'none', marginLeft: 'auto' }}
+                                    onClick={handleBulkDeleteLives}
+                                    disabled={isDeletingLives}
+                                >
+                                    {isDeletingLives ? <Loader className="spin" size={16} /> : <Trash2 size={16} />}
+                                    Delete Selected ({selectedLiveIds.length})
+                                </button>
+                            )}
+                        </div>
+
                         <div className="table-container">
                             <table className="admin-table">
-                                <thead><tr><th>Date</th><th>Tour Name</th><th>Venue</th><th>Actions</th></tr></thead>
+                                <thead>
+                                    <tr>
+                                        <th style={{ width: '40px', padding: '0 10px', textAlign: 'center' }}>
+                                            <div
+                                                onClick={toggleSelectAllLives}
+                                                style={{
+                                                    width: '18px', height: '18px', border: '1px solid #64748b', borderRadius: '4px', cursor: 'pointer',
+                                                    background: selectedLiveIds.length > 0 && selectedLiveIds.length === processedLives.length ? 'var(--primary-color)' : 'transparent',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                }}
+                                            >
+                                                {selectedLiveIds.length > 0 && selectedLiveIds.length === processedLives.length && <Check size={14} color="#000" />}
+                                            </div>
+                                        </th>
+                                        <th
+                                            onClick={() => setLiveSortConfig(prev => ({ key: 'date', direction: prev.key === 'date' && prev.direction === 'asc' ? 'desc' : 'asc' }))}
+                                            className="sortable-th"
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                Date
+                                                {liveSortConfig.key === 'date' ? (
+                                                    liveSortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                                                ) : <ArrowUpDown size={14} style={{ opacity: 0.3 }} />}
+                                            </div>
+                                        </th>
+                                        <th
+                                            onClick={() => setLiveSortConfig(prev => ({ key: 'tour_name', direction: prev.key === 'tour_name' && prev.direction === 'asc' ? 'desc' : 'asc' }))}
+                                            className="sortable-th"
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                Tour Name
+                                                {liveSortConfig.key === 'tour_name' ? (
+                                                    liveSortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                                                ) : <ArrowUpDown size={14} style={{ opacity: 0.3 }} />}
+                                            </div>
+                                        </th>
+                                        <th
+                                            onClick={() => setLiveSortConfig(prev => ({ key: 'venue', direction: prev.key === 'venue' && prev.direction === 'asc' ? 'desc' : 'asc' }))}
+                                            className="sortable-th"
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                Venue
+                                                {liveSortConfig.key === 'venue' ? (
+                                                    liveSortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                                                ) : <ArrowUpDown size={14} style={{ opacity: 0.3 }} />}
+                                            </div>
+                                        </th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
-                                    {lives.map(live => (
-                                        <tr key={live.id}>
+                                    {processedLives.map(live => (
+                                        <tr key={live.id} style={{ background: selectedLiveIds.includes(live.id) ? 'rgba(34, 197, 94, 0.1)' : 'transparent' }}>
+                                            <td style={{ padding: '0 10px', textAlign: 'center' }}>
+                                                <div
+                                                    onClick={() => toggleLiveSelection(live.id)}
+                                                    style={{
+                                                        width: '18px', height: '18px', border: '1px solid #64748b', borderRadius: '4px', cursor: 'pointer', margin: '0 auto',
+                                                        background: selectedLiveIds.includes(live.id) ? 'var(--primary-color)' : 'transparent',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                    }}
+                                                >
+                                                    {selectedLiveIds.includes(live.id) && <Check size={14} color="#000" />}
+                                                </div>
+                                            </td>
                                             <td style={{ width: '120px' }}>{new Date(live.date).toLocaleDateString()}</td>
                                             <td>
                                                 <div style={{ fontWeight: 'bold' }}>{live.tour_name}</div>
@@ -613,8 +968,8 @@ const AdminPage = () => {
                 {activeTab === 'songs' && (
                     <div className="tab-content fade-in">
                         <div className="table-header-panel">
-                            <h3>Songs Master</h3>
-                            <div style={{ display: 'flex', gap: '10px' }}>
+                            <h3>Songs Master ({processedSongs.length} / {songs.length})</h3>
+                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                                 <div style={{ position: 'relative' }}>
                                     <Search size={16} className="search-icon" />
                                     <input
@@ -623,6 +978,33 @@ const AdminPage = () => {
                                         className="search-input"
                                     />
                                 </div>
+                                <select
+                                    value={songAlbumFilter}
+                                    onChange={(e) => setSongAlbumFilter(e.target.value)}
+                                    style={{ padding: '8px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff', cursor: 'pointer' }}
+                                >
+                                    <option value="ALL">すべてのアルバム</option>
+                                    {uniqueAlbums.map(album => (
+                                        <option key={album} value={album}>{album}</option>
+                                    ))}
+                                </select>
+                                <select
+                                    value={`${songSortConfig.key}-${songSortConfig.direction}`}
+                                    onChange={(e) => {
+                                        const [key, dir] = e.target.value.split('-');
+                                        setSongSortConfig({ key, direction: dir });
+                                    }}
+                                    style={{ padding: '8px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff', cursor: 'pointer' }}
+                                >
+                                    <option value="release-asc">公開順（古い→新しい）</option>
+                                    <option value="release-desc">公開順（新しい→古い）</option>
+                                    <option value="title-asc">タイトル A→Z</option>
+                                    <option value="title-desc">タイトル Z→A</option>
+                                    <option value="album-asc">アルバム A→Z</option>
+                                    <option value="album-desc">アルバム Z→A</option>
+                                    <option value="id-asc">ID 昇順</option>
+                                    <option value="id-desc">ID 降順</option>
+                                </select>
                                 <button className="btn-primary" style={{ width: 'auto' }} onClick={() => {
                                     setEditingSong(null); setSongFormData({ title: '', album: '', release_year: '', mv_url: '', author: '' });
                                     setShowSongModal(true);
@@ -633,13 +1015,43 @@ const AdminPage = () => {
                         </div>
                         <div className="table-container">
                             <table className="admin-table">
-                                <thead><tr><th>ID</th><th>Title</th><th>Actions</th></tr></thead>
+                                <thead>
+                                    <tr>
+                                        <th
+                                            style={{ width: '60px', cursor: 'pointer' }}
+                                            onClick={() => setSongSortConfig(prev => ({ key: 'id', direction: prev.key === 'id' && prev.direction === 'asc' ? 'desc' : 'asc' }))}
+                                            className="sortable-th"
+                                        >
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>ID<ArrowUpDown size={14} style={{ opacity: songSortConfig.key === 'id' ? 1 : 0.3 }} /></span>
+                                        </th>
+                                        <th
+                                            style={{ cursor: 'pointer' }}
+                                            onClick={() => setSongSortConfig(prev => ({ key: 'title', direction: prev.key === 'title' && prev.direction === 'asc' ? 'desc' : 'asc' }))}
+                                            className="sortable-th"
+                                        >
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>Title<ArrowUpDown size={14} style={{ opacity: songSortConfig.key === 'title' ? 1 : 0.3 }} /></span>
+                                        </th>
+                                        <th
+                                            style={{ cursor: 'pointer' }}
+                                            onClick={() => setSongSortConfig(prev => ({ key: 'album', direction: prev.key === 'album' && prev.direction === 'asc' ? 'desc' : 'asc' }))}
+                                            className="sortable-th"
+                                        >
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>Album<ArrowUpDown size={14} style={{ opacity: songSortConfig.key === 'album' ? 1 : 0.3 }} /></span>
+                                        </th>
+                                        <th style={{ width: '100px' }}>Actions</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
                                     {processedSongs.map(song => (
                                         <tr key={song.id}>
-                                            <td style={{ width: '80px', color: '#94a3b8' }}>#{song.id}</td>
-                                            <td style={{ fontWeight: 'bold' }}>{song.title}</td>
-                                            <td style={{ width: '120px' }}>
+                                            <td style={{ color: '#94a3b8' }}>#{song.id}</td>
+                                            <td style={{ fontWeight: 'bold' }}>
+                                                <Link to={`/song/${encodeURIComponent(song.title)}`} style={{ color: '#e2e8f0', textDecoration: 'none' }} className="hover-link">
+                                                    {song.title}
+                                                </Link>
+                                            </td>
+                                            <td style={{ color: '#64748b', fontSize: '0.9rem' }}>{song.album || '-'}</td>
+                                            <td>
                                                 <div className="actions-wrapper">
                                                     <button onClick={() => openEditSong(song)} className="action-btn edit" title="Edit"><Edit2 size={18} /></button>
                                                     <button onClick={() => handleDeleteSong(song.id)} className="action-btn delete" title="Delete"><Trash2 size={18} /></button>
@@ -647,7 +1059,7 @@ const AdminPage = () => {
                                             </td>
                                         </tr>
                                     ))}
-                                    {processedSongs.length === 0 && <tr><td colSpan="3" className="empty-cell">No songs found.</td></tr>}
+                                    {processedSongs.length === 0 && <tr><td colSpan="4" className="empty-cell">No songs found.</td></tr>}
                                 </tbody>
                             </table>
                         </div>
@@ -781,132 +1193,7 @@ const AdminPage = () => {
                     </div>
                 )}
 
-                {/* COLLECT CONTENT */}
-                {activeTab === 'collect' && (
-                    <div className="tab-content fade-in">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h3 style={{ margin: 0 }}>Collect from setlist.fm</h3>
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                {selectedSfmSetlists.length > 0 && (
-                                    <button
-                                        onClick={handleBulkImport}
-                                        className="btn-primary"
-                                        style={{ background: '#22c55e', borderColor: '#22c55e', marginRight: '10px' }}
-                                        disabled={isImportingSFM}
-                                    >
-                                        {isImportingSFM ? <Loader className="animate-spin" size={18} /> : <Download size={18} />}
-                                        Import Selected ({selectedSfmSetlists.length})
-                                    </button>
-                                )}
-                                <input
-                                    type="number"
-                                    value={sfmSearchYear}
-                                    onChange={e => setSfmSearchYear(e.target.value)}
-                                    style={{ padding: '8px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff', width: '100px' }}
-                                />
-                                <button onClick={handleSetlistFMSearch} className="btn-primary" disabled={isSearchingSFM}>
-                                    {isSearchingSFM ? <Loader className="animate-spin" size={18} /> : <Search size={18} />} Search
-                                </button>
-                            </div>
-                        </div>
 
-                        {sfmResults.length > 0 ? (
-                            <div className="table-container">
-                                <table className="admin-table">
-                                    <thead>
-                                        <tr>
-                                            <th style={{ width: '40px', textAlign: 'center' }}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedSfmSetlists.length === sfmResults.length && sfmResults.length > 0}
-                                                    onChange={toggleSelectAllSfm}
-                                                    style={{ transform: 'scale(1.2)', cursor: 'pointer' }}
-                                                />
-                                            </th>
-                                            <th>Date</th><th>Venue</th><th>Location</th><th>Tour</th><th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {sfmResults.map(result => {
-                                            const hasSongs = result.sets?.set?.length > 0;
-                                            const isSelected = selectedSfmSetlists.includes(result.id);
-                                            const isImported = result.alreadyImported;
-
-                                            // Conditional styling - priority: selected > imported > no songs > default
-                                            let bg = 'transparent';
-                                            let borderLeft = 'none';
-
-                                            if (isSelected) {
-                                                bg = 'rgba(59, 130, 246, 0.1)';
-                                            } else if (isImported) {
-                                                bg = 'rgba(34, 197, 94, 0.1)';
-                                                borderLeft = '3px solid #22c55e';
-                                            } else if (!hasSongs) {
-                                                bg = 'rgba(239, 68, 68, 0.1)';
-                                                borderLeft = '3px solid #ef4444';
-                                            }
-
-                                            return (
-                                                <tr key={result.id} style={{ background: bg, borderLeft: borderLeft, opacity: isImported ? 0.7 : 1 }}>
-                                                    <td style={{ textAlign: 'center' }}>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={isSelected}
-                                                            onChange={() => toggleSfmSelection(result.id)}
-                                                            style={{ transform: 'scale(1.2)', cursor: 'pointer' }}
-                                                            disabled={isImported}
-                                                        />
-                                                    </td>
-                                                    <td style={{ width: '120px' }}>{result.eventDate}</td>
-                                                    <td style={{ fontWeight: 'bold' }}>{result.venue.name}</td>
-                                                    <td style={{ color: '#cbd5e1' }}>{result.venue.city.name}, {result.venue.city.country.code}</td>
-                                                    <td>{result.tour?.name || '-'}</td>
-                                                    <td style={{ width: '220px' }}>
-                                                        <div className="actions-wrapper">
-                                                            {isImported && <span style={{ color: '#22c55e', fontSize: '0.8rem', marginRight: '5px', fontWeight: 'bold' }}>✓ Imported</span>}
-                                                            {!hasSongs && !isImported && <span style={{ color: '#ef4444', fontSize: '0.8rem', marginRight: '5px', fontWeight: 'bold' }}>No Songs</span>}
-                                                            <button
-                                                                onClick={() => setSfmPreviewData(result)}
-                                                                className="action-btn"
-                                                                title="View Setlist"
-                                                                style={{ color: '#3b82f6', marginRight: '5px' }}
-                                                            >
-                                                                <ListMusic size={18} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleImportFromSetlistFM(result)}
-                                                                className="action-btn promote"
-                                                                title="Import to DB"
-                                                                disabled={isImportingSFM}
-                                                            >
-                                                                {isImportingSFM ? <Loader className="animate-spin" size={18} /> : <Download size={18} />}
-                                                            </button>
-                                                            <a
-                                                                href={result.url}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="action-btn"
-                                                                title="View on setlist.fm"
-                                                                style={{ color: '#94a3b8' }}
-                                                            >
-                                                                <ExternalLink size={18} />
-                                                            </a>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ) : (
-                            <div style={{ textAlign: 'center', padding: '100px 0', border: '1px dashed #334155', borderRadius: '12px', color: '#94a3b8' }}>
-                                <Globe size={48} style={{ marginBottom: '15px', opacity: 0.3 }} />
-                                <p>Enter a year and search for UVERworld setlists on setlist.fm</p>
-                            </div>
-                        )}
-                    </div>
-                )}
             </div>
 
             {/* LIVE MODAL */}

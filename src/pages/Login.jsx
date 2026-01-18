@@ -22,17 +22,17 @@ const Login = () => {
             if (result.success) {
                 navigate('/mypage');
             } else {
-                setError(result.message || 'Failed to login. Please check your credentials.');
+                setError(result.message || 'ログインに失敗しました。メールアドレスとパスワードを確認してください。');
             }
         } catch (err) {
-            setError('An unexpected error occurred.');
+            setError('予期せぬエラーが発生しました。');
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <AuthLayout title="Welcome Back" subtitle="Sign in to continue your journey">
+        <AuthLayout title="Welcome Back" subtitle="ログインして記録を続けましょう">
             {error && (
                 <div style={{
                     background: 'rgba(239, 68, 68, 0.1)',
@@ -49,7 +49,7 @@ const Login = () => {
             )}
             <form onSubmit={handleSubmit}>
                 <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '8px' }}>Email</label>
+                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '8px' }}>メールアドレス</label>
                     <div style={{ position: 'relative' }}>
                         <Mail size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
                         <input
@@ -76,7 +76,7 @@ const Login = () => {
                 </div>
 
                 <div style={{ marginBottom: '30px' }}>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '8px' }}>Password</label>
+                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '8px' }}>パスワード</label>
                     <div style={{ position: 'relative' }}>
                         <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
                         <input
@@ -125,12 +125,12 @@ const Login = () => {
                     onMouseEnter={(e) => !isLoading && (e.currentTarget.style.transform = 'translateY(-1px)')}
                     onMouseLeave={(e) => !isLoading && (e.currentTarget.style.transform = 'translateY(0)')}
                 >
-                    {isLoading ? <Loader size={20} className="animate-spin" /> : <>Sign In <ArrowRight size={20} /></>}
+                    {isLoading ? <Loader size={20} className="animate-spin" /> : <>ログイン <ArrowRight size={20} /></>}
                 </button>
             </form>
 
             <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.9rem', color: '#94a3b8' }}>
-                Don't have an account? <Link to="/signup" style={{ color: 'var(--primary-color)', textDecoration: 'none', fontWeight: 'bold' }}>Sign up</Link>
+                アカウントをお持ちでないですか？ <Link to="/signup" style={{ color: 'var(--primary-color)', textDecoration: 'none', fontWeight: 'bold' }}>新規登録</Link>
             </div>
         </AuthLayout>
     );

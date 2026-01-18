@@ -10,12 +10,16 @@ import MyPageOnboarding from '../components/Dashboard/MyPageOnboarding';
 import { Twitter, Instagram, Youtube, Globe, Music, Calendar, MapPin, Filter, Disc, Building2 } from 'lucide-react';
 import SEO from '../components/SEO';
 
+import AttendedLiveList from '../components/Dashboard/AttendedLiveList';
+import VenueRanking from '../components/Dashboard/VenueRanking';
+
 function MyPage() {
     const [userProfile, setUserProfile] = useState({ twitter: '', instagram: '', youtube: '', website: '' });
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [tempProfile, setTempProfile] = useState({});
     const [modalFilter, setModalFilter] = useState(null);
     const [yearRange, setYearRange] = useState([2005, 2024]);
+    const [selectedSong, setSelectedSong] = useState(null);
 
     const { loading, ...stats } = useLiveStats();
 
@@ -59,12 +63,35 @@ function MyPage() {
         setModalFilter({ type: 'year', value: year });
     };
 
+    const handleAlbumClick = (data) => {
+        if (data && data.name) {
+            setModalFilter({ type: 'album', value: data.name });
+        }
+    };
+
     const handleVenueTypeClick = (venueType) => {
         setModalFilter({ type: 'venueType', value: venueType });
     };
 
+    const handleTotalLivesClick = () => {
+        setModalFilter({ type: 'allLives', value: '通算参戦履歴' });
+    };
+
+    const handleCollectedSongsClick = () => {
+        setModalFilter({ type: 'collectedSongs', value: '収集した楽曲リスト' });
+    };
+
+    const handleSongClick = (song) => {
+        setSelectedSong(song);
+    };
+
+    const handleBackToSongs = () => {
+        setSelectedSong(null);
+    };
+
     const closeModal = () => {
         setModalFilter(null);
+        setSelectedSong(null);
     };
 
     const getFilteredLives = () => {
@@ -78,6 +105,18 @@ function MyPage() {
         }
         if (modalFilter.type === 'venueType') {
             return stats.myLives.filter(live => live.type === modalFilter.value);
+        }
+        if (modalFilter.type === 'allLives') {
+            return stats.myLives;
+        }
+        return [];
+    };
+
+    const getFilteredSongs = () => {
+        if (!modalFilter) return [];
+        if (modalFilter.type === 'collectedSongs') return stats.songRanking;
+        if (modalFilter.type === 'album') {
+            return stats.songRanking.filter(song => song.album === modalFilter.value);
         }
         return [];
     };
@@ -96,7 +135,7 @@ function MyPage() {
     return (
         <div className="container" style={{ paddingTop: '100px' }}>
             <SEO title="My Page" />
-            <Link to="/" style={{ display: 'inline-block', marginBottom: '20px', color: '#94a3b8' }}>&larr; Back to Dashboard</Link>
+            <Link to="/" style={{ display: 'inline-block', marginBottom: '20px', color: '#94a3b8' }}>&larr; ダッシュボードに戻る</Link>
 
             <h1 style={{ marginBottom: '30px', fontSize: '2.5rem' }}>My <span className="text-gold">UVER</span> Records</h1>
 
@@ -109,24 +148,44 @@ function MyPage() {
                         gap: '20px',
                         marginBottom: '40px'
                     }}>
-                        <div className="stat-card">
+                        <div className="stat-card" onClick={handleTotalLivesClick} style={{ cursor: 'pointer', transition: 'transform 0.2s', ':hover': { transform: 'translateY(-2px)' } }}>
                             <div className="stat-icon"><Calendar size={24} /></div>
-                            <div className="stat-label">Total Lives</div>
+                            <div className="stat-label">通算参戦数</div>
                             <div className="stat-value">{stats.totalLives}</div>
                         </div>
-                        <div className="stat-card">
+                        <div className="stat-card" onClick={handleCollectedSongsClick} style={{ cursor: 'pointer', transition: 'transform 0.2s', ':hover': { transform: 'translateY(-2px)' } }}>
                             <div className="stat-icon"><Music size={24} /></div>
-                            <div className="stat-label">Songs Collected</div>
+                            <div className="stat-label">収集した楽曲数</div>
                             <div className="stat-value">{stats.uniqueSongs}</div>
                         </div>
                         {stats.firstLive && (
-                            <div className="stat-card" style={{ gridColumn: 'span 2' }}>
-                                <div className="stat-icon"><MapPin size={24} /></div>
-                                <div className="stat-label">First Live</div>
-                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-color)' }}>
-                                    {stats.firstLive.date} @ {stats.firstLive.venue}
+                            <Link to={`/live/${stats.firstLive.id}`} className="stat-card group" style={{ gridColumn: 'span 2', background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)', borderColor: '#d4af37', textDecoration: 'none' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <div>
+                                        <div className="stat-icon" style={{ color: '#d4af37', marginBottom: '5px' }}><MapPin size={24} /></div>
+                                        <div className="stat-label" style={{ color: '#d4af37', letterSpacing: '0.05em' }}>FIRST MEMORY / 初参戦</div>
+                                    </div>
+                                    <div style={{ fontSize: '3rem', opacity: 0.1, fontWeight: '900', color: '#d4af37', lineHeight: 1 }}>01</div>
                                 </div>
-                            </div>
+
+                                <div style={{ marginTop: '15px' }}>
+                                    <div style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '5px' }}>
+                                        {new Date(stats.firstLive.date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}
+                                    </div>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', lineHeight: 1.3, marginBottom: '10px' }} className="group-hover:text-blue-400 transition-colors">
+                                        {stats.firstLive.tour_name}
+                                    </div>
+                                    {stats.firstLive.title && stats.firstLive.title !== stats.firstLive.tour_name && (
+                                        <div style={{ fontSize: '0.9rem', color: '#cbd5e1', marginBottom: '10px' }}>
+                                            {stats.firstLive.title}
+                                        </div>
+                                    )}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#d4af37', fontSize: '1rem' }}>
+                                        <Building2 size={16} />
+                                        <span>@ {stats.firstLive.venue}</span>
+                                    </div>
+                                </div>
+                            </Link>
                         )}
                     </div>
 
@@ -134,7 +193,7 @@ function MyPage() {
                     <div className="dashboard-panel" style={{ marginBottom: '30px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <div>
-                                <h3>Yearly Attendance <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 'normal' }}>(クリックで絞り込み)</span></h3>
+                                <h3>年間参戦履歴 <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 'normal' }}>(クリックで絞り込み)</span></h3>
                             </div>
                         </div>
 
@@ -167,32 +226,33 @@ function MyPage() {
                     </div>
 
                     {/* Secondary Metrics Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginBottom: '50px', alignItems: 'start' }}>
-                        <div className="dashboard-panel">
-                            <h3>Venue Types <span style={{ fontSize: '0.8rem', color: '#888' }}>(クリックで絞り込み)</span></h3>
-                            <VenueTypePie data={stats.venueTypeStats} onBarClick={handleVenueTypeClick} />
-                        </div>
-                        <div className="dashboard-panel">
-                            <h3>Top Songs Heard</h3>
-                            <SongRanking songs={stats.songRanking} />
-                        </div>
-                        <div className="dashboard-panel">
-                            <h3>Songs by Album</h3>
-                            <AlbumDistribution data={stats.albumStats} />
-                        </div>
-                        <div className="dashboard-panel" style={{ gridColumn: '1 / -1' }}>
-                            <h3>Recent History</h3>
-                            <div className="live-list-compact">
-                                {stats.myLives.slice().reverse().slice(0, 5).map((live) => (
-                                    <Link key={live.id} to={`/live/${live.id}`} className="compact-live-item">
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                                            <div className="date">{live.date}</div>
-                                            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>@ {live.venue}</div>
-                                        </div>
-                                        <div className="title" style={{ marginTop: '4px' }}>{live.tourTitle}</div>
-                                    </Link>
-                                ))}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginBottom: '50px', gridAutoRows: '500px' }}>
+                        <div className="dashboard-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <h3 style={{ flexShrink: 0 }}>会場別データ <span style={{ fontSize: '0.8rem', color: '#888' }}>(クリックで絞り込み)</span></h3>
+                            <div style={{ flex: 1, minHeight: 0 }}>
+                                <VenueTypePie data={stats.venueTypeStats} onBarClick={handleVenueTypeClick} />
                             </div>
+                        </div>
+                        <div className="dashboard-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <h3 style={{ flexShrink: 0 }}>参戦会場ランキング</h3>
+                            <div style={{ flex: 1, minHeight: 0 }}>
+                                <VenueRanking venues={stats.venueRanking} />
+                            </div>
+                        </div>
+                        <div className="dashboard-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <h3 style={{ flexShrink: 0 }}>よく聴く曲</h3>
+                            <div style={{ flex: 1, minHeight: 0, paddingRight: '5px' }}>
+                                <SongRanking songs={stats.songRanking} />
+                            </div>
+                        </div>
+                        <div className="dashboard-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <h3 style={{ flexShrink: 0 }}>アルバム別</h3>
+                            <div style={{ flex: 1, minHeight: 0 }}>
+                                <AlbumDistribution data={stats.albumStats} onBarClick={handleAlbumClick} />
+                            </div>
+                        </div>
+                        <div style={{ gridColumn: '1 / -1', height: '100%' }}>
+                            <AttendedLiveList lives={stats.myLives} />
                         </div>
                     </div>
                 </>
@@ -203,9 +263,9 @@ function MyPage() {
             {/* User Social Links */}
             <div className="social-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '40px', textAlign: 'center' }}>
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '20px', gap: '10px' }}>
-                    <h3 style={{ margin: 0, color: '#888' }}>My Socials</h3>
+                    <h3 style={{ margin: 0, color: '#888' }}>SNSリンク</h3>
                     {!isEditingProfile && (
-                        <button onClick={handleEditClick} className="edit-btn">Edit</button>
+                        <button onClick={handleEditClick} className="edit-btn">編集</button>
                     )}
                 </div>
 
@@ -275,7 +335,7 @@ function MyPage() {
                             </a>
                         )}
                         {!userProfile.twitter && !userProfile.instagram && !userProfile.youtube && !userProfile.website && (
-                            <div style={{ color: '#666', fontStyle: 'italic' }}>No links configured. Click "Edit" to add yours.</div>
+                            <div style={{ color: '#666', fontStyle: 'italic' }}>リンクが設定されていません。「編集」から追加してください。</div>
                         )}
                     </div>
                 )}
@@ -313,7 +373,10 @@ function MyPage() {
                     >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <h2 style={{ margin: 0 }}>
-                                {modalFilter.type === 'year' ? `${modalFilter.value} 年のライブ` : `${modalFilter.value} 会場`}
+                                {modalFilter.type === 'year' ? `${modalFilter.value} 年のライブ` :
+                                    modalFilter.type === 'venueType' ? `${modalFilter.value} 会場` :
+                                        modalFilter.type === 'album' ? `${modalFilter.value} の収録曲` :
+                                            modalFilter.value}
                             </h2>
                             <button
                                 onClick={closeModal}
@@ -329,23 +392,115 @@ function MyPage() {
                                 ×
                             </button>
                         </div>
-                        <div style={{ color: '#888', marginBottom: '20px' }}>
-                            {getFilteredLives().length}件のライブ
-                        </div>
-                        <div className="live-list-compact">
-                            {getFilteredLives().map((live) => (
-                                <Link
-                                    key={live.id}
-                                    to={`/ live / ${live.id} `}
-                                    className="compact-live-item"
-                                    onClick={closeModal}
-                                >
-                                    <div className="date">{live.date}</div>
-                                    <div className="title">{live.tourTitle}</div>
-                                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>@ {live.venue}</div>
-                                </Link>
-                            ))}
-                        </div>
+
+                        {modalFilter.type === 'collectedSongs' || modalFilter.type === 'album' ? (
+                            selectedSong ? (
+                                // Drill-down: Song Detail View
+                                <>
+                                    <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <button
+                                            onClick={handleBackToSongs}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                color: 'var(--primary-color)',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '5px',
+                                                fontSize: '0.9rem'
+                                            }}
+                                        >
+                                            &larr; リストに戻る
+                                        </button>
+                                    </div>
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <h3 style={{ margin: '0 0 5px 0', fontSize: '1.5rem' }}>{selectedSong.title}</h3>
+                                        <div style={{ color: '#888' }}>
+                                            全 {selectedSong.count} 回の演奏
+                                        </div>
+                                    </div>
+                                    <div className="live-list-compact">
+                                        {selectedSong.lives.map((live) => (
+                                            <Link
+                                                key={live.id}
+                                                to={`/live/${live.id}`}
+                                                className="compact-live-item"
+                                                onClick={closeModal}
+                                            >
+                                                <div className="date">{new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.')}</div>
+                                                <div className="title">{live.tourTitle}</div>
+                                                <div style={{ fontSize: '0.85rem', color: '#64748b' }}>@ {live.venue}</div>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </>
+                            ) : (
+                                // Song List View
+                                <>
+                                    <div style={{ color: '#888', marginBottom: '20px' }}>
+                                        {getFilteredSongs().length}曲を収集済み
+                                    </div>
+                                    <div className="live-list-compact">
+                                        {getFilteredSongs().map((song, index) => (
+                                            <div
+                                                key={song.title}
+                                                className="compact-live-item"
+                                                onClick={() => handleSongClick(song)}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                                    <div style={{
+                                                        fontSize: '1.2rem', fontWeight: 'bold', width: '30px',
+                                                        color: index < 3 ? 'var(--primary-color)' : '#475569',
+                                                        fontFamily: 'Oswald, sans-serif'
+                                                    }}>
+                                                        {index + 1}
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ fontWeight: 'bold' }}>{song.title}</div>
+                                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                                                            {index === 0 ? 'あなたのNo.1ソング！' : ''}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div style={{
+                                                    fontSize: '0.9rem', fontWeight: 'bold',
+                                                    background: 'rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: '12px',
+                                                    display: 'flex', alignItems: 'center', gap: '5px'
+                                                }}>
+                                                    {song.count} 回
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )
+                        ) : (
+                            // Live List View
+                            <>
+                                <div style={{ color: '#888', marginBottom: '20px' }}>
+                                    {getFilteredLives().length}件のライブ
+                                </div>
+                                <div className="live-list-compact">
+                                    {getFilteredLives().map((live) => (
+                                        <Link
+                                            key={live.id}
+                                            to={`/live/${live.id}`}
+                                            className="compact-live-item"
+                                            onClick={closeModal}
+                                        >
+                                            <div className="date">{new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.')}</div>
+                                            <div className="title">{live.tourTitle}</div>
+                                            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>@ {live.venue}</div>
+                                        </Link>
+                                    ))}
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}

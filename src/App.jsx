@@ -6,6 +6,7 @@ import MainLayout from './components/Layout/MainLayout';
 import LiveList from './pages/LiveList';
 import LiveDetail from './pages/LiveDetail';
 import SongDetail from './pages/SongDetail';
+import Songs from './pages/Songs';
 import Dashboard from './pages/Dashboard';
 import MyPage from './pages/MyPage';
 import Login from './pages/Login';
@@ -33,16 +34,24 @@ function App() {
             <Route path="/signup" element={<Signup />} />
 
             {/* Protected Routes */}
+            {/* Admin Route */}
+            <Route element={<ProtectedRoute requireAdmin={true} />}>
+              <Route element={<LayoutRoute />}>
+                <Route path="/admin" element={<AdminPage />} />
+              </Route>
+            </Route>
+
+            {/* Standard Protected Routes */}
             <Route element={<ProtectedRoute />}>
               <Route element={<LayoutRoute />}>
                 <Route path="/mypage" element={<MyPage />} />
-                <Route path="/admin" element={<AdminPage />} />
               </Route>
             </Route>
 
             {/* Public Routes (With Layout) */}
             <Route element={<LayoutRoute />}>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/songs" element={<Songs />} />
               <Route path="/lives" element={<LiveList />} />
               <Route path="/live/:id" element={<LiveDetail />} />
               <Route path="/song/:id" element={<SongDetail />} />

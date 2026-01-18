@@ -5,8 +5,8 @@ const LiveGraph = ({ data, onBarClick, dataKey = "count" }) => {
     if (!data || data.length === 0) return <div className="no-data">No Data</div>;
 
     const handleClick = (data) => {
-        if (onBarClick && data) {
-            onBarClick(data);
+        if (onBarClick && data && data.year) {
+            onBarClick(data.year);
         }
     };
 

@@ -13,7 +13,7 @@ const VenueTypeBar = ({ data, onBarClick }) => {
     };
 
     return (
-        <div style={{ width: '100%', height: 300 }}>
+        <div style={{ width: '100%', height: '100%', minHeight: 0 }}>
             <ResponsiveContainer>
                 <BarChart data={data} layout="vertical">
                     <XAxis type="number" stroke="#888" allowDecimals={false} />

@@ -18,7 +18,7 @@ const Signup = () => {
         e.preventDefault();
 
         if (password !== confirmPassword) {
-            return setError('Passwords do not match');
+            return setError('パスワードが一致しません');
         }
 
         setError('');
@@ -29,18 +29,18 @@ const Signup = () => {
             if (result.success) {
                 navigate('/mypage');
             } else {
-                setError(result.message || 'Failed to create an account.');
+                setError(result.message || 'アカウント作成に失敗しました。');
             }
         } catch (err) {
             console.error("Signup Catch Error:", err);
-            setError('An unexpected error occurred: ' + (err.message || String(err)));
+            setError('予期せぬエラーが発生しました: ' + (err.message || String(err)));
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <AuthLayout title="Create Account" subtitle="Join the community & archive your memories">
+        <AuthLayout title="Create Account" subtitle="コミュニティに参加して思い出を記録しよう">
             {error && (
                 <div style={{
                     background: 'rgba(239, 68, 68, 0.1)',
@@ -57,7 +57,7 @@ const Signup = () => {
             )}
             <form onSubmit={handleSubmit}>
                 <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '8px' }}>Username</label>
+                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '8px' }}>ユーザー名</label>
                     <div style={{ position: 'relative' }}>
                         <User size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
                         <input
@@ -65,7 +65,7 @@ const Signup = () => {
                             required
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            placeholder="UVERcrew Name"
+                            placeholder="UVERcrew名"
                             style={{
                                 width: '100%',
                                 padding: '12px 12px 12px 40px',
@@ -84,7 +84,7 @@ const Signup = () => {
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '8px' }}>Email</label>
+                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '8px' }}>メールアドレス</label>
                     <div style={{ position: 'relative' }}>
                         <Mail size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
                         <input
@@ -111,7 +111,7 @@ const Signup = () => {
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '8px' }}>Password</label>
+                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '8px' }}>パスワード</label>
                     <div style={{ position: 'relative' }}>
                         <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
                         <input
@@ -119,7 +119,7 @@ const Signup = () => {
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Create a password"
+                            placeholder="パスワードを作成"
                             style={{
                                 width: '100%',
                                 padding: '12px 12px 12px 40px',
@@ -138,7 +138,7 @@ const Signup = () => {
                 </div>
 
                 <div style={{ marginBottom: '30px' }}>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '8px' }}>Confirm Password</label>
+                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '8px' }}>パスワード（確認）</label>
                     <div style={{ position: 'relative' }}>
                         <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
                         <input
@@ -146,7 +146,7 @@ const Signup = () => {
                             required
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="Confirm password"
+                            placeholder="パスワードを再入力"
                             style={{
                                 width: '100%',
                                 padding: '12px 12px 12px 40px',
@@ -187,12 +187,12 @@ const Signup = () => {
                     onMouseEnter={(e) => !isLoading && (e.currentTarget.style.transform = 'translateY(-1px)')}
                     onMouseLeave={(e) => !isLoading && (e.currentTarget.style.transform = 'translateY(0)')}
                 >
-                    {isLoading ? <Loader size={20} className="animate-spin" /> : <>Start My Journey <ArrowRight size={20} /></>}
+                    {isLoading ? <Loader size={20} className="animate-spin" /> : <>登録する <ArrowRight size={20} /></>}
                 </button>
             </form>
 
             <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.9rem', color: '#94a3b8' }}>
-                Already have an account? <Link to="/login" style={{ color: 'var(--primary-color)', textDecoration: 'none', fontWeight: 'bold' }}>Sign in</Link>
+                すでにアカウントをお持ちですか？ <Link to="/login" style={{ color: 'var(--primary-color)', textDecoration: 'none', fontWeight: 'bold' }}>ログイン</Link>
             </div>
         </AuthLayout>
     );

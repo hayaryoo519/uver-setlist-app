@@ -134,12 +134,15 @@ router.get('/:id/stats', async (req, res) => {
             }
 
             // Rare Definition:
-            // 1. Revival: Not played in > 2 years (730 days)
+            // 1. Revival: Not played in > 3 years (1095 days)
             // 2. Low Frequency: Play Rate < 5%
-            const isRevival = daysSinceLast > 730;
+            const isRevival = daysSinceLast > 1095;
             const isLowFreq = playRate < 5.0 && totalPossibleLives > 10; // Avoid identifying new songs with few lives as rare immediately
 
             isRare = isRevival || isLowFreq;
+        } else {
+            // Songs that have NEVER been performed are extremely rare
+            isRare = true;
         }
 
         // Add calculated fields to response
