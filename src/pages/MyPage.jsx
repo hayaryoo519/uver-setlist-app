@@ -60,7 +60,7 @@ function MyPage() {
     };
 
     const handleYearClick = (year) => {
-        setModalFilter({ type: 'year', value: year });
+        setModalFilter({ type: 'year', value: String(year) });
     };
 
     const handleAlbumClick = (data) => {
@@ -96,20 +96,27 @@ function MyPage() {
 
     const getFilteredLives = () => {
         if (!modalFilter) return [];
+        let filtered = [];
+
         if (modalFilter.type === 'year') {
-            return stats.myLives.filter(live => {
-                // handle both DB date str and local
+            filtered = stats.myLives.filter(live => {
                 const d = live.date || live.attended_at;
-                return d && d.startsWith(modalFilter.value);
+                if (!d) return false;
+                const year = new Date(d).getFullYear();
+                return year == modalFilter.value;
             });
+        } else if (modalFilter.type === 'venueType') {
+            filtered = stats.myLives.filter(live => live.type === modalFilter.value);
+        } else if (modalFilter.type === 'allLives') {
+            filtered = stats.myLives;
         }
-        if (modalFilter.type === 'venueType') {
-            return stats.myLives.filter(live => live.type === modalFilter.value);
-        }
-        if (modalFilter.type === 'allLives') {
-            return stats.myLives;
-        }
-        return [];
+
+        // Sort by date descending (latest first)
+        return filtered.sort((a, b) => {
+            const dateA = new Date(a.date || a.attended_at);
+            const dateB = new Date(b.date || b.attended_at);
+            return dateB - dateA;
+        });
     };
 
     const getFilteredSongs = () => {
