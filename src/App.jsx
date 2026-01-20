@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom
 import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './contexts/AuthContext';
 import MainLayout from './components/Layout/MainLayout';
+import LandingPage from './pages/LandingPage';
 import LiveList from './pages/LiveList';
 import LiveDetail from './pages/LiveDetail';
 import SongDetail from './pages/SongDetail';
@@ -48,9 +49,13 @@ function App() {
               </Route>
             </Route>
 
+            {/* Public Routes */}
+            {/* Landing Page (No Layout) */}
+            <Route path="/" element={<LandingPage />} />
+
             {/* Public Routes (With Layout) */}
             <Route element={<LayoutRoute />}>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/songs" element={<Songs />} />
               <Route path="/lives" element={<LiveList />} />
               <Route path="/live/:id" element={<LiveDetail />} />
