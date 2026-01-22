@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown } from 'lucide-react';
+import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown, AlertTriangle, MessageCircle, CheckCircle } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SetlistEditor from '../components/Admin/SetlistEditor';
@@ -58,6 +58,11 @@ const AdminPage = () => {
     const [editingSong, setEditingSong] = useState(null);
     const [songFormData, setSongFormData] = useState({ title: '', album: '', release_year: '', mv_url: '', author: '' });
 
+    // --- CORRECTIONS STATE ---
+    const [corrections, setCorrections] = useState([]);
+    const [isLoadingCorrections, setIsLoadingCorrections] = useState(false);
+    const [correctionStatusFilter, setCorrectionStatusFilter] = useState('ALL');
+
     // --- COLLECT (SETLIST.FM) STATE ---
     const [sfmResults, setSfmResults] = useState([]);
     const [isSearchingSFM, setIsSearchingSFM] = useState(false);
@@ -75,6 +80,7 @@ const AdminPage = () => {
         if (activeTab === 'users') fetchUsers();
         if (activeTab === 'lives') fetchLives();
         if (activeTab === 'songs') fetchSongs();
+        if (activeTab === 'corrections') fetchCorrections();
         // Reset keyword when switching to import/collect to avoid carrying over from modal
         if (activeTab === 'collect') {
             setSfmSearchKeyword('');
@@ -119,6 +125,104 @@ const AdminPage = () => {
             setImportResult({ success: false, message: 'Error: ' + err.message });
         } finally {
             setIsImporting(false);
+        }
+    };
+
+    // --- API CALLS: CORRECTIONS ---
+    const fetchCorrections = async () => {
+        setIsLoadingCorrections(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/corrections', { headers: { token } });
+            if (res.ok) {
+                const data = await res.json();
+                setCorrections(data.corrections);
+            }
+        } catch (err) { console.error(err); } finally { setIsLoadingCorrections(false); }
+    };
+
+    const updateCorrectionStatus = async (id, status, note) => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/corrections/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', token },
+                body: JSON.stringify({ status, admin_note: note })
+            });
+
+            if (res.ok) {
+                fetchCorrections();
+            } else {
+                alert('Failed to update correction');
+            }
+        } catch (err) { console.error(err); }
+    };
+
+    const handleQuickCreateSong = async (title) => {
+        if (!window.confirm(`Create new song "${title}"?`)) return;
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/songs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', token },
+                body: JSON.stringify({ title })
+            });
+            if (res.ok) {
+                alert(`Song "${title}" created!`);
+                fetchSongs();
+            } else {
+                alert('Failed to create song');
+            }
+        } catch (err) { console.error(err); }
+    };
+
+    const handleApplySetlist = async (liveId, setlistData, correctionId) => {
+        if (!liveId) {
+            alert('Cannot apply: No linked Live ID');
+            return;
+        }
+
+        // Dynamic matching
+        const resolvedSongs = setlistData.map(s => {
+            if (s.songId) return s;
+            const match = songs.find(song => song.title.toLowerCase() === (s.clean || '').toLowerCase());
+            if (match) return { ...s, songId: match.id, songTitle: match.title, isUnknown: false };
+            return s;
+        });
+        const validSongs = resolvedSongs.filter(s => s.songId);
+        const unknownCount = setlistData.length - validSongs.length;
+
+        let confirmMsg = `Apply ${validSongs.length} songs to Live #${liveId}?`;
+        if (unknownCount > 0) {
+            confirmMsg += `\n\nWARNING: ${unknownCount} songs (e.g. "${resolvedSongs.find(s => !s.songId)?.clean}") are still unknown and will be skipped.`;
+        }
+
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            const token = localStorage.getItem('token');
+            // Format for API: { songs: [id, id, ...] }
+            // API expects plain array of IDs
+            const songIds = validSongs.map(s => s.songId);
+
+            const res = await fetch(`/api/lives/${liveId}/setlist`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', token },
+                body: JSON.stringify({ songs: songIds })
+            });
+
+            if (res.ok) {
+                alert('Setlist updated successfully!');
+                // Auto-resolve the correction request
+                if (window.confirm('Mark this correction request as RESOLVED?')) {
+                    updateCorrectionStatus(correctionId, 'resolved', 'Setlist applied via Admin Panel');
+                }
+            } else {
+                alert('Failed to update setlist');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error updating setlist');
         }
     };
 
@@ -1022,6 +1126,15 @@ const AdminPage = () => {
                         <span className="card-badge">API</span>
                     </div>
                 </div>
+
+                <div className={`admin-card ${activeTab === 'corrections' ? 'active' : ''}`} onClick={() => setActiveTab('corrections')}>
+                    <div className="card-header">
+                        <h2 className="card-title"><AlertTriangle size={24} color="#94a3b8" /> Corrections</h2>
+                        <span className="card-badge" style={{ background: corrections.filter(c => c.status === 'pending').length > 0 ? '#ef4444' : 'rgba(255,255,255,0.1)' }}>
+                            {corrections.filter(c => c.status === 'pending').length} / {corrections.length}
+                        </span>
+                    </div>
+                </div>
             </div>
 
             {/* --- CONTENT AREA --- */}
@@ -1182,6 +1295,163 @@ const AdminPage = () => {
                         </div>
                     </div>
                 )}
+                {/* CORRECTIONS CONTENT */}
+                {activeTab === 'corrections' && (
+                    <div className="tab-content fade-in">
+                        <div className="table-header-panel">
+                            <h3>Correction Requests</h3>
+                            <select
+                                value={correctionStatusFilter}
+                                onChange={(e) => setCorrectionStatusFilter(e.target.value)}
+                                style={{ padding: '8px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff', cursor: 'pointer' }}
+                            >
+                                <option value="ALL">All Statuses</option>
+                                <option value="pending">Pending</option>
+                                <option value="reviewed">Reviewed</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                        </div>
+                        <div className="table-container">
+                            <table className="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Status</th>
+                                        <th>Type</th>
+                                        <th style={{ width: '30%' }}>Description</th>
+                                        <th>Live</th>
+                                        <th>User</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {corrections
+                                        .filter(c => correctionStatusFilter === 'ALL' || c.status === correctionStatusFilter)
+                                        .map(correction => (
+                                            <tr key={correction.id}>
+                                                <td style={{ color: '#94a3b8' }}>#{correction.id}</td>
+                                                <td>
+                                                    <span className={`role-badge ${correction.status}`} style={{
+                                                        background: correction.status === 'pending' ? 'rgba(239, 68, 68, 0.2)' :
+                                                            correction.status === 'resolved' ? 'rgba(34, 197, 94, 0.2)' :
+                                                                correction.status === 'reviewed' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(148, 163, 184, 0.2)',
+                                                        color: correction.status === 'pending' ? '#fca5a5' :
+                                                            correction.status === 'resolved' ? '#86efac' :
+                                                                correction.status === 'reviewed' ? '#93c5fd' : '#cbd5e1'
+                                                    }}>
+                                                        {correction.status.toUpperCase()}
+                                                    </span>
+                                                </td>
+                                                <td>{correction.correction_type}</td>
+                                                <td>
+                                                    <div style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{correction.description}</div>
+                                                    {correction.suggested_data && correction.suggested_data.setlist && (
+                                                        <div style={{ marginTop: '10px', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '4px', padding: '10px' }}>
+                                                            <div style={{ fontWeight: 'bold', color: '#38bdf8', marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                                <ListMusic size={14} /> 解析済みデータ ({correction.suggested_data.setlist.length}曲)
+                                                            </div>
+                                                            <div style={{ maxHeight: '150px', overflowY: 'auto', fontSize: '0.8rem', background: 'rgba(0,0,0,0.3)', padding: '5px', marginBottom: '8px' }}>
+                                                                {correction.suggested_data.setlist.map((s, idx) => {
+                                                                    // Dynamic check
+                                                                    let isRecovered = false;
+                                                                    let renderTitle = s.songTitle || s.clean;
+                                                                    if (s.isUnknown) {
+                                                                        const match = songs.find(song => song.title.toLowerCase() === (s.clean || '').toLowerCase());
+                                                                        if (match) {
+                                                                            isRecovered = true;
+                                                                            renderTitle = match.title;
+                                                                        }
+                                                                    }
+
+                                                                    return (
+                                                                        <div key={idx} style={{ color: s.isUnknown && !isRecovered ? '#fca5a5' : '#cbd5e1', display: 'flex', gap: '5px', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                                            <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                                                                                <span>{idx + 1}.</span>
+                                                                                <span>{renderTitle}</span>
+                                                                                {s.isUnknown && !isRecovered && <span style={{ color: '#fca5a5', fontSize: '0.7em' }}>UNKNOWN</span>}
+                                                                                {isRecovered && <CheckCircle size={12} color="#4ade80" />}
+                                                                            </div>
+                                                                            {s.isUnknown && !isRecovered && (
+                                                                                <button
+                                                                                    onClick={() => handleQuickCreateSong(s.clean)}
+                                                                                    style={{ fontSize: '0.7em', background: '#22c55e', color: 'white', border: 'none', borderRadius: '3px', padding: '2px 6px', cursor: 'pointer' }}
+                                                                                >
+                                                                                    + Create
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                            {correction.status !== 'resolved' && (
+                                                                <button
+                                                                    onClick={() => handleApplySetlist(correction.live_id, correction.suggested_data.setlist, correction.id)}
+                                                                    className="action-btn"
+                                                                    style={{ width: '100%', fontSize: '0.8rem', padding: '6px', background: '#38bdf8', color: '#0f172a', justifyContent: 'center', fontWeight: 'bold', gap: '5px' }}
+                                                                >
+                                                                    <CheckCircle size={14} /> このセットリストを適用
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    {correction.admin_note && (
+                                                        <div style={{ marginTop: '8px', padding: '8px', background: 'rgba(0,0,0,0.3)', borderRadius: '4px', fontSize: '0.85rem' }}>
+                                                            <strong style={{ color: '#fbbf24' }}>Admin Note:</strong> {correction.admin_note}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    {correction.live_id ? (
+                                                        <Link to={`/live/${correction.live_id}`} target="_blank" style={{ color: '#fbbf24' }}>{correction.live_tour_name || 'View Live'}</Link>
+                                                    ) : (
+                                                        <div style={{ fontSize: '0.9rem' }}>
+                                                            <div>{correction.live_date}</div>
+                                                            <div>{correction.live_venue}</div>
+                                                            <div>{correction.live_title}</div>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td>{correction.submitter_name || 'Unknown'}</td>
+                                                <td style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{new Date(correction.created_at).toLocaleDateString()}</td>
+                                                <td>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                                        {correction.status !== 'resolved' && (
+                                                            <button onClick={() => updateCorrectionStatus(correction.id, 'resolved')} className="action-btn" style={{ color: '#86efac', justifyContent: 'flex-start', gap: '5px' }}>
+                                                                <CheckCircle size={14} /> Resolve
+                                                            </button>
+                                                        )}
+                                                        {correction.status === 'pending' && (
+                                                            <button onClick={() => updateCorrectionStatus(correction.id, 'reviewed')} className="action-btn" style={{ color: '#93c5fd', justifyContent: 'flex-start', gap: '5px' }}>
+                                                                <MessageCircle size={14} /> Review
+                                                            </button>
+                                                        )}
+                                                        {correction.status !== 'rejected' && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    const note = prompt('Reason for rejection?');
+                                                                    if (note) updateCorrectionStatus(correction.id, 'rejected', note);
+                                                                }}
+                                                                className="action-btn"
+                                                                style={{ color: '#fca5a5', justifyContent: 'flex-start', gap: '5px' }}
+                                                            >
+                                                                <X size={14} /> Reject
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    {corrections.filter(c => correctionStatusFilter === 'ALL' || c.status === correctionStatusFilter).length === 0 && (
+                                        <tr><td colSpan="8" className="empty-cell">No correction requests found.</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
 
 
                 {/* LIVES CONTENT */}
