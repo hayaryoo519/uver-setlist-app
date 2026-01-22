@@ -16,7 +16,7 @@ const LandingPage = () => {
             <header className="lp-header">
                 <div className="lp-header-container">
                     <Link to="/" className="lp-logo">
-                        <span className="lp-logo-text">UVERworld Setlist Archive</span>
+                        <span className="lp-logo-text"><span className="text-gold">UVER</span>world Setlist Archive</span>
                     </Link>
                     <nav className="lp-nav">
                         <Link to="/login" className="lp-nav-link">ログイン</Link>

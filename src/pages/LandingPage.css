@@ -39,7 +39,8 @@
 .lp-logo-text {
     font-size: 1.2rem;
     font-weight: 700;
-    color: var(--primary-color);
+    color: #f8fafc;
+    /* White */
     letter-spacing: -0.5px;
 }
 
