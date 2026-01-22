@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAttendance } from '../hooks/useAttendance';
+import { useAuth } from '../contexts/AuthContext';
+import CorrectionModal from '../components/CorrectionModal';
+import { AlertTriangle } from 'lucide-react';
 import SEO from '../components/SEO';
 
 function LiveDetail() {
@@ -9,6 +12,18 @@ function LiveDetail() {
     const [live, setLive] = useState(null);
     const [loading, setLoading] = useState(true);
     const { isAttended, addLive, removeLive, loading: attendanceLoading } = useAttendance();
+    const { currentUser } = useAuth();
+    const [isCorrectionModalOpen, setIsCorrectionModalOpen] = useState(false);
+    const navigate = useNavigate();
+
+    const handleCorrectionClick = () => {
+        if (!currentUser) {
+            // Include return URL so they come back after login (would need Login page support for this, but for now just redirect)
+            navigate('/login');
+            return;
+        }
+        setIsCorrectionModalOpen(true);
+    };
 
     useEffect(() => {
         // Fetch Live Data
@@ -172,6 +187,28 @@ function LiveDetail() {
                     </div>
                 )}
             </div>
+
+            <div style={{ marginTop: '40px', textAlign: 'center', borderTop: '1px solid #334155', paddingTop: '30px' }}>
+                <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '15px' }}>
+                    セットリストや公演情報に誤りを見つけた場合は、お知らせください。
+                </p>
+                <button
+                    className={`report-correction-btn ${!currentUser ? 'login-required' : ''}`}
+                    onClick={handleCorrectionClick}
+                >
+                    <AlertTriangle size={16} />
+                    {currentUser ? '情報の誤りを報告する' : 'ログインして情報の誤りを報告'}
+                </button>
+            </div>
+
+            <CorrectionModal
+                isOpen={isCorrectionModalOpen}
+                onClose={() => setIsCorrectionModalOpen(false)}
+                liveId={liveId}
+                liveDate={live.date}
+                liveVenue={live.venue}
+                liveTitle={mainTitle}
+            />
         </div>
     );
 }
