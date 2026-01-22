@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, User, Calendar, LogIn, LogOut, Shield, ListMusic } from 'lucide-react';
+import { Menu, X, User, Calendar, LogIn, LogOut, Shield, ListMusic, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Navbar = () => {
@@ -51,6 +51,11 @@ const Navbar = () => {
                                 <User size={18} /> マイページ
                             </Link>
                         )}
+                        {currentUser && (
+                            <Link to="/corrections/new" className="nav-link">
+                                <AlertTriangle size={18} /> データ修正
+                            </Link>
+                        )}
                         {currentUser?.role === 'admin' && (
                             <Link to="/admin" className="nav-link" style={{ color: '#fbbf24' }}>
                                 <Shield size={18} /> Admin Panel
@@ -84,6 +89,7 @@ const Navbar = () => {
                     <Link to="/songs" className="mobile-nav-link">Discography</Link>
                     <Link to="/lives" className="mobile-nav-link">Archive</Link>
                     {currentUser && <Link to="/mypage" className="mobile-nav-link">マイページ</Link>}
+                    {currentUser && <Link to="/corrections/new" className="mobile-nav-link">データ修正依頼</Link>}
                     <div className="mobile-nav-divider"></div>
                     {currentUser ? (
                         <button onClick={logout} className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>ログアウト</button>
