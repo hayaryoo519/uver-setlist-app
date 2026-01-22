@@ -11,7 +11,7 @@ router.post('/register', async (req, res) => {
         // 1. Check if user exists
         const userCheck = await db.query('SELECT * FROM users WHERE email = $1', [email]);
         if (userCheck.rows.length > 0) {
-            return res.status(401).json("User already exists");
+            return res.status(401).json("このメールアドレスは既に登録されています");
         }
 
         // 2. Hash password
@@ -36,7 +36,7 @@ router.post('/register', async (req, res) => {
 
     } catch (err) {
         console.error("Register Error:", err);
-        res.status(500).json({ message: "Internal Server Error" });
+        res.status(500).json({ message: "サーバーエラーが発生しました" });
     }
 });
 
@@ -47,12 +47,12 @@ router.post('/login', async (req, res) => {
         const user = await db.query("SELECT * FROM users WHERE email = $1", [email]);
 
         if (user.rows.length === 0) {
-            return res.status(401).json("Password or Email is incorrect");
+            return res.status(401).json("メールアドレスまたはパスワードが間違っています");
         }
 
         const validPassword = await bcrypt.compare(password, user.rows[0].password);
         if (!validPassword) {
-            return res.status(401).json("Password or Email is incorrect");
+            return res.status(401).json("メールアドレスまたはパスワードが間違っています");
         }
 
         const token = jwt.sign(
