@@ -26,8 +26,8 @@ const BulkImportModal = ({ onClose, onImport, allSongs }) => {
             // Cleanup: Remove leading numbers like "1.", "01", "M1."
             let cleanLine = line.replace(/^([0-9]+[\.\s]*|M[0-9]+[\.\s]*)/i, '').trim();
 
-            // Skip known noise words
-            if (/^(SE|MC)$/i.test(cleanLine)) return null;
+            // Skip known noise words? No, allow SE/MC per user request
+            // if (/^(SE|MC)$/i.test(cleanLine)) return null;
 
             const match = findMatch(cleanLine);
             return {
