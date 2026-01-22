@@ -8,7 +8,7 @@ const authorize = async (req, res, next) => {
 
         if (!jwtToken) {
             console.warn("[AUTH] No token provided");
-            return res.status(403).json({ message: "Not Authorized: No token provided" });
+            return res.status(403).json({ message: "認証されていません：トークンがありません" });
         }
 
         const payload = jwt.verify(jwtToken, process.env.JWT_SECRET || 'secret_key');
@@ -16,7 +16,7 @@ const authorize = async (req, res, next) => {
         next();
     } catch (err) {
         console.error("[AUTH ERROR]", err.message);
-        return res.status(403).json({ message: "Not Authorized: Invalid token" });
+        return res.status(403).json({ message: "認証されていません：無効なトークンです" });
     }
 };
 
@@ -24,7 +24,7 @@ const authorize = async (req, res, next) => {
 const adminCheck = (req, res, next) => {
     if (!req.user || req.user.role !== 'admin') {
         console.warn(`[ADMIN CHECK] Access Denied for user_id: ${req.user?.user_id}, role: ${req.user?.role}`);
-        return res.status(403).json({ message: "Access Denied: Admins only" });
+        return res.status(403).json({ message: "アクセス拒否：管理者権限が必要です" });
     }
     next();
 };
