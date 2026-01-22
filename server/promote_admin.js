@@ -8,9 +8,16 @@ const promoteUserToAdmin = async () => {
         // or just list them to let me pick.
         // Actually, let's just promote 'oaulth@gmail.com' if it exists, or the first user.
 
-        const updateRes = await pool.query(
-            "UPDATE users SET role = 'admin' RETURNING *"
-        );
+        const targetEmail = process.argv[2];
+        let query = "UPDATE users SET role = 'admin' RETURNING *";
+        let params = [];
+
+        if (targetEmail) {
+            query = "UPDATE users SET role = 'admin' WHERE email = $1 RETURNING *";
+            params = [targetEmail];
+        }
+
+        const updateRes = await pool.query(query, params);
 
         console.log("Updated Users:", updateRes.rows.map(u => ({ id: u.id, email: u.email, role: u.role })));
         process.exit(0);

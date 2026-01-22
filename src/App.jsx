@@ -13,6 +13,7 @@ import MyPage from './pages/MyPage';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import AdminPage from './pages/AdminPage';
+import CorrectionForm from './pages/CorrectionForm';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -46,6 +47,7 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<LayoutRoute />}>
                 <Route path="/mypage" element={<MyPage />} />
+                <Route path="/corrections/new" element={<CorrectionForm />} />
               </Route>
             </Route>
 
