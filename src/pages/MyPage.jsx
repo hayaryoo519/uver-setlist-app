@@ -1,65 +1,59 @@
 import React, { useState, useEffect } from 'react';
+import PageHeader from '../components/Layout/PageHeader';
 import { Link } from 'react-router-dom';
-import { getUserProfile, saveUserProfile } from '../utils/storage';
 import { useLiveStats } from '../hooks/useLiveStats';
 import LiveGraph from '../components/Dashboard/LiveGraph';
 import VenueTypePie from '../components/Dashboard/VenueTypePie';
 import AlbumDistribution from '../components/Dashboard/AlbumDistribution';
 import SongRanking from '../components/Dashboard/SongRanking';
 import MyPageOnboarding from '../components/Dashboard/MyPageOnboarding';
-import { Twitter, Instagram, Youtube, Globe, Music, Calendar, MapPin, Filter, Disc, Building2 } from 'lucide-react';
+import { Music, Calendar, MapPin, Filter, Building2, User, Settings as SettingsIcon, ArrowRight } from 'lucide-react';
 import SEO from '../components/SEO';
+import { useAuth } from '../contexts/AuthContext';
 
 import AttendedLiveList from '../components/Dashboard/AttendedLiveList';
 import VenueRanking from '../components/Dashboard/VenueRanking';
 
 function MyPage() {
-    const [userProfile, setUserProfile] = useState({ twitter: '', instagram: '', youtube: '', website: '' });
-    const [isEditingProfile, setIsEditingProfile] = useState(false);
-    const [tempProfile, setTempProfile] = useState({});
     const [modalFilter, setModalFilter] = useState(null);
     const [yearRange, setYearRange] = useState([2005, 2024]);
     const [selectedSong, setSelectedSong] = useState(null);
 
     const { loading, ...stats } = useLiveStats();
+    const { currentUser } = useAuth();
 
-    useEffect(() => {
-        const savedProfile = getUserProfile();
-        if (savedProfile) {
-            setUserProfile(prev => ({ ...prev, ...savedProfile }));
-        }
-    }, []);
+    const [yearFilterMode, setYearFilterMode] = useState('ALL'); // 'ALL', '5', '10'
 
     // Set default year range based on data
     useEffect(() => {
-        if (!loading && stats.myLives.length > 0) {
-            const years = stats.myLives.map(live => new Date(live.date).getFullYear());
+        if (!loading && stats.myLives.length > 0 && yearFilterMode === 'ALL') {
+            const years = stats.myLives.map(live => new Date(live.date || live.attended_at).getFullYear());
             const minYear = Math.min(...years);
             const currentYear = new Date().getFullYear();
             setYearRange([minYear, currentYear]);
         }
-    }, [loading, stats.myLives]);
+    }, [loading, stats.myLives, yearFilterMode]);
 
-    const handleEditClick = () => {
-        setTempProfile({ ...userProfile });
-        setIsEditingProfile(true);
+    const handleYearFilterChange = (e) => {
+        const mode = e.target.value;
+        setYearFilterMode(mode);
+        const currentYear = new Date().getFullYear();
+        if (mode === '5') {
+            setYearRange([currentYear - 4, currentYear]);
+        } else if (mode === '10') {
+            setYearRange([currentYear - 9, currentYear]);
+        } else {
+            // ALL (handled by useEffect or immediate calculation)
+            if (stats.myLives.length > 0) {
+                const years = stats.myLives.map(live => new Date(live.date || live.attended_at).getFullYear());
+                setYearRange([Math.min(...years), currentYear]);
+            }
+        }
     };
 
-    const handleSaveClick = () => {
-        setUserProfile(tempProfile);
-        saveUserProfile(tempProfile);
-        setIsEditingProfile(false);
-    };
 
-    const handleCancelClick = () => {
-        setIsEditingProfile(false);
-    };
-
-    const handleInputChange = (field, value) => {
-        setTempProfile(prev => ({ ...prev, [field]: value }));
-    };
-
-    const handleYearClick = (year) => {
+    const handleYearClick = (data) => {
+        const year = data.year || data; // Handle object or direct value
         setModalFilter({ type: 'year', value: String(year) });
     };
 
@@ -71,6 +65,10 @@ function MyPage() {
 
     const handleVenueTypeClick = (venueType) => {
         setModalFilter({ type: 'venueType', value: venueType });
+    };
+
+    const handleVenueClick = (venueName) => {
+        setModalFilter({ type: 'venue', value: venueName });
     };
 
     const handleTotalLivesClick = () => {
@@ -107,11 +105,12 @@ function MyPage() {
             });
         } else if (modalFilter.type === 'venueType') {
             filtered = stats.myLives.filter(live => live.type === modalFilter.value);
+        } else if (modalFilter.type === 'venue') {
+            filtered = stats.myLives.filter(live => live.venue === modalFilter.value);
         } else if (modalFilter.type === 'allLives') {
             filtered = stats.myLives;
         }
 
-        // Sort by date descending (latest first)
         return filtered.sort((a, b) => {
             const dateA = new Date(a.date || a.attended_at);
             const dateB = new Date(b.date || b.attended_at);
@@ -128,7 +127,6 @@ function MyPage() {
         return [];
     };
 
-    // Loading State
     if (loading) return (
         <div className="container" style={{ paddingTop: '100px', textAlign: 'center' }}>
             <p style={{ color: '#888' }}>Loading your records...</p>
@@ -142,9 +140,69 @@ function MyPage() {
     return (
         <div className="container" style={{ paddingTop: '100px' }}>
             <SEO title="My Page" />
-            <Link to="/" style={{ display: 'inline-block', marginBottom: '20px', color: '#94a3b8' }}>&larr; ダッシュボードに戻る</Link>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <Link to="/" style={{ color: '#94a3b8', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    &larr; <span style={{ fontSize: '0.9rem' }}>ダッシュボードに戻る</span>
+                </Link>
+                <Link to="/settings" className="edit-btn" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <SettingsIcon size={16} /> アカウント設定
+                </Link>
+            </div>
+            <PageHeader title="MY PAGE" />
 
-            <h1 style={{ marginBottom: '30px', fontSize: '2.5rem' }}>My <span className="text-gold">UVER</span> Records</h1>
+            <div className="profile-header-section" style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '24px',
+                marginBottom: '40px',
+                background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%)',
+                padding: '25px',
+                borderRadius: '16px',
+                border: '1px solid var(--border-color)',
+                backdropFilter: 'blur(8px)',
+                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)'
+            }}>
+                <div className="profile-avatar" style={{
+                    width: '90px',
+                    height: '90px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, var(--primary-color) 0%, #b8860b 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '2.5rem',
+                    color: '#000',
+                    fontWeight: '900',
+                    flexShrink: 0,
+                    boxShadow: '0 0 30px rgba(251, 191, 36, 0.15)',
+                    border: '4px solid rgba(255, 255, 255, 0.05)'
+                }}>
+                    {currentUser?.username?.charAt(0).toUpperCase() || <User size={40} />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: '800', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                        {currentUser?.username ? `${currentUser.username}'s` : 'My'}{' '}
+                        <span className="text-gold" style={{ textShadow: '0 0 15px rgba(251, 191, 36, 0.2)' }}>UVER</span> Records
+                    </h1>
+                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginTop: '12px' }}>
+                        {currentUser?.role === 'admin' && (
+                            <span style={{
+                                fontSize: '0.75rem',
+                                background: 'rgba(251, 191, 36, 0.1)',
+                                color: 'var(--primary-color)',
+                                padding: '4px 12px',
+                                borderRadius: '20px',
+                                border: '1px solid rgba(251, 191, 36, 0.2)',
+                                fontWeight: '700',
+                                letterSpacing: '0.05em',
+                                textTransform: 'uppercase'
+                            }}>
+                                🛡️ Administrator
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </div>
 
             {stats.totalLives > 0 ? (
                 <>
@@ -152,15 +210,15 @@ function MyPage() {
                     <div style={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                        gap: '20px',
+                        gap: '30px',
                         marginBottom: '40px'
                     }}>
-                        <div className="stat-card" onClick={handleTotalLivesClick} style={{ cursor: 'pointer', transition: 'transform 0.2s', ':hover': { transform: 'translateY(-2px)' } }}>
+                        <div className="stat-card" onClick={handleTotalLivesClick} style={{ cursor: 'pointer' }}>
                             <div className="stat-icon"><Calendar size={24} /></div>
                             <div className="stat-label">通算参戦数</div>
                             <div className="stat-value">{stats.totalLives}</div>
                         </div>
-                        <div className="stat-card" onClick={handleCollectedSongsClick} style={{ cursor: 'pointer', transition: 'transform 0.2s', ':hover': { transform: 'translateY(-2px)' } }}>
+                        <div className="stat-card" onClick={handleCollectedSongsClick} style={{ cursor: 'pointer' }}>
                             <div className="stat-icon"><Music size={24} /></div>
                             <div className="stat-label">収集した楽曲数</div>
                             <div className="stat-value">{stats.uniqueSongs}</div>
@@ -172,486 +230,319 @@ function MyPage() {
                                         <div className="stat-icon" style={{ color: '#d4af37', marginBottom: '5px' }}><MapPin size={24} /></div>
                                         <div className="stat-label" style={{ color: '#d4af37', letterSpacing: '0.05em' }}>FIRST MEMORY / 初参戦</div>
                                     </div>
-                                    <div style={{ fontSize: '3rem', opacity: 0.1, fontWeight: '900', color: '#d4af37', lineHeight: 1 }}>01</div>
                                 </div>
-
                                 <div style={{ marginTop: '15px' }}>
                                     <div style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '5px' }}>
                                         {new Date(stats.firstLive.date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}
                                     </div>
-                                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', lineHeight: 1.3, marginBottom: '10px' }} className="group-hover:text-blue-400 transition-colors">
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', lineHeight: 1.3 }}>
                                         {stats.firstLive.tour_name}
                                     </div>
-                                    {stats.firstLive.title && stats.firstLive.title !== stats.firstLive.tour_name && (
-                                        <div style={{ fontSize: '0.9rem', color: '#cbd5e1', marginBottom: '10px' }}>
-                                            {stats.firstLive.title}
-                                        </div>
-                                    )}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#d4af37', fontSize: '1rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#d4af37', fontSize: '1rem', marginTop: '10px' }}>
                                         <Building2 size={16} />
-                                        <span>@ {stats.firstLive.venue}</span>
+                                        <span>{stats.firstLive.venue}</span>
                                     </div>
                                 </div>
                             </Link>
                         )}
                     </div>
 
-                    {/* Yearly Attendance Graph (Full Width) */}
+                    {/* Yearly Attendance Graph */}
                     <div className="dashboard-panel" style={{ marginBottom: '30px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <div>
-                                <h3>年間参戦履歴 <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 'normal' }}>(クリックで絞り込み)</span></h3>
-                            </div>
+                            <h3>年間参戦履歴</h3>
+                            <select
+                                value={yearFilterMode}
+                                onChange={handleYearFilterChange}
+                                style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '6px',
+                                    border: '1px solid var(--border-color)',
+                                    background: 'rgba(255,255,255,0.05)',
+                                    color: 'white',
+                                    fontSize: '0.85rem',
+                                    outline: 'none',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <option value="ALL" style={{ backgroundColor: '#1e293b', color: 'white' }}>全期間</option>
+                                <option value="5" style={{ backgroundColor: '#1e293b', color: 'white' }}>直近5年</option>
+                                <option value="10" style={{ backgroundColor: '#1e293b', color: 'white' }}>直近10年</option>
+                            </select>
                         </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Filter size={14} />
-                                期間: {yearRange[0]} - {yearRange[1]}
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <input
-                                    type="range"
-                                    min="2005"
-                                    max="2024"
-                                    value={yearRange[0]}
-                                    onChange={(e) => setYearRange([parseInt(e.target.value), yearRange[1]])}
-                                    style={{ width: '80px', accentColor: 'var(--primary-color)' }}
-                                />
-                                <input
-                                    type="range"
-                                    min="2005"
-                                    max="2024"
-                                    value={yearRange[1]}
-                                    onChange={(e) => setYearRange([yearRange[0], parseInt(e.target.value)])}
-                                    style={{ width: '80px', accentColor: 'var(--primary-color)' }}
-                                />
-                            </div>
-                        </div>
-
                         <LiveGraph data={filteredYearlyStats} onBarClick={handleYearClick} />
                     </div>
 
-                    {/* Secondary Metrics Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginBottom: '50px', gridAutoRows: '500px' }}>
-                        <div className="dashboard-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                            <h3 style={{ flexShrink: 0 }}>会場別データ <span style={{ fontSize: '0.8rem', color: '#888' }}>(クリックで絞り込み)</span></h3>
-                            <div style={{ flex: 1, minHeight: 0 }}>
-                                <VenueTypePie data={stats.venueTypeStats} onBarClick={handleVenueTypeClick} />
-                            </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginBottom: '50px' }}>
+                        <div className="dashboard-panel chart-panel">
+                            <h3>参戦会場ランキング</h3>
+                            <VenueRanking venues={stats.venueRanking} onVenueClick={handleVenueClick} />
                         </div>
-                        <div className="dashboard-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                            <h3 style={{ flexShrink: 0 }}>参戦会場ランキング</h3>
-                            <div style={{ flex: 1, minHeight: 0 }}>
-                                <VenueRanking venues={stats.venueRanking} />
-                            </div>
+                        <div className="dashboard-panel chart-panel">
+                            <h3>よく聴く曲</h3>
+                            <SongRanking songs={stats.songRanking} />
                         </div>
-                        <div className="dashboard-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                            <h3 style={{ flexShrink: 0 }}>よく聴く曲</h3>
-                            <div style={{ flex: 1, minHeight: 0, paddingRight: '5px' }}>
-                                <SongRanking songs={stats.songRanking} />
-                            </div>
+                        <div className="dashboard-panel chart-panel" style={{ gridColumn: '1 / -1' }}>
+                            <h3>アルバム別</h3>
+                            <AlbumDistribution data={stats.albumStats} onBarClick={handleAlbumClick} />
                         </div>
-                        <div className="dashboard-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                            <h3 style={{ flexShrink: 0 }}>アルバム別</h3>
-                            <div style={{ flex: 1, minHeight: 0 }}>
-                                <AlbumDistribution data={stats.albumStats} onBarClick={handleAlbumClick} />
-                            </div>
-                        </div>
-                        <div style={{ gridColumn: '1 / -1', height: '100%' }}>
+                        <div style={{ gridColumn: '1 / -1' }}>
                             <AttendedLiveList lives={stats.myLives} />
                         </div>
                     </div>
                 </>
             ) : (
                 <MyPageOnboarding />
-            )}
-
-            {/* User Social Links */}
-            <div className="social-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '40px', textAlign: 'center' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '20px', gap: '10px' }}>
-                    <h3 style={{ margin: 0, color: '#888' }}>SNSリンク</h3>
-                    {!isEditingProfile && (
-                        <button onClick={handleEditClick} className="edit-btn">編集</button>
-                    )}
-                </div>
-
-                {isEditingProfile ? (
-                    <div className="edit-profile-form">
-                        <div className="form-group">
-                            <label><Twitter size={16} /> Twitter URL</label>
-                            <input
-                                type="text"
-                                value={tempProfile.twitter}
-                                onChange={(e) => handleInputChange('twitter', e.target.value)}
-                                placeholder="https://twitter.com/..."
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label><Instagram size={16} /> Instagram URL</label>
-                            <input
-                                type="text"
-                                value={tempProfile.instagram}
-                                onChange={(e) => handleInputChange('instagram', e.target.value)}
-                                placeholder="https://instagram.com/..."
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label><Youtube size={16} /> YouTube URL</label>
-                            <input
-                                type="text"
-                                value={tempProfile.youtube}
-                                onChange={(e) => handleInputChange('youtube', e.target.value)}
-                                placeholder="https://youtube.com/..."
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label><Globe size={16} /> Website/Blog</label>
-                            <input
-                                type="text"
-                                value={tempProfile.website}
-                                onChange={(e) => handleInputChange('website', e.target.value)}
-                                placeholder="https://..."
-                            />
-                        </div>
-                        <div className="form-actions">
-                            <button onClick={handleCancelClick} className="cancel-btn">Cancel</button>
-                            <button onClick={handleSaveClick} className="save-btn">Save Profile</button>
-                        </div>
-                    </div>
-                ) : (
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '30px' }}>
-                        {userProfile.twitter && (
-                            <a href={userProfile.twitter} target="_blank" rel="noopener noreferrer" className="social-icon">
-                                <Twitter size={30} />
-                            </a>
-                        )}
-                        {userProfile.instagram && (
-                            <a href={userProfile.instagram} target="_blank" rel="noopener noreferrer" className="social-icon">
-                                <Instagram size={30} />
-                            </a>
-                        )}
-                        {userProfile.youtube && (
-                            <a href={userProfile.youtube} target="_blank" rel="noopener noreferrer" className="social-icon">
-                                <Youtube size={30} />
-                            </a>
-                        )}
-                        {userProfile.website && (
-                            <a href={userProfile.website} target="_blank" rel="noopener noreferrer" className="social-icon">
-                                <Globe size={30} />
-                            </a>
-                        )}
-                        {!userProfile.twitter && !userProfile.instagram && !userProfile.youtube && !userProfile.website && (
-                            <div style={{ color: '#666', fontStyle: 'italic' }}>リンクが設定されていません。「編集」から追加してください。</div>
-                        )}
-                    </div>
-                )}
-            </div>
+            )
+            }
 
             {/* Filter Modal */}
-            {modalFilter && (
-                <div
-                    onClick={closeModal}
-                    style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 1000
-                    }}
-                >
-                    <div
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                            backgroundColor: 'var(--bg-color)',
-                            borderRadius: '12px',
-                            padding: '30px',
-                            maxWidth: '600px',
-                            width: '90%',
-                            maxHeight: '80vh',
-                            overflow: 'auto',
-                            border: '1px solid var(--border-color)'
-                        }}
-                    >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h2 style={{ margin: 0 }}>
-                                {modalFilter.type === 'year' ? `${modalFilter.value} 年のライブ` :
-                                    modalFilter.type === 'venueType' ? `${modalFilter.value} 会場` :
-                                        modalFilter.type === 'album' ? `${modalFilter.value} の収録曲` :
-                                            modalFilter.value}
-                            </h2>
-                            <button
-                                onClick={closeModal}
-                                style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: '#888',
-                                    fontSize: '1.5rem',
-                                    cursor: 'pointer',
-                                    padding: '0 10px'
-                                }}
-                            >
-                                ×
-                            </button>
-                        </div>
+            {
+                modalFilter && (
+                    <div onClick={closeModal} className="modal-overlay">
+                        <div onClick={(e) => e.stopPropagation()} className="modal-content">
+                            <div className="modal-header">
+                                <h2 style={{ margin: 0 }}>
+                                    {modalFilter.type === 'year' ? `${modalFilter.value} 年のライブ` :
+                                        modalFilter.type === 'venueType' ? `${modalFilter.value} 会場` :
+                                            modalFilter.type === 'venue' ? `${modalFilter.value}` :
+                                                modalFilter.type === 'album' ? `${modalFilter.value} の収録曲` :
+                                                    modalFilter.value}
+                                </h2>
+                                <button onClick={closeModal} className="close-modal-btn">×</button>
+                            </div>
 
-                        {modalFilter.type === 'collectedSongs' || modalFilter.type === 'album' ? (
-                            selectedSong ? (
-                                // Drill-down: Song Detail View
-                                <>
-                                    <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <button
-                                            onClick={handleBackToSongs}
-                                            style={{
-                                                background: 'none',
-                                                border: 'none',
-                                                color: 'var(--primary-color)',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '5px',
-                                                fontSize: '0.9rem'
-                                            }}
-                                        >
-                                            &larr; リストに戻る
+                            {modalFilter.type === 'collectedSongs' || modalFilter.type === 'album' ? (
+                                selectedSong ? (
+                                    <>
+                                        <button onClick={handleBackToSongs} className="back-btn" style={{ marginBottom: '15px', background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.9rem' }}>
+                                            <ArrowRight size={16} style={{ transform: 'rotate(180deg)' }} /> リストに戻る
                                         </button>
-                                    </div>
-                                    <div style={{ marginBottom: '20px' }}>
-                                        <h3 style={{ margin: '0 0 5px 0', fontSize: '1.5rem' }}>{selectedSong.title}</h3>
-                                        <div style={{ color: '#888' }}>
-                                            全 {selectedSong.count} 回の演奏
+                                        <div style={{ marginBottom: '20px' }}>
+                                            <h3 style={{ margin: '0 0 15px 0', borderLeft: '4px solid var(--primary-color)', paddingLeft: '10px' }}>{selectedSong.title}</h3>
+                                            <div className="live-list-compact">
+                                                {selectedSong.lives.map((live) => {
+                                                    const d = new Date(live.date);
+                                                    return (
+                                                        <Link
+                                                            key={live.id}
+                                                            to={`/live/${live.id}`}
+                                                            className="modal-live-item"
+                                                            onClick={closeModal}
+                                                            style={{
+                                                                display: 'flex',
+                                                                alignItems: 'baseline',
+                                                                gap: '12px',
+                                                                padding: '12px 10px',
+                                                                borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                                                                textDecoration: 'none',
+                                                                color: 'var(--text-color)'
+                                                            }}
+                                                        >
+                                                            <div style={{
+                                                                fontSize: '0.9rem',
+                                                                color: 'var(--primary-color)',
+                                                                fontWeight: 'bold',
+                                                                fontFamily: 'monospace',
+                                                                whiteSpace: 'nowrap'
+                                                            }}>
+                                                                {d.getFullYear()}.{String(d.getMonth() + 1).padStart(2, '0')}.{String(d.getDate()).padStart(2, '0')}
+                                                            </div>
+                                                            <div style={{ flex: 1, fontSize: '0.95rem', lineHeight: 1.4 }}>
+                                                                <span style={{ fontWeight: 'bold', marginRight: '8px', color: 'white' }}>
+                                                                    {live.tour_name || live.tourTitle || live.title}
+                                                                </span>
+                                                                <span style={{ fontSize: '0.85rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                                                                    @ {live.venue}
+                                                                </span>
+                                                            </div>
+                                                        </Link>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="live-list-compact">
-                                        {selectedSong.lives.map((live) => (
-                                            <Link
-                                                key={live.id}
-                                                to={`/live/${live.id}`}
-                                                className="compact-live-item"
-                                                onClick={closeModal}
-                                            >
-                                                <div className="date">{new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.')}</div>
-                                                <div className="title">{live.tourTitle}</div>
-                                                <div style={{ fontSize: '0.85rem', color: '#64748b' }}>@ {live.venue}</div>
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </>
-                            ) : (
-                                // Song List View
-                                <>
-                                    <div style={{ color: '#888', marginBottom: '20px' }}>
-                                        {getFilteredSongs().length}曲を収集済み
-                                    </div>
+                                    </>
+                                ) : (
                                     <div className="live-list-compact">
                                         {getFilteredSongs().map((song, index) => (
                                             <div
                                                 key={song.title}
-                                                className="compact-live-item"
+                                                className="modal-live-item"
                                                 onClick={() => handleSongClick(song)}
                                                 style={{
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                    cursor: 'pointer'
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    gap: '15px',
+                                                    padding: '10px 15px',
+                                                    marginBottom: '6px',
+                                                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                                                    borderRadius: '8px',
+                                                    background: 'rgba(255, 255, 255, 0.03)'
                                                 }}
                                             >
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                                    <div style={{
-                                                        fontSize: '1.2rem', fontWeight: 'bold', width: '30px',
-                                                        color: index < 3 ? 'var(--primary-color)' : '#475569',
-                                                        fontFamily: 'Oswald, sans-serif'
-                                                    }}>
-                                                        {index + 1}
-                                                    </div>
-                                                    <div>
-                                                        <div style={{ fontWeight: 'bold' }}>{song.title}</div>
-                                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                                                            {index === 0 ? 'あなたのNo.1ソング！' : ''}
-                                                        </div>
-                                                    </div>
+                                                <div style={{
+                                                    width: '28px',
+                                                    height: '28px',
+                                                    borderRadius: '50%',
+                                                    backgroundColor: index < 3 ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)',
+                                                    color: index < 3 ? '#000' : '#888',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: 'bold',
+                                                    flexShrink: 0
+                                                }}>
+                                                    {index + 1}
+                                                </div>
+                                                <div style={{ flex: 1, fontWeight: '700', fontSize: '1rem', textAlign: 'left', color: 'var(--text-color)' }}>
+                                                    {song.title}
                                                 </div>
                                                 <div style={{
-                                                    fontSize: '0.9rem', fontWeight: 'bold',
-                                                    background: 'rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: '12px',
-                                                    display: 'flex', alignItems: 'center', gap: '5px'
+                                                    background: 'rgba(255,255,255,0.1)',
+                                                    padding: '4px 10px',
+                                                    borderRadius: '20px',
+                                                    fontSize: '0.8rem',
+                                                    color: 'var(--primary-color)',
+                                                    fontWeight: 'bold'
                                                 }}>
-                                                    {song.count} 回
+                                                    {song.count}回
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
-                                </>
-                            )
-                        ) : (
-                            // Live List View
-                            <>
-                                <div style={{ color: '#888', marginBottom: '20px' }}>
-                                    {getFilteredLives().length}件のライブ
-                                </div>
+                                )
+                            ) : (
                                 <div className="live-list-compact">
-                                    {getFilteredLives().map((live) => (
-                                        <Link
-                                            key={live.id}
-                                            to={`/live/${live.id}`}
-                                            className="compact-live-item"
-                                            onClick={closeModal}
-                                        >
-                                            <div className="date">{new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.')}</div>
-                                            <div className="title">{live.tourTitle}</div>
-                                            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>@ {live.venue}</div>
-                                        </Link>
-                                    ))}
+                                    {getFilteredLives().map((live) => {
+                                        const d = new Date(live.date || live.attended_at);
+                                        return (
+                                            <Link
+                                                key={live.id}
+                                                to={`/live/${live.id}`}
+                                                className="modal-live-item"
+                                                onClick={closeModal}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'baseline',
+                                                    gap: '12px',
+                                                    padding: '12px 10px',
+                                                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                                                    textDecoration: 'none',
+                                                    color: 'var(--text-color)'
+                                                }}
+                                            >
+                                                <div style={{
+                                                    fontSize: '0.9rem',
+                                                    color: 'var(--primary-color)',
+                                                    fontWeight: 'bold',
+                                                    fontFamily: 'monospace',
+                                                    whiteSpace: 'nowrap'
+                                                }}>
+                                                    {d.getFullYear()}.{String(d.getMonth() + 1).padStart(2, '0')}.{String(d.getDate()).padStart(2, '0')}
+                                                </div>
+                                                <div style={{ flex: 1, fontSize: '0.95rem', lineHeight: 1.4 }}>
+                                                    <span style={{ fontWeight: 'bold', marginRight: '8px', color: 'white' }}>
+                                                        {live.tour_name || live.title}
+                                                    </span>
+                                                    <span style={{ fontSize: '0.85rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                                                        @ {live.venue}
+                                                    </span>
+                                                </div>
+                                            </Link>
+                                        );
+                                    })}
                                 </div>
-                            </>
-                        )}
+                            )}
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             <style>{`
-                .stat-card {
-                    background: var(--card-bg);
-                    padding: 20px;
-                    border-radius: 12px;
-                    border: 1px solid var(--border-color);
-                    position: relative;
-                    overflow: hidden;
-                }
-                .stat-card::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 4px;
-                    height: 100%;
-                    background: var(--primary-color);
-                }
-                .stat-icon {
-                    color: var(--primary-color);
-                    margin-bottom: 10px;
-                }
-                .stat-label {
-                    color: #94a3b8;
-                    font-size: 0.9rem;
-                    margin-bottom: 5px;
-                }
-                .stat-value {
-                    font-size: 2.5rem;
-                    font-weight: 800;
-                    color: var(--text-color);
-                    line-height: 1;
-                }
-                .dashboard-panel {
-                    background: var(--card-bg);
-                    padding: 25px;
-                    border-radius: 16px;
-                    border: 1px solid var(--border-color);
-                }
-                .text-gold {
-                    color: var(--primary-color);
-                }
-                .compact-live-item {
-                    display: block;
-                    padding: 12px;
-                    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-                    color: inherit;
-                    text-decoration: none;
-                    transition: background 0.2s;
-                }
-                .compact-live-item:hover {
-                    background: rgba(255, 255, 255, 0.03);
-                    text-decoration: none;
-                }
-                .compact-live-item.date {
-                    font-size: 0.8rem;
-                    color: var(--accent-color);
-                }
-                .compact-live-item.title {
-                    font-weight: 500;
-                }
-                .social-icon {
-                    color: #fff;
-                    transition: color 0.2s, transform 0.2s;
-                }
-                .social-icon:hover {
-                    color: var(--primary-color);
-                    transform: translateY(-3px);
-                }
                 .edit-btn {
                     background: none;
                     border: 1px solid #444;
-                    color: #888;
-                    padding: 2px 8px;
-                    border-radius: 4px;
+                    color: #94a3b8;
+                    padding: 6px 16px;
+                    border-radius: 8px;
                     cursor: pointer;
-                    font-size: 0.8rem;
+                    font-size: 0.85rem;
                     transition: all 0.2s;
                 }
                 .edit-btn:hover {
                     border-color: var(--primary-color);
                     color: var(--primary-color);
+                    background: rgba(212, 175, 55, 0.05);
                 }
-                .edit-profile-form {
-                    max-width: 400px;
-                    margin: 0 auto;
-                    background: rgba(0, 0, 0, 0.2);
-                    padding: 20px;
-                    border-radius: 8px;
+                .profile-header-section {
+                    transition: all 0.3s ease;
+                }
+                .stat-card {
+                    background: var(--card-bg);
+                    padding: 25px;
+                    border-radius: 16px;
                     border: 1px solid var(--border-color);
+                    position: relative;
+                    overflow: hidden;
+                    transition: transform 0.2s;
                 }
-                .form-group {
-                    margin-bottom: 15px;
-                    text-align: left;
-                }
-                .form-group label {
-                    display: block;
-                    margin-bottom: 5px;
-                    color: #ccc;
-                    font-size: 0.9rem;
-                    display: flex;
-                    align-items: center;
-                    gap: 5px;
-                }
-                .form-group input {
-                    width: 100%;
-                    padding: 8px 12px;
-                    background: var(--bg-color);
-                    border: 1px solid var(--border-color);
-                    border-radius: 4px;
-                    color: white;
-                    font-family: inherit;
-                }
-                .form-group input:focus {
-                    outline: none;
-                    border-color: var(--primary-color);
-                }
-                .form-actions {
-                    display: flex;
-                    justify-content: flex-end;
-                    gap: 10px;
-                    margin-top: 20px;
-                }
-                .save-btn, .cancel-btn {
-                    padding: 8px 16px;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-weight: 500;
-                    border: none;
-                }
-                .save-btn {
+                .stat-card:hover { transform: translateY(-2px); }
+                .stat-card::before {
+                    content: '';
+                    position: absolute;
+                    top: 0; left: 0; width: 4px; height: 100%;
                     background: var(--primary-color);
-                    color: black;
                 }
-                .cancel-btn {
-                    background: #333;
-                    color: white;
+                .stat-icon { color: var(--primary-color); margin-bottom: 10px; }
+                .stat-label { color: #94a3b8; font-size: 0.9rem; margin-bottom: 5px; }
+                .stat-value { font-size: 2.5rem; font-weight: 800; color: var(--text-color); line-height: 1; }
+                
+                .dashboard-panel {
+                    background: var(--card-bg);
+                    padding: 25px;
+                    border-radius: 16px;
+                    border: 1px solid var(--border-color);
+                    display: flex;
+                    flex-direction: column;
+                }
+                .chart-panel {
+                    height: 400px;
+                }
+                .chart-panel h3 {
+                    margin-bottom: 20px;
+                    flex-shrink: 0;
+                }
+                .text-gold { color: var(--primary-color); }
+
+                .modal-overlay {
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(0,0,0,0.85); display: flex; align-items: center;
+                    justify-content: center; z-index: 1000; backdrop-filter: blur(4px);
+                }
+                .modal-content {
+                    background: var(--bg-color); border-radius: 16px; padding: 40px;
+                    max-width: 600px; width: 90%; max-height: 85vh; overflow-y: auto;
+                    border: 1px solid var(--border-color);
+                }
+                .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+                .close-modal-btn { background: none; border: none; color: #64748b; font-size: 2rem; cursor: pointer; }
+                
+                .modal-live-item {
+                    display: flex; flex-direction: column; gap: 4px; padding: 16px;
+                    border-bottom: 1px solid rgba(255,255,255,0.05); color: inherit; text-decoration: none;
+                }
+                .modal-live-item:hover { background: rgba(255,255,255,0.03); }
+                .back-btn { background: none; border: none; color: var(--primary-color); cursor: pointer; padding: 0; margin-bottom: 20px; }
+
+                @media (max-width: 640px) {
+                    .profile-header-section { flex-direction: column; text-align: center; gap: 20px; }
+                    .profile-header-section div { justify-content: center; }
                 }
             `}</style>
-        </div>
+        </div >
     );
 }
 
