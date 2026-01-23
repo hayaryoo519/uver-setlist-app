@@ -12,12 +12,12 @@ const Footer = () => {
                 <div className="footer-links">
                     {currentUser && (
                         <Link to="/corrections/new" className="footer-link">
-                            <AlertTriangle size={14} /> データ修正依頼
+                            <AlertTriangle size={14} /> 不具合・データ修正依頼
                         </Link>
                     )}
                 </div>
                 <div className="footer-copyright">
-                    &copy; {new Date().getFullYear()} UVERworld Setlist App
+                    &copy; {new Date().getFullYear()} UVERworld Setlist Archive. Unofficial fan project.
                 </div>
             </div>
 

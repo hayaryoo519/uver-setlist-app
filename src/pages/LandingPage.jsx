@@ -16,7 +16,7 @@ const LandingPage = () => {
             <header className="lp-header">
                 <div className="lp-header-container">
                     <Link to="/" className="lp-logo">
-                        <span className="lp-logo-text"><span className="text-gold">UVER</span>world Setlist Archive</span>
+                        <span className="lp-logo-text"><span className="text-gold">UVERworld</span> Setlist Archive</span>
                     </Link>
                     <nav className="lp-nav">
                         <Link to="/login" className="lp-nav-link">ログイン</Link>
@@ -170,7 +170,7 @@ const LandingPage = () => {
                         <div className="lp-disclaimer-icon">📧</div>
                         <h3 className="lp-disclaimer-title">お問い合わせ</h3>
                         <p className="lp-disclaimer-text">
-                            データの削除依頼や著作権に関するお問い合わせは下記までご連絡ください。<br />
+                            データの修正依頼は、「不具合・データ修正依頼」からご連絡ください。その他、運営に関するお問い合わせは下記までご連絡ください。<br />
                             <strong>Email:</strong> contact@example.com<br />
                             <strong>X (Twitter):</strong> @example_account
                         </p>

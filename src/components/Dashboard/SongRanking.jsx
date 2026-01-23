@@ -94,26 +94,48 @@ const SongRanking = ({ songs }) => {
                                 borderRadius: '8px',
                                 borderLeft: '3px solid var(--primary-color)'
                             }}>
-                                {displayedLives.map((live, idx) => (
-                                    <Link
-                                        key={`${live.id}-${idx}`}
-                                        to={`/live/${live.id}`}
-                                        style={{
-                                            display: 'block',
-                                            padding: '8px 0',
-                                            borderBottom: idx < displayedLives.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-                                            color: 'inherit',
-                                            textDecoration: 'none',
-                                            transition: 'color 0.2s'
-                                        }}
-                                        onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--primary-color)')}
-                                        onMouseLeave={(e) => (e.currentTarget.style.color = 'inherit')}
-                                    >
-                                        <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{live.date}</div>
-                                        <div style={{ fontSize: '0.9rem', fontWeight: '500' }}>{live.tourTitle}</div>
-                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>@ {live.venue}</div>
-                                    </Link>
-                                ))}
+                                {displayedLives.map((live, idx) => {
+                                    const d = new Date(live.date);
+                                    const dateStr = !isNaN(d.getTime())
+                                        ? `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
+                                        : live.date;
+
+                                    return (
+                                        <Link
+                                            key={`${live.id}-${idx}`}
+                                            to={`/live/${live.id}`}
+                                            style={{
+                                                display: 'block',
+                                                padding: '8px 0',
+                                                borderBottom: idx < displayedLives.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                                                color: 'inherit',
+                                                textDecoration: 'none',
+                                                transition: 'all 0.2s',
+                                                opacity: 0.9
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.color = 'var(--primary-color)';
+                                                e.currentTarget.style.opacity = '1';
+                                                e.currentTarget.style.paddingLeft = '5px';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.color = 'inherit';
+                                                e.currentTarget.style.opacity = '0.9';
+                                                e.currentTarget.style.paddingLeft = '0';
+                                            }}
+                                        >
+                                            <div style={{ fontSize: '0.85rem', color: '#fbbf24', fontFamily: 'monospace', marginBottom: '2px' }}>
+                                                {dateStr}
+                                            </div>
+                                            <div style={{ fontSize: '0.95rem', fontWeight: '700', lineHeight: 1.3 }}>
+                                                {live.tourTitle || live.tour_name}
+                                            </div>
+                                            <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>
+                                                @ {live.venue}
+                                            </div>
+                                        </Link>
+                                    );
+                                })}
 
                                 {hasMoreLives && (
                                     <button

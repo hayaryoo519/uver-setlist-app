@@ -44,8 +44,8 @@ const AuthLayout = ({ children, title, subtitle }) => {
                             margin: '0 0 10px 0',
                             letterSpacing: '1px'
                         }}>
-                            UVER<span style={{ color: 'var(--primary-color)' }}>world</span><br />
-                            <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 'normal', letterSpacing: '2px' }}>SETLIST ARCHIVE</span>
+                            <span style={{ color: 'var(--primary-color)' }}>UVERworld</span><br />
+                            <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 'normal', letterSpacing: '2px' }}>Setlist Archive</span>
                         </h1>
                     </Link>
                     {title && <h2 style={{ fontSize: '1.5rem', marginTop: '20px', marginBottom: '5px' }}>{title}</h2>}

@@ -149,7 +149,7 @@ export const useGlobalStats = () => {
 
         const recentLives = [...allLives]
             .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .slice(0, 3)
+            .slice(0, 10)
             .map(live => ({ ...live, date: formatDate(live.date) }));
 
         // --- Album Stats (Global) ---

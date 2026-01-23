@@ -65,13 +65,15 @@ export const useLiveStatsLogic = (myLives, allSongs = []) => {
             // Count Album (using metadata from DB)
             const meta = songMetaMap.get(song.title);
             if (meta && meta.album) {
+                // Filter out Singles as per user request
+                if (meta.album === 'Single' || meta.album === 'Others' || meta.album === 'Side Projects') {
+                    return;
+                }
+
                 const albumCount = albumMap.get(meta.album) || 0;
                 albumMap.set(meta.album, albumCount + 1);
-            } else {
-                // Unknown Album
-                const unknownCount = albumMap.get('Unknown') || 0;
-                albumMap.set('Unknown', unknownCount + 1);
             }
+            // If no meta or no album, simply skip. Do not count as Unknown.
         });
     });
 

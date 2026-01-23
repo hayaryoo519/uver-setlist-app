@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import PageHeader from '../components/Layout/PageHeader';
 import { Link, useLocation } from 'react-router-dom';
 import { DISCOGRAPHY } from '../data/discography';
 import { useGlobalStats } from '../hooks/useGlobalStats';
@@ -121,10 +122,10 @@ function Songs() {
             <SEO title="Discography" />
 
             <div className="container" style={{ paddingTop: '100px', paddingBottom: '80px' }}>
-                <h1 className="page-title" style={{ marginBottom: '10px' }}>Discography</h1>
-                <p style={{ color: '#94a3b8', marginBottom: '20px' }}>
-                    All Releases ({filteredDiscography.length} / {DISCOGRAPHY.length})
-                </p>
+                <PageHeader
+                    title="DISCOGRAPHY"
+                    subtitle={`All Releases (${filteredDiscography.length} / ${DISCOGRAPHY.length})`}
+                />
 
                 {/* Filter Controls */}
                 <div style={{

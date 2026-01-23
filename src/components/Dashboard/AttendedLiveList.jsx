@@ -126,7 +126,19 @@ const AttendedLiveList = ({ lives }) => {
                     filteredAndSortedLives.map((live) => {
                         const d = new Date(live.date);
                         return (
-                            <Link key={live.id} to={`/live/${live.id}`} className="compact-live-item" style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '15px' }}>
+                            <Link
+                                key={live.id}
+                                to={`/live/${live.id}`}
+                                className="compact-live-item"
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '15px',
+                                    padding: '18px 15px',
+                                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                                    textDecoration: 'none'
+                                }}
+                            >
                                 <div style={{
                                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                                     width: '60px', flexShrink: 0
@@ -155,6 +167,15 @@ const AttendedLiveList = ({ lives }) => {
                     </div>
                 )}
             </div>
+
+            <style>{`
+                .compact-live-item {
+                    transition: background 0.2s ease;
+                }
+                .compact-live-item:hover {
+                    background: rgba(255, 255, 255, 0.03);
+                }
+            `}</style>
         </div>
     );
 };
