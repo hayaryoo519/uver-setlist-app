@@ -35,7 +35,7 @@ const Navbar = () => {
             <nav className={`navbar ${isScrolled ? 'scrolled' : ''}`}>
                 <div className="nav-container">
                     <Link to="/" className="nav-logo">
-                        <span className="text-gold">UVER</span>world
+                        <span className="text-gold">UVERworld</span> Setlist Archive
                     </Link>
 
                     {/* Desktop Menu */}
@@ -125,13 +125,11 @@ const Navbar = () => {
                 }
 
                 .nav-logo {
-                    font-family: 'Oswald', sans-serif;
-                    font-size: 1.5rem;
+                    font-size: 1.2rem;
                     font-weight: 700;
                     color: white;
                     text-decoration: none;
-                    text-transform: uppercase;
-                    letter-spacing: 2px;
+                    letter-spacing: -0.5px;
                 }
 
                 .text-gold {

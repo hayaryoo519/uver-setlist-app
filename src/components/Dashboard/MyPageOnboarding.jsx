@@ -10,8 +10,7 @@ const MyPageOnboarding = () => {
             padding: '40px',
             textAlign: 'center',
             border: '1px solid rgba(255,255,255,0.1)',
-            maxWidth: '700px',
-            margin: '0 auto 60px auto'
+            marginBottom: '60px'
         }}>
             <h2 style={{ fontSize: '2rem', marginBottom: '20px', color: 'var(--text-color)' }}>
                 あなたの<span className="text-gold">参戦履歴</span>を作ろう

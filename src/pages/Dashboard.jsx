@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
+import PageHeader from '../components/Layout/PageHeader';
 import { Link } from 'react-router-dom';
 import { useGlobalStats } from '../hooks/useGlobalStats';
 import { Calendar, Music, MapPin, ArrowRight, List, TrendingUp, Activity, Filter, Disc } from 'lucide-react';
 import LiveGraph from '../components/Dashboard/LiveGraph';
 import AlbumDistribution from '../components/Dashboard/AlbumDistribution';
-import MainVisual from '../components/Visual/MainVisual';
+
 import SEO from '../components/SEO';
 
 function Dashboard() {
@@ -197,145 +198,8 @@ function Dashboard() {
     return (
         <div className="page-wrapper">
             <SEO title="Dashboard" />
-            <MainVisual />
-            <div className="container" style={{ position: 'relative', zIndex: 10 }}>
-                {/* Current Tour Progress */}
-                {/* Current Tour Progress Hero */}
-                {stats.currentTour && (
-                    <div style={{
-                        marginTop: '0px',
-                        marginBottom: '40px',
-                        position: 'relative',
-                        zIndex: 20
-                    }}>
-                        <div style={{
-                            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95))',
-                            borderRadius: '16px',
-                            padding: '24px 32px', // Reduced padding
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            boxShadow: '0 10px 30px rgba(0,0,0,0.4)', // Reduced shadow
-                            overflow: 'hidden',
-                            position: 'relative'
-                        }}>
-                            {/* Abstract Background Element (CSS Only) */}
-                            <div style={{
-                                position: 'absolute',
-                                top: '-50%',
-                                right: '-10%',
-                                width: '500px', // Reduced size
-                                height: '500px',
-                                background: 'radial-gradient(circle, rgba(251, 191, 36, 0.1) 0%, rgba(0,0,0,0) 70%)',
-                                borderRadius: '50%',
-                                filter: 'blur(40px)',
-                                pointerEvents: 'none'
-                            }}></div>
-
-                            <div style={{ position: 'relative', zIndex: 10 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
-                                    <div style={{ flex: 1, minWidth: '300px' }}>
-                                        <div style={{
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '8px',
-                                            color: 'var(--primary-color)',
-                                            fontWeight: 'bold',
-                                            fontSize: '0.75rem',
-                                            marginBottom: '5px',
-                                            fontFamily: 'Oswald, sans-serif',
-                                            letterSpacing: '0.05em'
-                                        }}>
-                                            <span style={{ width: '8px', height: '8px', background: 'var(--primary-color)', borderRadius: '50%', display: 'inline-block' }}></span>
-                                            LATEST TOUR {stats.currentTour.startDate ? `/ ${stats.currentTour.startDate.split('.')[0]}` : ''}
-                                        </div>
-                                        <h2 style={{
-                                            margin: '5px 0 15px 0',
-                                            fontSize: '2.5rem', // Reduced from 3.5rem
-                                            lineHeight: 1.1,
-                                            fontFamily: 'Oswald, sans-serif',
-                                            background: 'linear-gradient(to right, #fff, #cbd5e1)', // Slightly softer gradient
-                                            WebkitBackgroundClip: 'text',
-                                            WebkitTextFillColor: 'transparent',
-                                            textTransform: 'uppercase'
-                                        }}>
-                                            {stats.currentTour.name.replace('UVERworld', '')}
-                                        </h2>
-                                        <div style={{ fontSize: '1rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '20px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <Calendar size={16} color="var(--primary-color)" />
-                                                <span className="font-mono">{stats.currentTour.startDate} 〜 {stats.currentTour.endDate}</span>
-                                            </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <MapPin size={16} color="var(--primary-color)" />
-                                                <span>Total {stats.currentTour.liveCount} Shows</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div style={{ textAlign: 'right', alignSelf: 'center' }}>
-                                        <div onClick={() => handleTourClick(stats.currentTour)} style={{
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            width: '50px', // Reduced size
-                                            height: '50px',
-                                            borderRadius: '50%',
-                                            border: '1px solid var(--primary-color)', // Thinner border
-                                            color: 'var(--primary-color)',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.3s'
-                                        }}
-                                            className="hover-scale group"
-                                        >
-                                            <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div style={{ marginTop: '25px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '15px' }}>
-                                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '10px', fontFamily: 'Oswald, sans-serif', letterSpacing: '0.05em' }}>
-                                        TOUR HIGHLIGHTS
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                                        {(stats.currentTour?.songRanking || []).slice(0, 5).map((song, i) => (
-                                            <Link
-                                                key={i}
-                                                to={`/song/${encodeURIComponent(song.title)}`} // Note: Assuming ID lookup by title or handling needs upgrade. Wait, seed has ID? Dashboard map has no ID. Using Name for now needs robust logic or ID.
-                                                // Actually standard link to /lives with filter is safer if ID missing
-                                                // Better: Dashboard data should have ID. 
-                                                // Checking useGlobalStats: songRanking has title, count, lives. No SongID. 
-                                                // Fallback: Link to specific live or make filter. 
-                                                // User requested "Clickable chips to song detail". 
-                                                // I need to fetch Song IDs in useGlobalStats ideally. 
-                                                // For now, I will use a placeholder or assume title lookup works if I fixed router? 
-                                                // Router expects ID. 
-                                                // Let's style it as desired but maybe just trigger the modal filter for now to be safe, 
-                                                // OR Link to a Search page? 
-                                                // Let's keep existing chip style but make it look premium.
-                                                // Re-using current logic but styling better.
-                                                style={{ textDecoration: 'none' }}
-                                            >
-                                                <div style={{
-                                                    background: 'rgba(255,255,255,0.03)',
-                                                    padding: '8px 16px',
-                                                    borderRadius: '4px',
-                                                    fontSize: '0.9rem',
-                                                    borderLeft: `2px solid ${i === 0 ? 'var(--primary-color)' : 'rgba(255,255,255,0.2)'}`,
-                                                    color: '#fff',
-                                                    transition: 'background 0.2s'
-                                                }}
-                                                    className="song-chip"
-                                                >
-                                                    <span style={{ fontWeight: '500' }}>{song.title}</span>
-                                                    <span style={{ color: '#64748b', marginLeft: '8px', fontSize: '0.8rem' }}>{song.count}回</span>
-                                                </div>
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
+            <div className="container" style={{ position: 'relative', zIndex: 10, paddingTop: '100px' }}>
+                <PageHeader title="DASHBOARD" />
 
                 {/* Stats Cards */}
                 <div style={{
@@ -436,156 +300,192 @@ function Dashboard() {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '40px' }}>
-
                     {/* Top Songs Ranking (Left Column) */}
-                    <div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <h2 className="section-title" style={{ marginBottom: '20px' }}>Top Songs <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 'normal' }}>(Top 10)</span></h2>
-                        <div className="dashboard-panel" style={{ padding: 0 }}>
+                        <div className="dashboard-panel" style={{ padding: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
                             {(!stats.globalSongRanking || stats.globalSongRanking.length === 0) ? (
-                                <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                                <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     No Song Data Available
                                 </div>
                             ) : (
-                                (stats.globalSongRanking || []).slice(0, 10).map((song, index) => (
-                                    <Link
-                                        to={song.id ? `/song/${song.id}` : '#'}
-                                        key={index}
-                                        style={{ textDecoration: 'none', color: 'inherit' }}
-                                    >
-                                        <div
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                padding: '15px 20px',
-                                                borderBottom: '1px solid rgba(255,255,255,0.05)',
-                                            }}
-                                            className="hover-opacity"
+                                <div style={{ flex: 1 }}>
+                                    {(stats.globalSongRanking || []).slice(0, 10).map((song, index) => (
+                                        <Link
+                                            to={song.id ? `/song/${song.id}` : '#'}
+                                            key={index}
+                                            style={{ textDecoration: 'none', color: 'inherit' }}
                                         >
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, minWidth: 0 }}>
-                                                <div style={{
-                                                    width: '24px',
-                                                    height: '24px',
-                                                    borderRadius: '50%',
-                                                    background: index < 3 ? 'linear-gradient(135deg, #fbbf24, #d97706)' : 'rgba(255,255,255,0.1)',
-                                                    color: index < 3 ? '#000' : '#fff',
+                                            <div
+                                                style={{
                                                     display: 'flex',
                                                     alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontWeight: 'bold',
-                                                    fontSize: '0.8rem',
-                                                    flexShrink: 0
-                                                }}>
-                                                    {index + 1}
+                                                    justifyContent: 'space-between',
+                                                    padding: '15px 20px',
+                                                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                                }}
+                                                className="hover-opacity"
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, minWidth: 0 }}>
+                                                    <div style={{
+                                                        width: '24px',
+                                                        height: '24px',
+                                                        borderRadius: '50%',
+                                                        background: index < 3 ? 'linear-gradient(135deg, #fbbf24, #d97706)' : 'rgba(255,255,255,0.1)',
+                                                        color: index < 3 ? '#000' : '#fff',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontWeight: 'bold',
+                                                        fontSize: '0.8rem',
+                                                        flexShrink: 0
+                                                    }}>
+                                                        {index + 1}
+                                                    </div>
+                                                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        <div style={{ fontWeight: '500' }}>{song.title}</div>
+                                                    </div>
                                                 </div>
-                                                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                    <div style={{ fontWeight: '500' }}>{song.title}</div>
+                                                <div style={{ textAlign: 'right', paddingLeft: '15px' }}>
+                                                    <div style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>
+                                                        {song.count} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: '#64748b' }}>Plays</span>
+                                                    </div>
+                                                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                                        {song.percentage}%
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div style={{ textAlign: 'right', paddingLeft: '15px' }}>
-                                                <div style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>
-                                                    {song.count} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: '#64748b' }}>Plays</span>
-                                                </div>
-                                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                                                    {song.percentage}%
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </Link>
-                                ))
+                                        </Link>
+                                    ))}
+                                </div>
                             )}
                         </div>
                     </div>
 
-                    {/* Right Column: Recent Lives & Album Graph */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
-                        {/* Recent Lives */}
-                        <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                <h2 className="section-title" style={{ marginBottom: 0 }}>Recent Lives</h2>
-                                <Link to="/lives" style={{ color: 'var(--accent-color)', fontSize: '0.9rem' }}>View All</Link>
+                    {/* Recent Lives (Right Column) */}
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h2 className="section-title" style={{ marginBottom: 0 }}>Recent Lives</h2>
+                            <Link to="/lives" style={{ color: 'var(--accent-color)', fontSize: '0.9rem' }}>View All</Link>
+                        </div>
+                        <div className="dashboard-panel" style={{ padding: '0', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                            {(!stats.recentLives || stats.recentLives.length === 0) ? (
+                                <div style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '0.9rem', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    No recent live records.
+                                </div>
+                            ) : (
+                                <div style={{ flex: 1 }}>
+                                    {(stats.recentLives || []).map((live, index) => {
+                                        const dateParts = live.date.split('.');
+                                        const year = dateParts[0];
+                                        const monthDay = `${dateParts[1]}.${dateParts[2]}`;
+                                        return (
+                                            <Link key={live.id} to={`/live/${live.id}`} className="recent-live-item">
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                                    <div style={{
+                                                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                                        width: '50px', flexShrink: 0
+                                                    }}>
+                                                        <span style={{ fontSize: '0.7rem', color: '#64748b', lineHeight: 1 }}>{year}</span>
+                                                        <span style={{
+                                                            fontSize: '1.1rem',
+                                                            fontWeight: 'bold',
+                                                            color: 'var(--primary-color)',
+                                                            lineHeight: 1.2,
+                                                            fontFamily: 'Oswald, sans-serif'
+                                                        }}>
+                                                            {monthDay}
+                                                        </span>
+                                                    </div>
+
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{
+                                                            fontWeight: 'bold',
+                                                            fontSize: '0.95rem',
+                                                            marginBottom: '2px',
+                                                            whiteSpace: 'nowrap',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            color: 'white'
+                                                        }}>
+                                                            {live.tour_name || live.title}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            <MapPin size={12} /> {live.venue}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Songs by Album (Full Width) */}
+                    <div className="dashboard-panel" style={{ gridColumn: '1 / -1' }}>
+                        {/* Duplicate Slider for easier access */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Filter size={14} />
+                                期間: {yearRange[0]} - {yearRange[1]}
                             </div>
-                            <div className="dashboard-panel" style={{ padding: '0' }}>
-                                {(!stats.recentLives || stats.recentLives.length === 0) ? (
-                                    <div style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
-                                        No recent live records.
-                                    </div>
-                                ) : (
-                                    (stats.recentLives || []).map((live, index) => (
-                                        <Link key={live.id} to={`/live/${live.id}`} className="recent-live-item">
-                                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{live.date}</div>
-                                            <div style={{ fontWeight: 'bold', margin: '4px 0' }}>{live.tourTitle}</div>
-                                            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>@ {live.venue}</div>
-                                        </Link>
-                                    ))
-                                )}
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <input
+                                    type="range"
+                                    min="2005"
+                                    max="2024"
+                                    value={yearRange[0]}
+                                    onChange={(e) => setYearRange([Math.min(parseInt(e.target.value), yearRange[1]), yearRange[1]])}
+                                    style={{ width: '80px', accentColor: 'var(--primary-color)' }}
+                                />
+                                <input
+                                    type="range"
+                                    min="2005"
+                                    max="2024"
+                                    value={yearRange[1]}
+                                    onChange={(e) => setYearRange([yearRange[0], Math.max(parseInt(e.target.value), yearRange[0])])}
+                                    style={{ width: '80px', accentColor: 'var(--primary-color)' }}
+                                />
                             </div>
                         </div>
 
-                        {/* Songs by Album */}
-                        <div className="dashboard-panel">
-                            {/* Duplicate Slider for easier access */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Filter size={14} />
-                                    期間: {yearRange[0]} - {yearRange[1]}
-                                </div>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    <input
-                                        type="range"
-                                        min="2005"
-                                        max="2024"
-                                        value={yearRange[0]}
-                                        onChange={(e) => setYearRange([Math.min(parseInt(e.target.value), yearRange[1]), yearRange[1]])}
-                                        style={{ width: '80px', accentColor: 'var(--primary-color)' }}
-                                    />
-                                    <input
-                                        type="range"
-                                        min="2005"
-                                        max="2024"
-                                        value={yearRange[1]}
-                                        onChange={(e) => setYearRange([yearRange[0], Math.max(parseInt(e.target.value), yearRange[0])])}
-                                        style={{ width: '80px', accentColor: 'var(--primary-color)' }}
-                                    />
-                                </div>
-                            </div>
+                        <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Disc size={20} color="var(--primary-color)" />
+                            Songs by Album ({yearRange[0]} - {yearRange[1]})
+                        </h3>
+                        <div style={{ height: '400px' }}>
+                            <AlbumDistribution data={(() => {
+                                if (!stats.allLives || !stats.songAlbumMap) return [];
 
-                            <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Disc size={20} color="var(--primary-color)" />
-                                Songs by Album ({yearRange[0]} - {yearRange[1]})
-                            </h3>
-                            <div style={{ height: '400px' }}>
-                                <AlbumDistribution data={(() => {
-                                    if (!stats.allLives || !stats.songAlbumMap) return [];
+                                const targetLives = stats.allLives.filter(live => {
+                                    if (!live.date) return false;
+                                    const y = new Date(live.date).getFullYear();
+                                    return y >= yearRange[0] && y <= yearRange[1];
+                                });
 
-                                    const targetLives = stats.allLives.filter(live => {
-                                        if (!live.date) return false;
-                                        const y = new Date(live.date).getFullYear();
-                                        return y >= yearRange[0] && y <= yearRange[1];
+                                const map = new Map();
+                                targetLives.forEach(live => {
+                                    if (!live.setlist) return;
+                                    live.setlist.forEach(song => {
+                                        if (!song || !song.title) return;
+                                        // Try exact match first, then unknown
+                                        let album = stats.songAlbumMap.get(song.title);
+                                        if (!album) {
+                                            // Fallback: Check if map keys have slight variation? (Simpler to just default to Unknown)
+                                            album = 'Unknown';
+                                        }
+                                        map.set(album, (map.get(album) || 0) + 1);
                                     });
+                                });
 
-                                    const map = new Map();
-                                    targetLives.forEach(live => {
-                                        if (!live.setlist) return;
-                                        live.setlist.forEach(song => {
-                                            if (!song || !song.title) return;
-                                            // Try exact match first, then unknown
-                                            let album = stats.songAlbumMap.get(song.title);
-                                            if (!album) {
-                                                // Fallback: Check if map keys have slight variation? (Simpler to just default to Unknown)
-                                                album = 'Unknown';
-                                            }
-                                            map.set(album, (map.get(album) || 0) + 1);
-                                        });
-                                    });
+                                const result = Array.from(map.entries())
+                                    .map(([name, value]) => ({ name, value }))
+                                    .sort((a, b) => b.value - a.value);
 
-                                    const result = Array.from(map.entries())
-                                        .map(([name, value]) => ({ name, value }))
-                                        .sort((a, b) => b.value - a.value);
-
-                                    return result;
-                                })()} onBarClick={handleAlbumClick} />
-                            </div>
+                                return result;
+                            })()} onBarClick={handleAlbumClick} />
                         </div>
                     </div>
                 </div>
