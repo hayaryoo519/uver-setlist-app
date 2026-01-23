@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAttendance } from '../hooks/useAttendance';
 import { useAuth } from '../contexts/AuthContext';
 import CorrectionModal from '../components/CorrectionModal';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Tag, MapPin, Check, Plus } from 'lucide-react';
 import SEO from '../components/SEO';
 
 function LiveDetail() {
@@ -18,7 +18,6 @@ function LiveDetail() {
 
     const handleCorrectionClick = () => {
         if (!currentUser) {
-            // Include return URL so they come back after login (would need Login page support for this, but for now just redirect)
             navigate('/login');
             return;
         }
@@ -26,7 +25,6 @@ function LiveDetail() {
     };
 
     useEffect(() => {
-        // Fetch Live Data
         const fetchLive = async () => {
             try {
                 const res = await fetch(`/api/lives/${id}`);
@@ -54,7 +52,10 @@ function LiveDetail() {
         }
 
         if (!success) {
-            alert("更新に失敗しました。ログイン状態を確認してください。");
+            const shouldLogin = window.confirm("参戦記録をつけるにはログインが必要です。\nログインページに移動しますか？");
+            if (shouldLogin) {
+                navigate('/login');
+            }
         }
     };
 
@@ -80,34 +81,31 @@ function LiveDetail() {
                 <Link to="/mypage" style={{ color: 'var(--accent-color)' }}>マイページ &rarr;</Link>
             </div>
 
+            {/* Header Section */}
             <div style={{ marginBottom: '30px' }}>
-                <h1 style={{ marginBottom: '10px' }}>{mainTitle}</h1>
+                <h1 className="text-3xl font-bold mb-3 font-oswald text-white">{mainTitle}</h1>
                 {live.special_note && (
-                    <div style={{ color: '#fbbf24', fontSize: '0.9rem', marginBottom: '8px', fontWeight: '500' }}>
+                    <div className="text-amber-400 text-sm font-medium mb-2 flex items-center gap-2">
+                        <AlertTriangle size={16} />
                         {live.special_note}
                     </div>
                 )}
-                <div style={{ color: '#94a3b8', marginBottom: '16px' }}>
-                    {new Date(live.date).toLocaleDateString()} @ {live.venue}
+                <div className="flex items-center gap-2 text-slate-400 mb-6 text-lg">
+                    <span>{new Date(live.date).toLocaleDateString()}</span>
+                    <MapPin size={18} className="text-red-500" strokeWidth={2.5} />
+                    <span className="text-white font-medium">{live.venue}</span>
                 </div>
 
                 <button
                     onClick={handleToggleAttendance}
                     disabled={attendanceLoading}
-                    style={{
-                        padding: '10px 20px',
-                        borderRadius: '999px',
-                        border: 'none',
-                        cursor: attendanceLoading ? 'wait' : 'pointer',
-                        backgroundColor: isAttended(liveId) ? 'var(--accent-color)' : '#334155',
-                        color: isAttended(liveId) ? '#0f172a' : 'white',
-                        fontWeight: 'bold',
-                        fontSize: '1rem',
-                        transition: 'all 0.2s',
-                        opacity: attendanceLoading ? 0.7 : 1
-                    }}
+                    className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-200 flex items-center gap-2
+                        ${isAttended(liveId)
+                            ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-900/20'
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
                 >
-                    {isAttended(liveId) ? '✓ 参戦済み' : '+ 参戦記録をつける'}
+                    {isAttended(liveId) ? <Check size={18} /> : <Plus size={18} />}
+                    {isAttended(liveId) ? '参戦済み' : '参戦記録をつける'}
                 </button>
             </div>
 
@@ -157,7 +155,6 @@ function LiveDetail() {
                                     <div style={{ flex: 1 }}>
                                         <div style={{ fontSize: '1.1rem', fontWeight: '500' }}>
                                             <Link
-                                                // Remove spaces for clean URL (e.g. "CORE PRIDE" -> "COREPRIDE")
                                                 to={`/song/${encodeURIComponent(song.title.replace(/\s+/g, ''))}`}
                                                 className="hover:text-blue-400 hover:underline transition-colors text-white"
                                             >

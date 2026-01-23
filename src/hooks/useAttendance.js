@@ -70,7 +70,7 @@ export const useAttendance = () => {
             if (res.ok) {
                 setAttendedIds(prev => {
                     const next = new Set(prev);
-                    next.delete(liveId);
+                    next.delete(Number(liveId));
                     return next;
                 });
                 return true;
@@ -82,7 +82,7 @@ export const useAttendance = () => {
         }
     };
 
-    const isAttended = (liveId) => attendedIds.has(liveId);
+    const isAttended = (liveId) => attendedIds.has(Number(liveId));
 
     return {
         attendedIds,

@@ -71,8 +71,8 @@ router.get('/me/attended_lives', authorize, async (req, res) => {
     try {
         const currentUserId = req.user.user_id;
 
-        // Join attendance with lives to get details
-        const query = `
+        // Step 1: Get attended live IDs and basic info
+        const livesQuery = `
             SELECT 
                 l.id, l.tour_name, l.title, l.date, l.venue, l.type,
                 a.created_at as attended_at
@@ -82,10 +82,28 @@ router.get('/me/attended_lives', authorize, async (req, res) => {
             ORDER BY l.date DESC
         `;
 
-        const result = await db.query(query, [currentUserId]);
-        res.json(result.rows);
+        const livesResult = await db.query(livesQuery, [currentUserId]);
+
+        // Step 2: For each live, fetch the setlist
+        const livesWithSetlists = await Promise.all(
+            livesResult.rows.map(async (live) => {
+                const setlistQuery = `
+                    SELECT s.id, s.title, sl.id as setlist_id
+                    FROM setlists sl
+                    JOIN songs s ON sl.song_id = s.id
+                    WHERE sl.live_id = $1
+                `;
+                const setlistResult = await db.query(setlistQuery, [live.id]);
+                return {
+                    ...live,
+                    setlist: setlistResult.rows
+                };
+            })
+        );
+
+        res.json(livesWithSetlists);
     } catch (err) {
-        console.error(err.message);
+        console.error('[GET ATTENDED] Error:', err.message);
         res.status(500).send("Server Error");
     }
 });
@@ -96,7 +114,10 @@ router.post('/me/attended_lives', authorize, async (req, res) => {
         const currentUserId = req.user.user_id;
         const { liveId } = req.body;
 
+        console.log('[ATTENDANCE] POST request received:', { currentUserId, liveId, bodyType: typeof liveId });
+
         if (!liveId) {
+            console.log('[ATTENDANCE] Error: liveId is missing');
             return res.status(400).json("liveId is required");
         }
 
@@ -106,7 +127,10 @@ router.post('/me/attended_lives', authorize, async (req, res) => {
             [currentUserId, liveId]
         );
 
+        console.log('[ATTENDANCE] Existing records:', check.rows.length);
+
         if (check.rows.length > 0) {
+            console.log('[ATTENDANCE] Already attended');
             return res.status(400).json("Live already in attendance list");
         }
 
@@ -116,9 +140,10 @@ router.post('/me/attended_lives', authorize, async (req, res) => {
             [currentUserId, liveId]
         );
 
+        console.log('[ATTENDANCE] Successfully added');
         res.json("Added to attendance list");
     } catch (err) {
-        console.error(err.message);
+        console.error('[ATTENDANCE] Error:', err.message);
         res.status(500).send("Server Error");
     }
 });
@@ -139,6 +164,51 @@ router.delete('/me/attended_lives/:liveId', authorize, async (req, res) => {
         }
 
         res.json("Removed from attendance list");
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
+    }
+});
+
+// UPDATE current user profile (username/email)
+router.put('/me', authorize, async (req, res) => {
+    try {
+        const currentUserId = req.user.user_id;
+        const { username, email } = req.body;
+
+        // Optional: Check if email is already taken by ANOTHER user
+        if (email) {
+            const emailCheck = await db.query("SELECT * FROM users WHERE email = $1 AND id != $2", [email, currentUserId]);
+            if (emailCheck.rows.length > 0) {
+                return res.status(400).json("このメールアドレスは既に他のユーザーに使用されています");
+            }
+        }
+
+        const updateResult = await db.query(
+            "UPDATE users SET username = COALESCE($1, username), email = COALESCE($2, email) WHERE id = $3 RETURNING id, username, email, role",
+            [username, email, currentUserId]
+        );
+
+        res.json(updateResult.rows[0]);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
+    }
+});
+
+// DELETE current user account
+router.delete('/me', authorize, async (req, res) => {
+    try {
+        const currentUserId = req.user.user_id;
+
+        // attendance records will be deleted automatically due to ON DELETE CASCADE
+        const deleteResult = await db.query("DELETE FROM users WHERE id = $1", [currentUserId]);
+
+        if (deleteResult.rowCount === 0) {
+            return res.status(404).json("User not found");
+        }
+
+        res.json("Account deleted successfully");
     } catch (err) {
         console.error(err.message);
         res.status(500).send("Server Error");

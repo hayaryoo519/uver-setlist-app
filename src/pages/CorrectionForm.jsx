@@ -11,6 +11,7 @@ const CORRECTION_TYPES = [
     { value: 'date', label: '日付' },
     { value: 'title', label: 'ライブタイトル/ツアー名' },
     { value: 'missing_live', label: '未登録ライブの追加依頼' },
+    { value: 'bug', label: 'システム不具合・バグ報告' },
     { value: 'other', label: 'その他' }
 ];
 
@@ -141,7 +142,7 @@ function CorrectionForm() {
 
     return (
         <div className="container" style={{ paddingTop: '100px' }}>
-            <SEO title="データ修正依頼" description="UVERworld Setlist Archiveのライブデータ修正・追加依頼フォーム" />
+            <SEO title="不具合・データ修正依頼" description="UVERworld Setlist Archiveのライブデータ修正・追加依頼および不具合報告フォーム" />
 
             <div className="correction-form-container">
                 <Link to="/lives" className="back-link">
@@ -149,10 +150,10 @@ function CorrectionForm() {
                 </Link>
 
                 <div className="correction-form-header">
-                    <h2><AlertTriangle size={32} /> データ修正依頼</h2>
+                    <h2><AlertTriangle size={32} /> 不具合・データ修正依頼</h2>
                     <p>
-                        データの誤りや不足している情報（未登録のライブ、セットリストの間違いなど）をご報告ください。<br />
-                        皆様のご協力により、アーカイブの精度が向上します。
+                        データの誤りや不足している情報（未登録のライブ、セットリストの間違いなど）、<br />
+                        またはシステム上の不具合があればご報告ください。
                     </p>
                 </div>
 

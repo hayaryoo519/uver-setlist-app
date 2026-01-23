@@ -87,11 +87,64 @@ export const AuthProvider = ({ children }) => {
         setCurrentUser(null);
     };
 
+    const updateUser = async (updatedData) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/users/me', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'token': token
+                },
+                body: JSON.stringify(updatedData),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Update failed');
+            }
+
+            const data = await response.json();
+            // Update localStorage
+            localStorage.setItem('user', JSON.stringify(data));
+            // Update state
+            setCurrentUser(data);
+            return { success: true };
+        } catch (error) {
+            console.error("Update error:", error);
+            return { success: false, message: error.message };
+        }
+    };
+
+    const deleteAccount = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/users/me', {
+                method: 'DELETE',
+                headers: { 'token': token }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Deletion failed');
+            }
+
+            // Cleanup
+            logout();
+            return { success: true };
+        } catch (error) {
+            console.error("Delete error:", error);
+            return { success: false, message: error.message };
+        }
+    };
+
     const value = {
         currentUser,
         login,
         register,
-        logout
+        logout,
+        updateUser,
+        deleteAccount
     };
 
     return (
