@@ -1,20 +1,31 @@
 import React from 'react';
 
-const VenueRanking = ({ venues }) => {
+const VenueRanking = ({ venues, onVenueClick }) => {
     if (!venues || venues.length === 0) return <div className="no-data">No venue data available.</div>;
 
     return (
         <div style={{ height: '100%', overflowY: 'auto', paddingRight: '5px' }}>
             {venues.map((venue, index) => (
-                <div key={venue.name} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    marginBottom: '10px',
-                    padding: '10px',
-                    backgroundColor: 'rgba(255,255,255,0.05)',
-                    borderRadius: '8px',
-                    transition: 'background 0.2s'
-                }}>
+                <div
+                    key={venue.name}
+                    onClick={() => onVenueClick && onVenueClick(venue.name)}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        marginBottom: '10px',
+                        padding: '10px',
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        borderRadius: '8px',
+                        transition: 'background 0.2s',
+                        cursor: onVenueClick ? 'pointer' : 'default'
+                    }}
+                    onMouseEnter={(e) => {
+                        if (onVenueClick) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                        if (onVenueClick) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                    }}
+                >
                     <div style={{
                         width: '30px',
                         height: '30px',

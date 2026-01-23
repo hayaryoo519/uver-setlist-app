@@ -10,6 +10,7 @@ import SongDetail from './pages/SongDetail';
 import Songs from './pages/Songs';
 import Dashboard from './pages/Dashboard';
 import MyPage from './pages/MyPage';
+import Settings from './pages/Settings';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import AdminPage from './pages/AdminPage';
@@ -47,6 +48,7 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<LayoutRoute />}>
                 <Route path="/mypage" element={<MyPage />} />
+                <Route path="/settings" element={<Settings />} />
                 <Route path="/corrections/new" element={<CorrectionForm />} />
               </Route>
             </Route>
