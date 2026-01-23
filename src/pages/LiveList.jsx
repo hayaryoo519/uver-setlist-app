@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import PageHeader from '../components/Layout/PageHeader';
 import { Link } from 'react-router-dom';
 import { Search, MapPin, Calendar, Tag, Check, Plus, ArrowRight, Loader, Home } from 'lucide-react';
 import { useAttendance } from '../hooks/useAttendance';
@@ -140,7 +141,7 @@ const LiveList = () => {
             <div className="max-w-4xl mx-auto px-4">
                 {/* Header Navigation */}
                 <div className="flex justify-between items-center mb-6">
-                    <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                    <Link to="/dashboard" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
                         <Home size={18} /> ダッシュボードに戻る
                     </Link>
                     <div className="flex gap-4">
@@ -157,14 +158,14 @@ const LiveList = () => {
                     </div>
                 </div>
 
-                <div className="flex items-end justify-between mb-8 border-b border-slate-800 pb-4">
-                    <h1 className="text-4xl font-bold font-oswald text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 leading-none">
-                        LIVE ARCHIVE
-                    </h1>
-                    <div className="text-slate-500 text-sm font-mono">
-                        {filteredLives.length} 件の公演が見つかりました
-                    </div>
-                </div>
+                <PageHeader
+                    title="LIVE ARCHIVE"
+                    rightElement={
+                        <div className="text-slate-500 text-sm font-mono">
+                            {filteredLives.length} 件の公演が見つかりました
+                        </div>
+                    }
+                />
 
                 {/* Collapsible Filter Panel */}
                 <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isFilterOpen ? 'max-h-[800px] opacity-100 mb-8' : 'max-h-0 opacity-0 mb-0'}`}>

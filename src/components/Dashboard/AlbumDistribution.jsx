@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, LabelList } from 'recharts';
 
 const COLORS = ['#d4af37', '#fbbf24', '#b91c1c', '#3b82f6', '#10b981', '#6366f1', '#8b5cf6'];
 
@@ -14,7 +14,7 @@ const AlbumDistribution = ({ data, onBarClick }) => {
             <ResponsiveContainer>
                 <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#444" />
-                    <XAxis type="number" stroke="#888" allowDecimals={false} />
+                    <XAxis type="number" stroke="#fbbf24" allowDecimals={false} tick={{ fill: '#fbbf24' }} />
                     <YAxis
                         type="category"
                         dataKey="name"
@@ -24,13 +24,16 @@ const AlbumDistribution = ({ data, onBarClick }) => {
                         interval={0}
                     />
                     <Tooltip
-                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#333', color: '#fff' }}
+                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#333' }}
+                        itemStyle={{ color: '#fbbf24' }}
+                        labelStyle={{ color: '#ffffff' }}
                         cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                     />
                     <Bar dataKey="value" radius={[0, 4, 4, 0]} onClick={onBarClick} style={{ cursor: 'pointer' }}>
                         {data.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} cursor="pointer" />
                         ))}
+                        <LabelList dataKey="value" position="right" fill="#fbbf24" />
                     </Bar>
                 </BarChart>
             </ResponsiveContainer>
