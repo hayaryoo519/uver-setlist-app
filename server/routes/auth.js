@@ -40,18 +40,34 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Login API (Placeholder for next step)
+// Login API
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
         const user = await db.query("SELECT * FROM users WHERE email = $1", [email]);
 
         if (user.rows.length === 0) {
+            // Log failed login attempt - user not found
+            await db.query(`
+                INSERT INTO security_logs (event_type, message, user_email, ip_address)
+                VALUES ($1, $2, $3, $4)
+            `, ['login_failed', 'ユーザーが存在しません', email, req.ip]).catch(err => {
+                console.error('Failed to log security event:', err);
+            });
+
             return res.status(401).json("メールアドレスまたはパスワードが間違っています");
         }
 
         const validPassword = await bcrypt.compare(password, user.rows[0].password);
         if (!validPassword) {
+            // Log failed login attempt - invalid password
+            await db.query(`
+                INSERT INTO security_logs (event_type, message, user_email, ip_address)
+                VALUES ($1, $2, $3, $4)
+            `, ['login_failed', 'パスワード不一致', email, req.ip]).catch(err => {
+                console.error('Failed to log security event:', err);
+            });
+
             return res.status(401).json("メールアドレスまたはパスワードが間違っています");
         }
 
@@ -63,6 +79,15 @@ router.post('/login', async (req, res) => {
         res.json({ token, user: { id: user.rows[0].id, username: user.rows[0].username, email: user.rows[0].email, role: user.rows[0].role } });
     } catch (err) {
         console.error("Login Error:", err);
+
+        // Log system error
+        await db.query(`
+            INSERT INTO security_logs (event_type, message, details)
+            VALUES ($1, $2, $3)
+        `, ['error', 'ログイン処理中のエラー', JSON.stringify({ error: err.message })]).catch(e => {
+            console.error('Failed to log error:', e);
+        });
+
         res.status(500).json({ message: "Internal Server Error" });
     }
 });
