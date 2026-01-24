@@ -3,6 +3,9 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
 
+const crypto = require('crypto');
+const { sendVerificationEmail } = require('../utils/email');
+
 // Register API
 router.post('/register', async (req, res) => {
     try {
@@ -11,7 +14,7 @@ router.post('/register', async (req, res) => {
         // 1. Check if user exists
         const userCheck = await db.query('SELECT * FROM users WHERE email = $1', [email]);
         if (userCheck.rows.length > 0) {
-            return res.status(401).json("このメールアドレスは既に登録されています");
+            return res.status(400).json({ message: "このメールアドレスは既に登録されています" });
         }
 
         // 2. Hash password
@@ -19,23 +22,55 @@ router.post('/register', async (req, res) => {
         const salt = await bcrypt.genSalt(saltRound);
         const bcryptPassword = await bcrypt.hash(password, salt);
 
-        // 3. Insert into DB
+        // 3. Generate verification token
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+
+        // 4. Insert into DB (is_verified default false)
         const newUser = await db.query(
-            "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING *",
-            [username, email, bcryptPassword]
+            "INSERT INTO users (username, email, password, is_verified, verification_token) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+            [username, email, bcryptPassword, false, verificationToken]
         );
 
-        // 4. Generate Token (Include role for stateless authorization)
-        const token = jwt.sign(
-            { user_id: newUser.rows[0].id, role: newUser.rows[0].role },
+        // 5. Send Verification Email
+        await sendVerificationEmail(email, verificationToken);
+
+        // Don't return token yet, require verification
+        res.json({
+            message: "登録が完了しました。メールを確認して認証を行ってください。",
+            requireVerification: true
+        });
+
+    } catch (err) {
+        console.error("Register Error:", err);
+        res.status(500).json({ message: "サーバーエラーが発生しました" });
+    }
+});
+
+// Verify Email API
+router.post('/verify-email', async (req, res) => {
+    try {
+        const { token } = req.body;
+
+        const user = await db.query("SELECT * FROM users WHERE verification_token = $1", [token]);
+
+        if (user.rows.length === 0) {
+            return res.status(400).json({ message: "無効なトークンです" });
+        }
+
+        // Update user to verified
+        await db.query("UPDATE users SET is_verified = TRUE, verification_token = NULL WHERE id = $1", [user.rows[0].id]);
+
+        // Generate Login Token
+        const jwtToken = jwt.sign(
+            { user_id: user.rows[0].id, role: user.rows[0].role },
             process.env.JWT_SECRET || 'secret_key',
             { expiresIn: "1h" }
         );
 
-        res.json({ token, user: { id: newUser.rows[0].id, username: newUser.rows[0].username, email: newUser.rows[0].email, role: newUser.rows[0].role } });
+        res.json({ token: jwtToken, user: { id: user.rows[0].id, username: user.rows[0].username, email: user.rows[0].email, role: user.rows[0].role } });
 
     } catch (err) {
-        console.error("Register Error:", err);
+        console.error("Verification Error:", err);
         res.status(500).json({ message: "サーバーエラーが発生しました" });
     }
 });
@@ -55,7 +90,15 @@ router.post('/login', async (req, res) => {
                 console.error('Failed to log security event:', err);
             });
 
-            return res.status(401).json("メールアドレスまたはパスワードが間違っています");
+            return res.status(401).json({ message: "メールアドレスまたはパスワードが間違っています" });
+        }
+
+        // Check if verified
+        if (user.rows[0].is_verified === false) {
+            return res.status(401).json({
+                message: "メールアドレスが認証されていません。メールを確認してください。",
+                requireVerification: true
+            });
         }
 
         const validPassword = await bcrypt.compare(password, user.rows[0].password);
@@ -68,7 +111,7 @@ router.post('/login', async (req, res) => {
                 console.error('Failed to log security event:', err);
             });
 
-            return res.status(401).json("メールアドレスまたはパスワードが間違っています");
+            return res.status(401).json({ message: "メールアドレスまたはパスワードが間違っています" });
         }
 
         const token = jwt.sign(
