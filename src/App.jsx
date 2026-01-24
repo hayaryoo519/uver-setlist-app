@@ -14,6 +14,7 @@ import Settings from './pages/Settings';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import AdminPage from './pages/AdminPage';
+import SecurityLogsPage from './pages/SecurityLogsPage';
 import CorrectionForm from './pages/CorrectionForm';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -39,6 +40,7 @@ function App() {
             {/* Protected Routes */}
             {/* Admin Route */}
             <Route element={<ProtectedRoute requireAdmin={true} />}>
+              <Route path="/admin/security-logs" element={<SecurityLogsPage />} />
               <Route element={<LayoutRoute />}>
                 <Route path="/admin" element={<AdminPage />} />
               </Route>

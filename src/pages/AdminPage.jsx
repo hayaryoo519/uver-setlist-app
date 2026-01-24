@@ -844,27 +844,75 @@ const AdminPage = () => {
         } catch (err) { console.error(err); } finally { setIsLoadingUsers(false); }
     };
 
-    const handleDeleteUser = async (userId) => {
-        if (!window.confirm("Are you sure you want to delete this user?")) return;
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`/api/users/${userId}`, { method: 'DELETE', headers: { token: token } });
-            if (response.ok) fetchUsers();
-            else { const msg = await response.json().catch(() => "Failed"); alert(typeof msg === 'string' ? msg : "Failed to delete user"); }
-        } catch (err) { console.error(err); }
+    // --- DELETE USER STATE ---
+    const [showDeleteUserModal, setShowDeleteUserModal] = useState(false);
+    const [userToDelete, setUserToDelete] = useState(null);
+
+    const handleDeleteUser = (user) => {
+        setUserToDelete(user);
+        setShowDeleteUserModal(true);
     };
 
-    const handleRoleUpdate = async (userId, currentRole) => {
-        const newRole = currentRole === 'admin' ? 'user' : 'admin';
-        if (!window.confirm(`Change role to ${newRole}?`)) return;
+    const confirmDeleteUser = async () => {
+        if (!userToDelete) return;
+
+        setIsLoadingUsers(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`/api/users/${userId}/role`, {
+            const response = await fetch(`/api/users/${userToDelete.id}`, { method: 'DELETE', headers: { token: token } });
+
+            if (response.ok) {
+                await fetchUsers();
+                setShowDeleteUserModal(false);
+                setUserToDelete(null);
+                alert('ユーザーを削除しました。');
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                alert(`削除に失敗しました: ${errorData.message || response.statusText}`);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('通信エラーが発生しました');
+        } finally {
+            setIsLoadingUsers(false);
+        }
+    };
+
+    // --- ROLE UPDATE STATE ---
+    const [showRoleUpdateModal, setShowRoleUpdateModal] = useState(false);
+    const [userToUpdate, setUserToUpdate] = useState(null);
+
+    const handleRoleUpdate = (user) => {
+        setUserToUpdate(user);
+        setShowRoleUpdateModal(true);
+    };
+
+    const confirmRoleUpdate = async () => {
+        if (!userToUpdate) return;
+
+        const newRole = userToUpdate.role === 'admin' ? 'user' : 'admin';
+        setIsLoadingUsers(true);
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/users/${userToUpdate.id}/role`, {
                 method: 'PUT', headers: { 'Content-Type': 'application/json', token: token },
                 body: JSON.stringify({ role: newRole })
             });
-            if (response.ok) fetchUsers();
-        } catch (err) { console.error(err); }
+            if (response.ok) {
+                await fetchUsers();
+                setShowRoleUpdateModal(false);
+                setUserToUpdate(null);
+                alert(`ユーザー権限を「${newRole}」に変更しました。`);
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                alert(`権限の変更に失敗しました: ${errorData.message || response.statusText}`);
+                setIsLoadingUsers(false);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('通信エラーが発生しました');
+            setIsLoadingUsers(false);
+        }
     };
 
     // --- HELPERS ---
@@ -1082,7 +1130,7 @@ const AdminPage = () => {
 
 
     return (
-        <div style={{ padding: '40px 20px', maxWidth: '1200px', margin: '0 auto', color: '#fff' }} className="fade-in">
+        <div style={{ padding: '100px 20px', maxWidth: '1200px', margin: '0 auto', color: '#fff' }} className="fade-in">
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '40px' }}>
                 <Shield size={40} color="var(--primary-color)" />
@@ -1133,6 +1181,13 @@ const AdminPage = () => {
                         <span className="card-badge" style={{ background: corrections.filter(c => c.status === 'pending').length > 0 ? '#ef4444' : 'rgba(255,255,255,0.1)' }}>
                             {corrections.filter(c => c.status === 'pending').length} / {corrections.length}
                         </span>
+                    </div>
+                </div>
+
+                <div className="admin-card" onClick={() => navigate('/admin/security-logs')}>
+                    <div className="card-header">
+                        <h2 className="card-title"><ShieldAlert size={24} color="#94a3b8" /> Security Logs</h2>
+                        <span className="card-badge">LOGS</span>
                     </div>
                 </div>
             </div>
@@ -1761,7 +1816,10 @@ const AdminPage = () => {
                                     <tr>
                                         <th onClick={() => requestUserSort('id')} className="sortable-th">ID <ArrowUpDown size={14} /></th>
                                         <th onClick={() => requestUserSort('username')} className="sortable-th">Username <ArrowUpDown size={14} /></th>
-                                        <th>Email</th><th>Role</th><th>Joined</th><th>Actions</th>
+                                        <th onClick={() => requestUserSort('email')} className="sortable-th">Email <ArrowUpDown size={14} /></th>
+                                        <th onClick={() => requestUserSort('role')} className="sortable-th">Role <ArrowUpDown size={14} /></th>
+                                        <th onClick={() => requestUserSort('created_at')} className="sortable-th">Joined <ArrowUpDown size={14} /></th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1774,8 +1832,8 @@ const AdminPage = () => {
                                             <td style={{ color: '#94a3b8', width: '120px' }}>{new Date(user.created_at).toLocaleDateString()}</td>
                                             <td style={{ width: '120px' }}>
                                                 <div className="actions-wrapper">
-                                                    <button onClick={() => handleRoleUpdate(user.id, user.role)} className="action-btn promote" title="Update Role"><ShieldAlert size={18} /></button>
-                                                    <button onClick={() => handleDeleteUser(user.id)} disabled={currentUser && user.id === currentUser.id} className={`action-btn delete ${currentUser && user.id === currentUser.id ? 'disabled' : ''}`} title="Delete"><Trash2 size={18} /></button>
+                                                    <button onClick={() => handleRoleUpdate(user)} className="action-btn promote" title="Update Role"><ShieldAlert size={18} /></button>
+                                                    <button onClick={() => handleDeleteUser(user)} disabled={currentUser && user.id === currentUser.id} className={`action-btn delete ${currentUser && user.id === currentUser.id ? 'disabled' : ''}`} title="Delete"><Trash2 size={18} /></button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -1870,6 +1928,89 @@ const AdminPage = () => {
 
 
             </div>
+
+            {/* ROLE UPDATE MODAL */}
+            {showRoleUpdateModal && (
+                <div className="modal-overlay" onClick={() => setShowRoleUpdateModal(false)}>
+                    <div className="modal-content fade-in" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+                        <div className="modal-header">
+                            <h2 className="modal-title">権限変更の確認</h2>
+                            <button className="close-btn" onClick={() => setShowRoleUpdateModal(false)}><X size={24} /></button>
+                        </div>
+                        <div className="modal-body">
+                            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                                <div style={{ background: 'rgba(251, 191, 36, 0.1)', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
+                                    <ShieldAlert size={30} color="#fbbf24" />
+                                </div>
+                                <h3 style={{ color: '#fff', fontSize: '1.2rem', marginBottom: '10px' }}>
+                                    権限を変更しますか？
+                                </h3>
+                                <p style={{ color: '#94a3b8', marginBottom: '5px' }}>
+                                    <strong>{userToUpdate?.username}</strong> ({userToUpdate?.email})
+                                </p>
+                                <p style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 'bold', marginTop: '10px' }}>
+                                    {userToUpdate?.role} → {userToUpdate?.role === 'admin' ? 'user' : 'admin'}
+                                </p>
+                            </div>
+
+                            <div className="form-actions" style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
+                                <button type="button" className="btn-secondary" onClick={() => setShowRoleUpdateModal(false)}>
+                                    キャンセル
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn-primary"
+                                    onClick={confirmRoleUpdate}
+                                    disabled={isLoadingUsers}
+                                >
+                                    {isLoadingUsers ? <Loader className="spin" size={18} /> : '変更する'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* DELETE USER MODAL */}
+            {showDeleteUserModal && (
+                <div className="modal-overlay" onClick={() => setShowDeleteUserModal(false)}>
+                    <div className="modal-content fade-in" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+                        <div className="modal-header">
+                            <h2 className="modal-title">ユーザー削除の確認</h2>
+                            <button className="close-btn" onClick={() => setShowDeleteUserModal(false)}><X size={24} /></button>
+                        </div>
+                        <div className="modal-body">
+                            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                                <div style={{ background: 'rgba(239, 68, 68, 0.1)', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
+                                    <Trash2 size={30} color="#ef4444" />
+                                </div>
+                                <h3 style={{ color: '#fff', fontSize: '1.2rem', marginBottom: '10px' }}>ユーザーを削除しますか？</h3>
+                                <p style={{ color: '#94a3b8', marginBottom: '5px' }}>
+                                    <strong>{userToDelete?.username}</strong> ({userToDelete?.email})
+                                </p>
+                                <p style={{ color: '#ef4444', fontSize: '0.9rem' }}>
+                                    この操作は取り消せません。
+                                </p>
+                            </div>
+
+                            <div className="form-actions" style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
+                                <button type="button" className="btn-secondary" onClick={() => setShowDeleteUserModal(false)}>
+                                    キャンセル
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn-primary"
+                                    style={{ background: '#ef4444', color: 'white', border: 'none' }}
+                                    onClick={confirmDeleteUser}
+                                    disabled={isLoadingUsers}
+                                >
+                                    {isLoadingUsers ? <Loader className="spin" size={18} /> : '削除する'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* LIVE MODAL */}
             {showLiveModal && (
