@@ -11,11 +11,16 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Mock check for existing session
-        const storedUser = localStorage.getItem('user'); // Changed from 'uver_user_session'
-        const storedToken = localStorage.getItem('token'); // Added token check
-        if (storedUser && storedToken) { // Check both
-            setCurrentUser(JSON.parse(storedUser));
+        try {
+            const storedUser = localStorage.getItem('user');
+            const storedToken = localStorage.getItem('token');
+            if (storedUser && storedToken && storedUser !== "undefined" && storedToken !== "undefined") {
+                setCurrentUser(JSON.parse(storedUser));
+            }
+        } catch (e) {
+            console.error("Failed to restore session:", e);
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
         }
         setLoading(false);
     }, []);
@@ -29,8 +34,15 @@ export const AuthProvider = ({ children }) => {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Login failed'); // Access message property
+                const contentType = response.headers.get("content-type");
+                let errorMessage = 'ログインに失敗しました';
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || (typeof errorData === 'string' ? errorData : JSON.stringify(errorData));
+                } else {
+                    errorMessage = await response.text();
+                }
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();
@@ -57,10 +69,10 @@ export const AuthProvider = ({ children }) => {
 
             if (!response.ok) {
                 const contentType = response.headers.get("content-type");
-                let errorMessage = 'Registration failed';
+                let errorMessage = 'アカウント登録に失敗しました';
                 if (contentType && contentType.indexOf("application/json") !== -1) {
                     const errorData = await response.json();
-                    errorMessage = errorData.message || (typeof errorData === 'object' ? JSON.stringify(errorData) : errorData) || errorMessage;
+                    errorMessage = errorData.message || (typeof errorData === 'string' ? errorData : JSON.stringify(errorData));
                 } else {
                     errorMessage = await response.text();
                 }
@@ -69,12 +81,14 @@ export const AuthProvider = ({ children }) => {
 
             const data = await response.json();
 
-            // Save token and user info
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
+            // ONLY Save token if NOT requiring verification
+            if (!data.requireVerification) {
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                setCurrentUser(data.user);
+            }
 
-            setCurrentUser(data.user);
-            return { success: true };
+            return { success: true, ...data };
         } catch (error) {
             console.error("Registration error:", error);
             return { success: false, message: error.message };

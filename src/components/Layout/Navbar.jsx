@@ -194,14 +194,20 @@ const Navbar = () => {
                     background: var(--bg-color);
                     z-index: 999;
                     transform: translateY(-100%);
-                    transition: transform 0.3s ease-in-out;
+                    opacity: 0;
+                    visibility: hidden;
+                    transition: all 0.3s ease-in-out;
                     display: flex;
                     align-items: center;
                     justify-content: center;
+                    pointer-events: none;
                 }
 
                 .mobile-menu.open {
                     transform: translateY(0);
+                    opacity: 1;
+                    visibility: visible;
+                    pointer-events: auto;
                 }
 
                 .mobile-nav-links {
