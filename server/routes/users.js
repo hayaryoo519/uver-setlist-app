@@ -170,24 +170,90 @@ router.delete('/me/attended_lives/:liveId', authorize, async (req, res) => {
     }
 });
 
-// UPDATE current user profile (username/email)
+// UPDATE current user profile (username/email/password)
 router.put('/me', authorize, async (req, res) => {
     try {
         const currentUserId = req.user.user_id;
-        const { username, email } = req.body;
+        const { username, email, password, currentPassword } = req.body;
+        const bcrypt = require('bcrypt');
 
         // Optional: Check if email is already taken by ANOTHER user
         if (email) {
             const emailCheck = await db.query("SELECT * FROM users WHERE email = $1 AND id != $2", [email, currentUserId]);
             if (emailCheck.rows.length > 0) {
-                return res.status(400).json("このメールアドレスは既に他のユーザーに使用されています");
+                return res.status(400).json({ message: "このメールアドレスは既に他のユーザーに使用されています" });
             }
         }
 
-        const updateResult = await db.query(
-            "UPDATE users SET username = COALESCE($1, username), email = COALESCE($2, email) WHERE id = $3 RETURNING id, username, email, role",
-            [username, email, currentUserId]
-        );
+        let newPasswordHash = null;
+
+        // Handle Password Update
+        if (password) {
+            if (password.length < 6) {
+                return res.status(400).json({ message: "パスワードは6文字以上で設定してください" });
+            }
+
+            if (!currentPassword) {
+                return res.status(400).json({ message: "現在のパスワードを入力してください" });
+            }
+
+            // Get current user password
+            const userResult = await db.query("SELECT password FROM users WHERE id = $1", [currentUserId]);
+            if (userResult.rows.length === 0) return res.status(404).json({ message: "User not found" });
+
+            const validPassword = await bcrypt.compare(currentPassword, userResult.rows[0].password);
+            if (!validPassword) {
+                return res.status(400).json({ message: "現在のパスワードが間違っています" });
+            }
+
+            const salt = await bcrypt.genSalt(10);
+            newPasswordHash = await bcrypt.hash(password, salt);
+        }
+
+        // Dynamic Update Query
+        let query = "UPDATE users SET username = COALESCE($1, username), email = COALESCE($2, email)";
+        const params = [username, email, currentUserId];
+
+        if (newPasswordHash) {
+            query += ", password = $" + (params.length + 1); // $4
+            params.push(newPasswordHash); // index 3
+        }
+
+        query += " WHERE id = $" + (newPasswordHash ? 3 : 3) + " RETURNING id, username, email, role";
+
+        // Wait, if I push to params, the index shifts.
+        // param 1: username, param 2: email, param 3: currentUserId.
+        // If password added:
+        // params becomes [username, email, currentUserId, newPasswordHash]
+        // WHERE id should be $3.
+        // SET password = $4.
+
+        // Re-construct cleaner query building
+        const updates = [];
+        const values = [];
+        let idx = 1;
+
+        if (username !== undefined) {
+            updates.push(`username = $${idx++}`);
+            values.push(username);
+        }
+        if (email !== undefined) {
+            updates.push(`email = $${idx++}`);
+            values.push(email);
+        }
+        if (newPasswordHash) {
+            updates.push(`password = $${idx++}`);
+            values.push(newPasswordHash);
+        }
+
+        if (updates.length === 0) {
+            return res.json({ message: "No changes requested" });
+        }
+
+        values.push(currentUserId);
+        const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} RETURNING id, username, email, role`;
+
+        const updateResult = await db.query(sql, values);
 
         res.json(updateResult.rows[0]);
     } catch (err) {
