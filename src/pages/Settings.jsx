@@ -11,24 +11,56 @@ function Settings() {
         username: currentUser?.username || '',
         email: currentUser?.email || ''
     });
+    const [passwordData, setPasswordData] = useState({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+    });
     const [message, setMessage] = useState({ text: '', type: '' });
 
     const handleInputChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
+    const handlePasswordChange = (field, value) => {
+        setPasswordData(prev => ({ ...prev, [field]: value }));
+    };
+
     const handleSave = async (e) => {
         e.preventDefault();
         setMessage({ text: '', type: '' });
 
-        if (formData.username === currentUser?.username && formData.email === currentUser?.email) {
+        const isProfileChanged = formData.username !== currentUser?.username || formData.email !== currentUser?.email;
+        const isPasswordChanged = passwordData.newPassword.length > 0;
+
+        if (!isProfileChanged && !isPasswordChanged) {
             setMessage({ text: '変更箇所がありません', type: 'info' });
             return;
         }
 
-        const res = await updateUser(formData);
+        const payload = { ...formData };
+
+        if (isPasswordChanged) {
+            if (!passwordData.currentPassword) {
+                setMessage({ text: '現在のパスワードを入力してください', type: 'error' });
+                return;
+            }
+            if (passwordData.newPassword !== passwordData.confirmPassword) {
+                setMessage({ text: '新しいパスワードが一致しません', type: 'error' });
+                return;
+            }
+            if (passwordData.newPassword.length < 6) {
+                setMessage({ text: 'パスワードは6文字以上で設定してください', type: 'error' });
+                return;
+            }
+            payload.password = passwordData.newPassword;
+            payload.currentPassword = passwordData.currentPassword;
+        }
+
+        const res = await updateUser(payload);
         if (res.success) {
             setMessage({ text: '設定を更新しました', type: 'success' });
+            setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
         } else {
             setMessage({ text: res.message || '更新に失敗しました', type: 'error' });
         }
@@ -78,24 +110,58 @@ function Settings() {
                 )}
 
                 <form onSubmit={handleSave}>
-                    <div className="form-group">
-                        <label><User size={16} /> ユーザー名</label>
-                        <input
-                            type="text"
-                            value={formData.username}
-                            onChange={(e) => handleInputChange('username', e.target.value)}
-                            placeholder="Username"
-                        />
+                    <div style={{ marginBottom: '40px' }}>
+                        <h2 style={{ fontSize: '1.2rem', marginBottom: '20px', color: '#cbd5e1', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>プロフィール設定</h2>
+                        <div className="form-group">
+                            <label><User size={16} /> ユーザー名</label>
+                            <input
+                                type="text"
+                                value={formData.username}
+                                onChange={(e) => handleInputChange('username', e.target.value)}
+                                placeholder="Username"
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label><Globe size={16} /> メールアドレス</label>
+                            <input
+                                type="email"
+                                value={formData.email}
+                                onChange={(e) => handleInputChange('email', e.target.value)}
+                                placeholder="email@example.com"
+                            />
+                        </div>
                     </div>
 
-                    <div className="form-group">
-                        <label><Globe size={16} /> メールアドレス</label>
-                        <input
-                            type="email"
-                            value={formData.email}
-                            onChange={(e) => handleInputChange('email', e.target.value)}
-                            placeholder="email@example.com"
-                        />
+                    <div style={{ marginBottom: '40px' }}>
+                        <h2 style={{ fontSize: '1.2rem', marginBottom: '20px', color: '#cbd5e1', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>パスワード変更</h2>
+                        <div className="form-group">
+                            <label>現在のパスワード</label>
+                            <input
+                                type="password"
+                                value={passwordData.currentPassword}
+                                onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
+                                placeholder="現在のパスワード（変更する場合のみ）"
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>新しいパスワード</label>
+                            <input
+                                type="password"
+                                value={passwordData.newPassword}
+                                onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
+                                placeholder="新しいパスワード"
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>新しいパスワード（確認）</label>
+                            <input
+                                type="password"
+                                value={passwordData.confirmPassword}
+                                onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
+                                placeholder="もう一度入力してください"
+                            />
+                        </div>
                     </div>
 
                     <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
