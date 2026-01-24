@@ -5,11 +5,11 @@ import { ClipboardList, BarChart2, Music, ArrowRight } from 'lucide-react';
 const MyPageOnboarding = () => {
     return (
         <div style={{
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
             borderRadius: '16px',
             padding: '40px',
             textAlign: 'center',
-            border: '1px solid rgba(255,255,255,0.1)',
+            border: '1px solid rgba(255,255,255,0.2)',
             marginBottom: '60px'
         }}>
             <h2 style={{ fontSize: '2rem', marginBottom: '20px', color: 'var(--text-color)' }}>

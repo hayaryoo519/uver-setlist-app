@@ -14,6 +14,8 @@ const Signup = () => {
     const { register } = useAuth();
     const navigate = useNavigate();
 
+    const [verificationSent, setVerificationSent] = useState(false);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -27,7 +29,11 @@ const Signup = () => {
         try {
             const result = await register(username, email, password);
             if (result.success) {
-                navigate('/mypage');
+                if (result.requireVerification) {
+                    setVerificationSent(true);
+                } else {
+                    navigate('/mypage');
+                }
             } else {
                 setError(result.message || 'アカウント作成に失敗しました。');
             }
@@ -39,8 +45,29 @@ const Signup = () => {
         }
     };
 
+    if (verificationSent) {
+        return (
+            <AuthLayout title="メールを確認" subtitle="認証メールを送信しました">
+                <div style={{ textAlign: 'center', padding: '20px' }}>
+                    <div style={{ background: 'rgba(251, 191, 36, 0.1)', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                        <Mail size={40} color="#fbbf24" />
+                    </div>
+                    <h3 style={{ color: '#fff', marginBottom: '15px' }}>認証メールを送信しました</h3>
+                    <p style={{ color: '#94a3b8', lineHeight: '1.6', marginBottom: '30px' }}>
+                        <strong>{email}</strong> 宛に認証用リンクを送信しました。<br />
+                        メール内のリンクをクリックして、アカウント登録を完了してください。
+                    </p>
+                    <div style={{ fontSize: '0.9rem', color: '#64748b' }}>
+                        メールが届かない場合は、迷惑メールフォルダもご確認ください。<br />
+                        または <a href="#" onClick={() => window.location.reload()} style={{ color: 'var(--primary-color)' }}>再登録</a> をお試しください。
+                    </div>
+                </div>
+            </AuthLayout>
+        );
+    }
+
     return (
-        <AuthLayout title="Create Account" subtitle="コミュニティに参加して思い出を記録しよう">
+        <AuthLayout title="アカウント作成" subtitle="コミュニティに参加して思い出を記録しよう">
             {error && (
                 <div style={{
                     background: 'rgba(239, 68, 68, 0.1)',
