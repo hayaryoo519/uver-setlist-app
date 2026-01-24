@@ -32,7 +32,7 @@ const Login = () => {
     };
 
     return (
-        <AuthLayout title="Welcome Back" subtitle="ログインして記録を続けましょう">
+        <AuthLayout title="ログイン" subtitle="おかえりなさい！">
             {error && (
                 <div style={{
                     background: 'rgba(239, 68, 68, 0.1)',

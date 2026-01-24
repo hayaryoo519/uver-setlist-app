@@ -32,6 +32,9 @@ function MyPage() {
             const currentYear = new Date().getFullYear();
             setYearRange([minYear, currentYear]);
         }
+
+        // Safety reset on unmount
+        return () => setModalFilter(null);
     }, [loading, stats.myLives, yearFilterMode]);
 
     const handleYearFilterChange = (e) => {
@@ -155,10 +158,10 @@ function MyPage() {
                 alignItems: 'center',
                 gap: '24px',
                 marginBottom: '40px',
-                background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%)',
+                background: 'linear-gradient(145deg, rgba(51, 65, 85, 0.6) 0%, rgba(30, 41, 59, 0.8) 100%)',
                 padding: '25px',
                 borderRadius: '16px',
-                border: '1px solid var(--border-color)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
                 backdropFilter: 'blur(8px)',
                 boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)'
             }}>

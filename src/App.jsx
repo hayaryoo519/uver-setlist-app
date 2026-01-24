@@ -13,6 +13,7 @@ import MyPage from './pages/MyPage';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import VerifyEmail from './pages/VerifyEmail';
 import AdminPage from './pages/AdminPage';
 import SecurityLogsPage from './pages/SecurityLogsPage';
 import CorrectionForm from './pages/CorrectionForm';
@@ -36,6 +37,7 @@ function App() {
             {/* Auth Pages (Standalone) */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
 
             {/* Protected Routes */}
             {/* Admin Route */}
