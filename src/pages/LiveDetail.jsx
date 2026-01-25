@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAttendance } from '../hooks/useAttendance';
 import { useAuth } from '../contexts/AuthContext';
 import CorrectionModal from '../components/CorrectionModal';
-import { AlertTriangle, Tag, MapPin, Check, Plus } from 'lucide-react';
+import { AlertTriangle, Tag, MapPin, Check, Plus, Star } from 'lucide-react';
 import SEO from '../components/SEO';
 
 function LiveDetail() {
@@ -84,10 +84,20 @@ function LiveDetail() {
             {/* Header Section */}
             <div style={{ marginBottom: '30px' }}>
                 <h1 className="text-3xl font-bold mb-3 font-oswald text-white">{mainTitle}</h1>
-                {live.special_note && (
-                    <div className="text-amber-400 text-sm font-medium mb-2 flex items-center gap-2">
-                        <AlertTriangle size={16} />
-                        {live.special_note}
+
+                {((live.title && live.title !== mainTitle) || live.special_note) && (
+                    <div className="flex flex-wrap items-center gap-4 mb-4">
+                        {live.title && live.title !== mainTitle && (
+                            <div className="text-blue-200 text-sm font-medium flex items-center gap-2">
+                                <Tag size={16} /> {live.title}
+                            </div>
+                        )}
+                        {live.special_note && (
+                            <div className="text-amber-400 text-sm font-medium flex items-center gap-2">
+                                <Star size={16} fill="currentColor" />
+                                {live.special_note}
+                            </div>
+                        )}
                     </div>
                 )}
                 <div className="flex items-center gap-2 text-slate-400 mb-6 text-lg">
