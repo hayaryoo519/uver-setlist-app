@@ -15,6 +15,8 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import VerifyEmail from './pages/VerifyEmail';
 import AdminPage from './pages/AdminPage';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import SecurityLogsPage from './pages/SecurityLogsPage';
 import CorrectionForm from './pages/CorrectionForm';
 import ScrollToTop from './components/ScrollToTop';
@@ -38,6 +40,8 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Protected Routes */}
             {/* Admin Route */}
