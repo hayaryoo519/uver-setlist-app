@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardList, BarChart2, Music, ArrowRight } from 'lucide-react';
+import { ClipboardList, BarChart2, Music, ArrowRight, Disc } from 'lucide-react';
 
 const MyPageOnboarding = () => {
     return (
@@ -29,8 +29,8 @@ const MyPageOnboarding = () => {
             }}>
                 <FeatureItem
                     icon={<BarChart2 size={24} color="var(--primary-color)" />}
-                    title="年度別グラフ"
-                    desc="毎年の参戦数をグラフで振り返り"
+                    title="参戦履歴"
+                    desc="参戦したライブをグラフや一覧で確認"
                 />
                 <FeatureItem
                     icon={<Music size={24} color="var(--primary-color)" />}
@@ -38,9 +38,9 @@ const MyPageOnboarding = () => {
                     desc="あなたが最も聴いた曲がわかります"
                 />
                 <FeatureItem
-                    icon={<ClipboardList size={24} color="var(--primary-color)" />}
-                    title="会場別データ"
-                    desc="アリーナ、ホール、ライブハウス別の統計"
+                    icon={<Disc size={24} color="var(--primary-color)" />}
+                    title="アルバム別データ"
+                    desc="聴いた曲の割合をアルバム別で確認"
                 />
             </div>
 
