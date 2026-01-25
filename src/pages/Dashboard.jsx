@@ -5,6 +5,9 @@ import { useGlobalStats } from '../hooks/useGlobalStats';
 import { Calendar, Music, MapPin, ArrowRight, List, TrendingUp, Activity, Filter, Disc } from 'lucide-react';
 import LiveGraph from '../components/Dashboard/LiveGraph';
 import AlbumDistribution from '../components/Dashboard/AlbumDistribution';
+import { LatestLiveCard } from '../components/Dashboard/LatestLiveCard';
+import { TourTrends } from '../components/Dashboard/TourTrends';
+import { UpcomingLives } from '../components/Dashboard/UpcomingLives';
 
 import SEO from '../components/SEO';
 
@@ -180,6 +183,16 @@ function Dashboard() {
         return [];
     };
 
+    const [selectedAnalysisTour, setSelectedAnalysisTour] = useState(null);
+
+    // Set default analysis tour when data loads
+    React.useEffect(() => {
+        if (stats.tourRanking && stats.tourRanking.length > 0 && !selectedAnalysisTour) {
+            // Default to the most recent completed tour (usually index 0 or 1 depending on current tour)
+            setSelectedAnalysisTour(stats.tourRanking[0]);
+        }
+    }, [stats.tourRanking]);
+
     if (loading) return (
         <div style={{ padding: '100px', textAlign: 'center', color: '#888' }}>
             Loading Global Stats...
@@ -201,7 +214,34 @@ function Dashboard() {
             <div className="container" style={{ position: 'relative', zIndex: 10, paddingTop: '100px' }}>
                 <PageHeader title="DASHBOARD" />
 
+                {/* Latest Live Highlight with Trends */}
+                {stats.recentLives && stats.recentLives.length > 0 && (
+                    <LatestLiveCard
+                        live={stats.recentLives[0]}
+                    />
+                )}
+
+                {/* Upcoming Lives (Next Live) */}
+                {stats.upcomingLives && stats.upcomingLives.length > 0 && (
+                    <UpcomingLives lives={stats.upcomingLives} />
+                )}
+
+                {/* Current Tour Trends (Compact) */}
+                {stats.currentTour && (
+                    <div style={{ marginBottom: '40px' }}>
+                        <h2 className="section-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <Music size={20} />
+                            TOUR HIGHLIGHTS
+                        </h2>
+                        <TourTrends tour={stats.currentTour} />
+                    </div>
+                )}
+
                 {/* Stats Cards */}
+                <h2 className="section-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Activity size={20} />
+                    HISTORY
+                </h2>
                 <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
@@ -299,7 +339,7 @@ function Dashboard() {
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '40px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '40px', marginBottom: '60px' }}>
                     {/* Top Songs Ranking (Left Column) */}
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <h2 className="section-title" style={{ marginBottom: '20px' }}>Top Songs <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 'normal' }}>(Top 10)</span></h2>
@@ -423,6 +463,8 @@ function Dashboard() {
                         </div>
                     </div>
 
+
+
                     {/* Songs by Album (Full Width) */}
                     <div className="dashboard-panel" style={{ gridColumn: '1 / -1' }}>
                         {/* Duplicate Slider for easier access */}
@@ -490,55 +532,70 @@ function Dashboard() {
                     </div>
                 </div>
 
-                {/* Top Tours (Bottom Row) */}
-                <div style={{ marginTop: '50px' }}>
-                    <h2 className="section-title" style={{ marginBottom: '20px' }}>Top Tours <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 'normal' }}>(クリックで詳細)</span></h2>
-                    <div className="dashboard-panel" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-                        {(stats.tourRanking || []).map((tour, index) => (
-                            <div
-                                key={index}
-                                onClick={() => handleTourClick(tour)}
+                {/* Past Tour Analysis (New Section) */}
+                <div style={{ marginTop: '60px', marginBottom: '100px' }}>
+                    <h2 className="section-title" style={{ marginBottom: '20px' }}>Past Tour Analysis</h2>
+
+                    <div className="dashboard-panel">
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', color: '#94a3b8', marginBottom: '8px', fontSize: '0.9rem' }}>Select Tour</label>
+                            <select
+                                value={selectedAnalysisTour ? selectedAnalysisTour.name : ''}
+                                onChange={(e) => {
+                                    const tour = stats.tourRanking.find(t => t.name === e.target.value);
+                                    setSelectedAnalysisTour(tour);
+                                }}
                                 style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    padding: '12px 0',
-                                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                    width: '100%',
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    background: '#1e293b',
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    color: '#fff',
+                                    fontSize: '1rem',
+                                    outline: 'none',
+                                    appearance: 'none',
+                                    backgroundImage: `url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")`,
+                                    backgroundRepeat: 'no-repeat',
+                                    backgroundPosition: 'right 12px top 50%',
+                                    backgroundSize: '12px auto',
                                     cursor: 'pointer'
                                 }}
-                                className="hover-opacity"
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                    <div style={{
-                                        width: '24px',
-                                        height: '24px',
-                                        borderRadius: '50%',
-                                        background: index < 3 ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)',
-                                        color: index < 3 ? '#000' : '#fff',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontWeight: 'bold',
-                                        fontSize: '0.8rem'
-                                    }}>
-                                        {index + 1}
-                                    </div>
-                                    <div>
-                                        <div style={{ fontWeight: '500' }}>{tour.name}</div>
-                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                                            {tour.startDate} - {tour.endDate}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div style={{ textAlign: 'right' }}>
-                                    <div style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>
-                                        {tour.liveCount} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: '#64748b' }}>Shows</span>
-                                    </div>
-                                </div>
+                                {(() => {
+                                    if (!stats.tourRanking) return null;
+                                    const groups = {};
+                                    stats.tourRanking.forEach(tour => {
+                                        const year = tour.startDate.split('.')[0];
+                                        if (!groups[year]) groups[year] = [];
+                                        groups[year].push(tour);
+                                    });
+
+                                    return Object.entries(groups)
+                                        .sort((a, b) => b[0].localeCompare(a[0]))
+                                        .map(([year, tours]) => (
+                                            <optgroup key={year} label={`${year}年`} style={{ color: '#94a3b8', background: '#0f172a' }}>
+                                                {tours.map((tour, idx) => (
+                                                    <option key={`${year}-${idx}`} value={tour.name} style={{ background: '#1e293b', color: '#fff' }}>
+                                                        {tour.name} ({tour.startDate} ~ {tour.endDate} / {tour.liveCount} shows)
+                                                    </option>
+                                                ))}
+                                            </optgroup>
+                                        ));
+                                })()}
+                            </select>
+                        </div>
+
+                        {selectedAnalysisTour ? (
+                            <TourTrends tour={selectedAnalysisTour} />
+                        ) : (
+                            <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                                Select a tour to view analysis
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
+
             </div >
 
             <style>{`
@@ -646,107 +703,114 @@ function Dashboard() {
                                 </button>
                             </div>
 
-                            {/* Unified View for Year / Album / Tour */}
-                            <>
-                                <div style={{ color: '#888', marginBottom: '20px', display: 'flex', justifyContent: 'space-between' }}>
-                                    <span>全{modalFilter.value.liveCount}公演 / 総披露{modalFilter.value.totalSongs}曲</span>
-                                    <span>{modalFilter.value.startDate} 〜 {modalFilter.value.endDate}</span>
+                            {/* United View for Year / Album / Tour */}
+                            {modalFilter.type === 'tour' ? (
+                                <div style={{ marginTop: '-20px' }}>
+                                    {/* For Tour type, use the dedicated TourTrends component for full analysis features */}
+                                    <TourTrends tour={modalFilter.value} />
                                 </div>
+                            ) : (
+                                <>
+                                    <div style={{ color: '#888', marginBottom: '20px', display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>全{modalFilter.value.liveCount}公演 / 総披露{modalFilter.value.totalSongs}曲</span>
+                                        <span>{modalFilter.value.startDate} 〜 {modalFilter.value.endDate}</span>
+                                    </div>
 
-                                <div>
-                                    {modalFilter.value.songRanking.map((song, idx) => (
-                                        <div key={idx} style={{
-                                            borderBottom: '1px solid rgba(255,255,255,0.05)',
-                                        }}>
-                                            <div
-                                                onClick={() => setExpandedSong(expandedSong === idx ? null : idx)}
-                                                style={{
-                                                    padding: '12px 0',
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                <div style={{ flex: 1 }}>
-                                                    <div style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                                                            <Link
-                                                                // Remove spaces for clean URL (e.g. "CORE PRIDE" -> "COREPRIDE")
-                                                                to={`/song/${encodeURIComponent(song.title.replace(/\s+/g, ''))}#performance-history`}
-                                                                onClick={(e) => { e.stopPropagation(); closeModal(); }}
-                                                                style={{
-                                                                    color: 'white',
-                                                                    textDecoration: 'none',
-                                                                    flex: 1,
-                                                                    display: 'flex',
-                                                                    alignItems: 'center'
-                                                                }}
-                                                                className="hover:text-blue-400"
-                                                            >
-                                                                {song.title}
-                                                            </Link>
+                                    <div>
+                                        {modalFilter.value.songRanking.map((song, idx) => (
+                                            <div key={idx} style={{
+                                                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                            }}>
+                                                <div
+                                                    onClick={() => setExpandedSong(expandedSong === idx ? null : idx)}
+                                                    style={{
+                                                        padding: '12px 0',
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                                                                <Link
+                                                                    // Remove spaces for clean URL (e.g. "CORE PRIDE" -> "COREPRIDE")
+                                                                    to={`/song/${encodeURIComponent(song.title.replace(/\s+/g, ''))}#performance-history`}
+                                                                    onClick={(e) => { e.stopPropagation(); closeModal(); }}
+                                                                    style={{
+                                                                        color: 'white',
+                                                                        textDecoration: 'none',
+                                                                        flex: 1,
+                                                                        display: 'flex',
+                                                                        alignItems: 'center'
+                                                                    }}
+                                                                    className="hover:text-blue-400"
+                                                                >
+                                                                    {song.title}
+                                                                </Link>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{
+                                                            height: '4px',
+                                                            background: '#333',
+                                                            width: '100%',
+                                                            marginTop: '8px',
+                                                            borderRadius: '2px',
+                                                            overflow: 'hidden'
+                                                        }}>
+                                                            <div style={{
+                                                                height: '100%',
+                                                                background: 'var(--primary-color)',
+                                                                width: `${song.percentage}%`
+                                                            }} />
                                                         </div>
                                                     </div>
-                                                    <div style={{
-                                                        height: '4px',
-                                                        background: '#333',
-                                                        width: '100%',
-                                                        marginTop: '8px',
-                                                        borderRadius: '2px',
-                                                        overflow: 'hidden'
-                                                    }}>
-                                                        <div style={{
-                                                            height: '100%',
-                                                            background: 'var(--primary-color)',
-                                                            width: `${song.percentage}%`
-                                                        }} />
+                                                    <div style={{ textAlign: 'right', marginLeft: '20px' }}>
+                                                        <div style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>{song.count}回</div>
+                                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>演奏率 {song.percentage}%</div>
                                                     </div>
                                                 </div>
-                                                <div style={{ textAlign: 'right', marginLeft: '20px' }}>
-                                                    <div style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>{song.count}回</div>
-                                                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>演奏率 {song.percentage}%</div>
-                                                </div>
-                                            </div>
 
-                                            {expandedSong === idx && (
-                                                <div style={{
-                                                    padding: '0 15px 15px 15px',
-                                                    background: 'rgba(255,255,255,0.02)',
-                                                    borderRadius: '8px',
-                                                    marginBottom: '10px'
-                                                }}>
-                                                    {song.lives.map(live => (
-                                                        <Link
-                                                            key={live.id}
-                                                            to={`/live/${live.id}`}
-                                                            onClick={closeModal}
-                                                            style={{
-                                                                display: 'block',
-                                                                padding: '8px 0',
-                                                                fontSize: '0.85rem',
-                                                                color: '#94a3b8',
-                                                                textDecoration: 'none',
-                                                                borderBottom: '1px solid rgba(255,255,255,0.03)'
-                                                            }}
-                                                        >
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                                <span>{live.date}</span>
-                                                                <span style={{ color: '#64748b' }}>@ {live.venue}</span>
-                                                            </div>
-                                                            {live.title && live.title !== modalFilter.value.name && (
-                                                                <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'right', marginTop: '2px' }}>
-                                                                    {live.title}
+                                                {expandedSong === idx && (
+                                                    <div style={{
+                                                        padding: '0 15px 15px 15px',
+                                                        background: 'rgba(255,255,255,0.02)',
+                                                        borderRadius: '8px',
+                                                        marginBottom: '10px'
+                                                    }}>
+                                                        {song.lives.map(live => (
+                                                            <Link
+                                                                key={live.id}
+                                                                to={`/live/${live.id}`}
+                                                                onClick={closeModal}
+                                                                style={{
+                                                                    display: 'block',
+                                                                    padding: '8px 0',
+                                                                    fontSize: '0.85rem',
+                                                                    color: '#94a3b8',
+                                                                    textDecoration: 'none',
+                                                                    borderBottom: '1px solid rgba(255,255,255,0.03)'
+                                                                }}
+                                                            >
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                    <span>{live.date}</span>
+                                                                    <span style={{ color: '#64748b' }}>@ {live.venue}</span>
                                                                 </div>
-                                                            )}
-                                                        </Link>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </>
+                                                                {live.title && live.title !== modalFilter.value.name && (
+                                                                    <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'right', marginTop: '2px' }}>
+                                                                        {live.title}
+                                                                    </div>
+                                                                )}
+                                                            </Link>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
 
                         </div>
                     </div>
