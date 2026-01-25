@@ -5,7 +5,7 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 4002;
 
 // Middleware
 app.use(helmet());
@@ -22,8 +22,13 @@ app.use('/api/external', require('./routes/external_api'));
 app.use('/api/corrections', require('./routes/corrections'));
 app.use('/api/logs', require('./routes/logs'));
 
-app.get('/', (req, res) => {
-    res.send('UVERworld Setlist API is running');
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 // Global error handler
