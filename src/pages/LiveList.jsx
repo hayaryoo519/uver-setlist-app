@@ -59,7 +59,14 @@ const LiveList = () => {
             if (Array.isArray(data)) {
                 // Ensure date object for sorting (though backend sends ISO string)
                 data.sort((a, b) => new Date(b.date) - new Date(a.date));
-                setLives(data);
+
+                // Filter out future lives (Dashboard shows them as Upcoming)
+                // Archive should only show past lives (date < today)
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const pastLives = data.filter(live => new Date(live.date) < today);
+
+                setLives(pastLives);
             } else {
                 setLives([]);
             }
@@ -215,6 +222,11 @@ const LiveList = () => {
                                             {live.title && live.title !== live.tour_name && (
                                                 <div className="text-blue-200 text-sm font-medium mb-1 flex items-center gap-1">
                                                     <Tag size={12} /> {live.title}
+                                                </div>
+                                            )}
+                                            {live.special_note && (
+                                                <div className="text-yellow-400 text-base font-bold mb-1">
+                                                    {live.special_note}
                                                 </div>
                                             )}
                                             <div className="flex items-center gap-4 mt-2">
