@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
-import { Music, Calendar, MapPin, Play, Clock, ArrowLeft, Loader, Sparkles, Disc } from 'lucide-react';
+import { Music, Calendar, MapPin, Play, Clock, ArrowLeft, Loader, Sparkles, Disc, ChevronDown, ChevronsDown, ChevronUp } from 'lucide-react';
 import SEO from '../components/SEO';
 import { DISCOGRAPHY } from '../data/discography';
 
@@ -218,8 +218,12 @@ const SongDetail = () => {
                     </div>
 
                     <div className="bg-slate-800 p-6 rounded-xl border border-slate-700/50 flex flex-col justify-center">
-                        <div className="text-slate-400 text-sm mb-2 flex items-center gap-2 uppercase tracking-wide">
+                        <div className="text-slate-400 text-sm mb-2 flex items-center gap-2 uppercase tracking-wide w-fit relative group cursor-help">
                             <Play size={14} /> 総演奏回数
+                            <div className="absolute bottom-full left-0 mb-2 w-56 p-3 bg-slate-900 border border-slate-600 rounded-lg text-xs text-slate-300 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 shadow-xl text-left pointer-events-none normal-case tracking-normal">
+                                <div className="font-bold text-blue-400 mb-1">総公演数について</div>
+                                演奏率の分母（全xx公演）は、この曲が初披露されてから現在までに開催されたライブの総数です。
+                            </div>
                         </div>
                         <div className="text-3xl font-bold text-white font-oswald flex items-baseline gap-2">
                             {song.total_performances}
@@ -320,12 +324,13 @@ const SongDetail = () => {
                                         <div>
                                             <div className="flex items-center gap-3 text-sm text-slate-400 mb-1">
                                                 <span className="font-mono">{new Date(live.date).toISOString().split('T')[0]}</span>
-                                                <span className={`text-[10px] px-2 py-0.5 rounded ${live.type === 'FESTIVAL' ? 'bg-purple-900 text-purple-200' :
-                                                    live.type === 'EVENT' ? 'bg-orange-900 text-orange-200' :
-                                                        live.type === 'ARENA' ? 'bg-blue-900 text-blue-200' : // Arena specific
-                                                            'bg-emerald-900 text-white'
-                                                    }`}>
-                                                    {live.type || 'ONEMAN'}
+                                                <span className={`text-[10px] px-2 py-0.5 rounded font-bold text-white
+                                                    ${live.type === 'FESTIVAL' ? 'bg-purple-600' :
+                                                        live.type === 'EVENT' ? 'bg-orange-600' :
+                                                            'bg-emerald-600'}`}>
+                                                    {live.type === 'FESTIVAL' ? 'FESTIVAL' :
+                                                        live.type === 'EVENT' ? 'EVENT' :
+                                                            'ONE MAN'}
                                                 </span>
                                             </div>
                                             <div className="font-bold text-white group-hover:text-blue-400 transition-colors">
@@ -343,16 +348,31 @@ const SongDetail = () => {
                             ))}
 
                             {/* Load More Button */}
-                            {filteredPerformances.length > visibleCount && (
-                                <div className="text-center pt-4">
+                            {/* Load More / Close Buttons */}
+                            <div className="text-center pt-4">
+                                {filteredPerformances.length > visibleCount ? (
                                     <button
-                                        onClick={() => setVisibleCount(prev => prev + 20)}
-                                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-6 py-2 rounded-full text-sm font-medium transition-colors border border-slate-700 hover:border-slate-600"
+                                        onClick={() => {
+                                            if (visibleCount < 50) setVisibleCount(50);
+                                            else setVisibleCount(filteredPerformances.length);
+                                        }}
+                                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-6 py-2 rounded-full text-sm font-medium transition-colors border border-slate-700 hover:border-slate-600 flex items-center justify-center gap-2 mx-auto"
                                     >
-                                        もっと見る (残り {filteredPerformances.length - visibleCount} 件)
+                                        {visibleCount < 50 ? (
+                                            <>もっと見る <ChevronDown size={14} /></>
+                                        ) : (
+                                            <>全表示 <ChevronsDown size={14} /></>
+                                        )}
                                     </button>
-                                </div>
-                            )}
+                                ) : filteredPerformances.length > 10 ? (
+                                    <button
+                                        onClick={() => setVisibleCount(10)}
+                                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-6 py-2 rounded-full text-sm font-medium transition-colors border border-slate-700 hover:border-slate-600 flex items-center justify-center gap-2 mx-auto"
+                                    >
+                                        閉じる <ChevronUp size={14} />
+                                    </button>
+                                ) : null}
+                            </div>
                         </>
                     )}
                 </div>
