@@ -32,14 +32,37 @@ export const useGlobalStats = () => {
     const stats = useMemo(() => {
         if (!allLives.length) return null;
 
-        const totalLives = allLives.length;
+        if (!allLives.length) return null;
 
-        // Total Songs: sum lengths of live.setlist
-        const totalSongsPerformed = allLives.reduce((acc, live) => acc + (live.setlist ? live.setlist.length : 0), 0);
+        const formatDate = (dateStr) => {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.');
+        };
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Separate Past and Future
+        // Past: strictly less than today (yesterday and before)
+        // or should it be <= today? User said "Archive doesn't show today". So let's stick to < today for stats to be safe/consistent.
+        // Actually, for "Current Tour Stats", if a live happened TODAY, we probably want it in stats if it's done?
+        // But usually setlists are added after.
+        // Let's stick with: Upcoming = >= today. Past = < today.
+
+        const pastLives = allLives.filter(live => new Date(live.date) < today);
+        const upcomingLives = allLives.filter(live => new Date(live.date) >= today)
+            .sort((a, b) => new Date(a.date) - new Date(b.date))
+            .map(live => ({ ...live, date: formatDate(live.date) }));
+
+        const totalLives = pastLives.length;
+
+        // Total Songs: sum lengths of live.setlist (only for past lives)
+        const totalSongsPerformed = pastLives.reduce((acc, live) => acc + (live.setlist ? live.setlist.length : 0), 0);
 
         // Detailed Yearly Stats
         const yearlyDetails = {};
-        allLives.forEach(live => {
+        pastLives.forEach(live => {
             const year = live.date.split('-')[0];
             if (!yearlyDetails[year]) {
                 yearlyDetails[year] = {
@@ -67,7 +90,15 @@ export const useGlobalStats = () => {
 
         // Tour Ranking with Song Counts & Duration
         const tourData = {};
-        allLives.forEach(live => {
+        pastLives.forEach(live => {
+            // Filter out Festivals/Events from Tour Analysis
+            const isFestival = (
+                live.type === 'FESTIVAL' ||
+                live.type === 'EVENT' ||
+                (live.tour_name && (live.tour_name.toUpperCase().includes('FES.') || live.tour_name.toUpperCase().includes('FESTIVAL')))
+            );
+            if (isFestival) return;
+
             const title = live.tour_name || live.title || "Unknown Tour";
             if (!tourData[title]) {
                 tourData[title] = {
@@ -110,11 +141,7 @@ export const useGlobalStats = () => {
             });
         });
 
-        const formatDate = (dateStr) => {
-            if (!dateStr) return '';
-            const d = new Date(dateStr);
-            return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.');
-        };
+
 
         const tourStats = Object.entries(tourData)
             .map(([name, data]) => {
@@ -141,13 +168,14 @@ export const useGlobalStats = () => {
             });
 
         const tourRanking = [...tourStats]
-            .sort((a, b) => b.liveCount - a.liveCount)
-            .slice(0, 5);
+            .sort((a, b) => b.latestDate.localeCompare(a.latestDate));
+        // .slice(0, 5); // Removed limit to show all tours in selection
 
         const currentTour = [...tourStats]
             .sort((a, b) => b.latestDate.localeCompare(a.latestDate))[0];
 
-        const recentLives = [...allLives]
+        // Recent lives (Archive Top 10)
+        const recentLives = [...pastLives]
             .sort((a, b) => new Date(b.date) - new Date(a.date))
             .slice(0, 10)
             .map(live => ({ ...live, date: formatDate(live.date) }));
@@ -159,7 +187,7 @@ export const useGlobalStats = () => {
         });
 
         const albumMap = new Map();
-        allLives.forEach(live => {
+        pastLives.forEach(live => {
             const list = live.setlist || [];
             list.forEach(song => {
                 const album = songMetaMap.get(song.title);
@@ -177,7 +205,7 @@ export const useGlobalStats = () => {
 
         // --- Global Song Ranking ---
         const globalSongCounts = {};
-        allLives.forEach(live => {
+        pastLives.forEach(live => {
             const list = live.setlist || [];
             list.forEach(song => {
                 if (!song || !song.title) return;
@@ -220,7 +248,8 @@ export const useGlobalStats = () => {
             albumStats,
             songAlbumMap: songMetaMap,
             songIdMap,
-            globalSongRanking
+            globalSongRanking,
+            upcomingLives
         };
     }, [allLives, allSongs]);
 
