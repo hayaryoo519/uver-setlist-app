@@ -1,38 +1,63 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { Link } from 'react-router-dom';
 import AuthLayout from '../components/Auth/AuthLayout';
-import { Mail, Lock, ArrowRight, Loader } from 'lucide-react';
+import { Mail, ArrowRight, Loader, CheckCircle } from 'lucide-react';
 
-const Login = () => {
+const ForgotPassword = () => {
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const { login } = useAuth();
-    const navigate = useNavigate();
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
+    const [submitted, setSubmitted] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
         setIsLoading(true);
+        setError('');
+        setMessage('');
 
         try {
-            const result = await login(email, password);
-            if (result.success) {
-                navigate('/mypage');
+            const response = await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setSubmitted(true);
+                setMessage(data.message);
             } else {
-                setError(result.message || 'ログインに失敗しました。メールアドレスとパスワードを確認してください。');
+                setError(data.message || 'エラーが発生しました。');
             }
         } catch (err) {
-            setError('予期せぬエラーが発生しました。');
+            setError('サーバーとの通信に失敗しました。');
         } finally {
             setIsLoading(false);
         }
     };
 
+    if (submitted) {
+        return (
+            <AuthLayout title="メールを確認" subtitle="再設定リンクを送信しました">
+                <div style={{ textAlign: 'center', padding: '20px' }}>
+                    <div style={{ background: 'rgba(34, 197, 94, 0.1)', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                        <CheckCircle size={40} color="#4ade80" />
+                    </div>
+                    <p style={{ color: '#94a3b8', lineHeight: '1.6', marginBottom: '30px' }}>
+                        {message}
+                    </p>
+                    <Link to="/login" style={{ color: 'var(--primary-color)', textDecoration: 'none', fontWeight: 'bold' }}>
+                        ログイン画面に戻る
+                    </Link>
+                </div>
+            </AuthLayout>
+        );
+    }
+
     return (
-        <AuthLayout title="ログイン" subtitle="おかえりなさい！">
+        <AuthLayout title="パスワード再設定" subtitle="登録済みのメールアドレスを入力してください">
             {error && (
                 <div style={{
                     background: 'rgba(239, 68, 68, 0.1)',
@@ -48,7 +73,7 @@ const Login = () => {
                 </div>
             )}
             <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: '20px' }}>
+                <div style={{ marginBottom: '30px' }}>
                     <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '8px' }}>メールアドレス</label>
                     <div style={{ position: 'relative' }}>
                         <Mail size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
@@ -58,36 +83,6 @@ const Login = () => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="your@email.com"
-                            style={{
-                                width: '100%',
-                                padding: '12px 12px 12px 40px',
-                                background: 'rgba(0,0,0,0.2)',
-                                border: '1px solid #334155',
-                                borderRadius: '8px',
-                                color: '#fff',
-                                fontSize: '1rem',
-                                outline: 'none',
-                                transition: 'border-color 0.2s'
-                            }}
-                            onFocus={(e) => e.target.style.borderColor = 'var(--primary-color)'}
-                            onBlur={(e) => e.target.style.borderColor = '#334155'}
-                        />
-                    </div>
-                </div>
-
-                <div style={{ marginBottom: '30px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <label style={{ color: '#94a3b8', fontSize: '0.9rem' }}>パスワード</label>
-                        <Link to="/forgot-password" style={{ color: '#64748b', fontSize: '0.8rem', textDecoration: 'none' }}>パスワードをお忘れですか？</Link>
-                    </div>
-                    <div style={{ position: 'relative' }}>
-                        <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
-                        <input
-                            type="password"
-                            required
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
                             style={{
                                 width: '100%',
                                 padding: '12px 12px 12px 40px',
@@ -125,18 +120,16 @@ const Login = () => {
                         transition: 'transform 0.1s, opacity 0.2s',
                         opacity: isLoading ? 0.7 : 1
                     }}
-                    onMouseEnter={(e) => !isLoading && (e.currentTarget.style.transform = 'translateY(-1px)')}
-                    onMouseLeave={(e) => !isLoading && (e.currentTarget.style.transform = 'translateY(0)')}
                 >
-                    {isLoading ? <Loader size={20} className="animate-spin" /> : <>ログイン <ArrowRight size={20} /></>}
+                    {isLoading ? <Loader size={20} className="animate-spin" /> : <>再設定メールを送信 <ArrowRight size={20} /></>}
                 </button>
             </form>
 
-            <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.9rem', color: '#94a3b8' }}>
-                アカウントをお持ちでないですか？ <Link to="/signup" style={{ color: 'var(--primary-color)', textDecoration: 'none', fontWeight: 'bold' }}>新規登録</Link>
+            <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.9rem' }}>
+                <Link to="/login" style={{ color: '#94a3b8', textDecoration: 'none' }}>ログイン画面に戻る</Link>
             </div>
         </AuthLayout>
     );
 };
 
-export default Login;
+export default ForgotPassword;

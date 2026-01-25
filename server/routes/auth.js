@@ -4,7 +4,8 @@ const jwt = require('jsonwebtoken');
 const db = require('../db');
 
 const crypto = require('crypto');
-const { sendVerificationEmail } = require('../utils/email');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/email');
+const { loginLimiter, resetLimiter } = require('../middleware/rateLimiter');
 
 // Register API
 router.post('/register', async (req, res) => {
@@ -76,7 +77,7 @@ router.post('/verify-email', async (req, res) => {
 });
 
 // Login API
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
         const user = await db.query("SELECT * FROM users WHERE email = $1", [email]);
@@ -132,6 +133,67 @@ router.post('/login', async (req, res) => {
         });
 
         res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+// Forgot Password API
+router.post('/forgot-password', resetLimiter, async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+
+        if (user.rows.length === 0) {
+            // For security, don't reveal if user exists. 
+            // Just return success message.
+            return res.json({ message: "パスワード再設定用のメールを送信しました。メールをご確認ください。" });
+        }
+
+        const token = crypto.randomBytes(32).toString('hex');
+        const expires = Date.now() + 3600000; // 1 hour
+
+        await db.query(
+            "UPDATE users SET reset_password_token = $1, reset_password_expires = $2 WHERE id = $3",
+            [token, expires, user.rows[0].id]
+        );
+
+        await sendPasswordResetEmail(email, token);
+
+        res.json({ message: "パスワード再設定用のメールを送信しました。メールをご確認ください。" });
+    } catch (err) {
+        console.error("Forgot Password Error:", err);
+        res.status(500).json({ message: "サーバーエラーが発生しました" });
+    }
+});
+
+// Reset Password API
+router.post('/reset-password', resetLimiter, async (req, res) => {
+    try {
+        const { token, password } = req.body;
+
+        const user = await db.query(
+            "SELECT * FROM users WHERE reset_password_token = $1 AND reset_password_expires > $2",
+            [token, Date.now()]
+        );
+
+        if (user.rows.length === 0) {
+            return res.status(400).json({ message: "無効または期限切れのトークンです。再度手続きを行ってください。" });
+        }
+
+        // Hash new password
+        const saltRound = 10;
+        const salt = await bcrypt.genSalt(saltRound);
+        const bcryptPassword = await bcrypt.hash(password, salt);
+
+        // Update password and clear token
+        await db.query(
+            "UPDATE users SET password = $1, reset_password_token = NULL, reset_password_expires = NULL WHERE id = $2",
+            [bcryptPassword, user.rows[0].id]
+        );
+
+        res.json({ message: "パスワードの再設定が完了しました。新しいパスワードでログインしてください。" });
+    } catch (err) {
+        console.error("Reset Password Error:", err);
+        res.status(500).json({ message: "サーバーエラーが発生しました" });
     }
 });
 
