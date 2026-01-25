@@ -8,7 +8,12 @@ const app = express();
 const PORT = process.env.PORT || 4002;
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: false,
+    hsts: false,
+    crossOriginOpenerPolicy: false,
+    crossOriginEmbedderPolicy: false
+}));
 app.use(cors());
 app.use(express.json());
 
