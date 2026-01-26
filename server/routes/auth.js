@@ -64,7 +64,7 @@ router.post('/verify-email', async (req, res) => {
         // Generate Login Token
         const jwtToken = jwt.sign(
             { user_id: user.rows[0].id, role: user.rows[0].role },
-            process.env.JWT_SECRET || 'secret_key',
+            process.env.JWT_SECRET,
             { expiresIn: "1h" }
         );
 
@@ -117,7 +117,7 @@ router.post('/login', loginLimiter, async (req, res) => {
 
         const token = jwt.sign(
             { user_id: user.rows[0].id, role: user.rows[0].role },
-            process.env.JWT_SECRET || 'secret_key',
+            process.env.JWT_SECRET,
             { expiresIn: "1h" }
         );
         res.json({ token, user: { id: user.rows[0].id, username: user.rows[0].username, email: user.rows[0].email, role: user.rows[0].role } });
