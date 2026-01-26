@@ -11,7 +11,7 @@ const authorize = async (req, res, next) => {
             return res.status(403).json({ message: "認証されていません：トークンがありません" });
         }
 
-        const payload = jwt.verify(jwtToken, process.env.JWT_SECRET || 'secret_key');
+        const payload = jwt.verify(jwtToken, process.env.JWT_SECRET);
         req.user = payload;
         next();
     } catch (err) {
