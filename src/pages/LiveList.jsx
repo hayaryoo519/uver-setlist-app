@@ -11,7 +11,7 @@ const LiveList = () => {
     const [availableSongs, setAvailableSongs] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     // filters state: songIds is array of integers, album is string
-    const [filters, setFilters] = useState({ text: '', tags: [], venue: '', songIds: [], album: '', startDate: '', endDate: '' });
+    const [filters, setFilters] = useState({ text: '', tags: [], venue: '', songIds: [], startDate: '', endDate: '' });
     // Use Attendance Hook
     const { attendedIds, addLive, removeLive, isAttended, loading: attendanceLoading } = useAttendance();
 
@@ -32,7 +32,7 @@ const LiveList = () => {
     useEffect(() => {
         // Fetch Lives (server-side filter for complex relations)
         fetchLives();
-    }, [filters.songIds, filters.album, filters.startDate, filters.endDate]);
+    }, [filters.songIds, filters.startDate, filters.endDate]);
 
     const fetchLives = async () => {
         setIsLoading(true);
@@ -40,9 +40,6 @@ const LiveList = () => {
             const params = new URLSearchParams();
             if (filters.songIds.length > 0) {
                 params.append('songIds', filters.songIds.join(','));
-            }
-            if (filters.album) {
-                params.append('album', filters.album);
             }
             if (filters.startDate) {
                 params.append('startDate', filters.startDate);
