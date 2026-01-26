@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Copy package files first for better caching
 COPY package*.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Copy source and build frontend
 COPY . .
@@ -18,7 +18,7 @@ WORKDIR /app
 
 # Install production dependencies only if possible, or just copy from builder
 COPY --from=builder /app/package*.json ./
-RUN npm install --production
+RUN npm install --production --legacy-peer-deps
 
 # Copy built assets and server code
 COPY --from=builder /app/dist ./dist
