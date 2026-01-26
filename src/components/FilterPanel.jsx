@@ -25,21 +25,12 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
     };
 
     const clearFilters = () => {
-        onChange({ text: '', tags: [], venue: '', songIds: [], album: '', startDate: '', endDate: '' });
+        onChange({ text: '', tags: [], venue: '', songIds: [], startDate: '', endDate: '' });
     };
 
-    // Derived Lists
-    const albums = React.useMemo(() => {
-        const list = songs.map(s => s.album).filter(Boolean);
-        return [...new Set(list)].sort();
-    }, [songs]);
 
     const sortedSongs = React.useMemo(() => {
-        // If album is selected, filter songs by that album
         let filtered = songs;
-        if (filters.album) {
-            filtered = songs.filter(s => s.album === filters.album);
-        }
 
         // Deduplicate songs with similar titles (e.g., "Don't Think.Sing" vs "Don't Think. Sing")
         // Normalize: lowercase, remove spaces/punctuation differences
@@ -62,7 +53,7 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
         });
 
         return deduplicated.sort((a, b) => a.title.localeCompare(b.title, 'ja'));
-    }, [songs, filters.album]);
+    }, [songs]);
 
     // Handle song selection (multi-select not supported easily in pure select, so single for now or custom logic)
     // Actually, task said "songIds" (plural). But simple dropdown handles one.
@@ -123,21 +114,6 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
 
                     {/* Venue Filter Removed per user request */}
 
-                    {/* Album Filter */}
-                    <div className="relative">
-                        <Tag className="absolute left-4 top-3.5 text-slate-400 pointer-events-none" size={18} />
-                        <select
-                            value={filters.album || ''}
-                            onChange={(e) => onChange({ ...filters, album: e.target.value, songIds: [] })} // Reset song when album changes? Maybe.
-                            className="w-full bg-slate-900 border border-slate-600 rounded-lg py-3 pl-10 pr-8 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all appearance-none cursor-pointer text-sm"
-                        >
-                            <option value="">すべてのアルバム</option>
-                            {albums.map(album => (
-                                <option key={album} value={album}>{album}</option>
-                            ))}
-                        </select>
-                        <div className="absolute right-3 top-4 text-slate-500 pointer-events-none">▼</div>
-                    </div>
 
                     {/* Song Filter (grouped by album/single) */}
                     <div className="relative">
@@ -148,7 +124,7 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
                             className="w-full bg-slate-900 border border-slate-600 rounded-lg py-3 pl-10 pr-8 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all appearance-none cursor-pointer text-sm"
                             disabled={songs.length === 0}
                         >
-                            <option value="">すべての楽曲 {filters.album ? `(${filters.album})` : ''}</option>
+                            <option value="">すべての楽曲</option>
                             {(() => {
                                 // Group songs by album
                                 const grouped = sortedSongs.reduce((acc, song) => {
@@ -229,7 +205,7 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
                     </div>
 
                     {/* Clear Button - Show only if filters active */}
-                    {(filters.text || filters.venue || filters.album || filters.songIds.length > 0 || filters.tags.length > 0 || filters.startDate || filters.endDate) && (
+                    {(filters.text || filters.venue || filters.songIds.length > 0 || filters.tags.length > 0 || filters.startDate || filters.endDate) && (
                         <button
                             onClick={clearFilters}
                             className="text-slate-400 hover:text-white text-sm underline decoration-slate-600 hover:decoration-white underline-offset-4 transition-colors"
