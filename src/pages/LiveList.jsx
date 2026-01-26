@@ -3,7 +3,7 @@ import PageHeader from '../components/Layout/PageHeader';
 import { Link } from 'react-router-dom';
 import { Search, MapPin, Calendar, Tag, Check, Plus, ArrowRight, Loader, Home } from 'lucide-react';
 import { useAttendance } from '../hooks/useAttendance';
-import FilterPanel, { PRESET_FILTERS } from '../components/FilterPanel';
+import FilterPanel from '../components/FilterPanel';
 import SEO from '../components/SEO';
 
 const LiveList = () => {
@@ -11,7 +11,7 @@ const LiveList = () => {
     const [availableSongs, setAvailableSongs] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     // filters state: songIds is array of integers, album is string
-    const [filters, setFilters] = useState({ text: '', tags: [], venue: '', songIds: [], startDate: '', endDate: '' });
+    const [filters, setFilters] = useState({ text: '', venue: '', songIds: [], startDate: '', endDate: '' });
     // Use Attendance Hook
     const { attendedIds, addLive, removeLive, isAttended, loading: attendanceLoading } = useAttendance();
 
@@ -109,14 +109,6 @@ const LiveList = () => {
                 if (!matchText) return false;
             }
 
-            // 2. Tag Filters (Intersection/AND logic)
-            if (filters.tags.length > 0) {
-                const matchAllTags = filters.tags.every(tagId => {
-                    const filter = PRESET_FILTERS.find(f => f.id === tagId);
-                    return filter ? filter.match(live) : true;
-                });
-                if (!matchAllTags) return false;
-            }
 
             // 3. Venue Filter
             // Note: If venue logic moves to backend, remove this. Keeping client-side for now.
@@ -126,7 +118,7 @@ const LiveList = () => {
 
             return true;
         });
-    }, [lives, filters.text, filters.tags, filters.venue]);
+    }, [lives, filters.text, filters.venue]);
 
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
