@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, Tag, MapPin } from 'lucide-react';
+import { DISCOGRAPHY } from '../data/discography';
 
 
 const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
@@ -34,7 +35,7 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
 
     return (
         <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700 mb-8 backdrop-blur-sm shadow-xl">
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-8">
 
                 {/* Text Search */}
                 <div className="relative">
@@ -49,7 +50,7 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
                 </div>
 
                 {/* Advanced Filters Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                     {/* Date Range Filter */}
                     <div className="flex gap-2">
@@ -89,52 +90,28 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
                         >
                             <option value="">すべての楽曲</option>
                             {(() => {
-                                // Group songs by album
-                                const grouped = sortedSongs.reduce((acc, song) => {
-                                    const album = song.album || 'その他';
-                                    if (!acc[album]) acc[album] = [];
-                                    acc[album].push(song);
-                                    return acc;
-                                }, {});
+                                // Create a lookup map for DB songs: Title -> ID
+                                const songMap = new Map();
+                                songs.forEach(s => songMap.set(s.title, s.id));
 
-                                // Define album order (newest first, with special categories at end)
-                                const albumOrder = [
-                                    'ENIGMASIS',
-                                    '30',
-                                    'UNSER',
-                                    'TYCOON',
-                                    'Ø CHOIR',
-                                    'THE ONE',
-                                    'LIFE 6 SENSE',
-                                    'LAST',
-                                    'AwakEVE',
-                                    'PROGLUTION',
-                                    'BUGRIGHT',
-                                    'Timeless',
-                                    'Single',
-                                    'Video',
-                                    'その他'
-                                ];
+                                // Iterate over DISCOGRAPHY to build options
+                                return DISCOGRAPHY.map((release, rIndex) => {
+                                    // Check which songs in this release exist in DB
+                                    const releaseSongs = release.songs.map(title => ({
+                                        title,
+                                        id: songMap.get(title)
+                                    })).filter(s => s.id !== undefined);
 
-                                return Object.entries(grouped)
-                                    .sort(([a], [b]) => {
-                                        const aIndex = albumOrder.indexOf(a);
-                                        const bIndex = albumOrder.indexOf(b);
-                                        // If both are in order list, sort by index
-                                        if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-                                        // If only one is in list, it comes first
-                                        if (aIndex !== -1) return -1;
-                                        if (bIndex !== -1) return 1;
-                                        // Otherwise alphabetical
-                                        return a.localeCompare(b, 'ja');
-                                    })
-                                    .map(([album, albumSongs]) => (
-                                        <optgroup key={album} label={album}>
-                                            {albumSongs.sort((a, b) => a.title.localeCompare(b.title, 'ja')).map(song => (
+                                    if (releaseSongs.length === 0) return null;
+
+                                    return (
+                                        <optgroup key={`${release.title}-${rIndex}`} label={release.title}>
+                                            {releaseSongs.map(song => (
                                                 <option key={song.id} value={song.id}>{song.title}</option>
                                             ))}
                                         </optgroup>
-                                    ));
+                                    );
+                                });
                             })()}
                         </select>
                         <div className="absolute right-3 top-4 text-slate-500 pointer-events-none">▼</div>
