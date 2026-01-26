@@ -228,28 +228,37 @@
 }
 
 .lp-scroll-indicator {
-    position: absolute;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    opacity: 0.6;
-    animation: bounce 2s infinite;
+    display: none;
+    /* Mobile-first: Hidden by default */
 }
 
-.lp-scroll-indicator span {
-    font-size: 0.85rem;
-    letter-spacing: 2px;
-    color: var(--primary-color);
+@media (min-width: 1024px) {
+    .lp-scroll-indicator {
+        position: absolute;
+        bottom: 40px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        opacity: 0.6;
+        animation: bounce 2s infinite;
+    }
 }
 
-.lp-scroll-line {
-    width: 2px;
-    height: 50px;
-    background: linear-gradient(to bottom, var(--primary-color), transparent);
+@media (min-width: 1024px) {
+    .lp-scroll-indicator span {
+        font-size: 0.85rem;
+        letter-spacing: 2px;
+        color: var(--primary-color);
+    }
+
+    .lp-scroll-line {
+        width: 2px;
+        height: 50px;
+        background: linear-gradient(to bottom, var(--primary-color), transparent);
+    }
 }
 
 /* Section Container */
@@ -525,34 +534,33 @@
     }
 
     .lp-hero {
-        padding-top: 120px;
-        padding-bottom: 80px;
+        padding-top: 100px;
+        padding-bottom: 60px;
         min-height: 100svh;
-        display: block;
-        /* Stack vertically if needed */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
 
     .lp-hero-content {
-        padding: 20px;
+        padding: 10px;
     }
 
     .lp-hero-cta {
         flex-direction: column;
         align-items: stretch;
-        margin-top: 30px;
+        margin-top: 25px;
+        gap: 15px;
     }
 
     .lp-btn {
         width: 100%;
         max-width: 320px;
         margin: 0 auto;
-        padding: 14px 20px;
+        padding: 12px 20px;
+        font-size: 1rem;
     }
 
-    .lp-scroll-indicator {
-        display: none;
-        /* Hide scroll indicator on mobile to avoid overlap and clutter */
-    }
 
     .lp-final-cta-title {
         font-size: 2rem;
