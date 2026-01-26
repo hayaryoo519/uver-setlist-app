@@ -78,7 +78,7 @@ const LandingPage = () => {
                         <div className="lp-feature-icon">📊</div>
                         <h3 className="lp-feature-title">統計分析</h3>
                         <p className="lp-feature-description">
-                            参加したライブの年別推移、会場タイプの分布、よく聴いた楽曲のランキングなど、あなたのライブ体験を可視化します。
+                            参加したライブの年別推移、よく聴いた楽曲のランキングなど、あなたのライブ体験を可視化します。
                         </p>
                     </div>
 
@@ -86,7 +86,7 @@ const LandingPage = () => {
                         <div className="lp-feature-icon">🎵</div>
                         <h3 className="lp-feature-title">楽曲コレクション</h3>
                         <p className="lp-feature-description">
-                            ライブで聴いた楽曲を自動で記録。全曲コンプリートを目指したり、まだ聴いたことのない楽曲を探したり。
+                            Discographyの各楽曲が、過去のライブでいつ演奏されたかをデータベース化。定番曲からレア曲まで、演奏履歴を詳しくチェックできます。
                         </p>
                     </div>
                 </div>
@@ -104,31 +104,31 @@ const LandingPage = () => {
                         <div className="lp-step-number">1</div>
                         <h3 className="lp-step-title">アカウント作成</h3>
                         <p className="lp-step-description">
-                            無料でアカウントを作成。メールアドレスとパスワードだけでOK。
+                            まずは無料登録。メールアドレスだけで、あなたの参戦履歴を保存する「マイページ」が作られます。
                         </p>
                     </div>
 
                     <div className="lp-step">
                         <div className="lp-step-number">2</div>
-                        <h3 className="lp-step-title">ライブを記録</h3>
+                        <h3 className="lp-step-title">検索 & 参戦ボタン</h3>
                         <p className="lp-step-description">
-                            参加したライブを「マイページ」から記録。過去のライブも遡って登録できます。
+                            ツアー名や会場、演奏曲から過去のライブを検索。「参戦した！」ボタンを押すだけで記録完了です。
                         </p>
                     </div>
 
                     <div className="lp-step">
                         <div className="lp-step-number">3</div>
-                        <h3 className="lp-step-title">セットリスト確認</h3>
+                        <h3 className="lp-step-title">自動でデータ化</h3>
                         <p className="lp-step-description">
-                            ライブ詳細ページでセットリストを確認。記憶を辿りながら当時の興奮を思い出そう。
+                            参戦数や、聴いた回数の多い曲ランキングなどを自動生成。あなたの活動履歴が可視化されます。
                         </p>
                     </div>
 
                     <div className="lp-step">
                         <div className="lp-step-number">4</div>
-                        <h3 className="lp-step-title">統計を楽しむ</h3>
+                        <h3 className="lp-step-title">コンプリートを目指す</h3>
                         <p className="lp-step-description">
-                            マイページで統計をチェック。あなたのUVERworld愛が数字で見える！
+                            Discography機能と連動。データベースに登録された全楽曲を一覧でチェックし、詳細データを確認できます。
                         </p>
                     </div>
                 </div>
