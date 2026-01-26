@@ -2,7 +2,7 @@ services:
   app-staging:
     build: .
     ports:
-      - "9000:8000"
+      - "9001:8000"
     environment:
       - NODE_ENV=staging
       - PORT=8000
