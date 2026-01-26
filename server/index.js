@@ -7,13 +7,15 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const app = express();
 const PORT = process.env.PORT || 8000;
 
+// Security Check: Ensure JWT_SECRET is configured
+if (!process.env.JWT_SECRET) {
+    console.error('FATAL ERROR: JWT_SECRET is not defined in environment variables.');
+    console.error('The application cannot start without a secure JWT secret.');
+    process.exit(1);
+}
+
 // Middleware
-app.use(helmet({
-    contentSecurityPolicy: false,
-    hsts: false,
-    crossOriginOpenerPolicy: false,
-    crossOriginEmbedderPolicy: false
-}));
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
