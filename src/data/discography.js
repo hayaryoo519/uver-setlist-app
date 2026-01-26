@@ -10,7 +10,7 @@ export const DISCOGRAPHY = [
         type: "SINGLE",
         title: "CHANCE!",
         date: "2005.10.26",
-        songs: ["CHANCE!", "Prime", "SHINE"]
+        songs: ["CHANCE!", "PRIME", "SHINE"]
     },
 
     // --- 2006 ---
@@ -40,7 +40,7 @@ export const DISCOGRAPHY = [
         type: "SINGLE",
         title: "SHAMROCK",
         date: "2006.08.02",
-        songs: ["SHAMROCK", "僕に重なって来る今", "= (Equal)"]
+        songs: ["SHAMROCK", "僕に重なって来る今", "="]
     },
     {
         type: "SINGLE",
@@ -55,7 +55,7 @@ export const DISCOGRAPHY = [
         title: "BUGRIGHT",
         date: "2007.02.21",
         songs: [
-            "ゼロの答", "SHAMROCK", "Home 微熱39℃", "～流れ・空虚・THIS WORD～",
+            "ゼロの答", "SHAMROCK", "Home ～微熱39℃～", "〜流れ・空虚・THIS WORD〜",
             "Colors of the Heart", "Live everyday as if it were the last day",
             "シャルマンノウラ", "一人じゃないから", "君の好きなうた",
             "51%", "LIFEsize", "EMPTY96", "DISCORD",
@@ -66,7 +66,7 @@ export const DISCOGRAPHY = [
         type: "SINGLE",
         title: "endscape",
         date: "2007.05.30",
-        songs: ["endscape", "UNKNOWN ORCHESTRA", "モノクローム～気付けなかったdevotion～"]
+        songs: ["endscape", "UNKNOWN ORCHESTRA", "モノクローム〜気付けなかったdevotion〜"]
     },
     {
         type: "SINGLE",
@@ -88,12 +88,12 @@ export const DISCOGRAPHY = [
         date: "2008.01.16",
         songs: [
             "Roots", "brand new ancient", "浮世CROSSING", "病的希求日記",
-            "counting song - H", "シャカビーチ～Laka Laka La～ (album ver.)",
+            "Counting Song-H", "シャカビーチ～Laka Laka La～ (album ver.)",
             "GROOVY GROOVY GROOVY", "expod -digital",
             "-妙策号外ORCHESTRA-", "UNKNOWN ORCHESTRA (album ver.)",
             "-god's followers-", "神集め", "-forecast map 1955-",
             "ENERGY (album ver.)", "endscape (album ver.)",
-            "心が指す場所と口癖　そして君がついて来る", "オトノハ", "to the world（SE）"
+            "心が指す場所と口癖　そして君がついて来る", "オトノハ", "to the world"
         ]
     },
     {
@@ -106,7 +106,7 @@ export const DISCOGRAPHY = [
         type: "SINGLE",
         title: "恋しくて",
         date: "2008.09.10",
-        songs: ["恋しくて", "志 -kokorozashi-", "over the stoic"]
+        songs: ["恋いしくて", "志-kokorozashi-", "over the stoic"]
     },
     {
         type: "SINGLE",
@@ -123,7 +123,7 @@ export const DISCOGRAPHY = [
         songs: [
             "激動", "99/100騙しの哲", "美影意志", "コロナ",
             "儚くも永久のカナシ", "earthy world", "畢生皐月プロローグ",
-            "アイ・アム Riri", "恋しくて", "Forget", "Just break the limit!",
+            "アイ・アム Riri", "恋いしくて", "Forget", "Just break the limit!",
             "和音", "YURA YURA"
         ]
     },
@@ -168,7 +168,7 @@ export const DISCOGRAPHY = [
         type: "SINGLE",
         title: "NO.1",
         date: "2010.11.24",
-        songs: ["NO.1", "6つの風", "超大作+81"]
+        songs: ["No.1", "6つの風", "超大作+81"]
     },
 
     // --- 2011 ---
@@ -189,8 +189,8 @@ export const DISCOGRAPHY = [
         title: "LIFE 6 SENSE",
         date: "2011.06.01",
         songs: [
-            "CORE PRIDE", "いつか必ず死ぬことを忘れるな", "一石を投じる",
-            "ace of ace", "NO.1", "クオリア", "Secret", "勝者臆病者",
+            "CORE PRIDE", "いつか必ず死ぬことを忘れるな", "一石を投じる　Tokyo midnight sun",
+            "ace of ace", "No.1", "クオリア", "Secret", "勝者臆病者",
             "6つの風", "白昼夢", "MONDO PIECE"
         ]
     },
@@ -219,7 +219,7 @@ export const DISCOGRAPHY = [
         title: "THE ONE",
         date: "2012.11.28",
         songs: [
-            "THE ONE (SE)", "7th Trigger", "Don't Think.Feel", "LIMITLESS",
+            "THE ONE", "7th Trigger", "Don't Think.Feel", "LIMITLESS",
             "23ワード", "KINJITO", "THE OVER", "此処から", "REVERSI",
             "バーベル", "BABY BORN & GO", "AWAYOKUBA-斬る"
         ]
@@ -257,7 +257,7 @@ export const DISCOGRAPHY = [
         title: "Ø CHOIR",
         date: "2014.07.02",
         songs: [
-            "零HERE～SE～", "IMPACT", "誰が言った", "ENOUGH-1",
+            "零 HERE ～SE～", "IMPACT", "誰が言った", "ENOUGH-1",
             "KICKが自由", "別世界", "Born Slippy", "Wizard CLUB",
             "在るべき形", "0 choir"
         ]
@@ -401,7 +401,7 @@ export const DISCOGRAPHY = [
         songs: [
             "ENIGMASIS", "VICTOSPIN", "High Light!", "ENCORE AGAIN",
             "FINALIST", "echoOZ", "Don't Think.Sing", "α-Skill",
-            "two Lies", "THEORY", "ピグマリオン", "ANOMALY 奏者"
+            "two Lies", "THEORY", "ピグマリオン", "ANOMALY奏者"
         ]
     },
 
