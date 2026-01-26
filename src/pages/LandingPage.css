@@ -524,15 +524,34 @@
         grid-template-columns: 1fr;
     }
 
+    .lp-hero {
+        padding-top: 120px;
+        padding-bottom: 80px;
+        min-height: 100svh;
+        display: block;
+        /* Stack vertically if needed */
+    }
+
+    .lp-hero-content {
+        padding: 20px;
+    }
+
     .lp-hero-cta {
         flex-direction: column;
         align-items: stretch;
+        margin-top: 30px;
     }
 
     .lp-btn {
         width: 100%;
-        max-width: 300px;
+        max-width: 320px;
         margin: 0 auto;
+        padding: 14px 20px;
+    }
+
+    .lp-scroll-indicator {
+        display: none;
+        /* Hide scroll indicator on mobile to avoid overlap and clutter */
     }
 
     .lp-final-cta-title {
