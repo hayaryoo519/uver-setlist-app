@@ -1,58 +1,21 @@
 import React from 'react';
 import { Search, Tag, MapPin } from 'lucide-react';
 
-export const PRESET_FILTERS = [
-    { id: 'xmas', label: 'Xmas / Christmas', match: (live) => (live.title && (live.title.toLowerCase().includes('xmas') || live.title.includes('クリスマス'))) },
-    { id: 'birthday', label: 'Birthday / Seitansai', match: (live) => (live.title && (live.title.toLowerCase().includes('birthday') || live.title.includes('生誕'))) },
-    { id: 'budokan', label: 'Budokan', match: (live) => (live.venue && (live.venue.includes('武道館') || live.venue.toLowerCase().includes('budokan'))) },
-    { id: 'arena', label: 'Arena Tour', match: (live) => (live.venue && (live.venue.includes('アリーナ') || live.venue.toLowerCase().includes('arena'))) },
-    { id: 'taiban', label: 'Event / Taiban', match: (live) => (live.type === 'EVENT' || (live.title && live.title.includes('対バン'))) },
-    { id: 'men', label: 'Danjri / Men Only', match: (live) => (live.title && (live.title.includes('男祭り') || live.title.includes('KING'))) },
-    { id: 'women', label: 'Women Only', match: (live) => (live.title && (live.title.includes('女祭り') || live.title.includes('QUEEN'))) },
-];
 
 const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
 
-    const toggleTag = (tagId) => {
-        const newTags = filters.tags.includes(tagId)
-            ? filters.tags.filter(t => t !== tagId)
-            : [...filters.tags, tagId];
-        onChange({ ...filters, tags: newTags });
-    };
 
     const handleTextChange = (e) => {
         onChange({ ...filters, text: e.target.value });
     };
 
     const clearFilters = () => {
-        onChange({ text: '', tags: [], venue: '', songIds: [], startDate: '', endDate: '' });
+        onChange({ text: '', venue: '', songIds: [], startDate: '', endDate: '' });
     };
 
 
     const sortedSongs = React.useMemo(() => {
-        let filtered = songs;
-
-        // Deduplicate songs with similar titles (e.g., "Don't Think.Sing" vs "Don't Think. Sing")
-        // Normalize: lowercase, remove spaces/punctuation differences
-        const normalizeTitle = (title) => {
-            return title
-                .toLowerCase()
-                .replace(/[.\s\-~～・　]/g, '') // Remove dots, spaces, hyphens, tildes
-                .replace(/[（）()]/g, '')        // Remove parentheses
-                .trim();
-        };
-
-        const seen = new Map();
-        const deduplicated = filtered.filter(song => {
-            const normalized = normalizeTitle(song.title);
-            if (seen.has(normalized)) {
-                return false; // Skip duplicate
-            }
-            seen.set(normalized, true);
-            return true;
-        });
-
-        return deduplicated.sort((a, b) => a.title.localeCompare(b.title, 'ja'));
+        return [...songs].sort((a, b) => a.title.localeCompare(b.title, 'ja'));
     }, [songs]);
 
     // Handle song selection (multi-select not supported easily in pure select, so single for now or custom logic)
@@ -178,34 +141,9 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
                     </div>
                 </div>
 
-                {/* Preset Tags & Clear */}
-                <div className="flex justify-between items-end flex-wrap gap-4">
-                    <div>
-                        <div className="flex items-center gap-2 mb-3 text-slate-400 text-xs font-bold uppercase tracking-wider">
-                            <Tag size={12} />
-                            <span>クイック絞り込み</span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {PRESET_FILTERS.map(filter => {
-                                const isActive = filters.tags.includes(filter.id);
-                                return (
-                                    <button
-                                        key={filter.id}
-                                        onClick={() => toggleTag(filter.id)}
-                                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200 border ${isActive
-                                            ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-900/50'
-                                            : 'bg-slate-800 border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-200 hover:bg-slate-700'
-                                            }`}
-                                    >
-                                        {filter.label}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* Clear Button - Show only if filters active */}
-                    {(filters.text || filters.venue || filters.songIds.length > 0 || filters.tags.length > 0 || filters.startDate || filters.endDate) && (
+                {/* Clear Button - Show only if filters active */}
+                <div className="flex justify-end mt-4">
+                    {(filters.text || filters.venue || filters.songIds.length > 0 || filters.startDate || filters.endDate) && (
                         <button
                             onClick={clearFilters}
                             className="text-slate-400 hover:text-white text-sm underline decoration-slate-600 hover:decoration-white underline-offset-4 transition-colors"
