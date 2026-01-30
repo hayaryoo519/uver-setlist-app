@@ -1,6 +1,10 @@
 services:
   app-staging:
-    build: .
+    build:
+      context: .
+      args:
+        - VITE_APP_ENV=staging
+        - NODE_ENV=staging
     ports:
       - "9001:8000"
     environment:
