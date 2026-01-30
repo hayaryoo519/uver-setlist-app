@@ -5,6 +5,7 @@ services:
       - "9001:8000"
     environment:
       - NODE_ENV=staging
+      - VITE_APP_ENV=staging
       - PORT=8000
       - DB_HOST=db-staging
       - DB_PORT=5432
