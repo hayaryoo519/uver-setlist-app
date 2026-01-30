@@ -14,9 +14,31 @@ export const useEnvironment = () => {
         const mode = import.meta.env.MODE;
         const viteEnv = import.meta.env.VITE_APP_ENV;
 
-        // 環境判定の優先順位: VITE_APP_ENV > MODE
-        const envName = viteEnv || mode;
+        // URLベースの判定（フォールバック）
+        const hostname = window.location.hostname;
+        const port = window.location.port;
+        const href = window.location.href;
 
+        // 環境判定の優先順位: VITE_APP_ENV > MODE > URL判定
+        let envName = viteEnv || mode;
+
+        // URL/ポートベースの判定（環境変数がない場合）
+        if (!viteEnv && !mode) {
+            // 検証サーバー: 192.168.0.13:9001
+            if (hostname === '192.168.0.13' && port === '9001') {
+                envName = 'staging';
+            }
+            // 本番サーバー: 192.168.0.13:8000
+            else if (hostname === '192.168.0.13' && port === '8000') {
+                envName = 'production';
+            }
+            // ローカル開発: localhost
+            else if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                envName = 'development';
+            }
+        }
+
+        // 環境ごとの設定
         if (envName === 'staging') {
             return {
                 name: 'staging',
