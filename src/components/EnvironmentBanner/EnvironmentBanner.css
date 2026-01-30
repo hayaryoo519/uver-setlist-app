@@ -1,0 +1,68 @@
+.environment-banner {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    padding: 10px 16px;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.environment-banner__icon {
+    font-size: 1.2em;
+    line-height: 1;
+}
+
+.environment-banner__text {
+    font-size: 0.95em;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+}
+
+.environment-banner__note {
+    font-size: 0.8em;
+    font-weight: 500;
+    opacity: 0.95;
+    letter-spacing: 0.5px;
+}
+
+/* 微妙なパルスアニメーション */
+@keyframes subtlePulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.92;
+        transform: scale(0.998);
+    }
+}
+
+.environment-banner {
+    animation: subtlePulse 3s ease-in-out infinite;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .environment-banner {
+        padding: 8px 12px;
+        font-size: 0.9em;
+    }
+
+    .environment-banner__note {
+        display: none;
+        /* モバイルでは注釈を非表示 */
+    }
+}
