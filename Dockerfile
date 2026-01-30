@@ -3,12 +3,21 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
+# ビルド時引数として環境変数を受け取る
+ARG VITE_APP_ENV=production
+ARG NODE_ENV=production
+
 # Copy package files first for better caching
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
 
 # Copy source and build frontend
 COPY . .
+
+# ビルド時に環境変数を設定
+ENV VITE_APP_ENV=${VITE_APP_ENV}
+ENV NODE_ENV=${NODE_ENV}
+
 RUN npm run build
 
 # Runner stage
