@@ -21,6 +21,8 @@ import SecurityLogsPage from './pages/SecurityLogsPage';
 import CorrectionForm from './pages/CorrectionForm';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from './components/ProtectedRoute';
+import { EnvironmentBanner } from './components/EnvironmentBanner/EnvironmentBanner';
+import { useEnvironmentTitle } from './hooks/useEnvironmentTitle';
 
 // Wrapper for pages that need the Main Layout (Navbar, etc.)
 const LayoutRoute = () => (
@@ -30,10 +32,14 @@ const LayoutRoute = () => (
 );
 
 function App() {
+  // 環境に応じてタイトルを変更
+  useEnvironmentTitle();
+
   return (
     <HelmetProvider>
       <AuthProvider>
         <Router>
+          <EnvironmentBanner />
           <ScrollToTop />
           <Routes>
             {/* Auth Pages (Standalone) */}
