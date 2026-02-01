@@ -1,16 +1,16 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import SEO from '../components/SEO';
 import { Music, BarChart3, Heart, ChevronDown, AlertTriangle, User, ShieldAlert, Mail } from 'lucide-react';
 import './LandingPage.css';
 
 const LandingPage = () => {
     return (
         <div className="landing-page">
-            <Helmet>
-                <title>UVERworld Setlist Archive - ファンによるセットリスト記録サイト</title>
-                <meta name="description" content="UVERworldのライブ参戦記録を可視化するファンサイト。あなたが参加したライブを記録し、統計データで振り返れます。" />
-            </Helmet>
+            <SEO
+                title="ファンによるセットリスト記録サイト"
+                description="UVERworldのライブ参戦記録を可視化するファンサイト。あなたが参加したライブを記録し、統計データで振り返れます。"
+            />
 
             {/* Header */}
             <header className="lp-header">
