@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, Link, useLocation } from 'react-router-dom';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Music, Calendar, MapPin, Play, Clock, ArrowLeft, Loader, Sparkles, Disc, ChevronDown, ChevronsDown, ChevronUp } from 'lucide-react';
 import SEO from '../components/SEO';
 import { DISCOGRAPHY } from '../data/discography';
@@ -7,6 +7,7 @@ import { DISCOGRAPHY } from '../data/discography';
 const SongDetail = () => {
     const { id } = useParams();
     const location = useLocation();
+    const navigate = useNavigate();
     const [song, setSong] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -128,13 +129,37 @@ const SongDetail = () => {
     const now = new Date();
     const daysSince = lastPlayed ? Math.floor((now - lastPlayed) / (1000 * 60 * 60 * 24)) : null;
 
+
+
+    // Determine back link logic
+    const hasHistory = location.state?.from;
+    const backLink = hasHistory ? location.state.from : '/songs';
+
+    const getBackLabel = () => {
+        if (!hasHistory) return '楽曲一覧に戻る';
+        if (backLink === '/dashboard' || backLink === '/mypage') return 'ダッシュボードに戻る';
+        if (backLink.startsWith('/live/')) return 'ライブ詳細に戻る';
+        return '前に戻る';
+    };
+
+    const handleBack = (e) => {
+        if (hasHistory) {
+            e.preventDefault();
+            navigate(-1);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-slate-900 text-white fade-in" style={{ paddingTop: '100px', paddingBottom: '40px' }}>
             <SEO title={`${song.title} - Song Stats`} description={`Performance history of ${song.title} by UVERworld.`} />
 
             <div className="max-w-4xl mx-auto px-4">
-                <Link to="/lives" className="inline-flex items-center text-slate-400 hover:text-white mb-6 transition-colors">
-                    <ArrowLeft size={18} className="mr-2" /> アーカイブに戻る
+                <Link
+                    to={backLink}
+                    onClick={handleBack}
+                    className="inline-flex items-center text-slate-400 hover:text-white mb-6 transition-colors"
+                >
+                    <ArrowLeft size={18} className="mr-2" /> {getBackLabel()}
                 </Link>
 
                 {/* Header */}
@@ -336,7 +361,7 @@ const SongDetail = () => {
                     ) : (
                         <>
                             {filteredPerformances.slice(0, visibleCount).map((live) => (
-                                <Link to={`/live/${live.id}`} key={live.id} className="block group">
+                                <Link to={`/live/${live.id}`} state={{ from: location.pathname }} key={live.id} className="block group">
                                     <div className="bg-slate-800/40 hover:bg-slate-700 border border-slate-700 rounded-lg p-4 transition-colors flex items-center justify-between">
                                         <div>
                                             <div className="flex items-center gap-3 text-sm text-slate-400 mb-1">

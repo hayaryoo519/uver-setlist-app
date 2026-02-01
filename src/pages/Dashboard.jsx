@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import PageHeader from '../components/Layout/PageHeader';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useGlobalStats } from '../hooks/useGlobalStats';
 import { Calendar, Music, MapPin, ArrowRight, List, TrendingUp, Activity, Filter, Disc } from 'lucide-react';
 import LiveGraph from '../components/Dashboard/LiveGraph';
@@ -13,6 +13,7 @@ import SEO from '../components/SEO';
 
 function Dashboard() {
     const { loading, ...stats } = useGlobalStats();
+    const location = useLocation();
     const [modalFilter, setModalFilter] = useState(null);
     const [expandedSong, setExpandedSong] = useState(null);
     const [graphMetric, setGraphMetric] = useState('liveCount');
@@ -353,6 +354,7 @@ function Dashboard() {
                                     {(stats.globalSongRanking || []).slice(0, 10).map((song, index) => (
                                         <Link
                                             to={song.id ? `/song/${song.id}` : '#'}
+                                            state={{ from: location.pathname }}
                                             key={index}
                                             style={{ textDecoration: 'none', color: 'inherit' }}
                                         >
@@ -420,7 +422,7 @@ function Dashboard() {
                                         const year = dateParts[0];
                                         const monthDay = `${dateParts[1]}.${dateParts[2]}`;
                                         return (
-                                            <Link key={live.id} to={`/live/${live.id}`} className="recent-live-item">
+                                            <Link key={live.id} to={`/live/${live.id}`} state={{ from: location.pathname }} className="recent-live-item">
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                                     <div style={{
                                                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -737,6 +739,7 @@ function Dashboard() {
                                                                 <Link
                                                                     // Remove spaces for clean URL (e.g. "CORE PRIDE" -> "COREPRIDE")
                                                                     to={`/song/${encodeURIComponent(song.title.replace(/\s+/g, ''))}#performance-history`}
+                                                                    state={{ from: location.pathname }}
                                                                     onClick={(e) => { e.stopPropagation(); closeModal(); }}
                                                                     style={{
                                                                         color: 'white',
@@ -783,6 +786,7 @@ function Dashboard() {
                                                             <Link
                                                                 key={live.id}
                                                                 to={`/live/${live.id}`}
+                                                                state={{ from: location.pathname }}
                                                                 onClick={closeModal}
                                                                 style={{
                                                                     display: 'block',
