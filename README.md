@@ -3,6 +3,18 @@
 UVERworldのライブセットリストを記録・閲覧するための非公式Webアプリケーション（MVP）です。
 「過去のライブのセットリストを振り返りたい」「あの時の曲順を知りたい」というファンの声に応えるために作成されました。
 
+> [!WARNING]
+> **3つの環境について**
+> 
+> このプロジェクトには独立した3つの環境があります：
+> - **ローカル開発** (Windows PC): Docker Supabaseを使用
+> - **検証 (Staging)** (192.168.0.13:9000): Docker PostgreSQLを使用  
+> - **本番 (Production)** (192.168.0.13:8000): 本番PostgreSQLを使用
+> 
+> **本番データベースは絶対に直接操作しないでください！**  
+> 開発・テストは必ずローカル環境または検証環境で行ってください。  
+> 詳細は [ENVIRONMENT_GUIDE.md](ENVIRONMENT_GUIDE.md) を参照してください。
+
 ## 機能
 *   **ライブ一覧**: 過去のライブを日付順に表示。
 *   **フィルタリング**: 開催年やキーワード（会場名・ツアー名）で絞り込みが可能。
@@ -14,9 +26,19 @@ UVERworldのライブセットリストを記録・閲覧するための非公�
 *   Vanilla CSS (CSS Modules/Variables)
 
 ## セットアップ
+
+> [!IMPORTANT]
+> **環境を理解してから作業を開始してください**  
+> セットアップする前に、必ず [ENVIRONMENT_GUIDE.md](ENVIRONMENT_GUIDE.md) を読んで3つの環境の違いを理解してください。
+
+### ローカル開発環境のセットアップ
 1.  リポジトリをクローン
 2.  依存関係をインストール: `npm install`
-3.  開発サーバーを起動: `npm run dev`
+3.  Docker Supabaseが起動していることを確認: `docker ps | findstr supabase`
+4.  開発サーバーを起動: `npm run dev`
+
+### 環境ごとの詳細セットアップ
+各環境のセットアップ手順、データベース設定、使い分けについては [ENVIRONMENT_GUIDE.md](ENVIRONMENT_GUIDE.md) を参照してください。
 
 ## セキュリティログ
 
