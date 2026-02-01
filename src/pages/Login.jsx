@@ -58,6 +58,7 @@ const Login = () => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="your@email.com"
+                            tabIndex={1}
                             style={{
                                 width: '100%',
                                 padding: '12px 12px 12px 40px',
@@ -78,7 +79,7 @@ const Login = () => {
                 <div style={{ marginBottom: '30px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                         <label style={{ color: '#94a3b8', fontSize: '0.9rem' }}>パスワード</label>
-                        <Link to="/forgot-password" style={{ color: '#64748b', fontSize: '0.8rem', textDecoration: 'none' }}>パスワードをお忘れですか？</Link>
+                        <Link to="/forgot-password" tabIndex={4} style={{ color: '#64748b', fontSize: '0.8rem', textDecoration: 'none' }}>パスワードをお忘れですか？</Link>
                     </div>
                     <div style={{ position: 'relative' }}>
                         <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
@@ -88,6 +89,7 @@ const Login = () => {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="••••••••"
+                            tabIndex={2}
                             style={{
                                 width: '100%',
                                 padding: '12px 12px 12px 40px',
@@ -108,6 +110,7 @@ const Login = () => {
                 <button
                     type="submit"
                     disabled={isLoading}
+                    tabIndex={3}
                     style={{
                         width: '100%',
                         padding: '14px',
