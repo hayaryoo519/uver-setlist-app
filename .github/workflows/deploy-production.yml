@@ -12,18 +12,25 @@ jobs:
       - name: Deploy to Production Server
         run: |
           cd ~/apps/uver-setlist-app/server
-          # 本番環境はmainブランチを追跡
-          git fetch origin main
-          git checkout main
-          git pull origin main
           
-          # 依存関係のインストール（必要時）
+          # 1. 現在の.envをバックアップ（サーバー固有の設定を守るため）
+          cp .env .env.backup
+          
+          # 2. 最新コードを強制的に取得（ローカルの変更を破棄）
+          git fetch origin main
+          git reset --hard origin/main
+          
+          # 3. バックアップから.envを復元
+          # （もしリポジトリ内の.envと競合しても、サーバーの設定を優先）
+          cp .env.backup .env
+          
+          # 4. 依存関係のインストール
           npm install
           
-          # 本番用ビルド（ルートディレクトリで実行が必要な場合）
+          # 본番用ビルド（ルートディレクトリ）
           cd ~/apps/uver-setlist-app
           npm install
           npm run build
           
-          # サーバー再起動（パスワードをSecretsから入力）
+          # 5. サーバー再起動
           echo "${{ secrets.SUDO_PASSWORD }}" | sudo -S systemctl restart uver-app-prod
