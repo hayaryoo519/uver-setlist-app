@@ -282,7 +282,6 @@ export const TourTrends = ({ tour }) => {
                                     key={idx}
                                     onClick={() => setSelectedSong(null)}
                                     style={{
-                                        display: 'block',
                                         padding: '15px 20px',
                                         textDecoration: 'none',
                                         color: '#cbd5e1',
