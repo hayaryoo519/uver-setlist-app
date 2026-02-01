@@ -17,7 +17,6 @@ export const useEnvironment = () => {
         // URLベースの判定（フォールバック）
         const hostname = window.location.hostname;
         const port = window.location.port;
-        const href = window.location.href;
 
         // 環境判定の優先順位: VITE_APP_ENV > MODE > URL判定
         let envName = viteEnv || mode;
@@ -39,28 +38,28 @@ export const useEnvironment = () => {
         }
 
         // 環境ごとの設定
-        if (envName === 'staging') {
-            return {
-                name: 'staging',
-                label: '検証環境',
-                color: '#FF9800', // オレンジ
-                textColor: '#ffffff'
-            };
-        } else if (envName === 'development') {
-            return {
+        const environments = {
+            development: {
                 name: 'development',
                 label: 'ローカル開発',
-                color: '#4CAF50', // 緑
+                color: '#10b981', // 濃い緑
                 textColor: '#ffffff'
-            };
-        } else {
-            return {
+            },
+            staging: {
+                name: 'staging',
+                label: '検証環境',
+                color: '#f97316', // 濃いオレンジ
+                textColor: '#ffffff'
+            },
+            production: {
                 name: 'production',
                 label: '本番',
                 color: null,
                 textColor: null
-            };
-        }
+            }
+        };
+
+        return environments[envName] || environments.production;
     }, []);
 
     const isProduction = env.name === 'production';
