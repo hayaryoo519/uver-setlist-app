@@ -25,11 +25,11 @@ jobs:
           cp .env.backup .env
           
           # 4. 依存関係のインストール
-          npm install
+          npm install --legacy-peer-deps
           
-          # 본番用ビルド（ルートディレクトリ）
+          # 本番用ビルド（ルートディレクトリ）
           cd ~/apps/uver-setlist-app
-          npm install
+          npm install --legacy-peer-deps
           npm run build
           
           # 5. サーバー再起動
