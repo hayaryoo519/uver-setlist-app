@@ -6,17 +6,12 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Deploy to Staging Server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USER }}
-          key: ${{ secrets.STAGING_SSH_KEY }}
-          script: |
-            cd ~/apps/uver-setlist-staging
-            git fetch origin dev
-            git checkout dev
-            git pull origin dev
-            docker compose up -d --build
+        run: |
+          cd ~/apps/uver-setlist-staging
+          git fetch origin dev
+          git checkout dev
+          git pull origin dev
+          docker compose up -d --build
