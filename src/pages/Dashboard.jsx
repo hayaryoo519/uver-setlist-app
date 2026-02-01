@@ -179,7 +179,7 @@ function Dashboard() {
     const getFilteredLives = () => {
         if (!modalFilter) return [];
         if (modalFilter.type === 'year') {
-            return stats.allLives.filter(live => live.date.startsWith(modalFilter.value));
+            return stats.allLives.filter(live => live.date && live.date.startsWith(modalFilter.value));
         }
         return [];
     };
@@ -418,7 +418,7 @@ function Dashboard() {
                             ) : (
                                 <div style={{ flex: 1 }}>
                                     {(stats.recentLives || []).map((live, index) => {
-                                        const dateParts = live.date.split('.');
+                                        const dateParts = live.date ? live.date.split('.') : ['Unknown', 'Unknown', 'Unknown'];
                                         const year = dateParts[0];
                                         const monthDay = `${dateParts[1]}.${dateParts[2]}`;
                                         return (
