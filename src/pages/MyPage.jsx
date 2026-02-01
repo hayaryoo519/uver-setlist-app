@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PageHeader from '../components/Layout/PageHeader';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useLiveStats } from '../hooks/useLiveStats';
 import LiveGraph from '../components/Dashboard/LiveGraph';
 import VenueTypePie from '../components/Dashboard/VenueTypePie';
@@ -16,6 +16,7 @@ import VenueRanking from '../components/Dashboard/VenueRanking';
 
 function MyPage() {
     const [modalFilter, setModalFilter] = useState(null);
+    const location = useLocation();
     const [yearRange, setYearRange] = useState([2005, 2024]);
     const [selectedSong, setSelectedSong] = useState(null);
 
@@ -144,7 +145,7 @@ function MyPage() {
         <div className="container" style={{ paddingTop: '100px' }}>
             <SEO title="My Page" />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <Link to="/" style={{ color: '#94a3b8', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Link to="/dashboard" style={{ color: '#94a3b8', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px' }}>
                     &larr; <span style={{ fontSize: '0.9rem' }}>ダッシュボードに戻る</span>
                 </Link>
                 <Link to="/settings" className="edit-btn" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -227,7 +228,7 @@ function MyPage() {
                             <div className="stat-value">{stats.uniqueSongs}</div>
                         </div>
                         {stats.firstLive && (
-                            <Link to={`/live/${stats.firstLive.id}`} className="stat-card group" style={{ gridColumn: 'span 2', background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)', borderColor: '#d4af37', textDecoration: 'none' }}>
+                            <Link to={`/live/${stats.firstLive.id}`} state={{ from: location.pathname }} className="stat-card group" style={{ gridColumn: 'span 2', background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)', borderColor: '#d4af37', textDecoration: 'none' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                     <div>
                                         <div className="stat-icon" style={{ color: '#d4af37', marginBottom: '5px' }}><MapPin size={24} /></div>
@@ -330,6 +331,7 @@ function MyPage() {
                                                         <Link
                                                             key={live.id}
                                                             to={`/live/${live.id}`}
+                                                            state={{ from: location.pathname }}
                                                             className="modal-live-item"
                                                             onClick={closeModal}
                                                             style={{
@@ -425,6 +427,7 @@ function MyPage() {
                                             <Link
                                                 key={live.id}
                                                 to={`/live/${live.id}`}
+                                                state={{ from: location.pathname }}
                                                 className="modal-live-item"
                                                 onClick={closeModal}
                                                 style={{
