@@ -5,6 +5,7 @@ export const useGlobalStats = () => {
     const [allSongs, setAllSongs] = useState([]);
     const [allLives, setAllLives] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -14,14 +15,16 @@ export const useGlobalStats = () => {
                     fetch('/api/songs')
                 ]);
 
-                if (livesRes.ok && songsRes.ok) {
-                    const livesData = await livesRes.json();
-                    const songsData = await songsRes.json();
-                    setAllLives(livesData);
-                    setAllSongs(songsData);
-                }
+                if (!livesRes.ok) throw new Error(`Lives API Error: ${livesRes.status}`);
+                if (!songsRes.ok) throw new Error(`Songs API Error: ${songsRes.status}`);
+
+                const livesData = await livesRes.json();
+                const songsData = await songsRes.json();
+                setAllLives(livesData);
+                setAllSongs(songsData);
             } catch (e) {
                 console.error("Failed to fetch data for global stats", e);
+                setError(e.message);
             } finally {
                 setLoading(false);
             }
@@ -30,8 +33,6 @@ export const useGlobalStats = () => {
     }, []);
 
     const stats = useMemo(() => {
-        if (!allLives.length) return null;
-
         if (!allLives.length) return null;
 
         const formatDate = (dateStr) => {
@@ -44,12 +45,6 @@ export const useGlobalStats = () => {
         today.setHours(0, 0, 0, 0);
 
         // Separate Past and Future
-        // Past: strictly less than today (yesterday and before)
-        // or should it be <= today? User said "Archive doesn't show today". So let's stick to < today for stats to be safe/consistent.
-        // Actually, for "Current Tour Stats", if a live happened TODAY, we probably want it in stats if it's done?
-        // But usually setlists are added after.
-        // Let's stick with: Upcoming = >= today. Past = < today.
-
         const pastLives = allLives.filter(live => new Date(live.date) < today);
         const upcomingLives = allLives.filter(live => new Date(live.date) >= today)
             .sort((a, b) => new Date(a.date) - new Date(b.date))
@@ -169,7 +164,6 @@ export const useGlobalStats = () => {
 
         const tourRanking = [...tourStats]
             .sort((a, b) => b.latestDate.localeCompare(a.latestDate));
-        // .slice(0, 5); // Removed limit to show all tours in selection
 
         const currentTour = [...tourStats]
             .sort((a, b) => b.latestDate.localeCompare(a.latestDate))[0];
@@ -211,10 +205,6 @@ export const useGlobalStats = () => {
                 if (!song || !song.title) return;
                 if (!globalSongCounts[song.title]) {
                     globalSongCounts[song.title] = { count: 0, id: song.id, title: song.title };
-                    // Note: song.id might be missing in setlist depending on query, 
-                    // but usually available if valid FK. 
-                    // If missing, we might need lookup. 
-                    // Only allSongs has guaranteed IDs.
                 }
                 globalSongCounts[song.title].count += 1;
                 // Ensure ID is captured if available from first occurrence
@@ -253,5 +243,5 @@ export const useGlobalStats = () => {
         };
     }, [allLives, allSongs]);
 
-    return { ...stats, loading };
+    return { ...stats, loading, error };
 };
