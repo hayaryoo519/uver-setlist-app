@@ -1,5 +1,9 @@
 # 環境構成ガイド
 
+> [!TIP]
+> **[インフラ運用・管理ガイド (INFRASTRUCTURE_MANAGEMENT.md)](./INFRASTRUCTURE_MANAGEMENT.md)**
+> ドメイン、Nginx、UFW、および環境差異に関するより詳細なルールはこちらを参照してください。
+
 > [!CAUTION]
 > ## ⚠️ 本番データベースは絶対に直接操作しないでください ⚠️
 > 
