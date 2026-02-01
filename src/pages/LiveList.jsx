@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import PageHeader from '../components/Layout/PageHeader';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Search, MapPin, Calendar, Tag, Check, Plus, ArrowRight, Loader, Home } from 'lucide-react';
 import { useAttendance } from '../hooks/useAttendance';
 import FilterPanel from '../components/FilterPanel';
 import SEO from '../components/SEO';
 
 const LiveList = () => {
+    const location = useLocation();
     const [lives, setLives] = useState([]);
     const [availableSongs, setAvailableSongs] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -136,10 +137,7 @@ const LiveList = () => {
 
             <div className="max-w-4xl mx-auto px-4">
                 {/* Header Navigation */}
-                <div className="flex justify-between items-center mb-6">
-                    <Link to="/dashboard" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
-                        <Home size={18} /> ダッシュボードに戻る
-                    </Link>
+                <div className="flex justify-end items-center mb-6">
                     <div className="flex gap-4">
                         <button
                             onClick={() => setIsFilterOpen(!isFilterOpen)}
@@ -180,7 +178,7 @@ const LiveList = () => {
                         </div>
                     ) : (
                         filteredLives.map(live => (
-                            <Link to={`/live/${live.id}`} key={live.id} className="block group">
+                            <Link to={`/live/${live.id}`} state={{ from: location.pathname }} key={live.id} className="block group">
                                 <div className="bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-blue-500/50 rounded-xl p-5 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-900/20 relative overflow-hidden">
                                     {/* Left accent border */}
                                     <div className="absolute top-0 left-0 w-1 h-full bg-slate-700 group-hover:bg-blue-500 transition-colors duration-300"></div>

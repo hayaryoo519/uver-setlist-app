@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Search, Filter, MapPin, ArrowUpDown } from 'lucide-react';
 
 const AttendedLiveList = ({ lives }) => {
+    const location = useLocation();
     const [searchText, setSearchText] = useState('');
     const [sortOrder, setSortOrder] = useState('desc'); // 'desc' (newest first) or 'asc' (oldest first)
     const [selectedYear, setSelectedYear] = useState('ALL');
@@ -129,6 +130,7 @@ const AttendedLiveList = ({ lives }) => {
                             <Link
                                 key={live.id}
                                 to={`/live/${live.id}`}
+                                state={{ from: location.pathname }}
                                 className="compact-live-item"
                                 style={{
                                     display: 'flex',
