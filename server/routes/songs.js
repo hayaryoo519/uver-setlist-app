@@ -21,8 +21,8 @@ router.get('/', async (req, res) => {
         const result = await db.query(query, params);
         res.json(result.rows);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Server Error");
+        console.error('API Error:', err);
+        res.status(500).json({ message: "Server Error", error: err.message });
     }
 });
 
