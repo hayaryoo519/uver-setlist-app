@@ -13,7 +13,7 @@ UVERworldのライブセットリストを記録・閲覧するための非公�
 > 
 > **本番データベースは絶対に直接操作しないでください！**  
 > 開発・テストは必ずローカル環境または検証環境で行ってください。  
-> 詳細は [ENVIRONMENT_GUIDE.md](ENVIRONMENT_GUIDE.md) を参照してください。
+> 詳細は [DEVELOPMENT.md](DEVELOPMENT.md) を参照してください。
 
 ## 機能
 *   **ライブ一覧**: 過去のライブを日付順に表示。
@@ -28,17 +28,16 @@ UVERworldのライブセットリストを記録・閲覧するための非公�
 ## セットアップ
 
 > [!IMPORTANT]
-> **環境を理解してから作業を開始してください**  
-> セットアップする前に、必ず [ENVIRONMENT_GUIDE.md](ENVIRONMENT_GUIDE.md) を読んで3つの環境の違いを理解してください。
+> **ドキュメント体系について**
+> 
+> - 💻 **開発者の方へ**: 環境構築やGitワークフローについては **[DEVELOPMENT.md](DEVELOPMENT.md)** を参照してください。
+> - 🏗 **運用・インフラ管理者へ**: サーバー構成、デプロイ、セキュリティについては **[OPERATIONS.md](OPERATIONS.md)** を参照してください。
 
-### ローカル開発環境のセットアップ
+### ローカル開発環境のクイックスタート
 1.  リポジトリをクローン
-2.  依存関係をインストール: `npm install`
-3.  Docker Supabaseが起動していることを確認: `docker ps | findstr supabase`
-4.  開発サーバーを起動: `npm run dev`
-
-### 環境ごとの詳細セットアップ
-各環境のセットアップ手順、データベース設定、使い分けについては [ENVIRONMENT_GUIDE.md](ENVIRONMENT_GUIDE.md) を参照してください。
+2.  `npm install`
+3.  Dockerが起動していることを確認 (`docker ps`)
+4.  `npm run dev`
 
 ## セキュリティログ
 
@@ -63,7 +62,7 @@ node server/analyze_security.js
 - **システムエラー**: 予期しないエラーの追跡
 
 ### 詳細ガイド
-セキュリティログの詳細な調査方法については、[SECURITY_LOG_GUIDE.md](docs/SECURITY_LOG_GUIDE.md) を参照してください。
+セキュリティログの詳細な調査方法については、**[OPERATIONS.md](OPERATIONS.md)** のセキュリティ運用セクションを参照してください。
 
 ### 管理画面からのアクセス
 管理者は以下のURLから直接アクセスできます：
