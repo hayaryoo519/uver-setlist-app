@@ -120,8 +120,8 @@ router.get('/', async (req, res) => {
 
         res.json(normalizedRows);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).json({ message: "Server Error" });
+        console.error('API Error:', err);
+        res.status(500).json({ message: "Server Error", error: err.message });
     }
 });
 
