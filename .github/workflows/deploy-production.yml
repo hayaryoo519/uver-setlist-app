@@ -1,0 +1,29 @@
+name: Deploy to Production
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Deploy to Production Server
+        run: |
+          cd ~/apps/uver-setlist-app/server
+          # 本番環境はmainブランチを追跡
+          git fetch origin main
+          git checkout main
+          git pull origin main
+          
+          # 依存関係のインストール（必要時）
+          npm install
+          
+          # 本番用ビルド（ルートディレクトリで実行が必要な場合）
+          cd ~/apps/uver-setlist-app
+          npm install
+          npm run build
+          
+          # サーバー再起動（パスワードをSecretsから入力）
+          echo "${{ secrets.SUDO_PASSWORD }}" | sudo -S systemctl restart uver-app-prod
