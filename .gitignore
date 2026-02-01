@@ -26,3 +26,16 @@ dist-ssr
 # Environment Variables
 .env
 .env.production
+
+# Development/Debug Scripts (temporary)
+server/check_*.js
+server/debug_*.js
+server/test_*.js
+server/export_*.js
+server/inspect_*.js
+server/analyze_*.js
+server/verify_*.js
+server/add_*.js
+server/correct_*.js
+server/api_response.json
+server/insert_*.sql
