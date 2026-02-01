@@ -39,3 +39,6 @@ server/add_*.js
 server/correct_*.js
 server/api_response.json
 server/insert_*.sql
+
+# Server Environment
+server/.env
