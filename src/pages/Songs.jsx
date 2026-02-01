@@ -284,7 +284,7 @@ function Songs() {
                                         return (
                                             <Link
                                                 key={sIndex}
-                                                to={isCollected ? `/song/${encodeURIComponent(songTitle)}` : '#'}
+                                                to={isCollected ? `/song/${encodeURIComponent(songTitle.replace(/\s+/g, ''))}` : '#'}
                                                 style={{
                                                     textDecoration: 'none',
                                                     pointerEvents: isCollected ? 'auto' : 'none'
