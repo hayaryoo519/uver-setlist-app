@@ -58,7 +58,7 @@ export const useGlobalStats = () => {
         // Detailed Yearly Stats
         const yearlyDetails = {};
         pastLives.forEach(live => {
-            const year = live.date.split('-')[0];
+            const year = live.date ? live.date.split('-')[0] : 'Unknown';
             if (!yearlyDetails[year]) {
                 yearlyDetails[year] = {
                     year,
