@@ -9,6 +9,7 @@ const SongDetail = () => {
     const location = useLocation();
     const [song, setSong] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [filterYear, setFilterYear] = useState('All');
     const [filterType, setFilterType] = useState('All');
     const [visibleCount, setVisibleCount] = useState(10);
@@ -65,9 +66,11 @@ const SongDetail = () => {
                     setSong(data);
                 } else {
                     console.error("Failed to fetch song");
+                    setError(`Failed to fetch song: ${res.status} ${res.statusText}`);
                 }
             } catch (error) {
                 console.error("Error:", error);
+                setError(error.message);
             } finally {
                 setIsLoading(false);
             }
@@ -91,6 +94,20 @@ const SongDetail = () => {
         return (
             <div className="flex justify-center items-center h-screen bg-slate-900">
                 <Loader className="animate-spin text-blue-500" size={40} />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-slate-900 flex justify-center items-center text-red-400 p-8 flex-col text-center">
+                <div className="text-2xl font-bold mb-4">Error Loading Song</div>
+                <div className="bg-red-900/20 p-4 rounded border border-red-500/30">
+                    {error}
+                </div>
+                <Link to="/songs" className="mt-8 text-blue-400 hover:text-blue-300 underline">
+                    Return to Song List
+                </Link>
             </div>
         );
     }

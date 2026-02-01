@@ -15,7 +15,7 @@ const normalizeSongTitle = (title) => {
 };
 
 function Songs() {
-    const { loading, songIdMap, allLives, songTranslationMap } = useGlobalStats();
+    const { loading, songIdMap, allLives, songTranslationMap, error } = useGlobalStats();
     const location = useLocation();
 
     // Handle hash scroll on mount/location change
@@ -204,7 +204,13 @@ function Songs() {
                     </div>
                 </div>
 
-                {loading ? (
+                {error ? (
+                    <div style={{ textAlign: 'center', padding: '50px', color: '#f87171', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                        <h3 style={{ marginBottom: '10px' }}>Connection Error</h3>
+                        <p>{error}</p>
+                        <p style={{ fontSize: '0.8rem', marginTop: '10px', color: '#9ca3af' }}>Please ensure the server is running and database is connected.</p>
+                    </div>
+                ) : loading ? (
                     <div style={{ textAlign: 'center', padding: '100px', color: '#64748b' }}>
                         Loading Discography...
                     </div>
