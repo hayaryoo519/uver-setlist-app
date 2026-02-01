@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAttendance } from '../hooks/useAttendance';
 import { useAuth } from '../contexts/AuthContext';
 import CorrectionModal from '../components/CorrectionModal';
@@ -70,6 +70,15 @@ function LiveDetail() {
     const setlist = live.setlist || [];
     const mainTitle = live.tour_name || live.title || "Unknown Live";
 
+    const location = useLocation();
+
+    // Determine back link destination
+    // Determine back link destination
+    const backLink = location.state?.from || '/lives';
+    let backLabel = 'アーカイブに戻る';
+    if (backLink === '/dashboard' || backLink === '/mypage') backLabel = 'ダッシュボードに戻る';
+    else if (backLink.startsWith('/song/')) backLabel = '楽曲詳細に戻る';
+
     return (
         <div className="container" style={{ paddingTop: '100px' }}>
             <SEO
@@ -77,8 +86,8 @@ function LiveDetail() {
                 description={`UVERworld ${mainTitle} @ ${live.venue} Setlist and Live Report.`}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <Link to="/lives" style={{ color: '#94a3b8' }}>&larr; アーカイブに戻る</Link>
-                <Link to="/mypage" style={{ color: 'var(--accent-color)' }}>マイページ &rarr;</Link>
+                <Link to={backLink} style={{ color: '#94a3b8' }}>&larr; {backLabel}</Link>
+
             </div>
 
             {/* Header Section */}
@@ -166,6 +175,7 @@ function LiveDetail() {
                                         <div style={{ fontSize: '1.1rem', fontWeight: '500' }}>
                                             <Link
                                                 to={`/song/${encodeURIComponent(song.title.replace(/\s+/g, ''))}`}
+                                                state={{ from: location.pathname }}
                                                 className="hover:text-blue-400 hover:underline transition-colors text-white"
                                             >
                                                 {song.title}
