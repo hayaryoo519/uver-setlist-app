@@ -1,8 +1,9 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 
 export const LatestLiveCard = ({ live }) => {
+    const location = useLocation();
     if (!live) return null;
     return (
         <div style={{
@@ -52,6 +53,7 @@ export const LatestLiveCard = ({ live }) => {
 
                 <Link
                     to={`/live/${live.id}`}
+                    state={{ from: location.pathname }}
                     style={{
                         display: 'inline-flex',
                         alignItems: 'center',
