@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Music, X, ArrowRight, ArrowUpDown, ChevronsDown } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 export const TourTrends = ({ tour }) => {
+    const location = useLocation();
     if (!tour || !tour.songRanking) return null;
 
     const [viewMode, setViewMode] = useState(0); // 0: Top 5, 1: Top 20, 2: All
@@ -277,6 +278,7 @@ export const TourTrends = ({ tour }) => {
                             {selectedSong.lives && selectedSong.lives.map((live, idx) => (
                                 <Link
                                     to={`/live/${live.id}`}
+                                    state={{ from: location.pathname }}
                                     key={idx}
                                     onClick={() => setSelectedSong(null)}
                                     style={{
