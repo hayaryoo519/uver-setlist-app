@@ -93,6 +93,7 @@ const Signup = () => {
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder="UVERcrew名"
+                            tabIndex={1}
                             style={{
                                 width: '100%',
                                 padding: '12px 12px 12px 40px',
@@ -120,6 +121,7 @@ const Signup = () => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="your@email.com"
+                            tabIndex={2}
                             style={{
                                 width: '100%',
                                 padding: '12px 12px 12px 40px',
@@ -147,6 +149,7 @@ const Signup = () => {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="パスワードを作成"
+                            tabIndex={3}
                             style={{
                                 width: '100%',
                                 padding: '12px 12px 12px 40px',
@@ -174,6 +177,7 @@ const Signup = () => {
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             placeholder="パスワードを再入力"
+                            tabIndex={4}
                             style={{
                                 width: '100%',
                                 padding: '12px 12px 12px 40px',
@@ -194,6 +198,7 @@ const Signup = () => {
                 <button
                     type="submit"
                     disabled={isLoading}
+                    tabIndex={5}
                     style={{
                         width: '100%',
                         padding: '14px',
