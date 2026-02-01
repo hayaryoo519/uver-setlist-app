@@ -18,7 +18,9 @@ if (!process.env.JWT_SECRET) {
 // Middleware
 // Disable helmet completely for staging (HTTP), enable for production (HTTPS)
 if (process.env.NODE_ENV !== 'staging') {
-    app.use(helmet());
+    app.use(helmet({
+        contentSecurityPolicy: false,
+    }));
 }
 app.use(cors());
 app.use(express.json());
