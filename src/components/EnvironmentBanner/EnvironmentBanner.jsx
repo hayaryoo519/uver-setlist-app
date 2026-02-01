@@ -4,7 +4,7 @@ import './EnvironmentBanner.css';
 
 /**
  * 環境バッジコンポーネント
- * 本番環境以外で画面上部に環境情報を表示
+ * 本番環境以外で画面右上に環境情報を小さいバッジで表示
  */
 export const EnvironmentBanner = () => {
     const { isProduction, label, color, textColor } = useEnvironment();
@@ -30,15 +30,13 @@ export const EnvironmentBanner = () => {
             }}
             role="banner"
             aria-label={`現在の環境: ${label}`}
+            title={`現在の環境: ${label} - テスト専用環境`}
         >
             <span className="environment-banner__icon" aria-hidden="true">
                 {getIcon()}
             </span>
             <span className="environment-banner__text">
                 {label}
-            </span>
-            <span className="environment-banner__note">
-                - テスト専用環境
             </span>
         </div>
     );
