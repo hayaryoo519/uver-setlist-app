@@ -8,8 +8,8 @@ const LandingPage = () => {
     return (
         <div className="landing-page">
             <SEO
-                title="ファンによるセットリスト記録サイト"
-                description="UVERworldのライブ参戦記録を可視化するファンサイト。あなたが参加したライブを記録し、統計データで振り返れます。"
+                title=""
+                description="UVERworldのライブ参戦記録を可視化するファンサイト。"
             />
 
             {/* Header */}
