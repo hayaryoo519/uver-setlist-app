@@ -185,8 +185,8 @@ const LiveList = () => {
 
                                     <div className="flex flex-col md:flex-row md:items-center gap-1.5 md:gap-4 pl-3">
                                         {/* Date Section */}
-                                        <div className="w-full md:w-28 flex-shrink-0 flex flex-row md:flex-col items-center md:items-start gap-2 md:gap-1 md:justify-start pt-0.5">
-                                            <div className="flex items-center gap-2">
+                                        <div className="w-full md:w-32 flex-shrink-0 flex flex-row md:flex-col items-center md:items-start gap-2 md:gap-1 md:justify-start pt-0.5">
+                                            <div className="flex items-center gap-2 md:flex-col md:items-start md:gap-1">
                                                 <div className="text-xl md:text-2xl font-bold font-oswald text-slate-300 group-hover:text-white leading-none">
                                                     {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.')}
                                                 </div>
