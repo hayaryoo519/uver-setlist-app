@@ -185,7 +185,7 @@ function MyPage() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: '800', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                        {currentUser?.username ? `${currentUser.username}'s` : 'My'}{' '}
+                        {currentUser?.username ? `${currentUser.username}'s` : 'My'}<br />
                         <span className="text-gold" style={{ textShadow: '0 0 15px rgba(251, 191, 36, 0.2)' }}>UVER</span> Records
                     </h1>
                     <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginTop: '12px' }}>
