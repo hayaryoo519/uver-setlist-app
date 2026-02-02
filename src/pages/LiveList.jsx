@@ -179,18 +179,18 @@ const LiveList = () => {
                     ) : (
                         filteredLives.map(live => (
                             <Link to={`/live/${live.id}`} state={{ from: location.pathname }} key={live.id} className="block group">
-                                <div className="bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-blue-500/50 rounded-xl p-5 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-900/20 relative overflow-hidden">
+                                <div className="bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-blue-500/50 rounded-xl px-4 py-3 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-900/20 relative overflow-hidden">
                                     {/* Left accent border */}
                                     <div className="absolute top-0 left-0 w-1 h-full bg-slate-700 group-hover:bg-blue-500 transition-colors duration-300"></div>
 
-                                    <div className="flex flex-col md:flex-row md:items-center gap-4 pl-3">
+                                    <div className="flex flex-col md:flex-row md:items-center gap-1.5 md:gap-4 pl-3">
                                         {/* Date Section */}
-                                        <div className="md:w-28 flex-shrink-0 flex flex-col justify-center">
-                                            <div className="text-2xl font-bold font-oswald text-slate-300 group-hover:text-white leading-none">
-                                                {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.')}
-                                            </div>
-                                            <div className="flex items-center gap-1 mt-2">
-                                                <span className={`text-[10px] w-full text-center font-bold px-1 py-0.5 rounded text-white
+                                        <div className="w-full md:w-28 flex-shrink-0 flex flex-row md:flex-col items-center md:items-start gap-2 md:gap-1 md:justify-start pt-0.5">
+                                            <div className="flex items-center gap-2">
+                                                <div className="text-xl md:text-2xl font-bold font-oswald text-slate-300 group-hover:text-white leading-none">
+                                                    {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.')}
+                                                </div>
+                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white inline-block
                                                     ${live.type === 'FESTIVAL' ? 'bg-purple-600' :
                                                         live.type === 'EVENT' ? 'bg-orange-600' :
                                                             'bg-emerald-600'}`}>
@@ -199,53 +199,66 @@ const LiveList = () => {
                                                             'ONE MAN'}
                                                 </span>
                                             </div>
-                                        </div>
 
-                                        {/* Main Info */}
-                                        <div className="flex-1 min-w-0 border-l border-slate-700/50 md:pl-4">
-                                            <h2 className="text-xl font-bold text-white mb-1 truncate group-hover:text-blue-400 transition-colors">
-                                                {live.tour_name}
-                                            </h2>
-                                            {live.title && live.title !== live.tour_name && (
-                                                <div className="text-blue-200 text-sm font-medium mb-1 flex items-center gap-1">
-                                                    <Tag size={12} /> {live.title}
-                                                </div>
-                                            )}
-                                            {live.special_note && (
-                                                <div className="text-yellow-400 text-base font-bold mb-1">
-                                                    {live.special_note}
-                                                </div>
-                                            )}
-                                            <div className="flex items-center gap-4 mt-2">
-                                                <div className="flex items-center gap-1.5 text-slate-400 text-sm group-hover:text-slate-300">
-                                                    <MapPin size={14} className="text-secondary-color" />
-                                                    <span className="font-medium">{live.venue}</span>
-                                                </div>
-                                                {/* Placeholder for Setlist Count if available in future */}
-                                                {/* <div className="flex items-center gap-1.5 text-slate-500 text-xs">
-                                                    <Music size={12} /> 20 Songs
-                                                </div> */}
-                                            </div>
-                                        </div>
-
-                                        {/* Actions */}
-                                        <div className="flex items-center gap-4 pl-2 md:pl-0 md:border-none border-t border-slate-700/50 pt-3 md:pt-0">
+                                            {/* Mobile Button */}
                                             <button
                                                 onClick={(e) => handleToggleAttendance(e, live.id)}
-                                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap z-10 relative
+                                                className={`md:hidden ml-auto px-3 py-1 rounded-full text-[10px] font-bold transition-all duration-200 flex items-center gap-1 whitespace-nowrap z-10 relative
                                                     ${isAttended(live.id)
                                                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-500/30'
                                                         : 'bg-slate-700 text-slate-300 border border-transparent hover:bg-slate-600'}`}
                                             >
                                                 {isAttended(live.id) ? (
-                                                    <><Check size={12} /> 参戦済み</>
+                                                    <><Check size={10} /> 参戦済み</>
                                                 ) : (
-                                                    <><Plus size={12} /> 参戦記録をつける</>
+                                                    <><Plus size={10} /> 参戦記録</>
+                                                )}
+                                            </button>
+                                        </div>
+
+                                        {/* Main Info */}
+                                        <div className="flex-1 min-w-0 md:border-l border-slate-700/50 md:pl-4">
+                                            <h2 className="text-lg md:text-xl font-bold text-white leading-tight group-hover:text-blue-400 transition-colors" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                {live.tour_name}
+                                            </h2>
+                                            {live.title && live.title !== live.tour_name && (
+                                                <div className="text-blue-200 text-xs font-medium mt-0.5 flex items-center gap-1">
+                                                    <Tag size={10} /> {live.title}
+                                                </div>
+                                            )}
+                                            {live.special_note && (
+                                                <div className="text-yellow-400 text-xs font-bold mt-1 flex items-center gap-1">
+                                                    <span className="bg-yellow-500/10 border border-yellow-500/30 px-1.5 py-0.5 rounded">
+                                                        {live.special_note}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <div className="flex items-center gap-3 mt-1">
+                                                <div className="flex items-center gap-1 text-slate-400 text-xs group-hover:text-slate-300">
+                                                    <MapPin size={12} className="text-secondary-color" />
+                                                    <span className="font-medium">{live.venue}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Actions (Desktop Only) */}
+                                        <div className="hidden md:flex items-center justify-start gap-3 pl-0 border-t border-slate-700/50 pt-0 mt-0 md:border-none">
+                                            <button
+                                                onClick={(e) => handleToggleAttendance(e, live.id)}
+                                                className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all duration-200 flex items-center gap-1 whitespace-nowrap z-10 relative
+                                                    ${isAttended(live.id)
+                                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-500/30'
+                                                        : 'bg-slate-700 text-slate-300 border border-transparent hover:bg-slate-600'}`}
+                                            >
+                                                {isAttended(live.id) ? (
+                                                    <><Check size={10} /> 参戦済み</>
+                                                ) : (
+                                                    <><Plus size={10} /> 参戦記録</>
                                                 )}
                                             </button>
 
-                                            <div className="hidden md:flex items-center text-slate-600 group-hover:text-blue-500 transition-colors">
-                                                <ArrowRight size={20} />
+                                            <div className="flex items-center text-slate-600 group-hover:text-blue-500 transition-colors">
+                                                <ArrowRight size={18} />
                                             </div>
                                         </div>
                                     </div>

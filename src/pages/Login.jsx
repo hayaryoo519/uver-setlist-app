@@ -136,7 +136,8 @@ const Login = () => {
             </form>
 
             <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.9rem', color: '#94a3b8' }}>
-                アカウントをお持ちでないですか？ <Link to="/signup" style={{ color: 'var(--primary-color)', textDecoration: 'none', fontWeight: 'bold' }}>新規登録</Link>
+                アカウントをお持ちでないですか？<br />
+                <Link to="/signup" style={{ color: 'var(--primary-color)', textDecoration: 'none', fontWeight: 'bold', display: 'inline-block', marginTop: '8px' }}>新規登録</Link>
             </div>
         </AuthLayout>
     );

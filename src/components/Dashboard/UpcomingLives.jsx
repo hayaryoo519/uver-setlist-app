@@ -10,10 +10,12 @@ export const UpcomingLives = ({ lives }) => {
 
     return (
         <div style={{ marginBottom: '50px' }}>
-            <h2 className="section-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Sparkles size={20} color="#fbbf24" style={{ animation: 'pulse 2s infinite' }} />
-                Next Live
-                <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 'normal' }}>
+            <h2 className="section-title next-live-header" style={{ marginBottom: '20px' }}>
+                <div className="next-live-label">
+                    <Sparkles size={20} color="#fbbf24" style={{ animation: 'pulse 2s infinite' }} />
+                    Next Live
+                </div>
+                <span className="next-live-sub">
                     （セットリスト予想 - Coming Soon）
                 </span>
             </h2>
@@ -102,21 +104,6 @@ export const UpcomingLives = ({ lives }) => {
                                 >
                                     <Sparkles size={14} /> 予想する (準備中)
                                 </button>
-                                {/* AI Prediction Badge (Placeholder) */}
-                                {/* 
-                                <div style={{
-                                    padding: '0 10px',
-                                    display: 'flex', alignItems: 'center',
-                                    background: 'rgba(56, 189, 248, 0.1)',
-                                    color: '#38bdf8',
-                                    borderRadius: '8px',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 'bold',
-                                    border: '1px solid rgba(56, 189, 248, 0.2)'
-                                }}>
-                                    AI
-                                </div>
-                                */}
                             </div>
                         </div>
                     </div>
@@ -133,6 +120,37 @@ export const UpcomingLives = ({ lives }) => {
                     transform: translateY(-5px);
                     border-color: rgba(251, 191, 36, 0.3) !important;
                     transition: all 0.3s ease;
+                }
+
+                /* Responsive Header for Next Live */
+                .next-live-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    flex-wrap: wrap;
+                }
+                .next-live-label {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    white-space: nowrap; /* Prevent "Next Live" line break */
+                }
+                .next-live-sub {
+                    font-size: 0.8rem;
+                    color: #888;
+                    font-weight: normal;
+                }
+
+                @media (max-width: 480px) {
+                    .next-live-header {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 2px;
+                    }
+                    .next-live-sub {
+                        font-size: 0.75rem;
+                        margin-left: 30px; /* Align with text, skipping icon width */
+                    }
                 }
             `}</style>
         </div>
