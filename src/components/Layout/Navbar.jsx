@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, User, Calendar, LogIn, LogOut, Shield, ListMusic, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -8,6 +8,12 @@ const Navbar = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const location = useLocation();
     const { currentUser, logout } = useAuth();
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    };
 
     // Handle scroll effect
     useEffect(() => {
@@ -58,7 +64,7 @@ const Navbar = () => {
                             </Link>
                         )}
                         {currentUser ? (
-                            <button onClick={logout} className="nav-btn-primary" style={{ textDecoration: 'none' }}>
+                            <button onClick={handleLogout} className="nav-btn-primary" style={{ textDecoration: 'none' }}>
                                 <LogOut size={18} /> ログアウト
                             </button>
                         ) : (
@@ -88,7 +94,7 @@ const Navbar = () => {
 
                     <div className="mobile-nav-divider"></div>
                     {currentUser ? (
-                        <button onClick={logout} className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>ログアウト</button>
+                        <button onClick={handleLogout} className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>ログアウト</button>
                     ) : (
                         <Link to="/login" className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>ログイン / 新規登録</Link>
                     )}
