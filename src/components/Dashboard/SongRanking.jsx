@@ -77,7 +77,7 @@ const SongRanking = ({ songs }) => {
                             <div style={{ flexGrow: 1, fontWeight: '500', marginRight: '10px', wordBreak: 'break-all' }}>
                                 {song.title}
                             </div>
-                            <div style={{ color: 'var(--accent-color)', fontWeight: 'bold', marginRight: '10px', whiteSpace: 'nowrap' }}>
+                            <div style={{ color: '#fbbf24', fontWeight: 'bold', marginRight: '10px', whiteSpace: 'nowrap' }}>
                                 {song.count}回
                             </div>
                             {hasLives && (
