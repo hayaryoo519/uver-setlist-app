@@ -1,5 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
+import { DISCOGRAPHY } from '../data/discography';
 
+// Helper for normalization
+const normalizeSongTitle = (title) => {
+    if (!title) return "";
+    if (title === "=") return "=";
+    return title.toLowerCase().replace(/[!'#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/g, "").replace(/\s+/g, "");
+};
 
 export const useGlobalStats = () => {
     const [allSongs, setAllSongs] = useState([]);
@@ -174,28 +181,63 @@ export const useGlobalStats = () => {
             .slice(0, 10)
             .map(live => ({ ...live, date: formatDate(live.date) }));
 
-        // --- Album Stats (Global) ---
-        const songMetaMap = new Map();
-        allSongs.forEach(song => {
-            if (song.title) songMetaMap.set(song.title, song.album);
+        // --- Album Stats (Global) - NEW LOGIC ---
+        // --- Album Stats (Global) - NEW LOGIC ---
+        // 1. Create Song -> Album Map from DISCOGRAPHY (Normalized)
+        const songAlbumMap = new Map();
+
+        // Pass 1: Map Albums First (Priority)
+        DISCOGRAPHY.forEach(release => {
+            if (release.type === 'ALBUM') {
+                release.songs.forEach(songTitle => {
+                    const norm = normalizeSongTitle(songTitle);
+                    if (!songAlbumMap.has(norm)) {
+                        songAlbumMap.set(norm, release.title);
+                    }
+                });
+            }
         });
 
+        // Pass 2: Map Singles (Only if not in Album -> B-sides, etc.)
+        DISCOGRAPHY.forEach(release => {
+            if (release.type === 'SINGLE') {
+                release.songs.forEach(songTitle => {
+                    const norm = normalizeSongTitle(songTitle);
+                    if (!songAlbumMap.has(norm)) {
+                        songAlbumMap.set(norm, "Singles");
+                    }
+                });
+            }
+        });
+
+        // 2. Count Albums from Past Lives
         const albumMap = new Map();
         pastLives.forEach(live => {
             const list = live.setlist || [];
             list.forEach(song => {
-                const album = songMetaMap.get(song.title);
+                const norm = normalizeSongTitle(song.title);
+                const album = songAlbumMap.get(norm);
+
+                // Count if mapped (Album Name or "Singles")
                 if (album) {
                     albumMap.set(album, (albumMap.get(album) || 0) + 1);
-                } else {
-                    albumMap.set('Unknown', (albumMap.get('Unknown') || 0) + 1);
                 }
             });
         });
 
-        const albumStats = Array.from(albumMap.entries())
-            .map(([name, value]) => ({ name, value }))
-            .sort((a, b) => b.value - a.value);
+        // Sort by DISCOGRAPHY order (Release Order)
+        const albumStats = [];
+
+        // Add Summarized Singles FIRST
+        const singlesCount = albumMap.get("Singles") || 0;
+        albumStats.push({ name: "Singles", value: singlesCount });
+
+        DISCOGRAPHY.forEach(release => {
+            if (release.type === 'ALBUM') {
+                const count = albumMap.get(release.title) || 0;
+                albumStats.push({ name: release.title, value: count });
+            }
+        });
 
         // --- Global Song Ranking ---
         const globalSongCounts = {};
@@ -236,7 +278,7 @@ export const useGlobalStats = () => {
             recentLives,
             allLives,
             albumStats,
-            songAlbumMap: songMetaMap,
+            songAlbumMap: songAlbumMap,
             songIdMap,
             globalSongRanking,
             upcomingLives
