@@ -1,10 +1,18 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import SEO from '../components/SEO';
 import { Music, BarChart3, Heart, ChevronDown, AlertTriangle, User, ShieldAlert, Mail } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import './LandingPage.css';
 
 const LandingPage = () => {
+    const { currentUser, logout } = useAuth();
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    };
     return (
         <div className="landing-page">
             <SEO
@@ -19,8 +27,17 @@ const LandingPage = () => {
                         <span className="lp-logo-text"><span className="text-gold">UVERworld</span> Setlist Archive</span>
                     </Link>
                     <nav className="lp-nav">
-                        <Link to="/login" className="lp-nav-link">ログイン</Link>
-                        <Link to="/signup" className="lp-nav-btn">新規登録</Link>
+                        {currentUser ? (
+                            <>
+                                <Link to="/mypage" className="lp-nav-link">My Page</Link>
+                                <button onClick={handleLogout} className="lp-nav-btn">ログアウト</button>
+                            </>
+                        ) : (
+                            <>
+                                <Link to="/login" className="lp-nav-link">ログイン</Link>
+                                <Link to="/signup" className="lp-nav-btn">新規登録</Link>
+                            </>
+                        )}
                     </nav>
                 </div>
             </header>
