@@ -8,8 +8,8 @@ const LandingPage = () => {
     return (
         <div className="landing-page">
             <SEO
-                title="ファンによるセットリスト記録サイト"
-                description="UVERworldのライブ参戦記録を可視化するファンサイト。あなたが参加したライブを記録し、統計データで振り返れます。"
+                title=""
+                description="UVERworldのライブ参戦記録を可視化するファンサイト。"
             />
 
             {/* Header */}
@@ -38,7 +38,7 @@ const LandingPage = () => {
                     </h1>
                     <p className="lp-hero-subtitle">あの日の感動を、永遠に。</p>
                     <p className="lp-hero-description">
-                        あなたが参戦したライブを記録し、データで振り返る。<br />
+                        あなたが参戦したライブを記録し、データで振り返る。<br className="responsive-br" />
                         ファンによる、ライブ体験を可視化する非公式アーカイブ。
                     </p>
                     <div className="lp-hero-cta">
@@ -171,8 +171,7 @@ const LandingPage = () => {
                         <h3 className="lp-disclaimer-title">お問い合わせ</h3>
                         <p className="lp-disclaimer-text">
                             データの修正依頼は、「不具合・データ修正依頼」からご連絡ください。その他、運営に関するお問い合わせは下記までご連絡ください。<br />
-                            <strong>Email:</strong> contact@example.com<br />
-                            <strong>X (Twitter):</strong> @example_account
+                            <strong>X (Twitter):</strong> @setlist_archive
                         </p>
                     </div>
                 </div>
