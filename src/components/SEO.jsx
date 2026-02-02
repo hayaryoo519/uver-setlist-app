@@ -4,7 +4,7 @@ import { useEnvironment } from '../hooks/useEnvironment';
 
 const SEO = ({ title, description }) => {
     const { isProduction, label } = useEnvironment();
-    const siteTitle = 'SETLIST ARCHIVE';
+    const siteTitle = 'UVERworld Setlist Archive';
 
     // 環境プレフィックスを追加
     const environmentPrefix = !isProduction ? `[${label}] ` : '';
