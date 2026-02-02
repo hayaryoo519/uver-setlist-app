@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, User, Calendar, LogIn, LogOut, Shield, ListMusic, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -8,6 +8,12 @@ const Navbar = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const location = useLocation();
     const { currentUser, logout } = useAuth();
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    };
 
     // Handle scroll effect
     useEffect(() => {
@@ -48,7 +54,7 @@ const Navbar = () => {
                         </Link>
                         {currentUser && (
                             <Link to="/mypage" className="nav-link">
-                                <User size={18} /> マイページ
+                                <User size={18} /> My Page
                             </Link>
                         )}
 
@@ -58,7 +64,7 @@ const Navbar = () => {
                             </Link>
                         )}
                         {currentUser ? (
-                            <button onClick={logout} className="nav-btn-primary" style={{ textDecoration: 'none' }}>
+                            <button onClick={handleLogout} className="nav-btn-primary" style={{ textDecoration: 'none' }}>
                                 <LogOut size={18} /> ログアウト
                             </button>
                         ) : (
@@ -84,11 +90,11 @@ const Navbar = () => {
                     <Link to="/" className="mobile-nav-link">Home</Link>
                     <Link to="/songs" className="mobile-nav-link">Discography</Link>
                     <Link to="/lives" className="mobile-nav-link">Archive</Link>
-                    {currentUser && <Link to="/mypage" className="mobile-nav-link">マイページ</Link>}
+                    {currentUser && <Link to="/mypage" className="mobile-nav-link">My Page</Link>}
 
                     <div className="mobile-nav-divider"></div>
                     {currentUser ? (
-                        <button onClick={logout} className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>ログアウト</button>
+                        <button onClick={handleLogout} className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>ログアウト</button>
                     ) : (
                         <Link to="/login" className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>ログイン / 新規登録</Link>
                     )}

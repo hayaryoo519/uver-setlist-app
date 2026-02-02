@@ -224,7 +224,8 @@ const Signup = () => {
             </form>
 
             <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.9rem', color: '#94a3b8' }}>
-                すでにアカウントをお持ちですか？ <Link to="/login" style={{ color: 'var(--primary-color)', textDecoration: 'none', fontWeight: 'bold' }}>ログイン</Link>
+                すでにアカウントをお持ちですか？<br />
+                <Link to="/login" style={{ color: 'var(--primary-color)', textDecoration: 'none', fontWeight: 'bold', display: 'inline-block', marginTop: '8px' }}>ログイン</Link>
             </div>
         </AuthLayout>
     );
