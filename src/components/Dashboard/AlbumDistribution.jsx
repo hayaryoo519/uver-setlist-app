@@ -3,6 +3,24 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Cartes
 
 const COLORS = ['#d4af37', '#fbbf24', '#b91c1c', '#3b82f6', '#10b981', '#6366f1', '#8b5cf6'];
 
+const CustomYAxisTick = ({ x, y, payload, fontSize }) => {
+    return (
+        <g transform={`translate(${x},${y})`}>
+            <text
+                x={0}
+                y={0}
+                dy={4}
+                textAnchor="end"
+                fill="#888"
+                fontSize={fontSize}
+                style={{ whiteSpace: 'nowrap' }} // SVG doesn't strictly obey this but it helps in some contexts, main thing is <text> doesn't wrap by default
+            >
+                {payload.value}
+            </text>
+        </g>
+    );
+};
+
 const AlbumDistribution = ({ data, onBarClick }) => {
     if (!data || data.length === 0) return <div className="no-data">No Album Data</div>;
 
@@ -22,16 +40,33 @@ const AlbumDistribution = ({ data, onBarClick }) => {
         ticks.push(i);
     }
 
+    // Responsive width for YAxis
+    const [yAxisConfig, setYAxisConfig] = React.useState({ width: 120, fontSize: 11 });
+
+    React.useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth <= 480) {
+                setYAxisConfig({ width: 60, fontSize: 9 });
+            } else {
+                setYAxisConfig({ width: 120, fontSize: 11 });
+            }
+        };
+
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     return (
         <div style={{ width: '100%', height: calculatedHeight, minHeight: 0 }}>
-            <ResponsiveContainer>
-                <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#444" />
                     <XAxis
                         type="number"
                         stroke="#fbbf24"
                         allowDecimals={false}
-                        tick={{ fill: '#fbbf24' }}
+                        tick={{ fill: '#fbbf24', fontSize: 11 }}
                         domain={[0, 'auto']}
                         ticks={ticks}
                     />
@@ -39,8 +74,8 @@ const AlbumDistribution = ({ data, onBarClick }) => {
                         type="category"
                         dataKey="name"
                         stroke="#888"
-                        width={180}
-                        tick={{ fontSize: 11, width: 170 }}
+                        width={yAxisConfig.width}
+                        tick={<CustomYAxisTick fontSize={yAxisConfig.fontSize} />}
                         interval={0}
                     />
                     <Tooltip

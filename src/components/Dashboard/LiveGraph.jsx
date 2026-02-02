@@ -44,13 +44,27 @@ const LiveGraph = ({ data, onBarClick, dataKey = "count", label }) => {
         }
     };
 
+    // Responsive width for YAxis
+    const [yWidth, setYWidth] = React.useState(40);
+
+    React.useEffect(() => {
+        const handleResize = () => {
+            setYWidth(window.innerWidth <= 480 ? 30 : 40);
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     return (
         <div style={{ width: '100%', height: 300 }}>
-            <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data}>
-                    <XAxis dataKey="year" stroke="#888" />
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                <BarChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                    <XAxis dataKey="year" stroke="#888" tick={{ fontSize: 11 }} />
                     <YAxis
                         stroke="#888"
+                        width={yWidth}
+                        tick={{ fontSize: 11 }}
                         allowDecimals={dataKey === 'avgSongs'}
                     />
                     <Tooltip
