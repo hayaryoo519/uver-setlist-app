@@ -185,7 +185,7 @@ function MyPage() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: '800', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                        {currentUser?.username ? `${currentUser.username}'s` : 'My'}{' '}
+                        {currentUser?.username ? `${currentUser.username}'s` : 'My'}<br />
                         <span className="text-gold" style={{ textShadow: '0 0 15px rgba(251, 191, 36, 0.2)' }}>UVER</span> Records
                     </h1>
                     <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginTop: '12px' }}>
@@ -211,24 +211,19 @@ function MyPage() {
             {stats.totalLives > 0 ? (
                 <>
                     {/* Summary Cards */}
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                        gap: '30px',
-                        marginBottom: '40px'
-                    }}>
+                    <div className="stats-grid">
                         <div className="stat-card" onClick={handleTotalLivesClick} style={{ cursor: 'pointer' }}>
-                            <div className="stat-icon"><Calendar size={24} /></div>
+                            <div className="stat-icon"><Calendar size={20} /></div>
                             <div className="stat-label">通算参戦数</div>
                             <div className="stat-value">{stats.totalLives}</div>
                         </div>
                         <div className="stat-card" onClick={handleCollectedSongsClick} style={{ cursor: 'pointer' }}>
-                            <div className="stat-icon"><Music size={24} /></div>
-                            <div className="stat-label">収集した楽曲数</div>
+                            <div className="stat-icon"><Music size={20} /></div>
+                            <div className="stat-label" style={{ whiteSpace: 'nowrap' }}>収集した楽曲数</div>
                             <div className="stat-value">{stats.uniqueSongs}</div>
                         </div>
                         {stats.firstLive && (
-                            <Link to={`/live/${stats.firstLive.id}`} state={{ from: location.pathname }} className="stat-card group" style={{ gridColumn: 'span 2', background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)', borderColor: '#d4af37', textDecoration: 'none' }}>
+                            <Link to={`/live/${stats.firstLive.id}`} state={{ from: location.pathname }} className="stat-card group" style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)', borderColor: '#d4af37', textDecoration: 'none' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                     <div>
                                         <div className="stat-icon" style={{ color: '#d4af37', marginBottom: '5px' }}><MapPin size={24} /></div>
@@ -542,6 +537,13 @@ function MyPage() {
                 }
                 .modal-live-item:hover { background: rgba(255,255,255,0.03); }
                 .back-btn { background: none; border: none; color: var(--primary-color); cursor: pointer; padding: 0; margin-bottom: 20px; }
+
+                .stats-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 30px;
+                    margin-bottom: 40px;
+                }
 
                 @media (max-width: 640px) {
                     .profile-header-section { flex-direction: column; text-align: center; gap: 20px; }
