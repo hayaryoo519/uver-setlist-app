@@ -42,3 +42,9 @@ server/insert_*.sql
 
 # Server Environment
 server/.env
+*.env
+setup_env.sh
+infra_setup.sh
+final_infra_setup.sh
+server/setup_env.sh
+server/final_infra_setup.sh
