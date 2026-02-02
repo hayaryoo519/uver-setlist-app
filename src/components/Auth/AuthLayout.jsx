@@ -42,9 +42,13 @@ const AuthLayout = ({ children, title, subtitle }) => {
                             fontSize: '1.8rem',
                             color: '#fff',
                             margin: '0 0 10px 0',
-                            letterSpacing: '1px'
+                            letterSpacing: '1px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            lineHeight: '1.1'
                         }}>
-                            <span style={{ color: 'var(--primary-color)' }}>UVERworld</span><br />
+                            <span style={{ color: 'var(--primary-color)' }}>UVERworld</span>
                             <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 'normal', letterSpacing: '2px' }}>Setlist Archive</span>
                         </h1>
                     </Link>

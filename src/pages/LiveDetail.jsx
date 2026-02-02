@@ -15,6 +15,7 @@ function LiveDetail() {
     const { currentUser } = useAuth();
     const [isCorrectionModalOpen, setIsCorrectionModalOpen] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
 
     const handleCorrectionClick = () => {
         if (!currentUser) {
@@ -70,9 +71,6 @@ function LiveDetail() {
     const setlist = live.setlist || [];
     const mainTitle = live.tour_name || live.title || "Unknown Live";
 
-    const location = useLocation();
-
-    // Determine back link destination
     // Determine back link destination
     const backLink = location.state?.from || '/lives';
     let backLabel = 'アーカイブに戻る';

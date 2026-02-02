@@ -52,9 +52,9 @@ const AttendedLiveList = ({ lives }) => {
                 <h3>参戦履歴</h3>
 
                 {/* Controls */}
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div className="controls-container">
                     {/* Search Input */}
-                    <div style={{ position: 'relative' }}>
+                    <div className="control-item search-item" style={{ position: 'relative' }}>
                         <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
                         <input
                             type="text"
@@ -68,13 +68,13 @@ const AttendedLiveList = ({ lives }) => {
                                 background: 'rgba(255,255,255,0.05)',
                                 color: 'white',
                                 fontSize: '0.9rem',
-                                width: '200px'
+                                width: '100%'
                             }}
                         />
                     </div>
 
                     {/* Year Filter */}
-                    <div style={{ position: 'relative' }}>
+                    <div className="control-item" style={{ position: 'relative' }}>
                         <Filter size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
                         <select
                             value={selectedYear}
@@ -88,7 +88,8 @@ const AttendedLiveList = ({ lives }) => {
                                 fontSize: '0.9rem',
                                 appearance: 'none',
                                 cursor: 'pointer',
-                                paddingRight: '30px'
+                                paddingRight: '30px',
+                                width: '100%'
                             }}
                         >
                             <option value="ALL">全期間</option>
@@ -100,6 +101,7 @@ const AttendedLiveList = ({ lives }) => {
 
                     {/* Sort Toggle */}
                     <button
+                        className="control-item"
                         onClick={toggleSort}
                         style={{
                             display: 'flex',
@@ -112,7 +114,9 @@ const AttendedLiveList = ({ lives }) => {
                             color: 'white',
                             fontSize: '0.9rem',
                             cursor: 'pointer',
-                            transition: 'background 0.2s'
+                            transition: 'background 0.2s',
+                            width: '100%',
+                            justifyContent: 'center'
                         }}
                     >
                         <ArrowUpDown size={16} />
@@ -176,6 +180,25 @@ const AttendedLiveList = ({ lives }) => {
                 }
                 .compact-live-item:hover {
                     background: rgba(255, 255, 255, 0.03);
+                }
+
+                .controls-container {
+                    display: flex;
+                    gap: 10px;
+                    align-items: center;
+                    flex-wrap: wrap;
+                    width: 100%;
+                }
+                
+                @media (max-width: 640px) {
+                    .controls-container {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 10px;
+                    }
+                    .search-item {
+                        grid-column: 1 / -1;
+                    }
                 }
             `}</style>
         </div>

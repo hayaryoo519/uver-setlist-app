@@ -6,6 +6,18 @@ const COLORS = ['#d4af37', '#fbbf24', '#b91c1c', '#FFFFFF'];
 const VenueTypeBar = ({ data, onBarClick }) => {
     if (!data || data.length === 0) return <div className="no-data">No Data</div>;
 
+    // Responsive width for YAxis
+    const [yWidth, setYWidth] = React.useState(100);
+
+    React.useEffect(() => {
+        const handleResize = () => {
+            setYWidth(window.innerWidth <= 480 ? 70 : 100);
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     const handleClick = (data) => {
         if (onBarClick && data && data.name) {
             onBarClick(data.name);
@@ -17,7 +29,7 @@ const VenueTypeBar = ({ data, onBarClick }) => {
             <ResponsiveContainer>
                 <BarChart data={data} layout="vertical">
                     <XAxis type="number" stroke="#888" allowDecimals={false} />
-                    <YAxis type="category" dataKey="name" stroke="#888" width={100} />
+                    <YAxis type="category" dataKey="name" stroke="#888" width={yWidth} tick={{ fontSize: 11 }} />
                     <Tooltip
                         contentStyle={{ backgroundColor: '#1e293b', borderColor: '#333', color: '#fff' }}
                         itemStyle={{ color: '#d4af37' }}
