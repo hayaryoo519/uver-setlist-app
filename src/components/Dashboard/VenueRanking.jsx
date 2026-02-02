@@ -44,7 +44,7 @@ const VenueRanking = ({ venues, onVenueClick }) => {
                     <div style={{ flexGrow: 1, fontWeight: '500' }}>
                         {venue.name}
                     </div>
-                    <div style={{ color: 'var(--accent-color)', fontWeight: 'bold' }}>
+                    <div style={{ color: '#fbbf24', fontWeight: 'bold' }}>
                         {venue.count}回
                     </div>
                 </div>
