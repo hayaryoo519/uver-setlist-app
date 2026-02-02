@@ -3,7 +3,7 @@ import { DISCOGRAPHY } from '../data/discography';
 import PageHeader from '../components/Layout/PageHeader';
 import { Link, useLocation } from 'react-router-dom';
 import { useGlobalStats } from '../hooks/useGlobalStats';
-import { Calendar, Music, MapPin, ArrowRight, List, TrendingUp, Activity, Filter, Disc } from 'lucide-react';
+import { Calendar, Music, MapPin, ArrowRight, List, TrendingUp, Activity, Filter, Disc, Trophy, History } from 'lucide-react';
 import LiveGraph from '../components/Dashboard/LiveGraph';
 import AlbumDistribution from '../components/Dashboard/AlbumDistribution';
 import { LatestLiveCard } from '../components/Dashboard/LatestLiveCard';
@@ -240,7 +240,7 @@ function Dashboard() {
                 {stats.currentTour && (
                     <div style={{ marginBottom: '40px' }}>
                         <h2 className="section-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <Music size={20} />
+                            <Music size={20} color="var(--primary-color)" />
                             TOUR HIGHLIGHTS
                         </h2>
                         <TourTrends tour={stats.currentTour} />
@@ -249,7 +249,7 @@ function Dashboard() {
 
                 {/* Stats Cards */}
                 <h2 className="section-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Activity size={20} />
+                    <Activity size={20} color="var(--primary-color)" />
                     HISTORY
                 </h2>
                 <div style={{
@@ -282,11 +282,9 @@ function Dashboard() {
                 {/* Yearly Chart */}
                 <div style={{ marginBottom: '60px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
-                        <h2 className="section-title" style={{ marginBottom: 0 }}>
-                            Trend Analysis
-                            <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 'normal', marginLeft: '10px' }}>
-                                (年度別統計)
-                            </span>
+                        <h2 className="section-title" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <TrendingUp size={20} color="var(--primary-color)" />
+                            Yearly Trends
                         </h2>
 
                         <div style={{ display: 'flex', gap: '10px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '8px' }}>
@@ -320,7 +318,7 @@ function Dashboard() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <Filter size={14} />
-                                期間: {yearRange[0]} - {yearRange[1]}
+                                {yearRange[0]} - {yearRange[1]}
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <input
@@ -352,7 +350,10 @@ function Dashboard() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '40px', marginBottom: '60px' }}>
                     {/* Top Songs Ranking (Left Column) */}
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <h2 className="section-title" style={{ marginBottom: '20px' }}>Top Songs <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 'normal' }}>(Top 10)</span></h2>
+                        <h2 className="section-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <Trophy size={20} color="var(--primary-color)" />
+                            Top Songs
+                        </h2>
                         <div className="dashboard-panel" style={{ padding: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
                             {(!stats.globalSongRanking || stats.globalSongRanking.length === 0) ? (
                                 <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -415,9 +416,12 @@ function Dashboard() {
 
                     {/* Recent Lives (Right Column) */}
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h2 className="section-title" style={{ marginBottom: 0 }}>Recent Lives</h2>
-                            <Link to="/lives" style={{ color: 'var(--accent-color)', fontSize: '0.9rem' }}>View All</Link>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '20px' }}>
+                            <h2 className="section-title" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <History size={20} color="var(--primary-color)" />
+                                Recent Lives
+                            </h2>
+                            <Link to="/lives" style={{ color: '#94a3b8', fontSize: '0.85rem', textDecoration: 'none' }}>View All &rarr;</Link>
                         </div>
                         <div className="dashboard-panel" style={{ padding: '0', flex: 1, display: 'flex', flexDirection: 'column' }}>
                             {(!stats.recentLives || stats.recentLives.length === 0) ? (
@@ -482,7 +486,7 @@ function Dashboard() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <Filter size={14} />
-                                期間: {yearRange[0]} - {yearRange[1]}
+                                {yearRange[0]} - {yearRange[1]}
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <input
@@ -565,7 +569,10 @@ function Dashboard() {
 
                 {/* Past Tour Analysis (New Section) */}
                 <div style={{ marginTop: '60px', marginBottom: '100px' }}>
-                    <h2 className="section-title" style={{ marginBottom: '20px' }}>Past Tour Analysis</h2>
+                    <h2 className="section-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <List size={20} color="var(--primary-color)" />
+                        Past Tour Analysis
+                    </h2>
 
                     <div className="dashboard-panel">
                         <div style={{ marginBottom: '20px' }}>
