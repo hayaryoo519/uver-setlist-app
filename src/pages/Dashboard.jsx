@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { DISCOGRAPHY } from '../data/discography';
 import PageHeader from '../components/Layout/PageHeader';
 import { Link, useLocation } from 'react-router-dom';
 import { useGlobalStats } from '../hooks/useGlobalStats';
@@ -101,6 +102,13 @@ function Dashboard() {
         if (!data || !data.name) return;
         const albumName = data.name;
 
+        // Local helper to match useGlobalStats logic
+        const normTitle = (t) => {
+            if (!t) return "";
+            if (t === "=") return "=";
+            return t.toLowerCase().replace(/[!'#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/g, "").replace(/\s+/g, "");
+        };
+
         // Filter lives by current year range
         const targetLives = stats.allLives.filter(live => {
             if (!live.date) return false;
@@ -118,8 +126,9 @@ function Dashboard() {
             live.setlist.forEach(song => {
                 if (!song || !song.title) return;
 
-                // Get album for this song
-                let songAlbum = stats.songAlbumMap.get(song.title);
+                // Get album for this song using NORMALIZED title
+                const nTitle = normTitle(song.title);
+                let songAlbum = stats.songAlbumMap.get(nTitle);
                 if (!songAlbum) songAlbum = 'Unknown';
 
                 if (songAlbum === albumName) {
@@ -499,7 +508,7 @@ function Dashboard() {
                             <Disc size={20} color="var(--primary-color)" />
                             Songs by Album ({yearRange[0]} - {yearRange[1]})
                         </h3>
-                        <div style={{ height: '400px' }}>
+                        <div style={{ minHeight: '400px' }}>
                             <AlbumDistribution data={(() => {
                                 if (!stats.allLives || !stats.songAlbumMap) return [];
 
@@ -509,24 +518,44 @@ function Dashboard() {
                                     return y >= yearRange[0] && y <= yearRange[1];
                                 });
 
+                                // Local normalization helper for consistency
+                                const normTitle = (t) => {
+                                    if (!t) return "";
+                                    if (t === "=") return "=";
+                                    return t.toLowerCase().replace(/[!'#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/g, "").replace(/\s+/g, "");
+                                };
+
                                 const map = new Map();
                                 targetLives.forEach(live => {
                                     if (!live.setlist) return;
                                     live.setlist.forEach(song => {
                                         if (!song || !song.title) return;
-                                        // Try exact match first, then unknown
-                                        let album = stats.songAlbumMap.get(song.title);
-                                        if (!album) {
-                                            // Fallback: Check if map keys have slight variation? (Simpler to just default to Unknown)
-                                            album = 'Unknown';
+
+                                        // Use Normalized Title to lookup in the map (which is also built with normalized keys now)
+                                        const nTitle = normTitle(song.title);
+                                        const album = stats.songAlbumMap.get(nTitle);
+
+                                        // Only count if mapped (Strict Album Only)
+                                        if (album) {
+                                            map.set(album, (map.get(album) || 0) + 1);
                                         }
-                                        map.set(album, (map.get(album) || 0) + 1);
                                     });
                                 });
 
-                                const result = Array.from(map.entries())
-                                    .map(([name, value]) => ({ name, value }))
-                                    .sort((a, b) => b.value - a.value);
+                                const result = [];
+
+                                // Add "Singles" category FIRST
+                                const singlesCount = map.get("Singles") || 0;
+                                result.push({ name: "Singles", value: singlesCount });
+
+                                // Add Albums in Chronological Order
+                                DISCOGRAPHY.forEach(release => {
+                                    if (release.type === 'ALBUM') {
+                                        const count = map.get(release.title) || 0;
+                                        // Include all albums even if 0, for consistency with discography list
+                                        result.push({ name: release.title, value: count });
+                                    }
+                                });
 
                                 return result;
                             })()} onBarClick={handleAlbumClick} />
