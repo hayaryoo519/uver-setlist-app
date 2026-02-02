@@ -180,6 +180,16 @@
     animation: fadeInUp 1s ease-out 0.4s backwards;
 }
 
+.responsive-br {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .responsive-br {
+        display: block;
+    }
+}
+
 .lp-hero-cta {
     display: flex;
     gap: 20px;
