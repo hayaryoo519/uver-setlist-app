@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { setlists } from '../data/setlists'; // Keep using local setlist data for now
 import { lives as localLives } from '../data/lives'; // Fallback or reference
+import { DISCOGRAPHY } from '../data/discography';
 
 // Logic to calculate stats from a list of Live Objects
 export const useLiveStatsLogic = (myLives, allSongs = []) => {
@@ -27,6 +28,32 @@ export const useLiveStatsLogic = (myLives, allSongs = []) => {
     allSongs.forEach(song => {
         if (song.title) songMetaMap.set(song.title, song);
     });
+
+    // --- NEW: Create Song -> Album Map from DISCOGRAPHY ---
+    const songAlbumMap = new Map();
+    // Traverse Discography to map songs to their Albums
+    // We prioritize original albums. Since DISCOGRAPHY is sorted by date,
+    // we can iterate and set the album.
+    // If a song appears in multiple albums (e.g. Best Album), usually the first one (Original) is better?
+    // OR if we want "Latest Live" context? No, static attribution is better.
+    // Actually, DISCOGRAPHY is chrono.
+    // Let's iterate and IF NOT EXISTS, set it. This prioritizes the FIRST appearance (Single or Album).
+    // WAIT, we only want ALBUM stats. So we should only map from type='ALBUM'.
+
+    DISCOGRAPHY.forEach(release => {
+        if (release.type === 'ALBUM') {
+            release.songs.forEach(songTitle => {
+                // If song already mapped, do we overwrite?
+                // Example: Song A in Album 1 (2006). Song A in Best Album (2010).
+                // We usually want the Original Album.
+                // Since DISCOGRAPHY is sorted 2005 -> 2025, the first ALBUM encounter is likely the Original Album.
+                if (!songAlbumMap.has(songTitle)) {
+                    songAlbumMap.set(songTitle, release.title);
+                }
+            });
+        }
+    });
+    // ----------------------------------------------------------
 
     // Song Counts & Album Stats
     const songStatsMap = new Map(); // title -> { count: 0, lives: [] }
@@ -62,29 +89,27 @@ export const useLiveStatsLogic = (myLives, allSongs = []) => {
             // Let's just push for now. 
             stat.lives.push(live);
 
-            // Count Album (using metadata from DB)
-            const meta = songMetaMap.get(song.title);
-            if (meta && meta.album) {
-                // Filter out Singles as per user request
-                if (meta.album === 'Single' || meta.album === 'Others' || meta.album === 'Side Projects') {
-                    return;
-                }
+            // Count Album (using NEW Logic based on DISCOGRAPHY)
+            const albumName = songAlbumMap.get(song.title);
 
-                const albumCount = albumMap.get(meta.album) || 0;
-                albumMap.set(meta.album, albumCount + 1);
+            if (albumName) {
+                const albumCount = albumMap.get(albumName) || 0;
+                albumMap.set(albumName, albumCount + 1);
             }
-            // If no meta or no album, simply skip. Do not count as Unknown.
         });
     });
 
     const songRanking = Array.from(songStatsMap.entries())
         .map(([title, stat]) => {
             const meta = songMetaMap.get(title);
+            // Use local map for album if available, else usage metadata or Unknown
+            const albumName = songAlbumMap.get(title) || (meta ? meta.album : 'Unknown');
+
             return {
                 title,
                 count: stat.count,
                 lives: stat.lives,
-                album: meta ? meta.album : 'Unknown'
+                album: albumName
             };
         })
         .sort((a, b) => b.count - a.count);
