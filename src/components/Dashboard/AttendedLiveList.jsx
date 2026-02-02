@@ -101,7 +101,7 @@ const AttendedLiveList = ({ lives }) => {
 
                     {/* Sort Toggle */}
                     <button
-                        className="control-item"
+                        className="control-item sort-btn"
                         onClick={toggleSort}
                         style={{
                             display: 'flex',
@@ -115,8 +115,7 @@ const AttendedLiveList = ({ lives }) => {
                             fontSize: '0.9rem',
                             cursor: 'pointer',
                             transition: 'background 0.2s',
-                            width: '100%',
-                            justifyContent: 'center'
+                            whiteSpace: 'nowrap'
                         }}
                     >
                         <ArrowUpDown size={16} />
@@ -186,8 +185,17 @@ const AttendedLiveList = ({ lives }) => {
                     display: flex;
                     gap: 10px;
                     align-items: center;
-                    flex-wrap: wrap;
-                    width: 100%;
+                    flex: 1;
+                }
+
+                .search-item {
+                    flex: 1;
+                    min-width: 200px;
+                }
+
+                .control-item select,
+                .control-item.sort-btn {
+                    width: auto !important;
                 }
                 
                 @media (max-width: 640px) {
@@ -195,9 +203,14 @@ const AttendedLiveList = ({ lives }) => {
                         display: grid;
                         grid-template-columns: 1fr 1fr;
                         gap: 10px;
+                        width: 100%;
                     }
                     .search-item {
                         grid-column: 1 / -1;
+                    }
+                    .control-item select,
+                    .control-item.sort-btn {
+                        width: 100% !important;
                     }
                 }
             `}</style>

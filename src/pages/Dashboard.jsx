@@ -352,7 +352,7 @@ function Dashboard() {
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <h2 className="section-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <Trophy size={20} color="var(--primary-color)" />
-                            Top Songs <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 'normal' }}>(Top 10)</span>
+                            Top Songs
                         </h2>
                         <div className="dashboard-panel" style={{ padding: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
                             {(!stats.globalSongRanking || stats.globalSongRanking.length === 0) ? (
