@@ -318,7 +318,7 @@ function Dashboard() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <Filter size={14} />
-                                期間: {yearRange[0]} - {yearRange[1]}
+                                {yearRange[0]} - {yearRange[1]}
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <input
@@ -486,7 +486,7 @@ function Dashboard() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <Filter size={14} />
-                                期間: {yearRange[0]} - {yearRange[1]}
+                                {yearRange[0]} - {yearRange[1]}
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <input
