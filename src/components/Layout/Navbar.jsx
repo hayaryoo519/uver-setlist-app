@@ -48,7 +48,7 @@ const Navbar = () => {
                         </Link>
                         {currentUser && (
                             <Link to="/mypage" className="nav-link">
-                                <User size={18} /> マイページ
+                                <User size={18} /> My Page
                             </Link>
                         )}
 
@@ -84,7 +84,7 @@ const Navbar = () => {
                     <Link to="/" className="mobile-nav-link">Home</Link>
                     <Link to="/songs" className="mobile-nav-link">Discography</Link>
                     <Link to="/lives" className="mobile-nav-link">Archive</Link>
-                    {currentUser && <Link to="/mypage" className="mobile-nav-link">マイページ</Link>}
+                    {currentUser && <Link to="/mypage" className="mobile-nav-link">My Page</Link>}
 
                     <div className="mobile-nav-divider"></div>
                     {currentUser ? (
