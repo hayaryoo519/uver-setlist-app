@@ -13,5 +13,5 @@ jobs:
           cd ~/apps/uver-setlist-staging
           git fetch origin dev
           git checkout dev
-          git pull origin dev
+          git reset --hard origin/dev
           docker compose up -d --build
