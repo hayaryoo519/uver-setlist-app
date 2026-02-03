@@ -185,12 +185,12 @@ const LiveList = () => {
 
                                     <div className="flex flex-col md:flex-row md:items-center gap-1.5 md:gap-4 pl-3">
                                         {/* Date Section */}
-                                        <div className="w-full md:w-32 flex-shrink-0 flex flex-row md:flex-col items-center md:items-start gap-2 md:gap-1 md:justify-start pt-0.5">
+                                        <div className="w-full md:w-32 flex-shrink-0 flex flex-row md:flex-col items-center md:items-start justify-between md:justify-start gap-2 md:gap-1 pt-0.5">
                                             <div className="flex items-center gap-2 md:flex-col md:items-start md:gap-1">
                                                 <div className="text-xl md:text-2xl font-bold font-oswald text-slate-300 group-hover:text-white leading-none">
                                                     {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.')}
                                                 </div>
-                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white inline-block
+                                                <span className={`text-sm font-bold px-2.5 py-0.5 rounded text-white inline-block whitespace-nowrap
                                                     ${live.type === 'FESTIVAL' ? 'bg-purple-600' :
                                                         live.type === 'EVENT' ? 'bg-orange-600' :
                                                             'bg-emerald-600'}`}>
@@ -203,15 +203,15 @@ const LiveList = () => {
                                             {/* Mobile Button */}
                                             <button
                                                 onClick={(e) => handleToggleAttendance(e, live.id)}
-                                                className={`md:hidden ml-auto px-3 py-1 rounded-full text-[10px] font-bold transition-all duration-200 flex items-center gap-1 whitespace-nowrap z-10 relative
+                                                className={`md:hidden px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 flex items-center gap-1 whitespace-nowrap z-10 relative
                                                     ${isAttended(live.id)
                                                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-500/30'
                                                         : 'bg-slate-700 text-slate-300 border border-transparent hover:bg-slate-600'}`}
                                             >
                                                 {isAttended(live.id) ? (
-                                                    <><Check size={10} /> 参戦済み</>
+                                                    <><Check size={12} /> 参戦済み</>
                                                 ) : (
-                                                    <><Plus size={10} /> 参戦記録</>
+                                                    <><Plus size={12} /> 参戦記録</>
                                                 )}
                                             </button>
                                         </div>
@@ -245,15 +245,15 @@ const LiveList = () => {
                                         <div className="hidden md:flex items-center justify-start gap-3 pl-0 border-t border-slate-700/50 pt-0 mt-0 md:border-none">
                                             <button
                                                 onClick={(e) => handleToggleAttendance(e, live.id)}
-                                                className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all duration-200 flex items-center gap-1 whitespace-nowrap z-10 relative
+                                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap z-10 relative
                                                     ${isAttended(live.id)
                                                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-500/30'
                                                         : 'bg-slate-700 text-slate-300 border border-transparent hover:bg-slate-600'}`}
                                             >
                                                 {isAttended(live.id) ? (
-                                                    <><Check size={10} /> 参戦済み</>
+                                                    <><Check size={14} /> 参戦済み</>
                                                 ) : (
-                                                    <><Plus size={10} /> 参戦記録</>
+                                                    <><Plus size={14} /> 参戦記録</>
                                                 )}
                                             </button>
 
