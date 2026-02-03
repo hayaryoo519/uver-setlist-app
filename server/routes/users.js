@@ -177,6 +177,13 @@ router.put('/me', authorize, async (req, res) => {
         const { username, email, password, currentPassword } = req.body;
         const bcrypt = require('bcrypt');
 
+        // Validate username if provided
+        if (username !== undefined) {
+            if (username.trim().length < 2 || username.length > 30) {
+                return res.status(400).json({ message: "ユーザー名は2文字以上30文字以内で入力してください" });
+            }
+        }
+
         // Optional: Check if email is already taken by ANOTHER user
         if (email) {
             const emailCheck = await db.query("SELECT * FROM users WHERE email = $1 AND id != $2", [email, currentUserId]);
