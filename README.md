@@ -68,11 +68,7 @@ node server/analyze_security.js
 ### 詳細ガイド
 セキュリティログの詳細な調査方法については、**[OPERATIONS.md](OPERATIONS.md)** のセキュリティ運用セクションを参照してください。
 
-### 管理画面からのアクセス
-管理者は以下のURLから直接アクセスできます：
-```
-http://localhost:5173/admin/security-logs
-```
+
 
 ## CI/CD
 - Pull Request: CI only (GitHub-hosted runner)
