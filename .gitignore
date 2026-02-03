@@ -48,3 +48,7 @@ infra_setup.sh
 final_infra_setup.sh
 server/setup_env.sh
 server/final_infra_setup.sh
+
+# Internal Documentation (not for public)
+DEVELOPMENT.md
+OPERATIONS.md
