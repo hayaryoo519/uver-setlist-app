@@ -23,15 +23,15 @@ export const useEnvironment = () => {
 
         // URL/ポートベースの判定（環境変数がない場合）
         if (!viteEnv && !mode) {
-            // 検証サーバー: 192.168.0.13:9001
-            if (hostname === '192.168.0.13' && port === '9001') {
+            // Staging server (port 9001)
+            if (port === '9001') {
                 envName = 'staging';
             }
-            // 本番サーバー: 192.168.0.13:8000
-            else if (hostname === '192.168.0.13' && port === '8000') {
+            // Production server (port 8000)
+            else if (port === '8000') {
                 envName = 'production';
             }
-            // ローカル開発: localhost
+            // Local development
             else if (hostname === 'localhost' || hostname === '127.0.0.1') {
                 envName = 'development';
             }
