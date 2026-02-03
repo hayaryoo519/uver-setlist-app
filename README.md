@@ -8,8 +8,8 @@ UVERworldのライブセットリストを記録・閲覧するための非公�
 > 
 > このプロジェクトには独立した3つの環境があります：
 > - **ローカル開発** (Windows PC): Docker Supabaseを使用
-> - **検証 (Staging)** (192.168.0.13:9000): Docker PostgreSQLを使用  
-> - **本番 (Production)** (192.168.0.13:8000): 本番PostgreSQLを使用
+> - **検証 (Staging)**: Docker PostgreSQLを使用
+> - **本番 (Production)**: 本番PostgreSQLを使用
 > 
 > **本番データベースは絶対に直接操作しないでください！**  
 > 開発・テストは必ずローカル環境または検証環境で行ってください。  
@@ -19,11 +19,15 @@ UVERworldのライブセットリストを記録・閲覧するための非公�
 *   **ライブ一覧**: 過去のライブを日付順に表示。
 *   **フィルタリング**: 開催年やキーワード（会場名・ツアー名）で絞り込みが可能。
 *   **セットリスト詳細**: 各ライブのセットリスト（曲順、アンコール情報）を閲覧可能。
+*   **My Page**: 参戦したライブの記録、聴いた楽曲の統計データの可視化。
+*   **修正リクエスト**: ライブ情報やセットリストの誤りをユーザーが報告できる機能。
+*   **管理者ダッシュボード**: 修正リクエストの承認・却下、セキュリティログの監視。
 
 ## 技術スタック
-*   React (Vite)
-*   React Router
-*   Vanilla CSS (CSS Modules/Variables)
+*   Frontend: React (Vite), React Router
+*   Backend: Node.js (Express)
+*   Database: PostgreSQL (Supabase/Docker)
+*   Styling: Vanilla CSS (CSS Modules/Variables), TailwindCSS (部分的に導入)
 
 ## セットアップ
 
