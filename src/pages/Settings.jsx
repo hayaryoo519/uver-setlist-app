@@ -119,6 +119,9 @@ function Settings() {
                                 value={formData.username}
                                 onChange={(e) => handleInputChange('username', e.target.value)}
                                 placeholder="Username"
+                                minLength={2}
+                                maxLength={30}
+                                title="2文字以上30文字以内で入力してください"
                             />
                         </div>
 
