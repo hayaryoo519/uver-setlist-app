@@ -12,7 +12,12 @@ router.post('/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
 
-        // 1. Check if user exists
+        // 1. Validate input
+        if (!username || username.trim().length < 2 || username.length > 30) {
+            return res.status(400).json({ message: "ユーザー名は2文字以上30文字以内で入力してください" });
+        }
+
+        // 2. Check if user exists
         const userCheck = await db.query('SELECT * FROM users WHERE email = $1', [email]);
         if (userCheck.rows.length > 0) {
             return res.status(400).json({ message: "このメールアドレスは既に登録されています" });
