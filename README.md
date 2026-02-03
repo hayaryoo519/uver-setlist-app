@@ -70,6 +70,10 @@ node server/analyze_security.js
 http://localhost:5173/admin/security-logs
 ```
 
+## CI/CD
+- Pull Request: CI only (GitHub-hosted runner)
+- Deploy: self-hosted runner (push to dev / version tag only)
+
 ## 将来の展望 (Roadmap)
 *   **楽曲コレクション**: 参加したライブを記録し、聴いた曲の回収率を表示。
 *   **未聴曲リスト**: まだ聴いていない曲の可視化。

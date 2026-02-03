@@ -14,9 +14,9 @@ services:
       - DB_HOST=db-staging
       - DB_PORT=5432
       - DB_NAME=uver_setlist_staging
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - JWT_SECRET=staging_secret_key_12345
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       db-staging:
         condition: service_healthy
@@ -24,9 +24,9 @@ services:
   db-staging:
     image: postgres:16-alpine
     environment:
-      - POSTGRES_DB=uver_setlist_staging
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
     volumes:
       - staging_db_data:/var/lib/postgresql/data
     healthcheck:
