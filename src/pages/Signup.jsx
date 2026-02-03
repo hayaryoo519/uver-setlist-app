@@ -92,7 +92,10 @@ const Signup = () => {
                             required
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            placeholder="UVERcrew名"
+                            placeholder="UVERcrew名 (2〜30文字)"
+                            minLength={2}
+                            maxLength={30}
+                            title="2文字以上30文字以内で入力してください"
                             tabIndex={1}
                             style={{
                                 width: '100%',
