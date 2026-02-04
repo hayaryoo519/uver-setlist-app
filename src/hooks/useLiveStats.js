@@ -62,8 +62,10 @@ export const useLiveStatsLogic = (myLives, allSongs = []) => {
     // We need to map the API live objects to the setlists.
     sortedLives.forEach(live => {
         // Generate key from date: YYYY-MM-DD -> live_YYYYMMDD_01
-        let list = [];
-        if (live.date) {
+        let list = live.setlist || [];
+
+        // If DB setlist is empty, try local file fallback
+        if (list.length === 0 && live.date) {
             const d = new Date(live.date);
             const yyyy = d.getFullYear();
             const mm = String(d.getMonth() + 1).padStart(2, '0');
