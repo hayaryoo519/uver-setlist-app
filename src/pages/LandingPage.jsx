@@ -103,7 +103,7 @@ const LandingPage = () => {
                         <div className="lp-feature-icon">🎵</div>
                         <h3 className="lp-feature-title">楽曲コレクション</h3>
                         <p className="lp-feature-description">
-                            Discographyの各楽曲が、過去のライブでいつ演奏されたかをデータベース化。定番曲からレア曲まで、演奏履歴を詳しくチェックできます。
+                            リリースされた全楽曲の演奏情報をデータベース化。定番曲からレア曲まで、過去のライブでいつ披露されたかを詳しくチェックできます。
                         </p>
                     </div>
                 </div>
@@ -143,9 +143,9 @@ const LandingPage = () => {
 
                     <div className="lp-step">
                         <div className="lp-step-number">4</div>
-                        <h3 className="lp-step-title">コンプリートを目指す</h3>
+                        <h3 className="lp-step-title">聴いた曲を管理</h3>
                         <p className="lp-step-description">
-                            Discography機能と連動。データベースに登録された全楽曲を一覧でチェックし、詳細データを確認できます。
+                            あなたの参戦履歴と自動連携。聴いたことのある曲と未聴の曲が一目で分かります。
                         </p>
                     </div>
                 </div>
