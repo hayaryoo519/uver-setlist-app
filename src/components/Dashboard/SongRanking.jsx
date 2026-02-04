@@ -88,11 +88,11 @@ const SongRanking = ({ songs }) => {
                         {isExpanded && hasLives && (
                             <div style={{
                                 marginTop: '5px',
-                                marginLeft: '45px',
+                                marginLeft: '10px',
                                 padding: '10px',
                                 backgroundColor: 'rgba(0,0,0,0.2)',
                                 borderRadius: '8px',
-                                borderLeft: '3px solid var(--primary-color)'
+                                borderLeft: '4px solid var(--primary-color)'
                             }}>
                                 {displayedLives.map((live, idx) => {
                                     const d = new Date(live.date);
