@@ -74,7 +74,8 @@ function LiveDetail() {
     // Determine back link destination
     const backLink = location.state?.from || '/lives';
     let backLabel = 'アーカイブに戻る';
-    if (backLink === '/dashboard' || backLink === '/mypage') backLabel = 'ダッシュボードに戻る';
+    if (backLink === '/dashboard') backLabel = 'ダッシュボードに戻る';
+    else if (backLink === '/mypage') backLabel = 'My Pageに戻る';
     else if (backLink.startsWith('/song/')) backLabel = '楽曲詳細に戻る';
 
     return (
