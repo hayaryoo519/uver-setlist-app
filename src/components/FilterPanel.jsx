@@ -53,26 +53,64 @@ const FilterPanel = ({ filters, onChange, venues, songs = [] }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                     {/* Date Range Filter */}
-                    <div className="flex gap-2">
-                        <div className="relative flex-1">
-                            <input
-                                type="date"
-                                placeholder="From"
-                                value={filters.startDate || ''}
-                                onChange={(e) => onChange({ ...filters, startDate: e.target.value })}
-                                className="w-full bg-slate-900 border border-slate-600 rounded-lg py-3 px-3 text-white text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-slate-500"
-                            />
-                            <div className="absolute right-0 top-[-20px] text-xs text-slate-500">Since</div>
+                    {/* Date Range Filter (Desktop: Date Pickers, Mobile: Year Select) */}
+                    <div className="flex-1">
+                        {/* Mobile: Year Select */}
+                        <div className="relative md:hidden">
+                            <select
+                                value={(filters.startDate && new Date(filters.startDate).getFullYear().toString()) || ''}
+                                onChange={(e) => {
+                                    const year = e.target.value;
+                                    if (year) {
+                                        onChange({
+                                            ...filters,
+                                            startDate: `${year}-01-01`,
+                                            endDate: `${year}-12-31`
+                                        });
+                                    } else {
+                                        onChange({ ...filters, startDate: '', endDate: '' });
+                                    }
+                                }}
+                                className="w-full bg-slate-900 border border-slate-600 rounded-lg py-3 pl-4 pr-8 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all appearance-none cursor-pointer"
+                            >
+                                <option value="">全ての期間</option>
+                                {(() => {
+                                    const currentYear = new Date().getFullYear();
+                                    const years = [];
+                                    for (let y = currentYear; y >= 2005; y--) {
+                                        years.push(y);
+                                    }
+                                    return years.map(year => (
+                                        <option key={year} value={year}>{year}年</option>
+                                    ));
+                                })()}
+                            </select>
+                            <div className="absolute right-3 top-3.5 text-slate-500 pointer-events-none">▼</div>
+                            <div className="absolute right-0 top-[-20px] text-xs text-slate-500">Filter by Year</div>
                         </div>
-                        <div className="relative flex-1">
-                            <input
-                                type="date"
-                                placeholder="To"
-                                value={filters.endDate || ''}
-                                onChange={(e) => onChange({ ...filters, endDate: e.target.value })}
-                                className="w-full bg-slate-900 border border-slate-600 rounded-lg py-3 px-3 text-white text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-slate-500"
-                            />
-                            <div className="absolute right-0 top-[-20px] text-xs text-slate-500">Until</div>
+
+                        {/* Desktop: Date Range Inputs */}
+                        <div className="hidden md:flex gap-2">
+                            <div className="relative flex-1">
+                                <input
+                                    type="date"
+                                    placeholder="From"
+                                    value={filters.startDate || ''}
+                                    onChange={(e) => onChange({ ...filters, startDate: e.target.value })}
+                                    className="w-full bg-slate-900 border border-slate-600 rounded-lg py-3 px-3 text-white text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-slate-500"
+                                />
+                                <div className="absolute right-0 top-[-20px] text-xs text-slate-500">Since</div>
+                            </div>
+                            <div className="relative flex-1">
+                                <input
+                                    type="date"
+                                    placeholder="To"
+                                    value={filters.endDate || ''}
+                                    onChange={(e) => onChange({ ...filters, endDate: e.target.value })}
+                                    className="w-full bg-slate-900 border border-slate-600 rounded-lg py-3 px-3 text-white text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-slate-500"
+                                />
+                                <div className="absolute right-0 top-[-20px] text-xs text-slate-500">Until</div>
+                            </div>
                         </div>
                     </div>
 
