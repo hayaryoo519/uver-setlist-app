@@ -50,7 +50,7 @@ export const TourTrends = ({ tour }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                 <div>
                     <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fff', marginLeft: '2px' }}>
-                        {tour.name} <span style={{ fontSize: '0.9rem', color: 'var(--primary-color)', fontWeight: 'normal' }}>({tour.liveCount} 公演)</span>
+                        {tour.name} <span style={{ fontSize: '0.9rem', color: 'var(--primary-color)', fontWeight: 'normal', whiteSpace: 'nowrap' }}>({tour.liveCount} 公演)</span>
                     </div>
                 </div>
             </div>
