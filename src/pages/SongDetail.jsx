@@ -12,7 +12,6 @@ const SongDetail = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [filterYear, setFilterYear] = useState('All');
-    const [filterType, setFilterType] = useState('All');
     const [visibleCount, setVisibleCount] = useState(10);
     const [sortOrder, setSortOrder] = useState('newest');
 
@@ -21,12 +20,6 @@ const SongDetail = () => {
         if (!song || !song.performances) return [];
         const years = new Set(song.performances.map(p => new Date(p.date).getFullYear()));
         return Array.from(years).sort((a, b) => b - a);
-    }, [song]);
-
-    const uniqueTypes = React.useMemo(() => {
-        if (!song || !song.performances) return [];
-        const types = new Set(song.performances.map(p => p.type || 'ONEMAN'));
-        return Array.from(types).sort();
     }, [song]);
 
     // Filter and Sort Logic
@@ -40,11 +33,6 @@ const SongDetail = () => {
             result = result.filter(live => new Date(live.date).getFullYear().toString() === filterYear.toString());
         }
 
-        // Filter by Type
-        if (filterType !== 'All') {
-            result = result.filter(live => (live.type || 'ONEMAN') === filterType);
-        }
-
         // Sort
         result.sort((a, b) => {
             const dateA = new Date(a.date);
@@ -53,7 +41,7 @@ const SongDetail = () => {
         });
 
         return result;
-    }, [song, filterYear, filterType, sortOrder]);
+    }, [song, filterYear, sortOrder]);
 
     useEffect(() => {
         const fetchSong = async () => {
@@ -305,7 +293,7 @@ const SongDetail = () => {
                 </div>
 
                 {/* Performance History Controls */}
-                <div id="performance-history" className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <div id="performance-history" className="flex flex-col md:flex-row items-start md:items-center mb-6 gap-4">
                     <h2 className="text-2xl font-bold font-oswald border-l-4 border-blue-500 pl-4">PERFORMANCE HISTORY</h2>
                     <div className="flex flex-wrap gap-3 w-full md:w-auto">
                         {/* Year Filter */}
@@ -325,22 +313,7 @@ const SongDetail = () => {
                             </div>
                         </div>
 
-                        {/* Type Filter */}
-                        <div className="relative">
-                            <select
-                                value={filterType}
-                                onChange={(e) => setFilterType(e.target.value)}
-                                className="appearance-none bg-slate-800 border border-slate-700 rounded-lg py-2 px-4 pr-8 text-sm focus:outline-none focus:border-blue-500 transition-colors w-full md:w-auto"
-                            >
-                                <option value="All">全タイプ</option>
-                                {uniqueTypes.map(type => (
-                                    <option key={type} value={type}>{type}</option>
-                                ))}
-                            </select>
-                            <div className="absolute right-3 top-2.5 text-slate-500 pointer-events-none">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                            </div>
-                        </div>
+
 
                         {/* Sort Toggle */}
                         <button
