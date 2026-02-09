@@ -9,12 +9,17 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+// Get base URL from environment variable (production) or default to localhost (development)
+const getAppUrl = () => process.env.APP_URL || 'http://localhost:5173';
+
 const sendVerificationEmail = async (email, token) => {
     // For dev: if credentials are dummy, log the link
+    const appUrl = getAppUrl();
+    
     if (!process.env.EMAIL_USER || process.env.EMAIL_USER.includes('your_email')) {
         console.log('====================================================');
         console.log(`[EMAIL MOCK] Verification Link for ${email}:`);
-        console.log(`http://localhost:5173/verify-email?token=${token}`);
+        console.log(`${appUrl}/verify-email?token=${token}`);
         console.log('====================================================');
         return;
     }
@@ -29,7 +34,7 @@ const sendVerificationEmail = async (email, token) => {
                 <p>アカウント登録ありがとうございます。</p>
                 <p>以下のリンクをクリックして、メールアドレスの認証を完了してください。</p>
                 <div style="margin: 30px 0;">
-                    <a href="http://localhost:5173/verify-email?token=${token}" 
+                    <a href="${appUrl}/verify-email?token=${token}" 
                        style="display: inline-block; background: #fbbf24; color: black; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
                        メールアドレスを認証する
                     </a>
@@ -58,11 +63,13 @@ const sendVerificationEmail = async (email, token) => {
 };
 
 const sendPasswordResetEmail = async (email, token) => {
+    const appUrl = getAppUrl();
+    
     // For dev: if credentials are dummy, log the link
     if (!process.env.EMAIL_USER || process.env.EMAIL_USER.includes('your_email')) {
         console.log('====================================================');
         console.log(`[EMAIL MOCK] Password Reset Link for ${email}:`);
-        console.log(`http://localhost:5173/reset-password?token=${token}`);
+        console.log(`${appUrl}/reset-password?token=${token}`);
         console.log('====================================================');
         return;
     }
@@ -77,7 +84,7 @@ const sendPasswordResetEmail = async (email, token) => {
                 <p>パスワード再設定のリクエストをいただきました。</p>
                 <p>以下のリンクをクリックして、新しいパスワードの設定を完了してください。</p>
                 <div style="margin: 30px 0;">
-                    <a href="http://localhost:5173/reset-password?token=${token}" 
+                    <a href="${appUrl}/reset-password?token=${token}" 
                        style="display: inline-block; background: #fbbf24; color: black; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
                        パスワードを再設定する
                     </a>
