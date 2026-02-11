@@ -36,7 +36,11 @@ self.addEventListener('notificationclick', (event) => {
 
     if (event.action === 'close') return;
 
-    const url = event.notification.data?.url || '/';
+    let url = event.notification.data?.url || '/';
+    // 絶対パスに変換
+    if (url.startsWith('/')) {
+        url = self.location.origin + url;
+    }
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true })
