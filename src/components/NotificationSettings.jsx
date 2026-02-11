@@ -19,7 +19,7 @@ export default function NotificationSettings() {
     const checkSubscriptionStatus = async () => {
         try {
             if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                setError('このブラウザはプッシュ通知に対応していません');
+                setError('通知機能が利用できません（HTTPS接続が必要です）');
                 setLoading(false);
                 return;
             }
@@ -135,7 +135,7 @@ export default function NotificationSettings() {
             <button
                 className={`notification-icon-btn ${isSubscribed ? 'subscribed' : ''}`}
                 onClick={isSubscribed ? unsubscribe : subscribe}
-                title={isSubscribed ? 'プッシュ通知: オン' : 'プッシュ通知: オフ'}
+                title={isSubscribed ? '通知をオフにする' : 'クリックして通知を受け取る'}
                 aria-label={isSubscribed ? '通知をオフにする' : '通知をオンにする'}
             >
                 {isSubscribed ? (
