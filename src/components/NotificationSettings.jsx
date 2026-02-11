@@ -19,7 +19,7 @@ export default function NotificationSettings() {
     const checkSubscriptionStatus = async () => {
         try {
             if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                setError('通知機能が利用できません（HTTPS接続が必要です）');
+                setError('このブラウザでは通知機能を利用できません');
                 setLoading(false);
                 return;
             }
