@@ -234,7 +234,7 @@ const SongDetail = () => {
                                     <span className="text-slate-500">日前</span>
                                 </div>
                                 <div className="text-sm text-slate-400 mt-2">
-                                    前回の演奏: <span className="text-white font-mono">{lastPlayed.toISOString().split('T')[0]}</span>
+                                    前回の演奏: <span className="text-white font-mono">{`${lastPlayed.getFullYear()}-${String(lastPlayed.getMonth() + 1).padStart(2, '0')}-${String(lastPlayed.getDate()).padStart(2, '0')}`}</span>
                                 </div>
                             </div>
                         ) : (
@@ -280,9 +280,13 @@ const SongDetail = () => {
                             <Calendar size={14} /> 初披露
                         </div>
                         <div className="text-lg font-bold font-mono">
-                            {song.first_performed_at ? (
-                                <span className="text-white">{new Date(song.first_performed_at).toISOString().split('T')[0]}</span>
-                            ) : (
+                            {song.first_performed_at ? (() => {
+                                const d = new Date(song.first_performed_at);
+                                const year = d.getFullYear();
+                                const month = String(d.getMonth() + 1).padStart(2, '0');
+                                const day = String(d.getDate()).padStart(2, '0');
+                                return <span className="text-white">{`${year}-${month}-${day}`}</span>;
+                            })() : (
                                 <span className="text-amber-400">ライブ未披露</span>
                             )}
                         </div>
@@ -338,7 +342,7 @@ const SongDetail = () => {
                                     <div className="bg-slate-800/40 hover:bg-slate-700 border border-slate-700 rounded-lg p-4 transition-colors flex items-center justify-between">
                                         <div>
                                             <div className="flex items-center gap-3 text-sm text-slate-400 mb-1">
-                                                <span className="font-mono">{new Date(live.date).toISOString().split('T')[0]}</span>
+                                                <span className="font-mono">{`${new Date(live.date).getFullYear()}-${String(new Date(live.date).getMonth() + 1).padStart(2, '0')}-${String(new Date(live.date).getDate()).padStart(2, '0')}`}</span>
                                                 <span className={`text-[10px] px-2 py-0.5 rounded font-bold text-white
                                                     ${live.type === 'FESTIVAL' ? 'bg-purple-600' :
                                                         live.type === 'EVENT' ? 'bg-orange-600' :
@@ -392,7 +396,7 @@ const SongDetail = () => {
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 
