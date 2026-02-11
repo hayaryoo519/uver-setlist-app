@@ -107,7 +107,7 @@ async function notifyNewLive(live) {
         icon: '/icons/icon-192x192.png',
         badge: '/icons/icon-192x192.png',
         data: {
-            url: `/lives/${live.id}`,
+            url: `/live/${live.id}`,
             type: 'new_live'
         }
     };
