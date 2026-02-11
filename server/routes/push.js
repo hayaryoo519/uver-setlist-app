@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { saveSubscription, removeSubscription, getVapidPublicKey } = require('../utils/pushNotification');
+const pool = require('../db');
+const db = require('../db');
+const authorize = require('../middleware/authorize');
+const adminCheck = require('../middleware/adminCheck');
 
 // 認証ミドルウェア（任意 - ログインユーザーのみ購読可能）
 const authMiddleware = (req, res, next) => {
