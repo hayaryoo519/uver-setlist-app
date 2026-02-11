@@ -71,4 +71,27 @@ router.post('/unsubscribe', async (req, res) => {
     }
 });
 
+// Manual trigger for new live notification (Admin only)
+router.post('/notify-live', authorize, adminCheck, async (req, res) => {
+    try {
+        const { liveId } = req.body;
+        const result = await db.query("SELECT * FROM lives WHERE id = $1", [liveId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "Live not found" });
+        }
+
+        const live = result.rows[0];
+        const pushResult = await notifyNewLive(live);
+
+        res.json({
+            message: "Notifications sent",
+            details: pushResult
+        });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ message: "Server Error" });
+    }
+});
+
 module.exports = router;
