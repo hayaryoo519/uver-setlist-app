@@ -19,6 +19,17 @@ app.use('/api', createProxyMiddleware({
     }
 }));
 
+// Service Worker & Manifest - no cache to ensure updates
+app.use('/sw.js', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Content-Type', 'application/javascript');
+    next();
+});
+app.use('/manifest.webmanifest', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    next();
+});
+
 // Serve static files
 app.use(express.static(path.join(__dirname, 'dist')));
 
