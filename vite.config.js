@@ -60,21 +60,68 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
+        importScripts: ['/sw-push.js'],
         runtimeCaching: [
+          // 認証系API - キャッシュしない
           {
-            urlPattern: /^\/api\//,
+            urlPattern: /^\/api\/(auth|users\/me)/,
+            handler: 'NetworkOnly'
+          },
+          // 曲の統計・マイページ系 - キャッシュ優先で裏で更新
+          {
+            urlPattern: /^\/api\/songs\/.*\/stats/,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'stats-cache',
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 12 // 12 hours
+              },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          },
+          // ライブ一覧・曲一覧 - ネットワーク優先（最新データ重要）
+          {
+            urlPattern: /^\/api\/(lives|songs)(\?.*)?$/,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'api-cache',
+              cacheName: 'list-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 // 24 hours
+              },
+              networkTimeoutSeconds: 5,
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          },
+          // ライブ詳細 - ネットワーク優先
+          {
+            urlPattern: /^\/api\/lives\/\d+$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'detail-cache',
               expiration: {
                 maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24 // 24 hours
               },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
+              networkTimeoutSeconds: 5,
+              cacheableResponse: { statuses: [0, 200] }
             }
           },
+          // その他のAPI - ネットワーク優先
+          {
+            urlPattern: /^\/api\//,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-other-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 6 // 6 hours
+              },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          },
+          // 画像 - キャッシュ優先
           {
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
             handler: 'CacheFirst',
@@ -83,6 +130,18 @@ export default defineConfig({
               expiration: {
                 maxEntries: 50,
                 maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+              }
+            }
+          },
+          // Google Fonts
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
               }
             }
           }

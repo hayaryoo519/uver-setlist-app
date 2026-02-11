@@ -13,6 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 import AttendedLiveList from '../components/Dashboard/AttendedLiveList';
 import VenueRanking from '../components/Dashboard/VenueRanking';
+import NotificationSettings from '../components/NotificationSettings';
 
 function MyPage() {
     const [modalFilter, setModalFilter] = useState(null);
@@ -152,7 +153,10 @@ function MyPage() {
                     <SettingsIcon size={16} /> アカウント設定
                 </Link>
             </div>
-            <PageHeader title="MY PAGE" />
+            <PageHeader
+                title="MY PAGE"
+                rightElement={<NotificationSettings />}
+            />
 
             <div className="profile-header-section" style={{
                 display: 'flex',
