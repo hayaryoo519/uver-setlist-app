@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown, AlertTriangle, MessageCircle, CheckCircle } from 'lucide-react';
+import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown, AlertTriangle, MessageCircle, CheckCircle, BellRing } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SetlistEditor from '../components/Admin/SetlistEditor';
@@ -139,6 +139,31 @@ const AdminPage = () => {
                 setCorrections(data.corrections);
             }
         } catch (err) { console.error(err); } finally { setIsLoadingCorrections(false); }
+    };
+
+    // --- MANUAL PUSH NOTIFICATION ---
+    const handleManualPush = async (live) => {
+        const confirmMsg = `「${live.title || live.tour_name}」のプッシュ通知を送信しますか？\n\n日付: ${live.date}\n会場: ${live.venue}`;
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/push/notify-live', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', token },
+                body: JSON.stringify({ liveId: live.id })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                alert(`Notification sent!\nSuccess: ${data.details.sent}\nFailed: ${data.details.failed}`);
+            } else {
+                alert(`Failed to send notification: ${data.message}`);
+            }
+        } catch (err) {
+            console.error('Push functionality error:', err);
+            alert('Error sending notification');
+        }
     };
 
     const updateCorrectionStatus = async (id, status, note) => {
@@ -1681,6 +1706,9 @@ const AdminPage = () => {
                                                         window.open(`https://www.setlist.fm/search?query=${encodeURIComponent(query)}`, '_blank');
                                                     }} className="action-btn" title="Search on Setlist.fm" style={{ color: '#8b5cf6' }}>
                                                         <Search size={18} />
+                                                    </button>
+                                                    <button onClick={() => handleManualPush(live)} className="action-btn" title="Send Push Notification" style={{ color: '#ec4899' }}>
+                                                        <BellRing size={18} />
                                                     </button>
                                                     <button onClick={() => handleDeleteLive(live.id)} className="action-btn delete" title="Delete"><Trash2 size={18} /></button>
                                                 </div>

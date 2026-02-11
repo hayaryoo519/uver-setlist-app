@@ -285,3 +285,87 @@ h3 {
   color: var(--primary-color);
   transform: translateX(3px);
 }
+
+/* Notification Settings (Compact) */
+.notification-settings-compact {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.notification-icon-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.notification-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.notification-icon-btn.subscribed {
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.3);
+  color: var(--primary-color);
+}
+
+.notification-icon-btn.subscribed:hover {
+  background: rgba(251, 191, 36, 0.2);
+  box-shadow: 0 0 15px rgba(251, 191, 36, 0.2);
+}
+
+.notification-icon-btn .icon.active {
+  filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.5));
+}
+
+.status-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: var(--primary-color);
+  color: #000;
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 10px;
+  line-height: 1;
+  border: 2px solid var(--bg-color);
+}
+
+.notification-tooltip {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 10px;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+  animation: fadeIn 0.2s;
+}
+
+.notification-tooltip::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: 14px;
+  width: 8px;
+  height: 8px;
+  background: inherit;
+  transform: rotate(45deg);
+}
