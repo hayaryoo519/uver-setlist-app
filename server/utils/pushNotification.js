@@ -85,9 +85,25 @@ async function sendNotificationToAll(payload) {
  * 新ライブ追加通知を送信
  */
 async function notifyNewLive(live) {
+    // 日付をYYYY/MM/DD形式に整形
+    let dateStr = live.date;
+    try {
+        const d = new Date(live.date);
+        if (!isNaN(d.getTime())) {
+            dateStr = d.toLocaleDateString('ja-JP', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                weekday: 'short'
+            });
+        }
+    } catch (e) {
+        console.error('Date parsing error:', e);
+    }
+
     const payload = {
         title: '🎸 新しいライブ情報！',
-        body: `${live.title || live.tour_name || 'ライブ'} (${live.date})`,
+        body: `${live.title || live.tour_name || 'ライブ'} (${dateStr})`,
         icon: '/icons/icon-192x192.png',
         badge: '/icons/icon-192x192.png',
         data: {
