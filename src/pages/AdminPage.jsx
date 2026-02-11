@@ -143,7 +143,7 @@ const AdminPage = () => {
 
     // --- MANUAL PUSH NOTIFICATION ---
     const handleManualPush = async (live) => {
-        const confirmMsg = `Send push notification for "${live.title || live.tour_name}"?\n\nDate: ${live.date}\nVenue: ${live.venue}`;
+        const confirmMsg = `「${live.title || live.tour_name}」のプッシュ通知を送信しますか？\n\n日付: ${live.date}\n会場: ${live.venue}`;
         if (!window.confirm(confirmMsg)) return;
 
         try {
