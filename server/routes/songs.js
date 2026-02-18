@@ -120,7 +120,18 @@ router.get('/:id/stats', async (req, res) => {
             daysSinceLast = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
             // Calculate Play Rate (Frequency)
-            // Get total number of lives held since the song's debut
+            // Fix: Count UNIQUE lives where the song was performed (ignore duplicates in same live)
+            // AND exclude future lives from the numerator as well
+            const perfCountRes = await db.query(
+                `SELECT COUNT(DISTINCT l.id)::int as count 
+                 FROM setlists sl
+                 JOIN lives l ON sl.live_id = l.id
+                 WHERE sl.song_id = $1 AND l.date <= NOW()`,
+                [song.id]
+            );
+            const uniquePastLivesCount = perfCountRes.rows[0].count;
+
+            // Get total number of possible lives since the song's debut (denominator)
             if (song.first_performed_at) {
                 const countRes = await db.query(
                     "SELECT COUNT(*)::int as count FROM lives WHERE date >= $1 AND date <= NOW()",
@@ -129,9 +140,12 @@ router.get('/:id/stats', async (req, res) => {
                 totalPossibleLives = countRes.rows[0].count;
 
                 if (totalPossibleLives > 0) {
-                    playRate = (song.total_performances / totalPossibleLives) * 100;
+                    playRate = (uniquePastLivesCount / totalPossibleLives) * 100;
                 }
             }
+
+            // Override total_performances to reflect the "valid" count (unique & past) for consistency
+            song.total_performances = uniquePastLivesCount;
 
             // Rare Definition:
             // 1. Revival: Not played in > 3 years (1095 days)
