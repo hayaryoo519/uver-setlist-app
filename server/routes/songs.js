@@ -123,7 +123,7 @@ router.get('/:id/stats', async (req, res) => {
             // Get total number of lives held since the song's debut
             if (song.first_performed_at) {
                 const countRes = await db.query(
-                    "SELECT COUNT(*)::int as count FROM lives WHERE date >= $1",
+                    "SELECT COUNT(*)::int as count FROM lives WHERE date >= $1 AND date <= NOW()",
                     [song.first_performed_at]
                 );
                 totalPossibleLives = countRes.rows[0].count;
