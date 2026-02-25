@@ -51,9 +51,9 @@ export const useGlobalStats = () => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        // Separate Past and Future
-        const pastLives = allLives.filter(live => new Date(live.date) < today);
-        const upcomingLives = allLives.filter(live => new Date(live.date) >= today)
+        // Separate Past and Future (今日以前 = pastLives, 明日以降 = upcomingLives)
+        const pastLives = allLives.filter(live => new Date(live.date) <= today);
+        const upcomingLives = allLives.filter(live => new Date(live.date) > today)
             .sort((a, b) => new Date(a.date) - new Date(b.date))
             .map(live => ({ ...live, date: formatDate(live.date) }));
 
