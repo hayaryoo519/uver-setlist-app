@@ -120,6 +120,14 @@ router.post('/login', loginLimiter, async (req, res) => {
             return res.status(401).json({ message: "メールアドレスまたはパスワードが間違っています" });
         }
 
+        // ログイン成功をセキュリティログに記録
+        await db.query(`
+            INSERT INTO security_logs (event_type, message, user_email, ip_address)
+            VALUES ($1, $2, $3, $4)
+        `, ['login_success', 'ログイン成功', email, req.ip]).catch(err => {
+            console.error('Failed to log security event:', err);
+        });
+
         const token = jwt.sign(
             { user_id: user.rows[0].id, role: user.rows[0].role },
             process.env.JWT_SECRET,
