@@ -2276,8 +2276,8 @@ const AdminPage = () => {
                     .collect-search-row input,
                     .collect-search-row select,
                     .collect-search-row button { width: 100% !important; }
-                    .actions-wrapper { gap: 4px !important; }
-                    .action-btn { padding: 4px !important; }
+                    .actions-wrapper { gap: 12px !important; }
+                    .action-btn { padding: 10px !important; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
                     .btn-primary, .btn-cancel { padding: 8px 14px !important; font-size: 0.9rem; }
                     .modal-content { padding: 20px !important; }
                     .modal-content h2 { font-size: 1.2rem !important; }
