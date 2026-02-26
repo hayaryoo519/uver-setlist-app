@@ -2258,28 +2258,64 @@ const AdminPage = () => {
                         align-items: flex-start !important;
                         gap: 10px !important;
                     }
-                    .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-                    .admin-table { min-width: 600px; }
-                    .admin-table th, .admin-table td { padding: 10px 12px !important; font-size: 0.85rem; }
-                    .search-input { width: 100% !important; }
-                    .admin-filter-row {
-                        flex-direction: column !important;
-                        width: 100% !important;
+                    /* テーブルのカード型レイアウト化 */
+                    .table-container { overflow-x: visible !important; background: transparent !important; border: none !important; }
+                    .admin-table { min-width: 100% !important; display: block !important; }
+                    .admin-table thead { display: none !important; } /* ヘッダーを隠す */
+                    .admin-table tbody { display: block !important; width: 100% !important; }
+                    .admin-table tr { 
+                        display: block !important; 
+                        background: rgba(30, 41, 59, 0.7) !important; 
+                        border: 1px solid #334155 !important; 
+                        border-radius: 12px !important; 
+                        margin-bottom: 16px !important; 
+                        padding: 15px !important;
                     }
+                    .admin-table td { 
+                        display: block !important; 
+                        padding: 6px 0 !important; 
+                        border-bottom: 1px dashed rgba(255,255,255,0.05) !important; 
+                        width: 100% !important; 
+                        text-align: left !important; 
+                        font-size: 0.95rem !important;
+                    }
+                    .admin-table td:last-child { border-bottom: none !important; }
+                    .empty-cell { text-align: center !important; }
+                    
+                    .search-input { width: 100% !important; }
+                    .admin-filter-row { flex-direction: column !important; width: 100% !important; }
                     .admin-filter-row > div,
                     .admin-filter-row > select,
                     .admin-filter-row > button { width: 100% !important; }
                     .admin-filter-row .search-input { width: 100% !important; }
-                    .collect-search-row {
-                        flex-direction: column !important;
-                    }
+                    .collect-search-row { flex-direction: column !important; }
                     .collect-search-row input,
                     .collect-search-row select,
                     .collect-search-row button { width: 100% !important; }
-                    .actions-wrapper { gap: 12px !important; }
-                    .action-btn { padding: 10px !important; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
-                    .btn-primary, .btn-cancel { padding: 8px 14px !important; font-size: 0.9rem; }
-                    .modal-content { padding: 20px !important; }
+                    
+                    .actions-wrapper { 
+                        width: 100% !important;
+                        display: flex !important; 
+                        flex-wrap: wrap !important;
+                        gap: 8px !important; 
+                        justify-content: center !important;
+                        margin-top: 10px !important;
+                        padding-top: 15px !important;
+                        border-top: 1px solid rgba(255,255,255,0.1) !important;
+                    }
+                    .action-btn { 
+                        flex: 1 1 calc(33% - 8px) !important; /* ボタンが多ければ複数行になるように調整 */
+                        background: rgba(15, 23, 42, 0.6) !important; 
+                        border: 1px solid #334155 !important;
+                        padding: 12px 10px !important; 
+                        min-height: 44px !important; 
+                        display: inline-flex !important; 
+                        align-items: center !important; 
+                        justify-content: center !important; 
+                        border-radius: 8px !important;
+                    }
+                    .btn-primary, .btn-cancel { padding: 12px 14px !important; font-size: 1rem !important; }
+                    .modal-content { padding: 20px !important; width: 95% !important; }
                     .modal-content h2 { font-size: 1.2rem !important; }
                 }
             `}</style>
