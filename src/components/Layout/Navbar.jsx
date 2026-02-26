@@ -91,6 +91,9 @@ const Navbar = () => {
                     <Link to="/songs" className="mobile-nav-link">Discography</Link>
                     <Link to="/lives" className="mobile-nav-link">Archive</Link>
                     {currentUser && <Link to="/mypage" className="mobile-nav-link">My Page</Link>}
+                    {currentUser?.role === 'admin' && (
+                        <Link to="/admin" className="mobile-nav-link" style={{ color: '#fbbf24' }}>Admin Panel</Link>
+                    )}
 
                     <div className="mobile-nav-divider"></div>
                     {currentUser ? (
