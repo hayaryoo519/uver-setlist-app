@@ -1155,7 +1155,7 @@ const AdminPage = () => {
 
 
     return (
-        <div style={{ padding: '100px 20px', maxWidth: '1200px', margin: '0 auto', color: '#fff' }} className="fade-in">
+        <div style={{ padding: '100px 20px', maxWidth: '1200px', margin: '0 auto', color: '#fff' }} className="fade-in admin-page-root">
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '40px' }}>
                 <Shield size={40} color="var(--primary-color)" />
@@ -1163,7 +1163,7 @@ const AdminPage = () => {
             </div>
 
             {/* Navigation Tabs */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+            <div className="admin-nav-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '40px' }}>
 
                 <div className={`admin-card ${activeTab === 'lives' ? 'active' : ''}`} onClick={() => setActiveTab('lives')}>
                     <div className="card-header">
@@ -1227,7 +1227,7 @@ const AdminPage = () => {
                             <h3>Collect from Setlist.fm</h3>
                         </div>
                         <div className="collect-panel" style={{ padding: '20px' }}>
-                            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                            <div className="collect-search-row" style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
                                 <select
                                     value={sfmSearchYear}
                                     onChange={(e) => setSfmSearchYear(e.target.value)}
@@ -1243,7 +1243,7 @@ const AdminPage = () => {
                                     value={sfmSearchKeyword}
                                     onChange={(e) => setSfmSearchKeyword(e.target.value)}
                                     placeholder="Optional: Keyword (Tour/Venue)"
-                                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #334155', background: '#1e293b', color: '#fff', width: '250px' }}
+                                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #334155', background: '#1e293b', color: '#fff', flex: 1, minWidth: '120px' }}
                                 />
                                 <button className="btn-primary" onClick={handleSetlistFMSearch} disabled={isSearchingSFM}>
                                     {isSearchingSFM ? <Loader className="spin" size={18} /> : <Search size={18} />} Search
@@ -1559,7 +1559,7 @@ const AdminPage = () => {
                             </div>
                         </div>
 
-                        <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <div className="admin-filter-row" style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                             <div style={{ position: 'relative' }}>
                                 <Search size={16} className="search-icon" />
                                 <input
@@ -1727,7 +1727,7 @@ const AdminPage = () => {
                     <div className="tab-content fade-in">
                         <div className="table-header-panel">
                             <h3>Songs Master ({processedSongs.length} / {songs.length})</h3>
-                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <div className="admin-filter-row" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                                 <div style={{ position: 'relative' }}>
                                     <Search size={16} className="search-icon" />
                                     <input
@@ -2240,6 +2240,48 @@ const AdminPage = () => {
                 .empty-cell { padding: 30px; text-align: center; color: #94a3b8; }
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
                 .fade-in { animation: fadeIn 0.3s ease-out; }
+
+                /* モバイルレスポンシブ対応 */
+                @media (max-width: 768px) {
+                    .admin-page-root { padding: 80px 10px 20px !important; }
+                    .admin-page-root > div:first-child h1 { font-size: 1.6rem !important; }
+                    .admin-nav-grid {
+                        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+                        gap: 10px !important;
+                        margin-bottom: 20px !important;
+                    }
+                    .admin-card { padding: 15px !important; }
+                    .card-title { font-size: 1.1rem !important; }
+                    .card-title svg { width: 18px; height: 18px; }
+                    .table-header-panel {
+                        flex-direction: column !important;
+                        align-items: flex-start !important;
+                        gap: 10px !important;
+                    }
+                    .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+                    .admin-table { min-width: 600px; }
+                    .admin-table th, .admin-table td { padding: 10px 12px !important; font-size: 0.85rem; }
+                    .search-input { width: 100% !important; }
+                    .admin-filter-row {
+                        flex-direction: column !important;
+                        width: 100% !important;
+                    }
+                    .admin-filter-row > div,
+                    .admin-filter-row > select,
+                    .admin-filter-row > button { width: 100% !important; }
+                    .admin-filter-row .search-input { width: 100% !important; }
+                    .collect-search-row {
+                        flex-direction: column !important;
+                    }
+                    .collect-search-row input,
+                    .collect-search-row select,
+                    .collect-search-row button { width: 100% !important; }
+                    .actions-wrapper { gap: 4px !important; }
+                    .action-btn { padding: 4px !important; }
+                    .btn-primary, .btn-cancel { padding: 8px 14px !important; font-size: 0.9rem; }
+                    .modal-content { padding: 20px !important; }
+                    .modal-content h2 { font-size: 1.2rem !important; }
+                }
             `}</style>
             {/* IMPORT MODAL FOR EXISTING LIVE */}
             {showImportModal && activeLiveForImport && (
