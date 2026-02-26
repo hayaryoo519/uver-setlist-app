@@ -59,10 +59,12 @@
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
     .environment-banner {
-        top: 10px;
+        top: auto;
+        bottom: 20px;
         right: 10px;
         padding: 6px 12px;
         font-size: 0.8rem;
+        /* モバイルではハンバーガーメニュー等との干渉を避けるため右下に配置 */
     }
 
     .environment-banner__icon {
