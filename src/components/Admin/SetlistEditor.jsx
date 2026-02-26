@@ -31,8 +31,8 @@ const SortableItem = ({ id, song, index, styles, onRemove, onEditStart, isEditin
             ref={setNodeRef}
             style={style}
             className={`flex items-center gap-3 bg-slate-800 p-2 rounded border group transition-colors ${isEditingTarget
-                    ? 'border-yellow-400 bg-yellow-400/10'
-                    : 'border-slate-700 hover:border-blue-500/50'
+                ? 'border-yellow-400 bg-yellow-400/10'
+                : 'border-slate-700 hover:border-blue-500/50'
                 }`}
         >
             <div {...attributes} {...listeners} className="cursor-grab hover:text-white text-slate-600 flex items-center justify-center p-1">
@@ -189,28 +189,28 @@ const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => 
     return (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
             <div className="bg-slate-900 rounded-lg w-full max-w-4xl h-[90vh] flex flex-col border border-slate-700 shadow-2xl">
-                {/* Header */}
-                <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800 rounded-t-lg">
-                    <div>
-                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                {/* ヘッダー */}
+                <div className="p-3 md:p-4 border-b border-slate-700 flex flex-wrap justify-between items-center gap-2 bg-slate-800 rounded-t-lg">
+                    <div className="min-w-0">
+                        <h2 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
                             Setlist Editor
-                            <span className="text-sm font-normal text-slate-400 bg-slate-700 px-2 py-1 rounded">
+                            <span className="text-xs md:text-sm font-normal text-slate-400 bg-slate-700 px-2 py-1 rounded truncate max-w-[200px] md:max-w-none">
                                 {liveDate} {liveTitle}
                             </span>
                         </h2>
                     </div>
-                    <div className="flex gap-2">
-                        <button onClick={() => setShowBulkImport(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded font-medium transition-colors">
-                            <ArrowDown size={18} /> Bulk Import
+                    <div className="flex flex-wrap gap-2">
+                        <button onClick={() => setShowBulkImport(true)} className="flex items-center gap-1 md:gap-2 bg-blue-600 hover:bg-blue-500 text-white px-2 md:px-4 py-2 rounded font-medium transition-colors text-sm">
+                            <ArrowDown size={16} /> <span className="hidden md:inline">Bulk Import</span>
                         </button>
-                        <button onClick={onEditLive} className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded font-medium transition-colors">
-                            <Edit2 size={18} /> Edit Details
+                        <button onClick={onEditLive} className="flex items-center gap-1 md:gap-2 bg-slate-700 hover:bg-slate-600 text-white px-2 md:px-4 py-2 rounded font-medium transition-colors text-sm">
+                            <Edit2 size={16} /> <span className="hidden md:inline">Edit Details</span>
                         </button>
-                        <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded font-medium transition-colors">
-                            <Save size={18} /> {isSaving ? 'Saving...' : 'Save Setlist'}
+                        <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-1 md:gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-2 md:px-4 py-2 rounded font-medium transition-colors text-sm">
+                            <Save size={16} /> {isSaving ? '...' : <span className="hidden md:inline">Save Setlist</span>}
                         </button>
                         <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors">
-                            <X size={24} />
+                            <X size={20} />
                         </button>
                     </div>
                 </div>
@@ -289,8 +289,8 @@ const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => 
                                     key={song.id}
                                     onClick={() => handleAddOrSwapSong(song)}
                                     className={`w-full text-left px-3 py-2 rounded text-sm flex justify-between group transition-colors ${editingIndex !== null
-                                            ? 'hover:bg-yellow-400/20 hover:text-yellow-200 text-slate-300'
-                                            : 'hover:bg-blue-600/20 hover:text-blue-400 text-slate-300'
+                                        ? 'hover:bg-yellow-400/20 hover:text-yellow-200 text-slate-300'
+                                        : 'hover:bg-blue-600/20 hover:text-blue-400 text-slate-300'
                                         }`}
                                 >
                                     <span>{song.title}</span>
