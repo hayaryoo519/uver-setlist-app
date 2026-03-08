@@ -85,7 +85,7 @@ function LiveDetail() {
                 description={`UVERworld ${mainTitle} @ ${live.venue} Setlist and Live Report.`}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <Link to={backLink} style={{ color: '#94a3b8' }}>&larr; {backLabel}</Link>
+                <Link to={backLink} state={location.state} style={{ color: '#94a3b8' }}>&larr; {backLabel}</Link>
 
             </div>
 
