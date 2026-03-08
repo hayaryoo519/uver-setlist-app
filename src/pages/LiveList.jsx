@@ -12,7 +12,8 @@ const LiveList = () => {
     const [availableSongs, setAvailableSongs] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     // filters state: songIds is array of integers, album is string
-    const [filters, setFilters] = useState({ text: '', venue: '', songIds: [], startDate: '', endDate: '' });
+    const initialFilters = location.state?.filters || { text: '', venue: '', songIds: [], startDate: '', endDate: '' };
+    const [filters, setFilters] = useState(initialFilters);
     // Use Attendance Hook
     const { attendedIds, addLive, removeLive, isAttended, loading: attendanceLoading } = useAttendance();
 
@@ -178,7 +179,7 @@ const LiveList = () => {
                         </div>
                     ) : (
                         filteredLives.map(live => (
-                            <Link to={`/live/${live.id}`} state={{ from: location.pathname }} key={live.id} className="block group">
+                            <Link to={`/live/${live.id}`} state={{ from: location.pathname, filters }} key={live.id} className="block group">
                                 <div className="bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-blue-500/50 rounded-xl px-4 py-3 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-900/20 relative overflow-hidden">
                                     {/* Left accent border */}
                                     <div className="absolute top-0 left-0 w-1 h-full bg-slate-700 group-hover:bg-blue-500 transition-colors duration-300"></div>
