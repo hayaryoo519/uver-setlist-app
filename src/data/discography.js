@@ -78,7 +78,7 @@ export const DISCOGRAPHY = [
         type: "SINGLE",
         title: "浮世CROSSING",
         date: "2007.11.14",
-        songs: ["浮世CROSSING", "DISCORD (Live)", "energy"]
+        songs: ["浮世CROSSING", "DISCORD〜your voices mix〜", "energy"]
     },
 
     // --- 2008 ---
