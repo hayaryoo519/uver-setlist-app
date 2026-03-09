@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import PageHeader from '../components/Layout/PageHeader';
-import { Link, useLocation } from 'react-router-dom';
-import { Search, MapPin, Calendar, Tag, Check, Plus, ArrowRight, Loader, Home } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Search, MapPin, Calendar, Tag, Check, Plus, ArrowRight, Loader } from 'lucide-react';
 import { useAttendance } from '../hooks/useAttendance';
 import FilterPanel from '../components/FilterPanel';
 import SEO from '../components/SEO';
@@ -14,6 +14,14 @@ const LiveList = () => {
     // filters state: songIds is array of integers, album is string
     const initialFilters = location.state?.filters || { text: '', venue: '', songIds: [], startDate: '', endDate: '' };
     const [filters, setFilters] = useState(initialFilters);
+    const navigate = useNavigate();
+
+    const handleFilterChange = (newFilters) => {
+        setFilters(newFilters);
+        // 現在の履歴エントリにfiltersを保存し、ブラウザの「戻る」ボタン使用時に復元できるようにする
+        navigate(location.pathname, { replace: true, state: { filters: newFilters } });
+    };
+
     // Use Attendance Hook
     const { attendedIds, addLive, removeLive, isAttended, loading: attendanceLoading } = useAttendance();
 
@@ -50,17 +58,12 @@ const LiveList = () => {
                 params.append('endDate', filters.endDate);
             }
 
-            // Note: We fetch ALL lives (filtered by heavy constraints) 
-            // and do lightweight filtering (Title, Venue, Tags) on client.
             const res = await fetch(`/api/lives?${params.toString()}`);
             const data = await res.json();
 
             if (Array.isArray(data)) {
-                // Ensure date object for sorting (though backend sends ISO string)
                 data.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-                // Filter out future lives (Dashboard shows them as Upcoming)
-                // Archive should only show past lives (date < today)
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 const pastLives = data.filter(live => new Date(live.date) < today);
@@ -95,11 +98,8 @@ const LiveList = () => {
         }
     };
 
-    // uniqueVenues calculation removed per user request (Filter removed)
-
     const filteredLives = useMemo(() => {
         return lives.filter(live => {
-            // 1. Text Filter
             if (filters.text) {
                 const lowerText = filters.text.toLowerCase();
                 const matchText =
@@ -111,9 +111,6 @@ const LiveList = () => {
                 if (!matchText) return false;
             }
 
-
-            // 3. Venue Filter
-            // Note: If venue logic moves to backend, remove this. Keeping client-side for now.
             if (filters.venue && live.venue !== filters.venue) {
                 return false;
             }
@@ -137,7 +134,6 @@ const LiveList = () => {
             <SEO title="Live Archive" description="Search UVERworld past setlists and live history." />
 
             <div className="max-w-4xl mx-auto px-4">
-                {/* Header Navigation */}
                 <div className="flex justify-end items-center mb-6">
                     <div className="flex gap-4">
                         <button
@@ -162,16 +158,14 @@ const LiveList = () => {
                     }
                 />
 
-                {/* Collapsible Filter Panel */}
                 <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isFilterOpen ? 'max-h-[800px] opacity-100 mb-8' : 'max-h-0 opacity-0 mb-0'}`}>
                     <FilterPanel
                         filters={filters}
-                        onChange={setFilters}
+                        onChange={handleFilterChange}
                         songs={availableSongs}
                     />
                 </div>
 
-                {/* Results */}
                 <div className="space-y-4">
                     {filteredLives.length === 0 ? (
                         <div className="text-center py-20 text-slate-500 border border-dashed border-slate-700 rounded-xl">
@@ -181,11 +175,9 @@ const LiveList = () => {
                         filteredLives.map(live => (
                             <Link to={`/live/${live.id}`} state={{ from: location.pathname, filters }} key={live.id} className="block group">
                                 <div className="bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-blue-500/50 rounded-xl px-4 py-3 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-900/20 relative overflow-hidden">
-                                    {/* Left accent border */}
                                     <div className="absolute top-0 left-0 w-1 h-full bg-slate-700 group-hover:bg-blue-500 transition-colors duration-300"></div>
 
                                     <div className="flex flex-col md:flex-row md:items-center gap-1.5 md:gap-4 pl-3">
-                                        {/* Date Section */}
                                         <div className="w-full md:w-32 flex-shrink-0 flex flex-row md:flex-col items-center md:items-start justify-between md:justify-start gap-2 md:gap-1 pt-0.5">
                                             <div className="flex items-center gap-2 md:flex-col md:items-start md:gap-1">
                                                 <div className="text-xl md:text-2xl font-bold font-oswald text-slate-300 group-hover:text-white leading-none">
@@ -201,7 +193,6 @@ const LiveList = () => {
                                                 </span>
                                             </div>
 
-                                            {/* Mobile Button */}
                                             <button
                                                 onClick={(e) => handleToggleAttendance(e, live.id)}
                                                 className={`md:hidden px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 flex items-center gap-1 whitespace-nowrap z-10 relative
@@ -217,7 +208,6 @@ const LiveList = () => {
                                             </button>
                                         </div>
 
-                                        {/* Main Info */}
                                         <div className="flex-1 min-w-0 md:border-l border-slate-700/50 md:pl-4">
                                             <h2 className="text-lg md:text-xl font-bold text-white leading-tight group-hover:text-blue-400 transition-colors" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                                 {live.tour_name}
@@ -242,7 +232,6 @@ const LiveList = () => {
                                             </div>
                                         </div>
 
-                                        {/* Actions (Desktop Only) */}
                                         <div className="hidden md:flex items-center justify-start gap-3 pl-0 border-t border-slate-700/50 pt-0 mt-0 md:border-none">
                                             <button
                                                 onClick={(e) => handleToggleAttendance(e, live.id)}

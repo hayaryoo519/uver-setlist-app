@@ -78,6 +78,17 @@ function LiveDetail() {
     else if (backLink === '/mypage') backLabel = 'My Pageに戻る';
     else if (backLink.startsWith('/song/')) backLabel = '楽曲詳細に戻る';
 
+    const handleBack = (e) => {
+        e.preventDefault();
+        // 戻るボタンがブラウザバック（POP）として機能するように navigate(-1) を使用する。
+        // これにより、ScrollToTop の除外ロジックと useScrollRestoration スクリプトが正しく動作する。
+        if (location.state?.from) {
+            navigate(-1);
+        } else {
+            navigate('/lives');
+        }
+    };
+
     return (
         <div className="container" style={{ paddingTop: '100px' }}>
             <SEO
@@ -85,8 +96,13 @@ function LiveDetail() {
                 description={`UVERworld ${mainTitle} @ ${live.venue} Setlist and Live Report.`}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <Link to={backLink} state={location.state} style={{ color: '#94a3b8' }}>&larr; {backLabel}</Link>
-
+                <a
+                    href={backLink}
+                    onClick={handleBack}
+                    className="hover:text-white transition-colors cursor-pointer text-slate-400 no-underline"
+                >
+                    &larr; {backLabel}
+                </a>
             </div>
 
             {/* Header Section */}
