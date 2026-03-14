@@ -260,7 +260,23 @@
 
 .lp-btn-primary:hover {
     transform: translateY(-4px);
-    backgro/* Scroll Indicator */
+    background: var(--lp-gold-light);
+    box-shadow: 0 12px 35px rgba(212, 175, 55, 0.45);
+}
+
+.lp-btn-secondary {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--lp-white);
+    border: 1.5px solid rgba(212, 175, 55, 0.7);
+    backdrop-filter: blur(10px);
+}
+
+.lp-btn-secondary:hover {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: var(--lp-gold);
+    transform: translateY(-4px);
+}
+/* Scroll Indicator */
 .lp-scroll-indicator {
     position: absolute;
     bottom: 40px;
@@ -508,6 +524,11 @@
 }
 
 /* Animations */
+@keyframes fadeInImage {
+    from { opacity: 0; transform: scale(1.05); }
+    to { opacity: 1; transform: scale(1); }
+}
+
 @keyframes fadeInUp {
     from {
         opacity: 0;
@@ -649,15 +670,4 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
-}
- { font-size: 1.4rem; }
-    .lp-hero-cta { flex-direction: column; align-items: stretch; }
-    
-    .lp-section-title { font-size: 2.2rem; }
-    .lp-features-grid { grid-template-columns: 1fr; }
-    .lp-disclaimer-grid { grid-template-columns: 1fr; }
-    .lp-steps { grid-template-columns: 1fr; }
-    
-    .lp-final-cta-title { font-size: 2.5rem; }
-    .lp-final-cta-buttons { flex-direction: column; align-items: stretch; max-width: 400px; margin: 0 auto; }
 }
