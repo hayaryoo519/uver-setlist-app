@@ -32,7 +32,11 @@
     border-width: 0;
 }
 
-.responsive-br {
+.pc-br {
+    display: inline;
+}
+
+.sp-br {
     display: none;
 }
 
@@ -567,7 +571,11 @@
 }
 
 @media (max-width: 768px) {
-    .responsive-br {
+    .pc-br {
+        display: none;
+    }
+
+    .sp-br {
         display: block;
     }
 
