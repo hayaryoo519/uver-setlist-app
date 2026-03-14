@@ -181,7 +181,7 @@
     width: 100%;
     max-width: 1400px;
     padding: 0 60px;
-    margin-top: 180px; /* text position adjusted down to avoid overlap with singer */
+    margin-top: 280px; /* Further adjusted down to avoid overlap with large logo in background */
     display: flex;
     justify-content: flex-start;
 }
