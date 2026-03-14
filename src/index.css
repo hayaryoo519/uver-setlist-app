@@ -3,29 +3,28 @@
 @tailwind utilities;
 
 :root {
-  /* Premium Theme */
-  --bg-color: #0c0c0c;
-  /* Deep Black */
-  --text-color: #f0f0f0;
-  --primary-color: #d4af37;
-  font-family: 'Noto Sans JP', 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* Premium Theme Palette (Shared with Landing Page) */
+  --lp-gold: #d4af37;
+  --lp-gold-light: #f1d279;
+  --lp-gold-glow: rgba(212, 175, 55, 0.4);
+  --lp-black: #080808;
+  --lp-navy-deep: #0a0a12;
+  --lp-slate-800: #1e293b;
+  --lp-slate-700: #334155;
+  --lp-slate-400: #94a3b8;
+  --lp-slate-500: #64748b;
+  --lp-white: #f8fafc;
+  
+  /* System / Backward Compatibility Variables */
+  --primary-color: var(--lp-gold);
+  --bg-color: var(--lp-black);
+  --card-bg: rgba(30, 41, 59, 0.4);
+  --text-color: var(--lp-white);
+  --border-color: rgba(212, 175, 55, 0.2);
+
+  font-family: 'Inter', 'Noto Sans JP', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  --primary-color: #fbbf24;
-  /* Amber-400 (Goldish) */
-  --secondary-color: #ef4444;
-  /* Red-500 (Vibrant Red) */
-  --accent-color: #60a5fa;
-  /* Blue-400 */
-  --bg-color: #0f172a;
-  /* Slate-900 */
-  --card-bg: #1e293b;
-  /* Slate-800 */
-  --text-color: #f8fafc;
-  /* Slate-50 */
-  --border-color: #334155;
-  /* Slate-700 */
 
   color-scheme: dark;
   color: var(--text-color);
@@ -357,6 +356,67 @@ h3 {
   pointer-events: none;
   z-index: 10;
   animation: fadeIn 0.2s;
+}
+
+/* Glassmorphism Classes */
+.glass-panel {
+  background: rgba(20, 20, 20, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+}
+
+.text-gold {
+  color: var(--lp-gold);
+  text-shadow: 0 0 10px var(--lp-gold-glow);
+}
+
+.premium-btn {
+  background: var(--lp-gold);
+  color: var(--lp-black);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-radius: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px var(--lp-gold-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.premium-btn:hover {
+  background: var(--lp-gold-light);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--lp-gold-glow);
+}
+
+.premium-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.premium-input {
+  width: 100%;
+  padding: 12px 12px 12px 40px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.premium-input:focus {
+  border-color: var(--lp-gold);
+  box-shadow: 0 0 10px var(--lp-gold-glow);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .notification-tooltip::before {
