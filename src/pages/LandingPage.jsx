@@ -92,13 +92,6 @@ const LandingPage = () => {
                         </div>
                     </div>
                 </div>
-
-                <div className="lp-scroll-indicator">
-                    <span>SCROLL</span>
-                    <div className="lp-scroll-mouse">
-                        <div className="lp-scroll-wheel"></div>
-                    </div>
-                </div>
             </section>
 
             {/* Features Section */}
