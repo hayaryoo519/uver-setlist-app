@@ -32,77 +32,54 @@ const Login = () => {
     };
 
     return (
-        <AuthLayout title="ログイン" subtitle="おかえりなさい！">
+        <AuthLayout title="ログイン" subtitle="UVERworld Setlist Archive へようこそ">
             {error && (
                 <div style={{
                     background: 'rgba(239, 68, 68, 0.1)',
                     border: '1px solid rgba(239, 68, 68, 0.2)',
                     color: '#f87171',
                     padding: '12px',
-                    borderRadius: '8px',
-                    marginBottom: '20px',
+                    borderRadius: '12px',
+                    marginBottom: '24px',
                     fontSize: '0.9rem',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    backdropFilter: 'blur(4px)'
                 }}>
                     {error}
                 </div>
             )}
             <form onSubmit={handleSubmit}>
                 <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '8px' }}>メールアドレス</label>
+                    <label style={{ display: 'block', color: 'var(--lp-slate-400)', fontSize: '0.85rem', marginBottom: '8px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>メールアドレス</label>
                     <div style={{ position: 'relative' }}>
-                        <Mail size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                        <Mail size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--lp-slate-500)', zIndex: 1 }} />
                         <input
                             type="email"
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="your@email.com"
+                            className="premium-input"
                             tabIndex={1}
-                            style={{
-                                width: '100%',
-                                padding: '12px 12px 12px 40px',
-                                background: 'rgba(0,0,0,0.2)',
-                                border: '1px solid #334155',
-                                borderRadius: '8px',
-                                color: '#fff',
-                                fontSize: '1rem',
-                                outline: 'none',
-                                transition: 'border-color 0.2s'
-                            }}
-                            onFocus={(e) => e.target.style.borderColor = 'var(--primary-color)'}
-                            onBlur={(e) => e.target.style.borderColor = '#334155'}
                         />
                     </div>
                 </div>
 
                 <div style={{ marginBottom: '30px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <label style={{ color: '#94a3b8', fontSize: '0.9rem' }}>パスワード</label>
-                        <Link to="/forgot-password" tabIndex={4} style={{ color: '#64748b', fontSize: '0.8rem', textDecoration: 'none' }}>パスワードをお忘れですか？</Link>
+                        <label style={{ color: 'var(--lp-slate-400)', fontSize: '0.85rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>パスワード</label>
+                        <Link to="/forgot-password" tabIndex={4} style={{ color: 'var(--lp-slate-500)', fontSize: '0.8rem', textDecoration: 'none', transition: 'color 0.3s' }} onMouseEnter={(e) => e.target.style.color = 'var(--lp-gold)'} onMouseLeave={(e) => e.target.style.color = 'var(--lp-slate-500)'}>忘れた場合</Link>
                     </div>
                     <div style={{ position: 'relative' }}>
-                        <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                        <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--lp-slate-500)', zIndex: 1 }} />
                         <input
                             type="password"
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="••••••••"
+                            className="premium-input"
                             tabIndex={2}
-                            style={{
-                                width: '100%',
-                                padding: '12px 12px 12px 40px',
-                                background: 'rgba(0,0,0,0.2)',
-                                border: '1px solid #334155',
-                                borderRadius: '8px',
-                                color: '#fff',
-                                fontSize: '1rem',
-                                outline: 'none',
-                                transition: 'border-color 0.2s'
-                            }}
-                            onFocus={(e) => e.target.style.borderColor = 'var(--primary-color)'}
-                            onBlur={(e) => e.target.style.borderColor = '#334155'}
                         />
                     </div>
                 </div>
@@ -111,33 +88,16 @@ const Login = () => {
                     type="submit"
                     disabled={isLoading}
                     tabIndex={3}
-                    style={{
-                        width: '100%',
-                        padding: '14px',
-                        background: 'var(--primary-color)',
-                        color: '#000',
-                        fontWeight: 'bold',
-                        fontSize: '1rem',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: isLoading ? 'not-allowed' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        transition: 'transform 0.1s, opacity 0.2s',
-                        opacity: isLoading ? 0.7 : 1
-                    }}
-                    onMouseEnter={(e) => !isLoading && (e.currentTarget.style.transform = 'translateY(-1px)')}
-                    onMouseLeave={(e) => !isLoading && (e.currentTarget.style.transform = 'translateY(0)')}
+                    className="premium-btn"
+                    style={{ width: '100%', padding: '14px' }}
                 >
                     {isLoading ? <Loader size={20} className="animate-spin" /> : <>ログイン <ArrowRight size={20} /></>}
                 </button>
             </form>
 
-            <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.9rem', color: '#94a3b8' }}>
+            <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '0.95rem', color: 'var(--lp-slate-400)' }}>
                 アカウントをお持ちでないですか？<br />
-                <Link to="/signup" style={{ color: 'var(--primary-color)', textDecoration: 'none', fontWeight: 'bold', display: 'inline-block', marginTop: '8px' }}>新規登録</Link>
+                <Link to="/signup" style={{ color: 'var(--lp-gold)', textDecoration: 'none', fontWeight: '700', display: 'inline-block', marginTop: '10px', borderBottom: '1px solid rgba(212, 175, 55, 0.3)', transition: 'all 0.3s' }} onMouseEnter={(e) => e.target.style.borderBottomColor = 'var(--lp-gold)'} onMouseLeave={(e) => e.target.style.borderBottomColor = 'rgba(212, 175, 55, 0.3)'}>新規アカウント作成</Link>
             </div>
         </AuthLayout>
     );
