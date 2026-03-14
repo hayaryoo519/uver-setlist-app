@@ -10,11 +10,26 @@ import mainVisualPhone from '../assets/main-visual2-phone.png';
 const LandingPage = () => {
     const { currentUser, logout } = useAuth();
     const navigate = useNavigate();
+    const [isScrolled, setIsScrolled] = React.useState(false);
+
+    React.useEffect(() => {
+        const handleScroll = () => {
+            if (window.scrollY > 100) {
+                setIsScrolled(true);
+            } else {
+                setIsScrolled(false);
+            }
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     const handleLogout = () => {
         logout();
         navigate('/');
     };
+
     return (
         <div className="landing-page">
             <SEO
@@ -23,7 +38,7 @@ const LandingPage = () => {
             />
 
             {/* Header */}
-            <header className="lp-header">
+            <header className={`lp-header ${isScrolled ? 'is-scrolled' : ''}`}>
                 <div className="lp-header-container">
                     <Link to="/" className="lp-logo">
                         <span className="lp-logo-text"><span className="text-gold">UVERworld</span> Setlist Archive</span>

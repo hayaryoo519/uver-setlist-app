@@ -44,7 +44,15 @@
     -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(212, 175, 55, 0.2);
     padding: 18px 0;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(-100%);
+    opacity: 0;
+}
+
+.lp-header.is-scrolled {
+    transform: translateY(0);
+    opacity: 1;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .lp-header-container {
@@ -173,7 +181,7 @@
     width: 100%;
     max-width: 1400px;
     padding: 0 60px;
-    margin-top: 60px;
+    margin-top: 180px; /* text position adjusted down to avoid overlap with singer */
     display: flex;
     justify-content: flex-start;
 }
