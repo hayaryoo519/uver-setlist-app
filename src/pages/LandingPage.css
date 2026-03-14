@@ -187,7 +187,8 @@
 }
 
 .lp-hero-text-wrapper {
-    max-width: 850px; /* 少し広げて読みやすく */
+    width: fit-content; /* 文字の長さに合わせる */
+    max-width: 90%; /* モバイル配慮 */
     margin: 0 auto;
     text-align: center;
     opacity: 0;
@@ -196,15 +197,15 @@
     
     /* 
        背景画像と同化するのを防ぐためのグラスモーフィズム・プレート
-       非常に薄い黒背景とぼかしを加えることで、高級感を維持しつつ可読性を確保
+       範囲を「文字があるところだけ」に限定するため、fit-contentと適切なpaddingを設定
     */
     background: rgba(0, 0, 0, 0.25);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    padding: 40px 60px;
+    backdrop-filter: blur(6px); /* わずかに弱めて背景の視認性を上げつつ文字も保護 */
+    -webkit-backdrop-filter: blur(6px);
+    padding: 24px 40px; /* 余白を最小限に絞る */
     border-radius: 12px;
     border: 1px solid rgba(212, 175, 55, 0.1);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
 }
 
 .lp-hero-subtitle {
