@@ -32,6 +32,10 @@
     border-width: 0;
 }
 
+.responsive-br {
+    display: none;
+}
+
 /* Header */
 .lp-header {
     position: fixed;
@@ -548,6 +552,10 @@
 
 /* Responsive Design */
 @media (max-width: 1024px) {
+    .lp-hero-subtitle {
+        font-size: 2rem;
+    }
+
     .lp-section-title {
         font-size: 2.8rem;
     }
@@ -559,66 +567,79 @@
 }
 
 @media (max-width: 768px) {
-    .lp-hero-title {
-        font-size: 3rem;
-    }
-
-    .lp-hero-subtitle {
-        font-size: 1.1rem;
-        letter-spacing: 2px;
-    }
-
-    .lp-hero-description {
-        font-size: 1rem;
-    }
-
-    .lp-section {
-        padding: 60px 20px;
-    }
-
-    .lp-section-title {
-        font-size: 2rem;
-    }
-
-    .lp-features-grid,
-    .lp-steps {
-        grid-template-columns: 1fr;
-    }
-
-    .lp-disclaimer-grid {
-        grid-template-columns: 1fr;
+    .responsive-br {
+        display: block;
     }
 
     .lp-hero {
-        padding-top: 100px;
-        padding-bottom: 110px;
-        min-height: 100svh;
+        padding-top: 60px;
+        padding-bottom: 60px;
+        min-height: -webkit-fill-available;
+        height: auto;
         display: flex;
         flex-direction: column;
         justify-content: center;
     }
 
     .lp-hero-content {
-        padding: 10px;
+        margin-top: 280px; /* ロゴの高さを考慮 */
+        padding: 0 24px;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+
+    .lp-hero-text-wrapper {
+        padding: 20px;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        background: rgba(0, 0, 0, 0.45);
+        border-radius: 12px;
+        width: 100%;
+        max-width: 500px;
+    }
+
+    .lp-hero-subtitle {
+        font-size: 1.6rem;
+        margin-bottom: 15px;
+        letter-spacing: 0.05em;
+        line-height: 1.4;
+    }
+
+    .lp-hero-description {
+        font-size: 0.95rem;
+        margin-bottom: 30px;
+        line-height: 1.6;
     }
 
     .lp-hero-cta {
         flex-direction: column;
-        align-items: stretch;
-        margin-top: 25px;
-        gap: 15px;
+        align-items: center;
+        width: 100%;
+        gap: 12px;
     }
 
     .lp-btn {
         width: 100%;
-        max-width: 320px;
-        margin: 0 auto;
+        max-width: 280px;
         padding: 12px 20px;
-        font-size: 1rem;
+        font-size: 0.95rem;
     }
 
-    .lp-final-cta-title {
-        font-size: 2.5rem;
+    .lp-section {
+        padding: 80px 20px;
+    }
+
+    .lp-section-title {
+        font-size: 2.2rem;
+        margin-bottom: 40px;
+    }
+
+    .lp-features-grid,
+    .lp-steps,
+    .lp-disclaimer-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
     }
 
     /* Header responsive */
@@ -635,20 +656,28 @@
     }
 
     .lp-nav-link {
+        display: none;
+    }
+
+    .lp-nav-link[href="/login"] {
+        display: block;
         font-size: 0.85rem;
-        white-space: nowrap;
     }
 
     .lp-nav-btn {
-        padding: 6px 14px;
+        padding: 8px 16px;
         font-size: 0.85rem;
-        white-space: nowrap;
     }
 }
 
 @media (max-width: 480px) {
-    .lp-hero-title {
-        font-size: 2.5rem;
+    .lp-hero-content {
+        margin-top: 260px;
+    }
+
+    .lp-hero-subtitle {
+        font-size: 1.4rem;
+        letter-spacing: 0.05em;
     }
 
     .lp-section-title {
@@ -656,18 +685,11 @@
     }
 
     .lp-logo-text {
-        font-size: 0.9rem;
+        font-size: 1rem;
     }
 
     .lp-logo {
         flex: 1;
         min-width: 0;
-        margin-right: 10px;
-    }
-
-    .lp-logo-text {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }
 }
