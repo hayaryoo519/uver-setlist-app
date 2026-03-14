@@ -4,6 +4,8 @@ import SEO from '../components/SEO';
 import { Music, BarChart3, Heart, ChevronDown, AlertTriangle, User, ShieldAlert, Mail } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import './LandingPage.css';
+import mainVisualPc from '../assets/main-visual2-pc.png';
+import mainVisualPhone from '../assets/main-visual2-phone.png';
 
 const LandingPage = () => {
     const { currentUser, logout } = useAuth();
@@ -45,33 +47,40 @@ const LandingPage = () => {
             {/* Hero Section */}
             <section className="lp-hero">
                 <div className="lp-hero-bg">
+                    <picture>
+                        <source media="(max-width: 768px)" srcSet={mainVisualPhone} />
+                        <img src={mainVisualPc} alt="UVERworld Live" className="lp-hero-image" />
+                    </picture>
                     <div className="lp-glow-effect"></div>
+                    <div className="lp-hero-overlay"></div>
                 </div>
 
                 <div className="lp-hero-content">
-                    <h1 className="lp-hero-title">
-                        <span className="text-gold">UVER</span>WORLD<br />
-                        <span className="text-subtitle-small">SETLIST ARCHIVE</span>
-                    </h1>
-                    <p className="lp-hero-subtitle">あの日の感動を、永遠に。</p>
-                    <p className="lp-hero-description">
-                        あなたが参戦したライブを記録し、データで振り返る。<br className="responsive-br" />
-                        ファンによる、ライブ体験を可視化する非公式アーカイブ。
-                    </p>
-                    <div className="lp-hero-cta">
-                        <Link to="/signup" className="lp-btn lp-btn-primary">
-                            参戦記録を始める
-                        </Link>
-                        <Link to="/dashboard" className="lp-btn lp-btn-secondary">
-                            データを見る（登録不要）
-                        </Link>
+                    <div className="lp-hero-text-wrapper">
+                        <h1 className="lp-hero-title sr-only">
+                            UVERworld SETLIST ARCHIVE
+                        </h1>
+                        <p className="lp-hero-subtitle">あの日の感動を、永遠に。</p>
+                        <p className="lp-hero-description">
+                            あなたが参戦したライブを記録し、データで振り返る。<br className="responsive-br" />
+                            ファンによる、ライブ体験を可視化する非公式アーカイブ。
+                        </p>
+                        <div className="lp-hero-cta">
+                            <Link to="/signup" className="lp-btn lp-btn-primary">
+                                参戦記録を始める
+                            </Link>
+                            <Link to="/dashboard" className="lp-btn lp-btn-secondary">
+                                データを見る（登録不要）
+                            </Link>
+                        </div>
                     </div>
                 </div>
 
                 <div className="lp-scroll-indicator">
+                    <div className="lp-scroll-mouse">
+                        <div className="lp-scroll-wheel"></div>
+                    </div>
                     <span>SCROLL</span>
-                    <div className="lp-scroll-line"></div>
-                    <ChevronDown size={24} color="var(--primary-color)" />
                 </div>
             </section>
 
