@@ -33,26 +33,12 @@ const Login = () => {
 
     return (
         <AuthLayout title="ログイン" subtitle="UVERworld Setlist Archive へようこそ">
-            {error && (
-                <div style={{
-                    background: 'rgba(239, 68, 68, 0.1)',
-                    border: '1px solid rgba(239, 68, 68, 0.2)',
-                    color: '#f87171',
-                    padding: '12px',
-                    borderRadius: '12px',
-                    marginBottom: '24px',
-                    fontSize: '0.9rem',
-                    textAlign: 'center',
-                    backdropFilter: 'blur(4px)'
-                }}>
-                    {error}
-                </div>
-            )}
+            {error && <div className="auth-error-message">{error}</div>}
+            
             <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', color: 'var(--lp-slate-400)', fontSize: '0.85rem', marginBottom: '8px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>メールアドレス</label>
-                    <div style={{ position: 'relative' }}>
-                        <Mail size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--lp-slate-500)', zIndex: 1 }} />
+                <div className="auth-input-group">
+                    <label className="auth-label">メールアドレス</label>
+                    <div className="auth-input-wrapper">
                         <input
                             type="email"
                             required
@@ -62,16 +48,16 @@ const Login = () => {
                             className="premium-input"
                             tabIndex={1}
                         />
+                        <Mail size={18} className="auth-input-icon" />
                     </div>
                 </div>
 
-                <div style={{ marginBottom: '30px' }}>
+                <div className="auth-input-group" style={{ marginBottom: '32px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <label style={{ color: 'var(--lp-slate-400)', fontSize: '0.85rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>パスワード</label>
-                        <Link to="/forgot-password" tabIndex={4} style={{ color: 'var(--lp-slate-500)', fontSize: '0.8rem', textDecoration: 'none', transition: 'color 0.3s' }} onMouseEnter={(e) => e.target.style.color = 'var(--lp-gold)'} onMouseLeave={(e) => e.target.style.color = 'var(--lp-slate-500)'}>忘れた場合</Link>
+                        <label className="auth-label" style={{ marginBottom: 0 }}>パスワード</label>
+                        <Link to="/forgot-password" tabIndex={4} className="auth-link" style={{ fontSize: '0.8rem', marginTop: 0, borderBottom: 'none', color: 'var(--lp-slate-500)', fontWeight: '500' }} onMouseEnter={(e) => e.target.style.color = 'var(--lp-gold)'} onMouseLeave={(e) => e.target.style.color = 'var(--lp-slate-500)'}>忘れた場合</Link>
                     </div>
-                    <div style={{ position: 'relative' }}>
-                        <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--lp-slate-500)', zIndex: 1 }} />
+                    <div className="auth-input-wrapper">
                         <input
                             type="password"
                             required
@@ -81,6 +67,7 @@ const Login = () => {
                             className="premium-input"
                             tabIndex={2}
                         />
+                        <Lock size={18} className="auth-input-icon" />
                     </div>
                 </div>
 
@@ -89,15 +76,15 @@ const Login = () => {
                     disabled={isLoading}
                     tabIndex={3}
                     className="premium-btn"
-                    style={{ width: '100%', padding: '14px' }}
+                    style={{ width: '100%', padding: '16px', fontSize: '1.1rem' }}
                 >
                     {isLoading ? <Loader size={20} className="animate-spin" /> : <>ログイン <ArrowRight size={20} /></>}
                 </button>
             </form>
 
-            <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '0.95rem', color: 'var(--lp-slate-400)' }}>
+            <div className="auth-footer-text">
                 アカウントをお持ちでないですか？<br />
-                <Link to="/signup" style={{ color: 'var(--lp-gold)', textDecoration: 'none', fontWeight: '700', display: 'inline-block', marginTop: '10px', borderBottom: '1px solid rgba(212, 175, 55, 0.3)', transition: 'all 0.3s' }} onMouseEnter={(e) => e.target.style.borderBottomColor = 'var(--lp-gold)'} onMouseLeave={(e) => e.target.style.borderBottomColor = 'rgba(212, 175, 55, 0.3)'}>新規アカウント作成</Link>
+                <Link to="/signup" className="auth-link">新規アカウント作成</Link>
             </div>
         </AuthLayout>
     );
