@@ -5,6 +5,7 @@ import { Search, MapPin, Calendar, Tag, Check, Plus, ArrowRight, Loader } from '
 import { useAttendance } from '../hooks/useAttendance';
 import FilterPanel from '../components/FilterPanel';
 import SEO from '../components/SEO';
+import './LiveListPrototype.css';
 
 const LiveList = () => {
     const location = useLocation();
@@ -14,6 +15,7 @@ const LiveList = () => {
     // filters state: songIds is array of integers, album is string
     const initialFilters = location.state?.filters || { text: '', venue: '', songIds: [], startDate: '', endDate: '' };
     const [filters, setFilters] = useState(initialFilters);
+    const [selectedTour, setSelectedTour] = useState(null);
     const navigate = useNavigate();
 
     const handleFilterChange = (newFilters) => {
@@ -98,8 +100,43 @@ const LiveList = () => {
         }
     };
 
+    // Calculate Annual Summaries for grouped List view
+    const annualSummaries = useMemo(() => {
+        const summaries = {};
+        
+        lives.forEach(live => {
+            if (!live.date) return;
+            const year = new Date(live.date).getFullYear();
+            
+            if (!summaries[year]) {
+                summaries[year] = {
+                    year,
+                    performanceCount: 0,
+                    lives: []
+                };
+            }
+            
+            summaries[year].performanceCount += 1;
+            summaries[year].lives.push(live);
+        });
+        
+        return Object.values(summaries).map(s => ({
+            ...s,
+            lives: s.lives.sort((a, b) => new Date(b.date) - new Date(a.date))
+        })).sort((a, b) => b.year - a.year);
+    }, [lives]);
+
+    const years = useMemo(() => annualSummaries.map(s => s.year), [annualSummaries]);
+
+    const [selectedYear, setSelectedYear] = useState(null);
+
     const filteredLives = useMemo(() => {
         return lives.filter(live => {
+            if (selectedYear) {
+                const liveYear = new Date(live.date).getFullYear();
+                if (liveYear !== selectedYear) return false;
+            }
+
             if (filters.text) {
                 const lowerText = filters.text.toLowerCase();
                 const matchText =
@@ -117,7 +154,7 @@ const LiveList = () => {
 
             return true;
         });
-    }, [lives, filters.text, filters.venue]);
+    }, [lives, filters.text, filters.venue, selectedYear]);
 
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
@@ -130,137 +167,199 @@ const LiveList = () => {
     }
 
     return (
-        <div className="min-h-screen bg-slate-900 text-white fade-in" style={{ paddingTop: '100px', paddingBottom: '40px' }}>
+        <div className="min-h-screen bg-slate-900 text-white fade-in prototype-active">
+            <div className="prototype-banner">DESIGN PROTOTYPE MODE (IMAGE-BASED LIST VIEW)</div>
             <SEO title="Live Archive" description="Search UVERworld past setlists and live history." />
 
-            <div className="max-w-4xl mx-auto px-4">
-                <div className="flex justify-end items-center mb-6">
-                    <div className="flex gap-4">
-                        <button
-                            onClick={() => setIsFilterOpen(!isFilterOpen)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all border
-                            ${isFilterOpen ? 'bg-slate-700 border-slate-600 text-white' : 'bg-transparent border-slate-700 text-slate-400 hover:text-white hover:border-slate-500'}`}
-                        >
-                            <Search size={16} /> 絞り込み
-                        </button>
-                        <Link to="/mypage" className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold transition-colors">
-                            My Page
-                        </Link>
+            <div className="live-list-layout">
+                {/* Sidebar Navigation */}
+                <aside className="live-sidebar">
+                    <div className="sidebar-group">
+                        <div className="sidebar-label">YEAR FILTER</div>
+                        <div className="sidebar-items">
+                            <div
+                                className={`sidebar-item ${selectedYear === null ? 'active' : ''}`}
+                                onClick={() => setSelectedYear(null)}
+                            >
+                                <Calendar size={18} className="sidebar-icon" />
+                                <span className="sidebar-text">ALL TIME</span>
+                                <span className="sidebar-count">{lives.length}</span>
+                            </div>
+                            {annualSummaries.map(summary => (
+                                <div
+                                    key={summary.year}
+                                    className={`sidebar-item ${selectedYear === summary.year ? 'active' : ''}`}
+                                    onClick={() => setSelectedYear(summary.year)}
+                                >
+                                    <Calendar size={18} className="sidebar-icon" />
+                                    <span className="sidebar-text">{summary.year}</span>
+                                    <span className="sidebar-count">{summary.performanceCount}</span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                </div>
 
-                <PageHeader
-                    title="LIVE ARCHIVE"
-                    rightElement={
-                        <div className="text-slate-500 text-sm font-mono">
-                            {filteredLives.length} 件の公演が見つかりました
+                    <div className="sidebar-info-box">
+                        <div className="info-icon">i</div>
+                        <div className="info-title">アーカイブについて</div>
+                        <div className="info-content">
+                            2005年のデビューから現在までの全てのライブデータを網羅。セットリスト、会場、動員数などを記録しています。
                         </div>
-                    }
-                />
+                    </div>
+                </aside>
 
-                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isFilterOpen ? 'max-h-[800px] opacity-100 mb-8' : 'max-h-0 opacity-0 mb-0'}`}>
-                    <FilterPanel
-                        filters={filters}
-                        onChange={handleFilterChange}
-                        songs={availableSongs}
-                    />
-                </div>
+                {/* Main Content */}
+                <main className="live-main-content">
+                    <div className="live-main-inner">
+                        <header className="archive-header">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <h1 className="archive-title">
+                                        LIVE TOUR <span className="accent-italic">ARCHIVE</span>
+                                    </h1>
+                                    <p className="archive-subtitle">
+                                        UVERworldの軌跡を辿る、全公演のセットリスト記録
+                                    </p>
+                                </div>
+                            </div>
+                        </header>
 
-                <div className="space-y-4">
-                    {filteredLives.length === 0 ? (
-                        <div className="text-center py-20 text-slate-500 border border-dashed border-slate-700 rounded-xl">
-                            条件に一致する公演は見つかりませんでした。
-                        </div>
-                    ) : (
-                        filteredLives.map(live => (
-                            <Link to={`/live/${live.id}`} state={{ from: location.pathname, filters }} key={live.id} className="block group">
-                                <div className="bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-blue-500/50 rounded-xl px-4 py-3 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-900/20 relative overflow-hidden">
-                                    <div className="absolute top-0 left-0 w-1 h-full bg-slate-700 group-hover:bg-blue-500 transition-colors duration-300"></div>
+                        {!selectedYear ? (
+                            /* Grouped List View (All Time) */
+                            <div className="archive-list-container">
+                                {annualSummaries.map(summary => (
+                                    <section key={summary.year} className="year-section">
+                                        <div className="year-section-header">
+                                            <span className="section-year">{summary.year}</span>
+                                            <span className="section-stat">{summary.performanceCount} PERFORMANCES</span>
+                                        </div>
+                                        <div className="space-y-4">
+                                            {summary.lives.map((live, idx) => (
+                                                <div 
+                                                    key={live.id} 
+                                                    className="tour-horizontal-card fade-in" 
+                                                    style={{ animationDelay: `${idx * 0.05}s`, cursor: 'pointer' }}
+                                                    onClick={() => navigate(`/live/${live.id}`)}
+                                                >
+                                                        {/* LEFT: Date & Type Badge */}
+                                                        <div className="date-col">
+                                                            <div className="date-text">
+                                                                {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.')}
+                                                            </div>
+                                                            <span className={`type-badge ${
+                                                                live.type === 'FESTIVAL' ? 'badge-fes' : 
+                                                                live.type === 'EVENT' ? 'badge-event' : 'badge-oneman'
+                                                            }`}>
+                                                                {live.type === 'FESTIVAL' ? 'FES' : 
+                                                                 live.type === 'EVENT' ? 'EVENT' : 'ONE-MAN'}
+                                                            </span>
+                                                        </div>
 
-                                    <div className="flex flex-col md:flex-row md:items-center gap-1.5 md:gap-4 pl-3">
-                                        <div className="w-full md:w-32 flex-shrink-0 flex flex-row md:flex-col items-center md:items-start justify-between md:justify-start gap-2 md:gap-1 pt-0.5">
-                                            <div className="flex items-center gap-2 md:flex-col md:items-start md:gap-1">
-                                                <div className="text-xl md:text-2xl font-bold font-oswald text-slate-300 group-hover:text-white leading-none">
-                                                    {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.')}
+                                                        {/* MIDDLE: Title, Special Badge, Venue */}
+                                                        <div className="content-mid-col">
+                                                            <h3 className="live-title">{live.title || live.tour_name}</h3>
+                                                            {live.special_note && (
+                                                                <div>
+                                                                    <span className="badge-special">{live.special_note}</span>
+                                                                </div>
+                                                            )}
+                                                            <div className="venue-row">
+                                                                <div className="venue-icon">
+                                                                    <MapPin size={14} />
+                                                                </div>
+                                                                <span className="venues-text">{live.venue}</span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* RIGHT: Actions */}
+                                                        <div className="card-actions-col">
+                                                            <button 
+                                                                className={`btn-checkin-pill ${isAttended(live.id) ? 'attended' : ''}`}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation(); // Added stopPropagation
+                                                                    handleToggleAttendance(e, live.id);
+                                                                }}
+                                                            >
+                                                                <span>+</span> 参戦記録
+                                                            </button>
+                                                            <Link to={`/live/${live.id}`} className="card-arrow-link">
+                                                                <ArrowRight size={20} />
+                                                            </Link>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    </section>
+                                ))}
+                            </div>
+                        ) : (
+                            /* Specific Year View (Flat List) */
+                            <div className="filtered-list-container">
+                                <div className="section-header-back" onClick={() => setSelectedYear(null)}>
+                                    <span className="back-arrow">←</span>
+                                    <span className="back-text">BACK TO ALL TIME</span>
+                                </div>
+                                <h2 className="fade-in">{selectedYear} ARCHIVE ({filteredLives.length})</h2>
+                                <div className="space-y-4 mt-6">
+                                    {filteredLives.map((live, idx) => (
+                                        <div 
+                                            key={live.id} 
+                                            className="tour-horizontal-card fade-in"
+                                            style={{ animationDelay: `${idx * 0.05}s`, cursor: 'pointer' }}
+                                            onClick={() => navigate(`/live/${live.id}`)}
+                                        >
+                                            {/* LEFT: Date & Type Badge */}
+                                            <div className="date-col">
+                                                <div className="date-text">
+                                                    {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.')}
                                                 </div>
-                                                <span className={`text-sm font-bold px-2.5 py-0.5 rounded text-white inline-block whitespace-nowrap
-                                                    ${live.type === 'FESTIVAL' ? 'bg-purple-600' :
-                                                        live.type === 'EVENT' ? 'bg-orange-600' :
-                                                            'bg-emerald-600'}`}>
-                                                    {live.type === 'FESTIVAL' ? 'FESTIVAL' :
-                                                        live.type === 'EVENT' ? 'EVENT' :
-                                                            'ONE MAN'}
+                                                <span className={`type-badge ${
+                                                    live.type === 'FESTIVAL' ? 'badge-fes' : 
+                                                    live.type === 'EVENT' ? 'badge-event' : 'badge-oneman'
+                                                }`}>
+                                                    {live.type === 'FESTIVAL' ? 'FES' : 
+                                                     live.type === 'EVENT' ? 'EVENT' : 'ONE-MAN'}
                                                 </span>
                                             </div>
 
-                                            <button
-                                                onClick={(e) => handleToggleAttendance(e, live.id)}
-                                                className={`md:hidden px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 flex items-center gap-1 whitespace-nowrap z-10 relative
-                                                    ${isAttended(live.id)
-                                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-500/30'
-                                                        : 'bg-slate-700 text-slate-300 border border-transparent hover:bg-slate-600'}`}
-                                            >
-                                                {isAttended(live.id) ? (
-                                                    <><Check size={12} /> 参戦済み</>
-                                                ) : (
-                                                    <><Plus size={12} /> 参戦記録</>
+                                            {/* MIDDLE: Title, Special Badge, Venue */}
+                                            <div className="content-mid-col">
+                                                <h3 className="live-title">{live.title || live.tour_name}</h3>
+                                                {live.special_note && (
+                                                    <div>
+                                                        <span className="badge-special">{live.special_note}</span>
+                                                    </div>
                                                 )}
-                                            </button>
-                                        </div>
-
-                                        <div className="flex-1 min-w-0 md:border-l border-slate-700/50 md:pl-4">
-                                            <h2 className="text-lg md:text-xl font-bold text-white leading-tight group-hover:text-blue-400 transition-colors" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                                {live.tour_name}
-                                            </h2>
-                                            {live.title && live.title !== live.tour_name && (
-                                                <div className="text-blue-200 text-xs font-medium mt-0.5 flex items-center gap-1">
-                                                    <Tag size={10} /> {live.title}
-                                                </div>
-                                            )}
-                                            {live.special_note && (
-                                                <div className="text-yellow-400 text-xs font-bold mt-1 flex items-center gap-1">
-                                                    <span className="bg-yellow-500/10 border border-yellow-500/30 px-1.5 py-0.5 rounded">
-                                                        {live.special_note}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            <div className="flex items-center gap-3 mt-1">
-                                                <div className="flex items-center gap-1 text-slate-400 text-xs group-hover:text-slate-300">
-                                                    <MapPin size={12} className="text-secondary-color" />
-                                                    <span className="font-medium">{live.venue}</span>
+                                                <div className="venue-row">
+                                                    <div className="venue-icon">
+                                                        <MapPin size={14} />
+                                                    </div>
+                                                    <span className="venues-text">{live.venue}</span>
                                                 </div>
                                             </div>
-                                        </div>
 
-                                        <div className="hidden md:flex items-center justify-start gap-3 pl-0 border-t border-slate-700/50 pt-0 mt-0 md:border-none">
-                                            <button
-                                                onClick={(e) => handleToggleAttendance(e, live.id)}
-                                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap z-10 relative
-                                                    ${isAttended(live.id)
-                                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-500/30'
-                                                        : 'bg-slate-700 text-slate-300 border border-transparent hover:bg-slate-600'}`}
-                                            >
-                                                {isAttended(live.id) ? (
-                                                    <><Check size={14} /> 参戦済み</>
-                                                ) : (
-                                                    <><Plus size={14} /> 参戦記録</>
-                                                )}
-                                            </button>
-
-                                            <div className="flex items-center text-slate-600 group-hover:text-blue-500 transition-colors">
-                                                <ArrowRight size={18} />
+                                            {/* RIGHT: Actions */}
+                                            <div className="card-actions-col">
+                                                <button 
+                                                    className={`btn-checkin-pill ${isAttended(live.id) ? 'attended' : ''}`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation(); // Added stopPropagation
+                                                        handleToggleAttendance(e, live.id);
+                                                    }}
+                                                >
+                                                    <span>+</span> 参戦記録
+                                                </button>
+                                                <Link to={`/live/${live.id}`} className="card-arrow-link">
+                                                    <ArrowRight size={20} />
+                                                </Link>
                                             </div>
                                         </div>
-                                    </div>
+                                    ))}
                                 </div>
-                            </Link>
-                        ))
-                    )}
-                </div>
-
-                <div className="mt-8 text-center text-slate-600 text-xs">
-                    END OF ARCHIVE
-                </div>
+                            </div>
+                        )}
+                    </div>
+                </main>
             </div>
         </div>
     );
