@@ -4,8 +4,8 @@
     --lp-gold: #d4af37;
     --lp-gold-light: #f1d279;
     --lp-gold-glow: rgba(212, 175, 55, 0.4);
-    --lp-black: #080808;
-    --lp-navy-deep: #0a0a12;
+    --lp-black: #0f172a;
+    --lp-navy-deep: #080b15;
     --lp-slate-800: #1e293b;
     --lp-slate-400: #94a3b8;
     --lp-white: #f8fafc;
@@ -47,7 +47,7 @@
     left: 0;
     right: 0;
     z-index: 10000;
-    background: rgba(8, 8, 8, 0.7);
+    background: rgba(15, 23, 42, 0.7);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(212, 175, 55, 0.2);
@@ -167,7 +167,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: radial-gradient(circle at 70% 30%, transparent 20%, rgba(8, 8, 8, 0.4) 50%, rgba(8, 8, 8, 0.9) 100%);
+    background: radial-gradient(circle at 70% 30%, transparent 20%, rgba(15, 23, 42, 0.4) 50%, rgba(15, 23, 42, 0.9) 100%);
     z-index: 2;
 }
 
@@ -207,7 +207,7 @@
        背景画像と同化するのを防ぐためのグラスモーフィズム・プレート
        範囲を「文字があるところだけ」に限定するため、fit-contentと適切なpaddingを設定
     */
-    background: rgba(0, 0, 0, 0.25);
+    background: rgba(15, 23, 42, 0.25);
     backdrop-filter: blur(6px); /* わずかに弱めて背景の視認性を上げつつ文字も保護 */
     -webkit-backdrop-filter: blur(6px);
     padding: 12px 20px; /* 上下左右ともに極限まで余白を削減 */
@@ -314,7 +314,7 @@
 
 /* Features Section */
 .lp-features {
-    background: linear-gradient(180deg, var(--lp-black) 0%, #1e293b 100%);
+    background: linear-gradient(180deg, var(--lp-black) 0%, #080b15 100%);
 }
 
 .lp-features-grid {
@@ -406,7 +406,7 @@
 
 /* Disclaimer Section */
 .lp-disclaimer {
-    background: linear-gradient(180deg, var(--lp-black) 0%, #293548 100%);
+    background: linear-gradient(180deg, var(--lp-black) 0%, #080b15 100%);
 }
 
 .lp-disclaimer-grid {

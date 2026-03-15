@@ -90,149 +90,144 @@ function LiveDetail() {
     };
 
     return (
-        <div className="container" style={{ paddingTop: '100px' }}>
+        <div className="min-h-screen bg-slate-900 text-white fade-in pb-20" style={{ paddingTop: '100px' }}>
+            <div className="prototype-banner">DESIGN PROTOTYPE MODE (IMAGE-LESS STITCH AESTHETICS)</div>
             <SEO
                 title={`${mainTitle} (${new Date(live.date).toLocaleDateString()})`}
                 description={`UVERworld ${mainTitle} @ ${live.venue} Setlist and Live Report.`}
             />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <a
-                    href={backLink}
-                    onClick={handleBack}
-                    className="hover:text-white transition-colors cursor-pointer text-slate-400 no-underline"
-                >
-                    &larr; {backLabel}
-                </a>
-            </div>
-
-            {/* Header Section */}
-            <div style={{ marginBottom: '30px' }}>
-                <h1 className="text-3xl font-bold mb-3 font-oswald text-white">{mainTitle}</h1>
-
-                {((live.title && live.title !== mainTitle) || live.special_note) && (
-                    <div className="flex flex-wrap items-center gap-4 mb-4">
-                        {live.title && live.title !== mainTitle && (
-                            <div className="text-blue-200 text-sm font-medium flex items-center gap-2">
-                                <Tag size={16} /> {live.title}
-                            </div>
-                        )}
-                        {live.special_note && (
-                            <div className="text-amber-400 text-sm font-medium flex items-center gap-2">
-                                <Star size={16} fill="currentColor" />
-                                {live.special_note}
-                            </div>
-                        )}
-                    </div>
-                )}
-                <div className="flex items-center gap-2 text-slate-400 mb-6 text-lg">
-                    <span>{new Date(live.date).toLocaleDateString()}</span>
-                    <MapPin size={18} className="text-red-500" strokeWidth={2.5} />
-                    <span className="text-white font-medium">{live.venue}</span>
+            
+            <div className="max-w-3xl mx-auto px-6">
+                <div className="flex justify-between items-center mb-10">
+                    <button
+                        onClick={handleBack}
+                        className="flex items-center gap-2 text-slate-500 hover:text-white transition-all group"
+                    >
+                        <div className="w-8 h-8 rounded-full border border-slate-800 flex items-center justify-center group-hover:border-slate-600 transition-colors">
+                            &larr;
+                        </div>
+                        <span className="text-sm font-medium">{backLabel}</span>
+                    </button>
+                    
+                    <button
+                        onClick={handleToggleAttendance}
+                        disabled={attendanceLoading}
+                        className={`px-5 py-2 rounded-full text-xs font-bold transition-all duration-300 flex items-center gap-2
+                            ${isAttended(liveId)
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                                : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-500'}`}
+                    >
+                        {isAttended(liveId) ? <Check size={14} /> : <Plus size={14} />}
+                        {isAttended(liveId) ? 'ATTENDED' : 'LOG ATTENDANCE'}
+                    </button>
                 </div>
 
-                <button
-                    onClick={handleToggleAttendance}
-                    disabled={attendanceLoading}
-                    className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-200 flex items-center gap-2
-                        ${isAttended(liveId)
-                            ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-900/20'
-                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
-                >
-                    {isAttended(liveId) ? <Check size={18} /> : <Plus size={18} />}
-                    {isAttended(liveId) ? '参戦済み' : '参戦記録をつける'}
-                </button>
-            </div>
+                {/* Header Section */}
+                <header className="mb-12">
+                    <div className="flex items-center gap-3 mb-4">
+                        <span className="text-[10px] font-black tracking-widest text-blue-500 uppercase px-2 py-0.5 border border-blue-500/30 rounded">
+                            {live.type || 'LIVE ARCHIVE'}
+                        </span>
+                        <div className="h-px flex-1 bg-slate-800"></div>
+                        <span className="text-xs font-mono text-slate-500">
+                            {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.')}
+                        </span>
+                    </div>
 
-            <div className="setlist">
-                {setlist.length > 0 ? (
-                    setlist.map((song, index) => {
-                        const isEncore = song.note === 'Encore';
-                        const showEncoreHeader = isEncore && (index === 0 || setlist[index - 1].note !== 'Encore');
+                    <h1 className="text-4xl md:text-5xl font-bold mb-6 font-oswald text-white uppercase tracking-tight leading-tight">
+                        {mainTitle}
+                    </h1>
 
-                        return (
-                            <React.Fragment key={index}>
-                                {showEncoreHeader && (
-                                    <div style={{
-                                        textAlign: 'center',
-                                        color: '#94a3b8',
-                                        fontSize: '0.8rem',
-                                        letterSpacing: '2px',
-                                        margin: '20px 0 10px',
-                                        position: 'relative',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}>
-                                        <span style={{ padding: '0 10px', backgroundColor: 'var(--bg-color)', position: 'relative', zIndex: 1 }}>ENCORE</span>
-                                        <div style={{ position: 'absolute', left: 0, right: 0, height: '1px', backgroundColor: '#334155' }}></div>
+                    <div className="flex flex-wrap items-center gap-6 text-slate-400">
+                        <div className="flex items-center gap-2 text-sm">
+                            <MapPin size={16} className="text-blue-500" />
+                            <span className="text-white font-semibold">{live.venue}</span>
+                        </div>
+                        {((live.title && live.title !== mainTitle) || live.special_note) && (
+                            <div className="flex items-center gap-4">
+                                {live.title && live.title !== mainTitle && (
+                                    <div className="text-blue-200/80 text-sm font-medium flex items-center gap-2 bg-blue-500/5 px-3 py-1 rounded-lg border border-blue-500/10">
+                                        <Tag size={14} /> {live.title}
                                     </div>
                                 )}
-                                <div style={{
-                                    padding: '16px 10px',
-                                    borderBottom: '1px solid #1e293b',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    transition: 'background-color 0.2s',
-                                }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1e293b'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                >
-                                    <span style={{
-                                        width: '40px',
-                                        color: '#64748b',
-                                        fontWeight: 'bold',
-                                        fontFamily: 'monospace',
-                                        fontSize: '0.9rem'
-                                    }}>
-                                        {String(song.position || index + 1).padStart(2, '0')}
-                                    </span>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: '1.1rem', fontWeight: '500' }}>
-                                            <Link
-                                                to={`/song/${encodeURIComponent(song.title.replace(/\s+/g, ''))}`}
-                                                state={{ from: location.pathname }}
-                                                className="hover:text-blue-400 hover:underline transition-colors text-white"
-                                            >
-                                                {song.title}
-                                            </Link>
-                                        </div>
+                                {live.special_note && (
+                                    <div className="text-amber-400/90 text-sm font-bold flex items-center gap-2 bg-amber-400/5 px-3 py-1 rounded-lg border border-amber-400/10">
+                                        <Star size={14} fill="currentColor" />
+                                        {live.special_note}
                                     </div>
-                                    {song.note && song.note !== 'Encore' && (
-                                        <span style={{
-                                            fontSize: '0.75rem',
-                                            backgroundColor: 'rgba(251, 191, 36, 0.1)',
-                                            color: 'var(--accent-color)',
-                                            padding: '4px 8px',
-                                            borderRadius: '4px',
-                                            marginLeft: '10px'
-                                        }}>
-                                            {song.note}
-                                        </span>
-                                    )}
-                                </div>
-                            </React.Fragment>
-                        );
-                    })
-                ) : (
-                    <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                        <p>この公演のセットリストはありません。</p>
+                                )}
+                            </div>
+                        )}
                     </div>
-                )}
-            </div>
+                </header>
 
-            <div style={{ marginTop: '40px', textAlign: 'center', borderTop: '1px solid #334155', paddingTop: '30px' }}>
-                <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '15px' }}>
-                    セットリストや公演情報に誤りを見つけた場合は、お知らせください。
-                </p>
-                <button
-                    className={`report-correction-btn ${!currentUser ? 'login-required' : ''}`}
-                    onClick={handleCorrectionClick}
-                >
-                    <AlertTriangle size={16} />
-                    {currentUser ? '情報の誤りを報告する' : 'ログインして情報の誤りを報告'}
-                </button>
-            </div>
+                <div className="setlist bg-slate-800/20 rounded-3xl p-4 md:p-8 border border-slate-800/50">
+                    <div className="mb-8 flex items-center justify-between">
+                        <h2 className="text-xs font-black tracking-[0.3em] text-slate-500 uppercase">SETLIST PERFORMANCE</h2>
+                        <div className="text-[10px] font-mono text-slate-600">{setlist.length} TRACKS</div>
+                    </div>
 
+                    {setlist.length > 0 ? (
+                        <div className="space-y-1">
+                            {setlist.map((song, index) => {
+                                const isEncore = song.note === 'Encore';
+                                const showEncoreHeader = isEncore && (index === 0 || setlist[index - 1].note !== 'Encore');
+
+                                return (
+                                    <React.Fragment key={index}>
+                                        {showEncoreHeader && (
+                                            <div className="flex items-center justify-center my-8">
+                                                <div className="h-px flex-1 bg-slate-800"></div>
+                                                <span className="px-6 text-[10px] font-black tracking-[0.5em] text-slate-400">ENCORE</span>
+                                                <div className="h-px flex-1 bg-slate-800"></div>
+                                            </div>
+                                        )}
+                                        <div className="group flex items-center py-4 px-4 rounded-xl hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-slate-800">
+                                            <span className="w-10 text-slate-600 font-mono text-sm group-hover:text-blue-500 transition-colors">
+                                                {String(song.position || index + 1).padStart(2, '0')}
+                                            </span>
+                                            <div className="flex-1">
+                                                <Link
+                                                    to={`/song/${encodeURIComponent(song.title.replace(/\s+/g, ''))}`}
+                                                    state={{ from: location.pathname }}
+                                                    className="inline-block text-lg font-medium text-slate-200 hover:text-white transition-colors tracking-wide"
+                                                >
+                                                    {song.title}
+                                                </Link>
+                                            </div>
+                                            {song.note && song.note !== 'Encore' && (
+                                                <span className="text-[10px] font-bold text-blue-400/80 bg-blue-400/5 px-2.5 py-1 rounded tracking-wider uppercase border border-blue-400/10">
+                                                    {song.note}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </React.Fragment>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="text-center py-20 text-slate-600 bg-slate-900/40 rounded-2xl border border-dashed border-slate-800">
+                            <p className="font-medium">SETLIST DATA NOT FOUND</p>
+                        </div>
+                    )}
+                </div>
+
+                <div className="mt-16 text-center">
+                    <p className="text-slate-500 text-sm mb-6 max-w-sm mx-auto leading-relaxed">
+                        If you found any errors in the setlist or live information, please let us know.
+                    </p>
+                    <button
+                        className={`inline-flex items-center gap-3 px-8 py-4 rounded-full text-sm font-black tracking-widest transition-all duration-300
+                            ${!currentUser 
+                                ? 'bg-slate-800 text-slate-500 border border-slate-700' 
+                                : 'bg-white text-black hover:bg-blue-500 hover:text-white shadow-xl shadow-white/5'}`}
+                        onClick={handleCorrectionClick}
+                    >
+                        <AlertTriangle size={16} />
+                        {currentUser ? 'REPORT CORRECTION' : 'LOGIN TO REPORT'}
+                    </button>
+                </div>
+            </div>
             <CorrectionModal
                 isOpen={isCorrectionModalOpen}
                 onClose={() => setIsCorrectionModalOpen(false)}
