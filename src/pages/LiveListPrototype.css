@@ -1,13 +1,15 @@
 /* LiveListPrototype.css - List View Refresh */
 
 :root {
-    --gold: #eab308;
+    --gold: #d4af37; /* Premium Gold */
+    --gold-dim: rgba(212, 175, 55, 0.4);
+    --gold-bg: rgba(212, 175, 55, 0.05);
     --bg-black: #0f172a;
     --bg-dark: #080b15;
-    --bg-card: rgba(30, 41, 59, 0.4);
-    --text-main: #ffffff;
+    --bg-card: rgba(30, 41, 59, 0.3);
+    --text-main: #e2e8f0; /* Softer white (Slate-200) */
     --text-dim: #94a3b8;
-    --border-dim: rgba(255, 255, 255, 0.08);
+    --border-dim: rgba(255, 255, 255, 0.06);
 }
 
 .prototype-active {
@@ -23,8 +25,7 @@
     text-align: center;
     padding: 6px;
     letter-spacing: 2px;
-    position: sticky;
-    top: 0;
+    position: relative; /* fixed から relative に変更してコンテンツを押し下げないようにする、または z-index 調整 */
     z-index: 1000;
     text-transform: uppercase;
 }
@@ -46,6 +47,27 @@
     display: flex;
     flex-direction: column;
     gap: 40px;
+    overflow-y: auto; /* 内部スクロールを有効化 */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(234, 179, 8, 0.3) transparent;
+}
+
+/* Sidebar Custom Scrollbar */
+.live-sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.live-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.live-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(234, 179, 8, 0.2);
+    border-radius: 10px;
+}
+
+.live-sidebar:hover::-webkit-scrollbar-thumb {
+    background: rgba(234, 179, 8, 0.4);
 }
 
 .sidebar-label {
@@ -91,13 +113,15 @@
 
 .sidebar-text {
     font-family: 'Oswald', sans-serif;
-    font-size: 18px;
+    font-size: 15px; /* OSWALD is big, shrinking a bit */
     flex-grow: 1;
     color: var(--text-dim);
+    letter-spacing: 1px;
 }
 
 .active .sidebar-text {
     color: var(--gold);
+    font-weight: 700;
 }
 
 .sidebar-count {
@@ -152,19 +176,21 @@
     margin: 0 auto;
 }
 
-.archive-header {
-    margin-bottom: 40px;
-    border-bottom: 1px solid var(--border-dim);
-    padding-bottom: 30px;
+/* Mobile Nav & Back Button - Hidden by default (Desktop) */
+.mobile-tab-nav, .header-back-btn {
+    display: none;
 }
 
-.archive-title {
+.live-main-content .archive-header h1 {
     font-family: 'Oswald', sans-serif;
-    font-size: 48px;
-    font-weight: 800;
-    letter-spacing: -1px;
-    line-height: 1;
-    margin-bottom: 10px;
+    font-size: 42px; /* 52px -> 42px: Smaller to reduce pressure */
+    font-weight: 700; /* Less heavy */
+    letter-spacing: 0.02em; /* More breathing room */
+    line-height: 1.1;
+    margin-bottom: 30px;
+    color: var(--text-main);
+    text-transform: uppercase;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .accent-italic {
@@ -214,9 +240,11 @@
 
 .section-year {
     font-family: 'Oswald', sans-serif;
-    font-size: 42px;
+    font-size: 48px;
     font-weight: 800;
-    color: var(--gold);
+    color: var(--text-dim); /* Subtler than header to avoid clashing */
+    line-height: 1;
+    opacity: 0.8;
 }
 
 .section-stat {
@@ -268,12 +296,30 @@
 .tour-name-col { flex: 3.5; }
 .period-col { flex: 1.5; }
 .shows-col { flex: 1.5; }
-.card-actions-col { 
-    flex: 1.5; 
-    display: flex; 
-    gap: 16px; 
-    justify-content: flex-end; 
-    align-items: center;
+
+/* Main Card Info - Common for Desktop/Mobile */
+.card-main-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+/* Visibility Utilities */
+.mobile-only { display: none !important; }
+.desktop-only { display: flex !important; }
+
+@media (max-width: 1024px) {
+    .mobile-only { display: flex !important; }
+    .desktop-only { display: none !important; }
+}
+
+.card-actions-col {
+    margin-left: auto;
+    display: flex;
+    align-items: center; /* 参戦記録ボタンを上下中央にするのだ */
+    justify-content: flex-end;
 }
 
 .card-arrow-link {
@@ -292,10 +338,21 @@
 }
 
 .tour-name-text {
-    font-size: 22px;
-    font-weight: 800;
-    line-height: 1.2;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.4;
     color: var(--text-main);
+    letter-spacing: 0.01em;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 12px; /* Consistent gap between badge and title */
+}
+
+/* Ensure title text doesn't shrink and wraps correctly */
+.title-text-wrap {
+    flex: 1;
+    min-width: 0;
 }
 
 .period-text, .shows-text, .venues-text {
@@ -392,6 +449,43 @@
     opacity: 0.8;
 }
 
+.card-action-btn-mock span {
+    font-size: 13px;
+    font-weight: 700;
+}
+/* Desktop specialized sizing for mock button */
+.live-main-content:not(.mobile-view) .card-action-btn-mock {
+    padding: 8px 16px;
+    min-width: 100px;
+    height: 38px;
+    background: rgba(234, 179, 8, 0.05);
+    border: 1px solid rgba(234, 179, 8, 0.4);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--gold);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    position: relative;
+    z-index: 10;
+    transition: all 0.2s ease;
+}
+
+.live-main-content:not(.mobile-view) .card-action-btn-mock:hover {
+    background: rgba(234, 179, 8, 0.15);
+    border-color: var(--gold);
+    transform: translateY(-1px);
+}
+
+.live-main-content:not(.mobile-view) .card-action-btn-mock.attended {
+    background: var(--gold);
+    color: #000;
+    border-color: var(--gold);
+}
+
 .btn-setlist-gold {
     background: var(--gold);
     border: none;
@@ -423,44 +517,26 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Badge Styles */
-.badge-container {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-right: 12px;
-}
-
-.type-badge {
-    font-family: 'Oswald', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    padding: 2px 14px;
-    border-radius: 4px;
-    letter-spacing: 0.5px;
+/* Badge Styles (Unified for Desktop/Mobile) */
+.mobile-type-badge {
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-weight: 800;
     text-transform: uppercase;
-}
-
-.badge-oneman {
-    background: var(--gold);
     color: #000;
-    border: 1px solid var(--gold);
-    font-weight: 800;
+    flex-shrink: 0;
+    margin-right: 0; /* Using grid gap instead */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.05em;
+    line-height: 1;
 }
 
-.badge-fes {
-    background: #10b981;
-    color: #000;
-    border: 1px solid #10b981;
-    font-weight: 800;
-}
-
-.badge-event {
-    background: #8b5cf6;
-    color: #fff;
-    border: 1px solid #8b5cf6;
-    font-weight: 800;
-}
+.badge-oneman-m { background: var(--gold); }
+.badge-fes-m { background: #10b981; }
+.badge-event-m { background: #8b5cf6; color: #fff; }
 
 .badge-special {
     font-size: 12px;
@@ -532,41 +608,54 @@
     /* Mockup Header Sync */
     .archive-header {
         background: #141414;
-        padding: 24px 20px 0;
+        padding: 60px 15px 0; /* padding-top を 40px -> 60px に増やしてさらに余裕を持たせる */
         margin-bottom: 0;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         text-align: center;
+        position: relative;
+        z-index: 5;
     }
 
     .header-top-row {
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 24px;
+        margin-bottom: 12px; /* 24px -> 12px に縮小 */
         position: relative;
+        padding: 0 45px; /* 戻るボタンとの重なり防止 */
     }
 
     .header-back-btn {
         position: absolute;
         left: 0;
         color: #fff;
-        display: flex;
+        display: flex; /* モバイル表示時のみ表示 */
         align-items: center;
+        z-index: 100;
+        padding: 10px;
+        cursor: pointer;
     }
 
-    .archive-title {
+    .live-main-content .archive-header h1.archive-title {
         font-family: 'Oswald', sans-serif;
-        font-size: 20px;
-        letter-spacing: 2px;
+        font-size: 18px; /* さらに縮小 */
         margin: 0;
+        margin-bottom: 0 !important; /* 強制的に 0 に */
         text-transform: uppercase;
-        font-weight: 700;
         color: #fff;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        white-space: nowrap;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: center;
+        padding: 0 10px; /* 内側にも少し余白 */
     }
 
     /* Mockup Tabs */
     .mobile-tab-nav {
-        display: flex;
+        display: flex; /* モバイル表示時のみ表示 */
         gap: 24px;
         overflow-x: auto;
         padding-bottom: 2px;
@@ -606,9 +695,9 @@
 
     .section-year {
         font-family: 'Oswald', sans-serif;
-        font-size: 28px;
+        font-size: 32px;
         font-weight: 800;
-        color: var(--gold);
+        color: var(--text-dim);
         display: block;
         margin-bottom: 15px;
         border-bottom: 1px solid rgba(255,255,255,0.05);
@@ -620,47 +709,61 @@
         background: rgba(30, 32, 40, 0.6);
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 12px;
-        padding: 18px;
+        padding: 20px; /* 15px -> 20px に拡大して余白を確保 */
         flex-direction: row;
         align-items: center;
-        gap: 12px;
+        gap: 15px; /* 10px -> 15px */
         margin-bottom: 12px;
         transition: transform 0.2s ease;
+        overflow: hidden; /* はみ出し防止 */
+        position: relative;
     }
 
     .card-main-info {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
+        /* Common style is now handled outside media query */
         gap: 8px;
+        min-width: 0;
+        flex-shrink: 1;
     }
 
-    .tour-name-text {
-        font-family: 'Inter', sans-serif;
-        font-size: 17px;
-        font-weight: 700;
-        color: #fff;
-        line-height: 1.3;
+    .card-header-row {
         display: flex;
         align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 8px;
     }
 
-    /* Mockup Badges */
-    .mobile-type-badge {
-        font-size: 10px;
-        padding: 2px 6px;
-        border-radius: 4px;
+    .card-date-text {
+        font-family: 'Oswald', sans-serif;
+        font-size: 20px;
         font-weight: 800;
-        text-transform: uppercase;
-        color: #000;
-        flex-shrink: 0;
+        color: #fff;
+        letter-spacing: 0.02em;
     }
 
-    .badge-oneman-m { background: var(--gold); }
-    .badge-fes-m { background: #10b981; }
-    .badge-event-m { background: #8b5cf6; color: #fff; }
+    .card-title-text {
+        font-family: 'Inter', sans-serif;
+        font-size: 18px;
+        font-weight: 800;
+        color: #fff;
+        line-height: 1.3;
+        margin-bottom: 10px;
+        word-break: break-all;
+    }
+
+    .card-venue-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        color: #94a3b8; /* Slate-400 */
+    }
+
+    .card-venue-row svg {
+        color: #ef4444; /* アイコンを赤っぽくしてアクセントに（リファレンス参考） */
+        opacity: 0.9;
+    }
+
 
     .mock-info-row {
         display: flex;
@@ -690,22 +793,25 @@
     }
 
     .card-action-btn-mock {
-        padding: 6px 14px;
-        min-width: 84px;
-        height: 32px;
+        padding: 10px 16px;
+        min-width: 100px; /* 最小幅を広げて安定させる */
+        min-height: 40px; 
         background: transparent;
         border: 1px solid rgba(234, 179, 8, 0.5);
         border-radius: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 4px;
+        gap: 6px;
         color: var(--gold);
         flex-shrink: 0;
+        margin-left: auto; /* 右端に寄せる */
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        font-size: 11px;
+        font-size: 12px; /* 11px -> 12px */
         font-weight: 700;
         letter-spacing: 0.02em;
+        position: relative; /* 重なり順位を制御 */
+        z-index: 10; /* カード本体より前面に配置してクリックを確実に拾う */
     }
 
     .card-action-btn-mock.attended {
@@ -724,14 +830,15 @@
     }
 
     /* Hide Original Elements */
-    .date-col, .content-mid-col, .card-actions-col, .section-stat, .badge-container {
+    .date-col, .content-mid-col, .section-stat, .badge-container {
         display: none !important;
     }
 }
 
 @media (max-width: 640px) {
     .archive-title {
-        font-size: 28px;
+        font-size: 20px; /* 28px -> 20px: To fit in one line */
+        white-space: nowrap; /* No line breaks */
     }
 
     .archive-subtitle {
