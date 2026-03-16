@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import PageHeader from '../components/Layout/PageHeader';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, MapPin, Calendar, Tag, Check, Plus, ArrowRight, Loader } from 'lucide-react';
 import { useAttendance } from '../hooks/useAttendance';
+import { useAuth } from '../contexts/AuthContext';
 import FilterPanel from '../components/FilterPanel';
 import SEO from '../components/SEO';
 import './LiveListPrototype.css';
 
 const LiveList = () => {
+    const { currentUser } = useAuth();
+    const [searchParams, setSearchParams] = useSearchParams();
     const location = useLocation();
+    const selectedYear = searchParams.get('year');
     const [lives, setLives] = useState([]);
     const [availableSongs, setAvailableSongs] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -82,21 +86,43 @@ const LiveList = () => {
     };
 
     const handleToggleAttendance = async (e, liveId) => {
-        e.preventDefault();
-        e.stopPropagation();
+        // Stop both default Link navigation and event bubbling
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        console.log(`[DEBUG] handleToggleAttendance START - liveId: ${liveId}, user:`, currentUser?.email || 'null');
 
+        if (!currentUser) {
+            console.log("[DEBUG] No current user found. Attempting window.confirm...");
+            // Force a small timeout to ensure we are out of any weird React event batching if necessary
+            // But window.confirm is usually fine in onClick
+            const message = "参戦記録をつけるにはログインが必要です。\nログインページに移動しますか？";
+            if (window.confirm(message)) {
+                console.log("[DEBUG] User confirmed login redirect. Navigating...");
+                navigate('/login', { state: { from: location.pathname + location.search } });
+            } else {
+                console.log("[DEBUG] User cancelled login redirect.");
+            }
+            return;
+        }
+
+        console.log("[DEBUG] User authenticated. Toggling attendance...");
         let success;
-        if (isAttended(liveId)) {
-            success = await removeLive(liveId);
-        } else {
-            success = await addLive(liveId);
+        try {
+            if (isAttended(liveId)) {
+                success = await removeLive(liveId);
+            } else {
+                success = await addLive(liveId);
+            }
+        } catch (err) {
+            console.error("[DEBUG] Attendance toggle error:", err);
+            success = false;
         }
 
         if (!success) {
-            const shouldLogin = window.confirm("参戦記録をつけるにはログインが必要です。\nログインページに移動しますか？");
-            if (shouldLogin) {
-                window.location.href = '/login';
-            }
+            alert("エラーが発生しました。ログイン状態を確認してください。");
         }
     };
 
@@ -128,13 +154,11 @@ const LiveList = () => {
 
     const years = useMemo(() => annualSummaries.map(s => s.year), [annualSummaries]);
 
-    const [selectedYear, setSelectedYear] = useState(null);
-
     const filteredLives = useMemo(() => {
         return lives.filter(live => {
             if (selectedYear) {
                 const liveYear = new Date(live.date).getFullYear();
-                if (liveYear !== selectedYear) return false;
+                if (liveYear.toString() !== selectedYear) return false;
             }
 
             if (filters.text) {
@@ -178,8 +202,8 @@ const LiveList = () => {
                         <div className="sidebar-label">YEAR FILTER</div>
                         <div className="sidebar-items">
                             <div
-                                className={`sidebar-item ${selectedYear === null ? 'active' : ''}`}
-                                onClick={() => setSelectedYear(null)}
+                                className={`sidebar-item ${!selectedYear ? 'active' : ''}`}
+                                onClick={() => setSearchParams({})}
                             >
                                 <Calendar size={18} className="sidebar-icon" />
                                 <span className="sidebar-text">ALL TIME</span>
@@ -188,8 +212,8 @@ const LiveList = () => {
                             {annualSummaries.map(summary => (
                                 <div
                                     key={summary.year}
-                                    className={`sidebar-item ${selectedYear === summary.year ? 'active' : ''}`}
-                                    onClick={() => setSelectedYear(summary.year)}
+                                    className={`sidebar-item ${selectedYear === summary.year.toString() ? 'active' : ''}`}
+                                    onClick={() => setSearchParams({ year: summary.year })}
                                 >
                                     <Calendar size={18} className="sidebar-icon" />
                                     <span className="sidebar-text">{summary.year}</span>
@@ -203,7 +227,7 @@ const LiveList = () => {
                         <div className="info-icon">i</div>
                         <div className="info-title">アーカイブについて</div>
                         <div className="info-content">
-                            2005年のデビューから現在までの全てのライブデータを網羅。セットリスト、会場、動員数などを記録しています。
+                            現在2015年以降のデータを公開中。2005年のデビューから現在までのライブデータを網羅できるよう、順次アップデートを行っています。
                         </div>
                     </div>
                 </aside>
@@ -224,16 +248,16 @@ const LiveList = () => {
                             {/* Mockup Tab Navigation */}
                             <nav className="mobile-tab-nav no-scrollbar">
                                 <div 
-                                    className={`tab-item ${selectedYear === null ? 'active' : ''}`}
-                                    onClick={() => setSelectedYear(null)}
+                                    className={`tab-item ${!selectedYear ? 'active' : ''}`}
+                                    onClick={() => setSearchParams({})}
                                 >
                                     ALL TIME
                                 </div>
                                 {annualSummaries.map(summary => (
                                     <div 
                                         key={summary.year}
-                                        className={`tab-item ${selectedYear === summary.year ? 'active' : ''}`}
-                                        onClick={() => setSelectedYear(summary.year)}
+                                        className={`tab-item ${selectedYear === summary.year.toString() ? 'active' : ''}`}
+                                        onClick={() => setSearchParams({ year: summary.year })}
                                     >
                                         {summary.year}
                                     </div>
@@ -251,14 +275,15 @@ const LiveList = () => {
                                         </div>
                                         <div className="space-y-4">
                                             {summary.lives.map((live, idx) => (
-                                                <div 
+                                                <Link 
                                                     key={live.id} 
+                                                    to={`/live/${live.id}`}
                                                     className="tour-horizontal-card fade-in" 
-                                                    style={{ animationDelay: `${idx * 0.05}s`, cursor: 'pointer' }}
-                                                    onClick={() => navigate(`/live/${live.id}`)}
+                                                    style={{ animationDelay: `${idx * 0.05}s`, cursor: 'pointer', textDecoration: 'none', color: 'inherit', display: 'flex', overflow: 'hidden' }}
                                                 >
-                                                    {/* Mockup Layout: Main Info */}
-                                                    <div className="card-main-info">
+                                                    {/* Desktop View: Columns */}
+                                                    <div className="card-column tour-name-col desktop-only">
+                                                        <label>Tour / Live Title</label>
                                                         <h3 className="tour-name-text">
                                                             <span className={`mobile-type-badge ${
                                                                 live.type === 'FESTIVAL' ? 'badge-fes-m' : 
@@ -267,41 +292,66 @@ const LiveList = () => {
                                                                 {live.type === 'FESTIVAL' ? 'FES' : 
                                                                  live.type === 'EVENT' ? 'EVENT' : 'ONE-MAN'}
                                                             </span>
+                                                            <span className="title-text-wrap">
+                                                                {live.title || live.tour_name}
+                                                            </span>
+                                                        </h3>
+                                                    </div>
+                                                    <div className="card-column period-col desktop-only">
+                                                        <label>Date</label>
+                                                        <div className="period-text">
+                                                            {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.')}
+                                                        </div>
+                                                    </div>
+                                                              {/* Mobile View: Integrated Info Area */}
+                                                    <div className="card-main-info mobile-only">
+                                                        <div className="card-header-row">
+                                                            <span className="card-date-text">
+                                                                {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.')}
+                                                            </span>
+                                                            <span className={`mobile-type-badge ${
+                                                                live.type === 'FESTIVAL' ? 'badge-fes-m' : 
+                                                                live.type === 'EVENT' ? 'badge-event-m' : 'badge-oneman-m'
+                                                            }`}>
+                                                                {live.type === 'FESTIVAL' ? 'FES' : 
+                                                                 live.type === 'EVENT' ? 'EVENT' : 'ONE-MAN'}
+                                                            </span>
+                                                        </div>
+                                                        <h3 className="card-title-text">
                                                             {live.title || live.tour_name}
                                                         </h3>
-                                                        <div className="mock-info-row">
-                                                            <div className="info-item">
-                                                                <Calendar size={14} />
-                                                                <span>{new Date(live.date).toLocaleDateString('ja-JP', { year: '2-digit', month: '2-digit', day: '2-digit' }).replace(/\//g, '.')}</span>
-                                                            </div>
-                                                            <div className="info-item">
-                                                                <MapPin size={14} />
-                                                                <span>{live.venue}</span>
-                                                            </div>
+                                                        <div className="card-venue-row">
+                                                            <MapPin size={14} />
+                                                            <span>{live.venue}</span>
                                                         </div>
                                                     </div>
 
-                                                    {/* Mockup Layout: Action Icon (Attendance Toggle) */}
-                                                    <div 
-                                                        className={`card-action-btn-mock ${isAttended(live.id) ? 'attended' : ''}`}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleToggleAttendance(e, live.id);
-                                                        }}
-                                                    >
-                                                        {isAttended(live.id) ? (
-                                                            <>
-                                                                <Check size={14} strokeWidth={3} />
-                                                                <span>参戦済</span>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <Plus size={14} strokeWidth={3} />
-                                                                <span>参戦記録</span>
-                                                            </>
-                                                        )}
+                                                    {/* Actions Area (Attendance Toggle) */}
+                                                    <div className="card-actions-col">
+                                                        <div 
+                                                            className={`card-action-btn-mock ${isAttended(live.id) ? 'attended' : ''}`}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleToggleAttendance(e, live.id);
+                                                            }}
+                                                        >
+                                                            {isAttended(live.id) ? (
+                                                                <>
+                                                                    <Check size={14} strokeWidth={3} />
+                                                                    <span>参戦済</span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Plus size={14} strokeWidth={3} />
+                                                                    <span>参戦記録</span>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                        <div className="card-arrow-link desktop-only">
+                                                            <ArrowRight size={20} />
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                </Link>
                                             ))}
                                         </div>
                                     </section>
@@ -313,54 +363,88 @@ const LiveList = () => {
                                 <h2 className="fade-in">{selectedYear} ARCHIVE ({filteredLives.length})</h2>
                                 <div className="space-y-4">
                                     {filteredLives.map((live, idx) => (
-                                        <div 
+                                        <Link 
                                             key={live.id} 
+                                            to={`/live/${live.id}`}
                                             className="tour-horizontal-card fade-in"
-                                            style={{ animationDelay: `${idx * 0.05}s`, cursor: 'pointer' }}
-                                            onClick={() => navigate(`/live/${live.id}`)}
+                                            style={{ animationDelay: `${idx * 0.05}s`, cursor: 'pointer', textDecoration: 'none', color: 'inherit', display: 'flex', overflow: 'hidden' }}
                                         >
-                                            <div className="card-main-info">
-                                                <h3 className="tour-name-text">
-                                                    <span className={`mobile-type-badge ${
-                                                        live.type === 'FESTIVAL' ? 'badge-fes-m' : 
-                                                        live.type === 'EVENT' ? 'badge-event-m' : 'badge-oneman-m'
-                                                    }`}>
-                                                        {live.type === 'FESTIVAL' ? 'FES' : 
-                                                         live.type === 'EVENT' ? 'EVENT' : 'ONE-MAN'}
-                                                    </span>
-                                                    {live.title || live.tour_name}
-                                                </h3>
-                                                <div className="mock-info-row">
-                                                    <div className="info-item">
-                                                        <Calendar size={14} />
-                                                        <span>{new Date(live.date).toLocaleDateString('ja-JP', { year: '2-digit', month: '2-digit', day: '2-digit' }).replace(/\//g, '.')}</span>
-                                                    </div>
-                                                    <div className="info-item">
-                                                        <MapPin size={14} />
-                                                        <span>{live.venue}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div 
-                                                className={`card-action-btn-mock ${isAttended(live.id) ? 'attended' : ''}`}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleToggleAttendance(e, live.id);
-                                                }}
-                                            >
-                                                {isAttended(live.id) ? (
-                                                    <>
-                                                        <Check size={14} strokeWidth={3} />
-                                                        <span>参戦済</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Plus size={14} strokeWidth={3} />
-                                                        <span>参戦記録</span>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
+                                             {/* Desktop View: Columns */}
+                                             <div className="card-column tour-name-col desktop-only">
+                                                 <label>Tour / Live Title</label>
+                                                 <h3 className="tour-name-text">
+                                                     <span className={`mobile-type-badge ${
+                                                         live.type === 'FESTIVAL' ? 'badge-fes-m' : 
+                                                         live.type === 'EVENT' ? 'badge-event-m' : 'badge-oneman-m'
+                                                     }`}>
+                                                         {live.type === 'FESTIVAL' ? 'FES' : 
+                                                          live.type === 'EVENT' ? 'EVENT' : 'ONE-MAN'}
+                                                     </span>
+                                                     <span className="title-text-wrap">
+                                                         {live.title || live.tour_name}
+                                                     </span>
+                                                 </h3>
+                                             </div>
+                                             <div className="card-column period-col desktop-only">
+                                                 <label>Date</label>
+                                                 <div className="period-text">
+                                                     {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.')}
+                                                 </div>
+                                             </div>
+                                             <div className="card-column shows-col desktop-only">
+                                                 <label>Venue</label>
+                                                 <div className="shows-text">{live.venue}</div>
+                                             </div>
+
+                                             {/* Mobile View: Integrated Info Area */}
+                                             <div className="card-main-info mobile-only">
+                                                 <div className="card-header-row">
+                                                     <span className="card-date-text">
+                                                         {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.')}
+                                                     </span>
+                                                     <span className={`mobile-type-badge ${
+                                                         live.type === 'FESTIVAL' ? 'badge-fes-m' : 
+                                                         live.type === 'EVENT' ? 'badge-event-m' : 'badge-oneman-m'
+                                                     }`}>
+                                                         {live.type === 'FESTIVAL' ? 'FES' : 
+                                                          live.type === 'EVENT' ? 'EVENT' : 'ONE-MAN'}
+                                                     </span>
+                                                 </div>
+                                                 <h3 className="card-title-text">
+                                                     {live.title || live.tour_name}
+                                                 </h3>
+                                                 <div className="card-venue-row">
+                                                     <MapPin size={14} />
+                                                     <span>{live.venue}</span>
+                                                 </div>
+                                             </div>
+
+                                             {/* Actions Area */}
+                                             <div className="card-actions-col">
+                                                 <div 
+                                                     className={`card-action-btn-mock ${isAttended(live.id) ? 'attended' : ''}`}
+                                                     onClick={(e) => {
+                                                         e.stopPropagation();
+                                                         handleToggleAttendance(e, live.id);
+                                                     }}
+                                                 >
+                                                     {isAttended(live.id) ? (
+                                                         <>
+                                                             <Check size={14} strokeWidth={3} />
+                                                             <span>参戦済</span>
+                                                         </>
+                                                     ) : (
+                                                         <>
+                                                             <Plus size={14} strokeWidth={3} />
+                                                             <span>参戦記録</span>
+                                                         </>
+                                                     )}
+                                                 </div>
+                                                 <div className="card-arrow-link desktop-only">
+                                                     <ArrowRight size={20} />
+                                                 </div>
+                                             </div>
+                                        </Link>
                                     ))}
                                 </div>
                             </div>
