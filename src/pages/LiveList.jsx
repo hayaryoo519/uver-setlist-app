@@ -182,6 +182,13 @@ const LiveList = () => {
 
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
+    useEffect(() => {
+        document.body.classList.add('prototype-active');
+        return () => {
+            document.body.classList.remove('prototype-active');
+        };
+    }, []);
+
     if (isLoading) {
         return (
             <div className="flex justify-center items-center h-screen bg-slate-900">
@@ -191,7 +198,7 @@ const LiveList = () => {
     }
 
     return (
-        <div className="min-h-screen bg-slate-900 text-white fade-in prototype-active">
+        <div className="min-h-screen bg-slate-900 text-white fade-in">
             <div className="prototype-banner">DESIGN PROTOTYPE MODE (IMAGE-BASED LIST VIEW)</div>
             <SEO title="Live Archive" description="Search UVERworld past setlists and live history." />
 
@@ -244,26 +251,32 @@ const LiveList = () => {
                                     LIVE TOUR ARCHIVE
                                 </h1>
                             </div>
+                        </header>
 
-                            {/* Mockup Tab Navigation */}
-                            <nav className="mobile-tab-nav no-scrollbar">
-                                <div 
-                                    className={`tab-item ${!selectedYear ? 'active' : ''}`}
+                        {/* モバイル用タブナビゲーション - archive-headerの外に出すことでstickyを効かせる */}
+                        <div className="mobile-tab-nav">
+                            <div className="mobile-tab-scroll">
+                                <button 
+                                    className={`mobile-tab-btn ${!selectedYear ? 'active' : ''}`}
                                     onClick={() => setSearchParams({})}
                                 >
                                     ALL TIME
-                                </div>
+                                </button>
                                 {annualSummaries.map(summary => (
-                                    <div 
+                                    <button 
                                         key={summary.year}
-                                        className={`tab-item ${selectedYear === summary.year.toString() ? 'active' : ''}`}
+                                        className={`mobile-tab-btn ${selectedYear === summary.year.toString() ? 'active' : ''}`}
                                         onClick={() => setSearchParams({ year: summary.year })}
                                     >
                                         {summary.year}
-                                    </div>
+                                    </button>
                                 ))}
-                            </nav>
-                        </header>
+                            </div>
+                        </div>
+
+                        <div className="archive-stats-strip">
+                            {/* Stats or other elements can go here */}
+                        </div>
 
                         {!selectedYear ? (
                             /* Grouped List View (All Time) */

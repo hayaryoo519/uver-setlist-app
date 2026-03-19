@@ -87,7 +87,8 @@ const LandingPage = () => {
                                 参戦記録を始める
                             </Link>
                             <Link to="/dashboard" className="lp-btn lp-btn-secondary">
-                                データを見る（登録不要）
+                                <span className="pc-text">データを見る（登録不要）</span>
+                                <span className="sp-text">データを見る →</span>
                             </Link>
                         </div>
                     </div>

@@ -36,8 +36,20 @@
     display: inline;
 }
 
-.sp-br {
-    display: none;
+.sp-text {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
+    .pc-text {
+        display: none !important;
+    }
+    .sp-text {
+        display: inline !important;
+    }
+    .sp-br {
+        display: block;
+    }
 }
 
 /* Header */
@@ -143,6 +155,18 @@
     background: var(--lp-black);
 }
 
+.lp-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        transparent,
+        rgba(0, 0, 0, 0.75)
+    );
+    pointer-events: none;
+    z-index: 5;
+}
+
 .lp-hero-bg {
     position: absolute;
     top: 0;
@@ -169,6 +193,13 @@
     height: 100%;
     background: radial-gradient(circle at 70% 30%, transparent 20%, rgba(15, 23, 42, 0.4) 50%, rgba(15, 23, 42, 0.9) 100%);
     z-index: 2;
+}
+
+/* モバイル用：下部グラデーションを追加して文字の可読性を確保 */
+@media (max-width: 768px) {
+    .lp-hero-overlay {
+        display: none;
+    }
 }
 
 .lp-glow-effect {
@@ -536,58 +567,84 @@
     }
 
     .lp-hero {
-        padding-top: 60px;
-        padding-bottom: 60px;
+        padding: 0;
+        height: 100vh;
         min-height: -webkit-fill-available;
-        height: auto;
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        justify-content: flex-end; /* 下部配置 */
     }
 
     .lp-hero-content {
-        margin-top: 280px; /* ロゴの高さを考慮 */
-        padding: 0 24px;
+        margin-top: 0;
+        margin-bottom: 140px; /* 位置をさらに引き下げ */
+        padding-left: 24px;
+        padding-right: 24px;
         width: 100%;
         display: flex;
         justify-content: center;
+        z-index: 10;
     }
 
     .lp-hero-text-wrapper {
-        padding: 20px;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        background: rgba(0, 0, 0, 0.45);
-        border-radius: 12px;
+        padding: 0; /* 余白は各要素に任せる */
+        background: transparent; /* プレートも消してMVを主役に */
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
         width: 100%;
-        max-width: 500px;
+        max-width: none;
     }
 
     .lp-hero-subtitle {
-        font-size: 1.6rem;
-        margin-bottom: 15px;
-        letter-spacing: 0.05em;
-        line-height: 1.4;
+        font-size: 22px;
+        font-weight: 600;
+        margin-bottom: 25px;
+        letter-spacing: 0.1em;
+        line-height: 1.5;
+        text-align: center;
     }
 
     .lp-hero-description {
-        font-size: 0.95rem;
-        margin-bottom: 30px;
-        line-height: 1.6;
+        display: none; /* スマホでは非表示 */
     }
 
     .lp-hero-cta {
-        flex-direction: column;
+        display: flex;
+        flex-direction: column; /* 縦並びに変更して重なりを解消 */
         align-items: center;
         width: 100%;
         gap: 12px;
     }
 
     .lp-btn {
-        width: 100%;
-        max-width: 280px;
-        padding: 12px 20px;
-        font-size: 0.95rem;
+        width: auto;
+        flex: none;
+        padding: 12px 20px; /* サイズを少し縮小 */
+        font-size: 14px;
+        white-space: nowrap;
+    }
+
+    /* 副CTAをボタン形式にする */
+    .lp-hero-cta .lp-btn-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        text-decoration: none;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 14px;
+        padding: 12px 28px;
+        flex: none;
+        width: auto;
+        border-radius: 4px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .lp-hero-cta .lp-btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-2px);
     }
 
     .lp-section {

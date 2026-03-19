@@ -37,9 +37,10 @@ const Login = () => {
             
             <form onSubmit={handleSubmit}>
                 <div className="auth-input-group">
-                    <label className="auth-label">メールアドレス</label>
+                    <label htmlFor="email" className="auth-label">メールアドレス</label>
                     <div className="auth-input-wrapper">
                         <input
+                            id="email"
                             type="email"
                             required
                             value={email}
@@ -54,11 +55,12 @@ const Login = () => {
 
                 <div className="auth-input-group" style={{ marginBottom: '32px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <label className="auth-label" style={{ marginBottom: 0 }}>パスワード</label>
+                        <label htmlFor="password" className="auth-label" style={{ marginBottom: 0 }}>パスワード</label>
                         <Link to="/forgot-password" tabIndex={4} className="auth-link" style={{ fontSize: '0.8rem', marginTop: 0, borderBottom: 'none', color: 'var(--lp-slate-500)', fontWeight: '500' }} onMouseEnter={(e) => e.target.style.color = 'var(--lp-gold)'} onMouseLeave={(e) => e.target.style.color = 'var(--lp-slate-500)'}>忘れた場合</Link>
                     </div>
                     <div className="auth-input-wrapper">
                         <input
+                            id="password"
                             type="password"
                             required
                             value={password}
