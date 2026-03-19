@@ -17,15 +17,36 @@ const Navbar = () => {
 
     // Handle scroll effect
     useEffect(() => {
+        let lastScrollY = window.scrollY;
+        
         const handleScroll = () => {
-            if (window.scrollY > 50) {
+            const currentScrollY = window.scrollY;
+            
+            // 背景色の切り替え (50px以上で背景あり)
+            if (currentScrollY > 50) {
                 setIsScrolled(true);
+                document.body.classList.add('scrolled');
             } else {
                 setIsScrolled(false);
+                document.body.classList.remove('scrolled');
             }
+
+            // スクロール方向による表示・非表示の制御 (モバイル・デスクトップ共通)
+            // ページ最上部付近（50px以下）では常に表示
+            if (currentScrollY <= 50) {
+                document.body.classList.remove('header-hidden');
+            } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
+                // 下スクロール & 一定以上スクロールで隠す
+                document.body.classList.add('header-hidden');
+            } else if (currentScrollY < lastScrollY) {
+                // 上スクロールで表示
+                document.body.classList.remove('header-hidden');
+            }
+            
+            lastScrollY = currentScrollY;
         };
 
-        window.addEventListener('scroll', handleScroll);
+        window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
@@ -111,17 +132,55 @@ const Navbar = () => {
                     left: 0;
                     width: 100%;
                     z-index: 1000;
-                    padding: 20px 0;
+                    padding: 12px 0; /* 20px -> 12px に縮小 */
                     transition: all 0.3s ease;
                     background: transparent;
                 }
+                
+                /* Keep the offset in a way that can be easily hidden */
+                .navbar {
+                    top: var(--header-offset, 0px);
+                }
+
+                .prototype-active {
+                    --header-offset: 27px;
+                }
+
+                /* Header Hide/Show Logic */
+                body.header-hidden .navbar {
+                    transform: translateY(-150%) !important;
+                    opacity: 0 !important;
+                    pointer-events: none;
+                }
+
+                body.header-hidden .prototype-banner {
+                    transform: translateY(-150%) !important;
+                    opacity: 0 !important;
+                }
 
                 .navbar.scrolled {
-                    padding: 15px 0;
-                    background: rgba(15, 23, 42, 0.85); /* Dark blue/slate background */
-                    backdrop-filter: blur(10px);
-                    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                    padding: 8px 0;
+                    background: rgba(15, 23, 42, 0.9); /* Darker on scroll for better contrast */
+                    backdrop-filter: blur(12px);
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+                }
+
+                /* Header Hide/Show Logic */
+                .header-hidden .navbar {
+                    transform: translateY(-100%);
+                    opacity: 0;
+                    pointer-events: none;
+                }
+
+                .header-hidden .prototype-banner {
+                    transform: translateY(-100%);
+                    opacity: 0;
+                }
+
+                /* Ensure prototype banner also transitions smootly */
+                .prototype-banner {
+                    transition: transform 0.3s ease, opacity 0.3s ease !important;
                 }
 
                 .nav-container {
