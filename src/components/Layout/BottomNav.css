@@ -1,0 +1,61 @@
+.bottom-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background: rgba(15, 23, 42, 0.85); /* ダークな背景 */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding-bottom: env(safe-area-inset-bottom); /* iPhoneのノッチ対応 */
+    z-index: 1000;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8; /* 非アクティブ時の色 */
+    text-decoration: none;
+    gap: 4px;
+    transition: all 0.2s ease;
+    flex: 1;
+    height: 100%;
+}
+
+.bottom-nav-item span {
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.bottom-nav-item.active {
+    color: var(--lp-gold); /* アクティブ時のゴールド */
+}
+
+.bottom-nav-item.active svg {
+    filter: drop-shadow(0 0 8px var(--lp-gold-glow));
+}
+
+/* モバイルのみ表示 */
+@media (min-width: 769px) {
+    .bottom-nav {
+        display: none !important;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        padding-bottom: 70px; /* ナビに隠れないように余白を追加 */
+    }
+    
+    .bottom-nav {
+        display: flex;
+    }
+}
