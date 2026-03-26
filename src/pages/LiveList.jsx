@@ -68,11 +68,20 @@ const LiveList = () => {
             const data = await res.json();
 
             if (Array.isArray(data)) {
-                data.sort((a, b) => new Date(b.date) - new Date(a.date));
+                // Filter out invalid or unrealistic dates (like year 202612)
+                const validData = data.filter(live => {
+                    if (!live.date) return false;
+                    const d = new Date(live.date);
+                    if (isNaN(d.getTime())) return false;
+                    const year = d.getFullYear();
+                    return year > 1990 && year < 2100;
+                });
+
+                validData.sort((a, b) => new Date(b.date) - new Date(a.date));
 
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                const pastLives = data.filter(live => new Date(live.date) < today);
+                const pastLives = validData.filter(live => new Date(live.date) < today);
 
                 setLives(pastLives);
             } else {
@@ -132,7 +141,10 @@ const LiveList = () => {
         
         lives.forEach(live => {
             if (!live.date) return;
-            const year = new Date(live.date).getFullYear();
+            const dateObj = new Date(live.date);
+            if (isNaN(dateObj.getTime())) return; // Skip invalid dates
+            
+            const year = dateObj.getFullYear();
             
             if (!summaries[year]) {
                 summaries[year] = {
@@ -199,7 +211,6 @@ const LiveList = () => {
 
     return (
         <div className="min-h-screen bg-slate-900 text-white fade-in">
-            <div className="prototype-banner">DESIGN PROTOTYPE MODE (IMAGE-BASED LIST VIEW)</div>
             <SEO title="Live Archive" description="Search UVERworld past setlists and live history." />
 
             <div className="live-list-layout">
