@@ -1,0 +1,901 @@
+/* LiveListPrototype.css - List View Refresh */
+
+:root {
+    --gold: #d4af37; /* Premium Gold */
+    --gold-dim: rgba(212, 175, 55, 0.4);
+    --gold-bg: rgba(212, 175, 55, 0.05);
+    --bg-black: #0f172a;
+    --bg-dark: #080b15;
+    --bg-card: rgba(30, 41, 59, 0.3);
+    --text-main: #e2e8f0; /* Softer white (Slate-200) */
+    --text-dim: #94a3b8;
+    --border-dim: rgba(255, 255, 255, 0.06);
+}
+
+.prototype-active {
+    background-color: var(--bg-black);
+    color: var(--text-main);
+}
+
+.prototype-banner {
+    background: var(--gold);
+    color: #000;
+    font-size: 10px;
+    font-weight: 900;
+    text-align: center;
+    padding: 6px;
+    letter-spacing: 2px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1001; /* Navbar (1000) より上に表示 */
+    text-transform: uppercase;
+}
+
+.live-list-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar Styling */
+.live-sidebar {
+    width: 280px;
+    background: var(--bg-black);
+    border-right: 1px solid var(--border-dim);
+    padding: 60px 20px;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    overflow-y: auto; /* 内部スクロールを有効化 */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(234, 179, 8, 0.3) transparent;
+}
+
+/* Sidebar Custom Scrollbar */
+.live-sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.live-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.live-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(234, 179, 8, 0.2);
+    border-radius: 10px;
+}
+
+.live-sidebar:hover::-webkit-scrollbar-thumb {
+    background: rgba(234, 179, 8, 0.4);
+}
+
+.sidebar-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+    color: var(--gold);
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+    padding-left: 10px;
+}
+
+.sidebar-items {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    padding: 14px 20px;
+    background: var(--bg-card);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.sidebar-item:hover {
+    background: #1c1d21;
+}
+
+.sidebar-item.active {
+    background: rgba(234, 179, 8, 0.05);
+    border-color: rgba(234, 179, 8, 0.3);
+}
+
+.sidebar-icon {
+    color: var(--gold);
+    margin-right: 15px;
+    opacity: 0.8;
+}
+
+.sidebar-text {
+    font-family: 'Oswald', sans-serif;
+    font-size: 15px; /* OSWALD is big, shrinking a bit */
+    flex-grow: 1;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+}
+
+.active .sidebar-text {
+    color: var(--gold);
+    font-weight: 700;
+}
+
+.sidebar-count {
+    font-size: 12px;
+    color: var(--text-dim);
+    opacity: 0.6;
+}
+
+.sidebar-info-box {
+    margin-top: auto;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid var(--border-dim);
+}
+
+.info-icon {
+    width: 20px;
+    height: 20px;
+    background: var(--gold);
+    color: #000;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 12px;
+    margin-bottom: 15px;
+}
+
+.info-title {
+    font-weight: 800;
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+.info-content {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+}
+
+/* Main Content Styling */
+.live-main-content {
+    flex: 1;
+    background: var(--bg-black);
+    padding: 60px 40px;
+}
+
+.live-main-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+/* Mobile Nav & Back Button - Hidden by default (Desktop) */
+.mobile-tab-nav, .header-back-btn {
+    display: none;
+}
+
+.live-main-content .archive-header h1 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 42px; /* 52px -> 42px: Smaller to reduce pressure */
+    font-weight: 700; /* Less heavy */
+    letter-spacing: 0.02em; /* More breathing room */
+    line-height: 1.1;
+    margin-bottom: 30px;
+    color: var(--text-main);
+    text-transform: uppercase;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.accent-italic {
+    color: var(--gold);
+    font-style: italic;
+}
+
+.archive-subtitle {
+    color: var(--text-dim);
+    font-size: 16px;
+}
+
+.view-toggle {
+    display: flex;
+    background: #111;
+    padding: 4px;
+    border-radius: 8px;
+}
+
+.toggle-btn {
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 800;
+    font-family: 'Oswald', sans-serif;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.toggle-btn.active {
+    background: var(--gold);
+    color: #000;
+}
+
+/* List Items Styling */
+.year-section {
+    margin-bottom: 60px;
+}
+
+.year-section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.section-year {
+    font-family: 'Oswald', sans-serif;
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--text-dim); /* Subtler than header to avoid clashing */
+    line-height: 1;
+    opacity: 0.8;
+}
+
+.section-stat {
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+}
+
+.tour-cards-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.tour-horizontal-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-radius: 16px;
+    padding: 25px 30px;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    color: inherit;
+    list-style: none;
+}
+
+.tour-horizontal-card:hover {
+    background: rgba(51, 65, 85, 0.6);
+    border-color: var(--gold);
+    transform: translateX(5px);
+}
+
+.card-column {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.card-column label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.tour-name-col { flex: 3.5; }
+.period-col { flex: 1.5; }
+.shows-col { flex: 1.5; }
+
+/* Main Card Info - Common for Desktop/Mobile */
+.card-main-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.card-actions-col {
+    margin-left: auto;
+    display: flex;
+    align-items: center; /* 参戦記録ボタンを上下中央にするのだ */
+    justify-content: flex-end;
+}
+
+.card-arrow-link {
+    color: var(--text-dim);
+    opacity: 0.4;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    padding: 5px;
+}
+
+.card-arrow-link:hover {
+    color: var(--gold);
+    opacity: 1;
+    transform: translateX(3px);
+}
+
+.tour-name-text {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.4;
+    color: var(--text-main);
+    letter-spacing: 0.01em;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 12px; /* Consistent gap between badge and title */
+}
+
+/* Ensure title text doesn't shrink and wraps correctly */
+.title-text-wrap {
+    flex: 1;
+    min-width: 0;
+}
+
+.period-text, .shows-text, .venues-text {
+    font-family: 'Oswald', sans-serif;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text-main);
+}
+
+/* Specific Year View Refinements */
+.date-col {
+    flex: 0 0 140px;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    padding-right: 20px;
+    margin-right: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.date-text {
+    font-family: 'Oswald', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+}
+
+.content-mid-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+}
+
+.live-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #fff;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.venue-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-dim);
+    margin-top: 2px;
+}
+
+.venue-icon {
+    color: var(--gold); /* Changed from red to gold */
+    display: flex;
+    align-items: center;
+}
+
+.venues-text {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-dim);
+    font-family: 'Inter', sans-serif;
+}
+
+/* Button Styling */
+/* 参戦記録（CHECK-IN）ボタン - ピル型デザイン */
+.btn-checkin-pill {
+    background: rgba(255, 255, 255, 0.1); /* ダークグレー背景 */
+    border: none;
+    color: var(--text-main);
+    padding: 8px 18px;
+    border-radius: 30px; /* 形状：ピル型 */
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.btn-checkin-pill:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+.btn-checkin-pill span {
+    font-size: 16px;
+    font-weight: 300;
+    opacity: 0.8;
+}
+
+.card-action-btn-mock span {
+    font-size: 13px;
+    font-weight: 700;
+}
+/* Desktop specialized sizing for mock button */
+.live-main-content:not(.mobile-view) .card-action-btn-mock {
+    padding: 8px 16px;
+    min-width: 100px;
+    height: 38px;
+    background: rgba(234, 179, 8, 0.05);
+    border: 1px solid rgba(234, 179, 8, 0.4);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--gold);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    position: relative;
+    z-index: 10;
+    transition: all 0.2s ease;
+}
+
+.live-main-content:not(.mobile-view) .card-action-btn-mock:hover {
+    background: rgba(234, 179, 8, 0.15);
+    border-color: var(--gold);
+    transform: translateY(-1px);
+}
+
+.live-main-content:not(.mobile-view) .card-action-btn-mock.attended {
+    background: var(--gold);
+    color: #000;
+    border-color: var(--gold);
+}
+
+.btn-setlist-gold {
+    background: var(--gold);
+    border: none;
+    color: #000;
+    padding: 10px 25px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 900;
+    font-family: 'Oswald', sans-serif;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s ease;
+}
+
+.btn-setlist-gold span {
+    font-size: 18px;
+}
+
+.btn-setlist-gold:hover {
+    background: #ca8a04;
+    transform: scale(1.02);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Badge Styles (Unified for Desktop/Mobile) */
+.mobile-type-badge {
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #000;
+    flex-shrink: 0;
+    margin-right: 0; /* Using grid gap instead */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.05em;
+    line-height: 1;
+}
+
+.badge-oneman-m { background: var(--gold); }
+.badge-fes-m { background: #10b981; }
+.badge-event-m { background: #8b5cf6; color: #fff; }
+
+.badge-special {
+    font-size: 12px;
+    padding: 3px 12px;
+    background: transparent;
+    color: #ffab00;
+    border: 1px solid #ffab00;
+    border-radius: 4px;
+    margin-top: 8px;
+    display: inline-block;
+    font-weight: 700;
+}
+
+.fade-in {
+    animation: fadeIn 0.8s ease forwards;
+}
+
+
+/* Filter View Specific Styles */
+.section-header-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    cursor: pointer;
+    color: var(--text-dim);
+    transition: all 0.2s ease;
+}
+
+.section-header-back:hover {
+    color: var(--gold);
+    transform: translateX(-5px);
+}
+
+.back-arrow {
+    font-size: 20px;
+    font-weight: 300;
+}
+
+.back-text {
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.filtered-list-container h2 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    margin-top: 10px;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .live-list-layout {
+        flex-direction: column;
+    }
+
+    .live-sidebar {
+        display: none !important;
+    }
+
+    .live-main-content {
+        padding: 0;
+        background: #080b15;
+    }
+
+    /* Mockup Header Sync */
+    .archive-header {
+        background: #141414;
+        padding: 85px 15px 0; /* 55px -> 85px (Banner 35px + Navbar 44px + 6px buffer) */
+        margin-bottom: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        text-align: center;
+        position: relative;
+        z-index: 5;
+    }
+
+    .header-top-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 12px; /* 24px -> 12px に縮小 */
+        position: relative;
+        padding: 0 45px; /* 戻るボタンとの重なり防止 */
+    }
+
+    .header-back-btn {
+        position: absolute;
+        left: 0;
+        color: #fff;
+        display: flex; /* モバイル表示時のみ表示 */
+        align-items: center;
+        z-index: 100;
+        padding: 10px;
+        cursor: pointer;
+    }
+
+    .live-main-content .archive-header h1.archive-title {
+        font-family: 'Oswald', sans-serif;
+        font-size: 18px; /* さらに縮小 */
+        margin: 0;
+        margin-bottom: 0 !important; /* 強制的に 0 に */
+        text-transform: uppercase;
+        color: #fff;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        white-space: nowrap;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: center;
+        padding: 0 10px; /* 内側にも少し余白 */
+    }
+
+    /* Mockup Tabs */
+    .mobile-tab-nav {
+        display: flex; /* モバイル表示時のみ表示 */
+        gap: 24px;
+        overflow-x: auto;
+        padding-bottom: 2px;
+        margin-bottom: -1px;
+    }
+
+    .tab-item {
+        font-family: 'Oswald', sans-serif;
+        font-size: 15px;
+        font-weight: 700;
+        color: #666;
+        padding: 12px 2px;
+        white-space: nowrap;
+        text-transform: uppercase;
+        position: relative;
+        cursor: pointer;
+    }
+
+    .tab-item.active {
+        color: var(--gold);
+    }
+
+    .tab-item.active::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: var(--gold);
+    }
+
+    /* List Container */
+    .archive-list-container, .filtered-list-container {
+        padding: 20px;
+    }
+
+    .section-year {
+        font-family: 'Oswald', sans-serif;
+        font-size: 32px;
+        font-weight: 800;
+        color: var(--text-dim);
+        display: block;
+        margin-bottom: 15px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        padding-bottom: 10px;
+    }
+
+    /* Mockup Card Layout */
+    .tour-horizontal-card {
+        background: rgba(30, 32, 40, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 20px; /* 15px -> 20px に拡大して余白を確保 */
+        flex-direction: row;
+        align-items: center;
+        gap: 15px; /* 10px -> 15px */
+        margin-bottom: 12px;
+        transition: transform 0.2s ease;
+        overflow: hidden; /* はみ出し防止 */
+        position: relative;
+    }
+
+    .card-main-info {
+        /* Common style is now handled outside media query */
+        gap: 8px;
+        min-width: 0;
+        flex-shrink: 1;
+    }
+
+    .card-header-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+
+    .card-date-text {
+        font-family: 'Oswald', sans-serif;
+        font-size: 20px;
+        font-weight: 800;
+        color: #fff;
+        letter-spacing: 0.02em;
+    }
+
+    .card-title-text {
+        font-family: 'Inter', sans-serif;
+        font-size: 18px;
+        font-weight: 800;
+        color: #fff;
+        line-height: 1.3;
+        margin-bottom: 10px;
+        word-break: break-all;
+    }
+
+    .card-venue-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        color: #94a3b8; /* Slate-400 */
+    }
+
+    .card-venue-row svg {
+        color: #ef4444; /* アイコンを赤っぽくしてアクセントに（リファレンス参考） */
+        opacity: 0.9;
+    }
+
+
+    .mock-info-row {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 4px;
+    }
+
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: #e2e8f0; /* 明るいスレート色 */
+        letter-spacing: 0.01em;
+    }
+
+    .info-item:last-child {
+        font-size: 14px;
+        font-weight: 500;
+        color: #fff; /* 会場名はさらに強調 */
+    }
+
+    .info-item svg {
+        opacity: 0.8;
+        color: var(--gold); /* アイコンに色をつけて視認性アップ */
+    }
+
+    .card-action-btn-mock {
+        padding: 10px 16px;
+        min-width: 100px; /* 最小幅を広げて安定させる */
+        min-height: 40px; 
+        background: transparent;
+        border: 1px solid rgba(234, 179, 8, 0.5);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        color: var(--gold);
+        flex-shrink: 0;
+        margin-left: auto; /* 右端に寄せる */
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        font-size: 12px; /* 11px -> 12px */
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        position: relative; /* 重なり順位を制御 */
+        z-index: 10; /* カード本体より前面に配置してクリックを確実に拾う */
+    }
+
+    .card-action-btn-mock.attended {
+        background: var(--gold);
+        border-color: var(--gold);
+        color: #000;
+        box-shadow: 0 4px 12px rgba(234, 179, 8, 0.2);
+    }
+
+    .card-action-btn-mock svg {
+        transition: transform 0.3s ease;
+    }
+
+    .card-action-btn-mock.attended svg {
+        transform: scale(1.1);
+    }
+
+    /* Hide Original Elements */
+    .date-col, .content-mid-col, .section-stat, .badge-container {
+        display: none !important;
+    }
+
+    /* モバイル向け年別タブナビゲーション */
+    .mobile-tab-nav {
+        display: flex;
+        position: sticky;
+        top: 51px; /* Navbar高さ (12+12+24+1buffer = 49) -> 近接させる */
+        z-index: 900;
+        transition: top 0.3s ease;
+        background: rgba(8, 11, 21, 0.95);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 4px 0;
+    }
+
+    /* スクロール時の調整 (body.scrolled) */
+    .scrolled .mobile-tab-nav {
+        top: 41px; /* Navbar高さ (8+8+24+1buffer = 41) */
+    }
+
+    /* プロトタイプモード（バナー有り）時の調整 */
+    .prototype-active .mobile-tab-nav {
+        top: 78px !important; /* Banner(27) + Navbar(51) = 78 */
+    }
+
+    .prototype-active.scrolled .mobile-tab-nav {
+        top: 68px !important; /* Banner(27) + Navbar(41) = 68 */
+    }
+
+    .mobile-tab-scroll {
+        display: flex;
+        overflow-x: auto;
+        padding: 8px 15px;
+        gap: 20px; /* 余白を広げて押しやすくしたのだ！ */
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        width: 100%;
+    }
+
+    .mobile-tab-btn {
+        flex: 0 0 auto; /* 文字が潰れないように固定 */
+        background: transparent;
+        border: none;
+        color: rgba(255, 255, 255, 0.6);
+        font-family: 'Oswald', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        padding: 4px 2px;
+        position: relative;
+        white-space: nowrap; /* 改行防止 */
+    }
+}
+
+@media (max-width: 640px) {
+    .archive-title {
+        font-size: 20px; /* 28px -> 20px: To fit in one line */
+        white-space: nowrap; /* No line breaks */
+    }
+
+    .archive-subtitle {
+        font-size: 14px;
+    }
+}
+
+/* Utilities for Mobile Slider */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
