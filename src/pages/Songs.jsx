@@ -273,6 +273,16 @@ function Songs() {
                         ))}
                     </div>
                 )}
+
+                {/* Attribution - Legal Consideration for Public Release */}
+                <div className="mt-16 pt-8 border-t border-white/5 text-center">
+                    <p className="text-slate-600 text-[10px] font-medium tracking-[0.1em] uppercase">
+                        Image Source: Apple Music / iTunes
+                    </p>
+                    <p className="text-slate-700 text-[9px] mt-1">
+                        All album artwork is property of their respective owners.
+                    </p>
+                </div>
             </div>
         </div>
     );
