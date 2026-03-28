@@ -139,11 +139,7 @@ const Navbar = () => {
                 
                 /* Keep the offset in a way that can be easily hidden */
                 .navbar {
-                    top: var(--header-offset, 0px);
-                }
-
-                .prototype-active {
-                    --header-offset: 27px;
+                    top: 0;
                 }
 
                 /* Header Hide/Show Logic */
@@ -151,11 +147,6 @@ const Navbar = () => {
                     transform: translateY(-150%) !important;
                     opacity: 0 !important;
                     pointer-events: none;
-                }
-
-                body.header-hidden .prototype-banner {
-                    transform: translateY(-150%) !important;
-                    opacity: 0 !important;
                 }
 
                 .navbar.scrolled {
@@ -171,16 +162,6 @@ const Navbar = () => {
                     transform: translateY(-100%);
                     opacity: 0;
                     pointer-events: none;
-                }
-
-                .header-hidden .prototype-banner {
-                    transform: translateY(-100%);
-                    opacity: 0;
-                }
-
-                /* Ensure prototype banner also transitions smootly */
-                .prototype-banner {
-                    transition: transform 0.3s ease, opacity 0.3s ease !important;
                 }
 
                 .nav-container {

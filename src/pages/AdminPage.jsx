@@ -3,7 +3,8 @@ import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Sear
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SetlistEditor from '../components/Admin/SetlistEditor';
-
+import DraftManager from '../components/Admin/DraftManager';
+import { FileText } from 'lucide-react';
 const AdminPage = () => {
     const { currentUser } = useAuth();
     const navigate = useNavigate();
@@ -1200,6 +1201,13 @@ const AdminPage = () => {
                     </div>
                 </div>
 
+                <div className={`admin-card ${activeTab === 'drafts' ? 'active' : ''}`} onClick={() => setActiveTab('drafts')}>
+                    <div className="card-header">
+                        <h2 className="card-title"><FileText size={24} color="#94a3b8" /> Drafts</h2>
+                        <span className="card-badge" style={{ background: '#8b5cf620', color: '#a78bfa' }}>AI</span>
+                    </div>
+                </div>
+
                 <div className={`admin-card ${activeTab === 'corrections' ? 'active' : ''}`} onClick={() => setActiveTab('corrections')}>
                     <div className="card-header">
                         <h2 className="card-title"><AlertTriangle size={24} color="#94a3b8" /> Corrections</h2>
@@ -1219,6 +1227,18 @@ const AdminPage = () => {
 
             {/* --- CONTENT AREA --- */}
             <div className="content-area">
+
+                {/* DRAFT CONTENT */}
+                {activeTab === 'drafts' && (
+                    <DraftManager
+                        lives={lives}
+                        allSongs={songs}
+                        onSetlistImported={(importedSongs) => {
+                            fetchLives();
+                            fetchSongs();
+                        }}
+                    />
+                )}
 
                 {/* COLLECT CONTENT */}
                 {activeTab === 'collect' && (
