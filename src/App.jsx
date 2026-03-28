@@ -53,6 +53,7 @@ function App() {
               <Route path="/admin/security-logs" element={<SecurityLogsPage />} />
               <Route element={<LayoutRoute />}>
                 <Route path="/admin" element={<AdminPage />} />
+                <Route path="/admin/drafts" element={<AdminPage />} />
               </Route>
             </Route>
 
