@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAttendance } from '../hooks/useAttendance';
 import { useAuth } from '../contexts/AuthContext';
 import CorrectionModal from '../components/CorrectionModal';
-import { AlertTriangle, Tag, MapPin, Check, Plus, Star } from 'lucide-react';
+import { AlertTriangle, Tag, MapPin, Check, Plus, Star, Music } from 'lucide-react';
 import SEO from '../components/SEO';
 
 function LiveDetail() {
@@ -89,9 +89,15 @@ function LiveDetail() {
         }
     };
 
+    // Determine badge type based on 3 choices
+    const badge = (() => {
+        if (live.type === 'FESTIVAL') return { text: 'FES', className: 'bg-[#10b981] text-black border-none' };
+        if (live.type === 'EVENT') return { text: 'EVENT', className: 'bg-[#8b5cf6] text-white border-none' };
+        return { text: 'ONE-MAN', className: 'bg-[#d4af37] text-black border-none' };
+    })();
+
     return (
         <div className="min-h-screen bg-slate-900 text-white fade-in pb-20" style={{ paddingTop: '100px' }}>
-            <div className="prototype-banner">DESIGN PROTOTYPE MODE (IMAGE-LESS STITCH AESTHETICS)</div>
             <SEO
                 title={`${mainTitle} (${new Date(live.date).toLocaleDateString()})`}
                 description={`UVERworld ${mainTitle} @ ${live.venue} Setlist and Live Report.`}
@@ -118,18 +124,18 @@ function LiveDetail() {
                                 : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-500'}`}
                     >
                         {isAttended(liveId) ? <Check size={14} /> : <Plus size={14} />}
-                        {isAttended(liveId) ? 'ATTENDED' : 'LOG ATTENDANCE'}
+                        {isAttended(liveId) ? '参戦済' : '参戦記録'}
                     </button>
                 </div>
 
                 {/* Header Section */}
                 <header className="mb-12">
                     <div className="flex items-center gap-3 mb-4">
-                        <span className="text-[10px] font-black tracking-widest text-blue-500 uppercase px-2 py-0.5 border border-blue-500/30 rounded">
-                            {live.type || 'LIVE ARCHIVE'}
+                        <span className={`text-[10px] font-black tracking-widest uppercase px-2 py-0.5 rounded ${badge.className}`}>
+                            {badge.text}
                         </span>
                         <div className="h-px flex-1 bg-slate-800"></div>
-                        <span className="text-xs font-mono text-slate-500">
+                        <span className="text-base font-bold font-mono text-slate-400">
                             {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.')}
                         </span>
                     </div>
@@ -138,10 +144,10 @@ function LiveDetail() {
                         {mainTitle}
                     </h1>
 
-                    <div className="flex flex-wrap items-center gap-6 text-slate-400">
-                        <div className="flex items-center gap-2 text-sm">
-                            <MapPin size={16} className="text-blue-500" />
-                            <span className="text-white font-semibold">{live.venue}</span>
+                    <div className="flex flex-wrap items-center gap-6 text-slate-300">
+                        <div className="flex items-center gap-2 text-lg">
+                            <MapPin size={20} className="text-blue-500" />
+                            <span className="text-white font-bold tracking-wide">{live.venue}</span>
                         </div>
                         {((live.title && live.title !== mainTitle) || live.special_note) && (
                             <div className="flex items-center gap-4">
@@ -182,21 +188,23 @@ function LiveDetail() {
                                                 <div className="h-px flex-1 bg-slate-800"></div>
                                             </div>
                                         )}
-                                        <div className="group flex items-center py-4 px-4 rounded-xl hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-slate-800">
-                                            <span className="w-10 text-slate-600 font-mono text-sm group-hover:text-blue-500 transition-colors">
+                                        <div className="group flex items-center py-4 px-5 rounded-2xl hover:bg-white/5 transition-all duration-300 border border-transparent hover:border-slate-800 hover:scale-[1.01] active:scale-95 shadow-lg hover:shadow-blue-500/5">
+                                            {/* Song Number (Replaces Thumbnail) */}
+                                            <div className="w-10 h-10 flex items-center justify-center font-mono text-sm font-black text-slate-500 group-hover:text-blue-500 transition-colors bg-slate-900/50 rounded-xl border border-slate-800/50 mr-5 flex-shrink-0 group-hover:border-blue-500/30">
                                                 {String(song.position || index + 1).padStart(2, '0')}
-                                            </span>
-                                            <div className="flex-1">
+                                            </div>
+
+                                            <div className="flex-1 min-w-0">
                                                 <Link
                                                     to={`/song/${encodeURIComponent(song.title.replace(/\s+/g, ''))}`}
                                                     state={{ from: location.pathname }}
-                                                    className="inline-block text-lg font-medium text-slate-200 hover:text-white transition-colors tracking-wide"
+                                                    className="inline-block text-lg md:text-xl font-black text-slate-200 group-hover:text-white transition-colors tracking-wide truncate max-w-full"
                                                 >
                                                     {song.title}
                                                 </Link>
                                             </div>
                                             {song.note && song.note !== 'Encore' && (
-                                                <span className="text-[10px] font-bold text-blue-400/80 bg-blue-400/5 px-2.5 py-1 rounded tracking-wider uppercase border border-blue-400/10">
+                                                <span className="ml-2 text-[8px] md:text-[10px] font-bold text-blue-400/80 bg-blue-400/5 px-2 py-0.5 md:px-2.5 md:py-1 rounded tracking-wider uppercase border border-blue-400/10 whitespace-nowrap">
                                                     {song.note}
                                                 </span>
                                             )}

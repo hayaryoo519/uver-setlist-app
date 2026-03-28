@@ -584,8 +584,19 @@
     margin-top: 10px;
 }
 
+/* Visibility Utilities */
+@media (min-width: 1025px) {
+    .mobile-only {
+        display: none !important;
+    }
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
+    .desktop-only {
+        display: none !important;
+    }
+
     .live-list-layout {
         flex-direction: column;
     }
@@ -602,7 +613,7 @@
     /* Mockup Header Sync */
     .archive-header {
         background: #141414;
-        padding: 85px 15px 0; /* 55px -> 85px (Banner 35px + Navbar 44px + 6px buffer) */
+        padding: 55px 15px 0; /* バナー削除に伴い85pxから55pxへ */
         margin-bottom: 0;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         text-align: center;
