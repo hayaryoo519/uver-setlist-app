@@ -23,6 +23,8 @@ services:
 
   db-staging:
     image: postgres:16-alpine
+    ports:
+      - "54323:5432"
     environment:
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_USER=${DB_USER}
