@@ -149,8 +149,9 @@
     height: 100vh;
     min-height: 700px;
     display: flex;
-    align-items: center;
+    align-items: flex-end; /* テキストを下部に寄せる */
     justify-content: center;
+    padding-bottom: 120px; /* 下部からの余白 */
     overflow: hidden;
     background: var(--lp-black);
 }
@@ -191,7 +192,8 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: radial-gradient(circle at 70% 30%, transparent 20%, rgba(15, 23, 42, 0.4) 50%, rgba(15, 23, 42, 0.9) 100%);
+    background: linear-gradient(90deg, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.3) 45%, transparent 100%),
+                radial-gradient(circle at 70% 30%, transparent 20%, rgba(15, 23, 42, 0.3) 60%, rgba(15, 23, 42, 0.9) 100%);
     z-index: 2;
 }
 
@@ -220,7 +222,7 @@
     width: 100%;
     max-width: 1400px;
     padding: 0 60px;
-    margin-top: 420px; /* 位置をさらに下げて背景のロゴを完全に回避 */
+    margin-top: 0; /* 下部配置のためmargin-topは不要 */
     display: flex;
     justify-content: center; /* 水平中央配置 */
 }
@@ -235,16 +237,10 @@
     animation: fadeInUp 1s cubic-bezier(0.2, 1, 0.3, 1) 0.5s forwards;
     
     /* 
-       背景画像と同化するのを防ぐためのグラスモーフィズム・プレート
-       範囲を「文字があるところだけ」に限定するため、fit-contentと適切なpaddingを設定
+       グラスモーフィズムを廃止し、全体グラデーション（.lp-hero-overlay）に置き換え
     */
-    background: rgba(15, 23, 42, 0.25);
-    backdrop-filter: blur(6px); /* わずかに弱めて背景の視認性を上げつつ文字も保護 */
-    -webkit-backdrop-filter: blur(6px);
-    padding: 12px 20px; /* 上下左右ともに極限まで余白を削減 */
-    border-radius: 12px;
-    border: none; /* 枠線を削除 */
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    background: transparent;
+    padding: 0;
 }
 
 .lp-hero-subtitle {
@@ -304,14 +300,14 @@
 }
 
 .lp-btn-secondary {
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--lp-slate-800); /* 塗りつぶし背景（深めのスレートブルー） */
     color: var(--lp-white);
     border: 1.5px solid rgba(212, 175, 55, 0.7);
     backdrop-filter: blur(10px);
 }
 
 .lp-btn-secondary:hover {
-    background: rgba(212, 175, 55, 0.1);
+    background: var(--lp-navy-deep);
     border-color: var(--lp-gold);
     transform: translateY(-4px);
 }
@@ -573,6 +569,7 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-end; /* 下部配置 */
+        align-items: center; /* 中央に維持 */
     }
 
     .lp-hero-content {
@@ -626,12 +623,12 @@
 
     /* 副CTAをボタン形式にする */
     .lp-hero-cta .lp-btn-secondary {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.3);
+        background: var(--lp-slate-800); /* スマホ版も塗りつぶし背景 */
+        border: 1.5px solid rgba(212, 175, 55, 0.6); /* ゴールド枠で統一感 */
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
         text-decoration: none;
-        color: rgba(255, 255, 255, 0.9);
+        color: rgba(255, 255, 255, 0.95);
         font-size: 14px;
         padding: 12px 28px;
         flex: none;
@@ -642,8 +639,8 @@
     }
 
     .lp-hero-cta .lp-btn-secondary:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: rgba(255, 255, 255, 0.5);
+        background: var(--lp-navy-deep);
+        border-color: var(--lp-gold);
         transform: translateY(-2px);
     }
 

@@ -76,11 +76,11 @@ const LandingPage = () => {
                             UVERworld SETLIST ARCHIVE
                         </h1>
                         <p className="lp-hero-subtitle">
-                            あの日の感動を、<br className="sp-br" />永遠に。
+                            あの日の感動を、永遠に。
                         </p>
                         <p className="lp-hero-description">
-                            あなたが参戦したライブを記録し、<br className="sp-br" />データで振り返る。<br className="pc-br" />
-                            ファンによる、<br className="sp-br" />ライブ体験を可視化する非公式アーカイブ。
+                            あなたが参戦したライブを記録し、データで振り返る。<br />
+                            ファンによる、ライブ体験を可視化する非公式アーカイブ。
                         </p>
                         <div className="lp-hero-cta">
                             <Link to="/signup" className="lp-btn lp-btn-primary">
