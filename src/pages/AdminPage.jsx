@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown, AlertTriangle, MessageCircle, CheckCircle, BellRing } from 'lucide-react';
+import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown, AlertTriangle, MessageCircle, CheckCircle, BellRing, FileText } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SetlistEditor from '../components/Admin/SetlistEditor';
 import DraftManager from '../components/Admin/DraftManager';
-import { FileText } from 'lucide-react';
+
 const AdminPage = () => {
     const { currentUser } = useAuth();
     const navigate = useNavigate();
@@ -13,7 +13,7 @@ const AdminPage = () => {
     const [activeTab, setActiveTab] = useState('lives');
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
-    const initialTab = queryParams.get('tab');
+    const initialTab = queryParams.get('tab') || (location.pathname === '/admin/drafts' ? 'drafts' : null);
     const editId = queryParams.get('edit');
 
 
