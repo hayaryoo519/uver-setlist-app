@@ -171,7 +171,7 @@
 .live-main-content {
     flex: 1;
     background: var(--bg-black);
-    padding: 80px 40px;
+    padding: 100px 40px; /* 80px -> 100px にさらに余裕を持たせる */
 }
 
 .live-main-inner {
@@ -843,7 +843,7 @@
     .mobile-tab-nav {
         display: flex;
         position: sticky;
-        top: 50px; /* Navbar高さ (12+12+24+2buffer = 50) */
+        top: 56px; /* Navbar高さ (12+12+24+border = 50付近) -> 実測に合わせ56px */
         z-index: 900;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         background: rgba(8, 11, 21, 0.95);
@@ -854,7 +854,7 @@
 
     /* スクロール時の縮小 (body.scrolled) */
     .scrolled .mobile-tab-nav {
-        top: 40px; /* Navbar高さ (8+8+24 = 40) */
+        top: 46px; /* Navbar高さ (8+8+24+border = 40.x) -> 実測に合わせ46px */
     }
 
     /* ヘッダー非表示時 (body.header-hidden) - 隙間を無くすために top: 0 */
