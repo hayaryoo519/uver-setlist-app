@@ -171,7 +171,7 @@
 .live-main-content {
     flex: 1;
     background: var(--bg-black);
-    padding: 60px 40px;
+    padding: 80px 40px;
 }
 
 .live-main-inner {
@@ -586,7 +586,7 @@
 
 /* Visibility Utilities */
 @media (min-width: 1025px) {
-    .mobile-only {
+    .mobile-only, .mobile-tab-nav {
         display: none !important;
     }
 }
@@ -862,10 +862,6 @@
         top: 0 !important;
     }
 
-    /* プロトタイプモードでもバナーは無いので同様に top: 0 */
-    .prototype-active .mobile-tab-nav {
-        /* 特殊な計算は不要。通常の top 継承でOK */
-    }
 
     .mobile-tab-scroll {
         display: flex;
