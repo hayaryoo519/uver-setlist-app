@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Check, AlertCircle, Upload, ArrowRight } from 'lucide-react';
 
-const BulkImportModal = ({ onClose, onImport, allSongs }) => {
-    const [rawText, setRawText] = useState('');
+const BulkImportModal = ({ onClose, onImport, allSongs, initialText = '' }) => {
+    const [rawText, setRawText] = useState(initialText);
+    
+    useEffect(() => {
+        setRawText(initialText);
+    }, [initialText]);
+
     const [parsedLines, setParsedLines] = useState([]);
     const [step, setStep] = useState(1); // 1: Input, 2: Review
 
