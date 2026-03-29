@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown, AlertTriangle, MessageCircle, CheckCircle, BellRing } from 'lucide-react';
+import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown, AlertTriangle, MessageCircle, CheckCircle, BellRing, FileText } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SetlistEditor from '../components/Admin/SetlistEditor';
+import DraftManager from '../components/Admin/DraftManager';
 
 const AdminPage = () => {
     const { currentUser } = useAuth();
@@ -12,7 +13,7 @@ const AdminPage = () => {
     const [activeTab, setActiveTab] = useState('lives');
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
-    const initialTab = queryParams.get('tab');
+    const initialTab = queryParams.get('tab') || (location.pathname === '/admin/drafts' ? 'drafts' : null);
     const editId = queryParams.get('edit');
 
 
@@ -1200,6 +1201,13 @@ const AdminPage = () => {
                     </div>
                 </div>
 
+                <div className={`admin-card ${activeTab === 'drafts' ? 'active' : ''}`} onClick={() => setActiveTab('drafts')}>
+                    <div className="card-header">
+                        <h2 className="card-title"><FileText size={24} color="#94a3b8" /> Drafts</h2>
+                        <span className="card-badge" style={{ background: '#8b5cf620', color: '#a78bfa' }}>AI</span>
+                    </div>
+                </div>
+
                 <div className={`admin-card ${activeTab === 'corrections' ? 'active' : ''}`} onClick={() => setActiveTab('corrections')}>
                     <div className="card-header">
                         <h2 className="card-title"><AlertTriangle size={24} color="#94a3b8" /> Corrections</h2>
@@ -1219,6 +1227,18 @@ const AdminPage = () => {
 
             {/* --- CONTENT AREA --- */}
             <div className="content-area">
+
+                {/* DRAFT CONTENT */}
+                {activeTab === 'drafts' && (
+                    <DraftManager
+                        lives={lives}
+                        allSongs={songs}
+                        onSetlistImported={(importedSongs) => {
+                            fetchLives();
+                            fetchSongs();
+                        }}
+                    />
+                )}
 
                 {/* COLLECT CONTENT */}
                 {activeTab === 'collect' && (

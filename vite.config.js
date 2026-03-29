@@ -58,6 +58,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        maximumFileSizeToCacheInBytes: 3000000, // 3MBまで許容 (GitHub Actions等のビルドエラー対策)
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
         importScripts: ['/sw-push.js'],
@@ -155,11 +156,22 @@ export default defineConfig({
     'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'http://localhost:8000')
   },
   server: {
+    host: true,
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
+      '/uploads': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
     },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
+    exclude: ['**/node_modules/**', '**/dist/**', '**/server/tests/**'],
   },
 })
