@@ -839,38 +839,41 @@
         display: none !important;
     }
 
-    /* モバイル向け年別タブナビゲーション */
+    /* モバイル向け年別タブナビゲーション - ヘッダー挙動と連動 */
     .mobile-tab-nav {
         display: flex;
         position: sticky;
-        top: 51px; /* Navbar高さ (12+12+24+1buffer = 49) -> 近接させる */
+        top: 50px; /* Navbar高さ (12+12+24+2buffer = 50) */
         z-index: 900;
-        transition: top 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         background: rgba(8, 11, 21, 0.95);
-        backdrop-filter: blur(8px);
+        backdrop-filter: blur(12px);
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         padding: 4px 0;
     }
 
-    /* スクロール時の調整 (body.scrolled) */
+    /* スクロール時の縮小 (body.scrolled) */
     .scrolled .mobile-tab-nav {
-        top: 41px; /* Navbar高さ (8+8+24+1buffer = 41) */
+        top: 40px; /* Navbar高さ (8+8+24 = 40) */
     }
 
-    /* プロトタイプモード（バナー有り）時の調整 */
+    /* ヘッダー非表示時 (body.header-hidden) - 隙間を無くすために top: 0 */
+    .header-hidden .mobile-tab-nav {
+        top: 0 !important;
+    }
+
+    /* プロトタイプモードでもバナーは無いので同様に top: 0 */
     .prototype-active .mobile-tab-nav {
-        top: 78px !important; /* Banner(27) + Navbar(51) = 78 */
-    }
-
-    .prototype-active.scrolled .mobile-tab-nav {
-        top: 68px !important; /* Banner(27) + Navbar(41) = 68 */
+        /* 特殊な計算は不要。通常の top 継承でOK */
     }
 
     .mobile-tab-scroll {
         display: flex;
         overflow-x: auto;
+        overflow-y: hidden; /* 垂直スクロールの干渉を防止 */
+        touch-action: pan-x pan-y; /* 両方向のジェスチャーを許可してブラウザに任せる */
         padding: 8px 15px;
-        gap: 20px; /* 余白を広げて押しやすくしたのだ！ */
+        gap: 20px;
         scrollbar-width: none;
         -ms-overflow-style: none;
         width: 100%;
