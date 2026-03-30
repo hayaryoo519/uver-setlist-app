@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Music, Calendar, MapPin, Play, Clock, ArrowLeft, Loader, Sparkles, Disc, ChevronDown, ChevronsDown, ChevronUp } from 'lucide-react';
+import { Music, Calendar, MapPin, Play, Clock, ArrowLeft, Loader, Sparkles, ChevronDown, ChevronsDown, ChevronUp } from 'lucide-react';
+import ImageWithFallback from '../components/common/ImageWithFallback';
 import SEO from '../components/SEO';
 import { DISCOGRAPHY } from '../data/discography';
 
@@ -14,6 +15,7 @@ const SongDetail = () => {
     const [filterYear, setFilterYear] = useState('All');
     const [visibleCount, setVisibleCount] = useState(10);
     const [sortOrder, setSortOrder] = useState('newest');
+    const [isImageFetching, setIsImageFetching] = useState(false);
 
     // Extract Unique Filter Options
     const uniqueYears = React.useMemo(() => {
@@ -70,8 +72,9 @@ const SongDetail = () => {
 
     // Fetch image if missing
     useEffect(() => {
-        if (!isLoading && song && !song.image_url) {
+        if (!isLoading && song && !song.image_url && !isImageFetching) {
             const fetchImage = async () => {
+                setIsImageFetching(true);
                 try {
                     const res = await fetch(`/api/music/song-image/${encodeURIComponent(song.title)}`);
                     if (res.ok) {
@@ -82,11 +85,13 @@ const SongDetail = () => {
                     }
                 } catch (e) {
                     console.error("Failed to fetch image", e);
+                } finally {
+                    setIsImageFetching(false);
                 }
             };
             fetchImage();
         }
-    }, [isLoading, song]);
+    }, [isLoading, song, isImageFetching]);
 
     // Handle hash scroll
     useEffect(() => {
@@ -178,13 +183,12 @@ const SongDetail = () => {
                         <div className="flex flex-col md:flex-row gap-8 items-start">
                             {/* Jacket Image */}
                             <div className="w-32 h-32 md:w-48 md:h-48 rounded-lg overflow-hidden bg-slate-800 border border-slate-700 shadow-2xl flex-shrink-0">
-                                {song.image_url ? (
-                                    <img src={song.image_url} alt={song.title} className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-slate-600">
-                                        <Disc size={48} />
-                                    </div>
-                                )}
+                                <ImageWithFallback
+                                    src={song.image_url}
+                                    alt={song.title}
+                                    className="w-full h-full"
+                                    isError={!isImageFetching && !song.image_url}
+                                />
                             </div>
 
                             <div className="flex-1">
@@ -220,7 +224,7 @@ const SongDetail = () => {
                                         return (
                                             <div className="mt-4 pt-4 border-t border-slate-700/50">
                                                 <div className="text-slate-500 text-[10px] uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-                                                    <Disc size={12} /> FEATURED IN
+                                                <Music size={12} /> FEATURED IN
                                                 </div>
                                                 <div className="flex flex-wrap gap-2">
                                                     {containingReleases.map(release => (
