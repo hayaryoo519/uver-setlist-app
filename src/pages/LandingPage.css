@@ -570,6 +570,12 @@
         flex-direction: column;
         justify-content: flex-end; /* 下部配置 */
         align-items: center; /* 中央に維持 */
+        background: var(--lp-navy-deep);
+    }
+
+    .lp-hero-image {
+        object-fit: contain; /* モバイルでは画像を完全に表示し、ロゴ切れを防止する */
+        object-position: center 20%; /* ロゴの垂直位置を調整 */
     }
 
     .lp-hero-content {
@@ -584,12 +590,13 @@
     }
 
     .lp-hero-text-wrapper {
-        padding: 0; /* 余白は各要素に任せる */
-        background: transparent; /* プレートも消してMVを主役に */
+        padding: 0 24px; /* 左右に余白を確保 */
+        background: transparent; /* プレートを非表示にしてメインビジュアルを強調 */
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
         width: 100%;
-        max-width: none;
+        max-width: 100%;
+        box-sizing: border-box;
     }
 
     .lp-hero-subtitle {
