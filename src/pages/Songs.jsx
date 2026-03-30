@@ -3,7 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { DISCOGRAPHY } from '../data/discography';
 import { useGlobalStats } from '../hooks/useGlobalStats';
 import SEO from '../components/SEO';
-import { Disc, Music, Calendar, Search, Filter, ArrowUpDown, ChevronRight } from 'lucide-react';
+import { Music, Calendar, Search, Filter, ArrowUpDown, ChevronRight } from 'lucide-react';
+import ImageWithFallback from '../components/common/ImageWithFallback';
 
 // Simple normalization helper (client-side version)
 const normalizeSongTitle = (title) => {
@@ -48,38 +49,35 @@ const ReleaseItem = ({ release, index, songDataMap }) => {
             style={{ animationDelay: `${index * 50}ms` }}
         >
             {/* Release Item Header */}
-            <div className="group flex flex-col sm:flex-row sm:items-center gap-6 p-6 mb-6 rounded-3xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-yellow-500/30 transition-all backdrop-blur-md shadow-2xl">
-                <div className="w-24 h-24 sm:w-32 sm:h-32 bg-slate-950 rounded-2xl flex items-center justify-center flex-shrink-0 border border-slate-800 group-hover:border-yellow-500/50 transition-all duration-500 overflow-hidden shadow-inner group-hover:scale-105">
-                    {albumImage ? (
-                        <img src={albumImage} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                    ) : isFetching ? (
-                        <div className="w-full h-full flex items-center justify-center">
-                            <div className="w-6 h-6 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin"></div>
-                        </div>
-                    ) : (
-                        <Disc className="w-12 h-12 text-slate-700 group-hover:text-yellow-500/80 transition-colors" />
-                    )}
+            <div className="group flex flex-row items-center gap-3 sm:gap-6 p-3 sm:p-6 mb-6 rounded-3xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-yellow-500/30 transition-all backdrop-blur-md shadow-2xl">
+                <div className="w-20 h-20 sm:w-32 sm:h-32 bg-slate-950 rounded-2xl flex items-center justify-center flex-shrink-0 border border-slate-800 group-hover:border-yellow-500/50 transition-all duration-500 overflow-hidden shadow-inner group-hover:scale-105">
+                    <ImageWithFallback
+                        src={albumImage}
+                        alt={release.title}
+                        className="w-full h-full"
+                        isError={!isFetching && !albumImage}
+                    />
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-3">
-                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border tracking-[0.1em] uppercase ${
+                    <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                        <span className={`text-[9px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border tracking-[0.1em] uppercase ${
                             release.type === 'ALBUM' 
                                 ? 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10' 
                                 : 'text-blue-400 border-blue-500/30 bg-blue-500/10'
                         }`}>
                             {release.type}
                         </span>
-                        <div className="text-slate-400 text-xs font-mono tracking-widest flex items-center gap-1.5">
+                        <div className="text-slate-400 text-[10px] sm:text-xs font-mono tracking-widest flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
                             {release.date.replaceAll('-', '.')}
                         </div>
                     </div>
-                    <h2 className="text-2xl sm:text-3xl font-black text-white group-hover:text-yellow-500 transition-colors truncate font-oswald tracking-wider uppercase">
+                    <h2 className="text-lg sm:text-3xl font-black text-white group-hover:text-yellow-500 transition-colors truncate font-oswald tracking-wider uppercase">
                         {release.title}
                     </h2>
-                    <p className="text-slate-500 text-xs mt-2 font-medium tracking-wide">
-                        {release.songs.length} Tracks included in this release
+                    <p className="text-slate-500 text-[10px] sm:text-xs mt-1 sm:mt-2 font-medium tracking-wide">
+                        {release.songs.length} Tracks
                     </p>
                 </div>
             </div>
