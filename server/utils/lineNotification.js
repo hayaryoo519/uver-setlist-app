@@ -78,28 +78,48 @@ async function notifyDraftAdded(draft) {
     ].join('\n');
 
     try {
-        const response = await fetch(LINE_API_URL, {
+        const https = require('https');
+        const url = new URL(LINE_API_URL);
+        
+        const data = JSON.stringify({
+            to: LINE_USER_ID,
+            messages: [
+                { type: 'text', text: messageText }
+            ]
+        });
+
+        const options = {
+            hostname: url.hostname,
+            path: url.pathname,
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`,
-            },
-            body: JSON.stringify({
-                to: LINE_USER_ID,
-                messages: [
-                    { type: 'text', text: messageText }
-                ]
-            }),
+                'Content-Length': Buffer.byteLength(data)
+            }
+        };
+
+        const req = https.request(options, (res) => {
+            let body = '';
+            res.on('data', (chunk) => body += chunk);
+            res.on('end', () => {
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                    console.log('[LINE] ドラフト追加通知を送信しました。');
+                } else {
+                    console.error(`[LINE] 通知失敗 (status: ${res.statusCode}):`, body);
+                }
+            });
         });
 
-        if (!response.ok) {
-            const errorBody = await response.text();
-            console.error(`[LINE] 通知失敗 (status: ${response.status}):`, errorBody);
-        } else {
-            console.log('[LINE] ドラフト追加通知を送信しました。');
-        }
+        req.on('error', (err) => {
+            console.error('[LINE] 通知送信中にエラーが発生しました:', err.message);
+        });
+
+        req.write(data);
+        req.end();
+
     } catch (err) {
-        console.error('[LINE] 通知送信中にエラーが発生しました:', err.message);
+        console.error('[LINE] 通知処理中に致命的なエラーが発生しました:', err.message);
     }
 }
 
