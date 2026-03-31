@@ -1,5 +1,6 @@
 const db = require('../db');
 const crypto = require('crypto');
+const { notifyDraftAdded } = require('../utils/lineNotification');
 
 // レート制限用メモリキャッシュ
 const lastRunCache = new Map();
@@ -172,11 +173,16 @@ async function collect(query, inputLiveId = null) {
             const parsedJson = result.songs.map((s, i) => ({ position: i+1, title: s }));
 
             console.log(`[Collector] Creating new draft with live_id=${liveId}`);
-            await db.query(
+            const insertResult = await db.query(
                 `INSERT INTO raw_setlists (live_id, source, raw_text, parsed_json, status, source_url, raw_text_hash, confidence, duplicate_count)
-                 VALUES ($1, 'x', $2, $3, 'pending', $4, $5, $6, $7)`,
+                 VALUES ($1, 'x', $2, $3, 'pending', $4, $5, $6, $7)
+                 RETURNING *`,
                 [liveId, post.text, JSON.stringify(parsedJson), post.url, hash, confidence, 1]
             );
+
+            // LINE通知（非同期・失敗しても引き続き処理する）
+            notifyDraftAdded(insertResult.rows[0]).catch(err => console.error('[LINE] 自動収集ドラフト通知エラー:', err.message));
+
             count++;
         } catch (postErr) {
             console.error(`[Collector] Post processing error:`, postErr);
