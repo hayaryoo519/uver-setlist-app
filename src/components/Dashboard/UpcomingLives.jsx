@@ -15,6 +15,9 @@ export const UpcomingLives = ({ lives }) => {
                     <Sparkles size={20} color="#fbbf24" style={{ animation: 'pulse 2s infinite' }} />
                     Next Live
                 </div>
+                <span className="next-live-sub">
+                    （セットリスト予想 - Coming Soon）
+                </span>
             </h2>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
@@ -31,11 +34,11 @@ export const UpcomingLives = ({ lives }) => {
                             overflow: 'hidden',
                             display: 'flex',
                             flexDirection: 'column',
-                            justifyContent: 'center',
-                            minHeight: '180px'
+                            justifyContent: 'space-between',
+                            minHeight: '200px'
                         }}
                     >
-                        <div style={{ position: 'relative', zIndex: 1 }}>
+                        <div style={{ position: 'relative', zIndex: 1, flex: 1 }}>
                             <div style={{
                                 fontSize: '0.8rem',
                                 color: index === 0 ? '#fbbf24' : '#94a3b8',
@@ -70,6 +73,37 @@ export const UpcomingLives = ({ lives }) => {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Future Actions Area */}
+                        <div style={{
+                            marginTop: '20px',
+                            paddingTop: '15px',
+                            borderTop: '1px solid rgba(255,255,255,0.05)',
+                            position: 'relative',
+                            zIndex: 1
+                        }}>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button
+                                    disabled
+                                    style={{
+                                        flex: 1,
+                                        padding: '10px',
+                                        borderRadius: '8px',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        color: '#64748b',
+                                        fontSize: '0.8rem',
+                                        cursor: 'not-allowed',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '6px'
+                                    }}
+                                >
+                                    <Sparkles size={14} /> 予想する (準備中)
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 ))}
             </div>
@@ -99,12 +133,21 @@ export const UpcomingLives = ({ lives }) => {
                     gap: 10px;
                     white-space: nowrap;
                 }
+                .next-live-sub {
+                    font-size: 0.8rem;
+                    color: #888;
+                    font-weight: normal;
+                }
 
                 @media (max-width: 480px) {
                     .next-live-header {
                         flex-direction: column;
                         align-items: flex-start;
                         gap: 2px;
+                    }
+                    .next-live-sub {
+                        font-size: 0.75rem;
+                        margin-left: 30px;
                     }
                 }
             `}</style>
