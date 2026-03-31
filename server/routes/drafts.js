@@ -5,6 +5,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const { notifyDraftAdded } = require('../utils/lineNotification');
 
 // multerの設定
 const storage = multer.diskStorage({
@@ -213,6 +214,9 @@ router.post('/upload', authorize, adminCheck, upload.single('image'), async (req
             [rawText, JSON.stringify(parsedJson), imageUrl, hash, confidence]
         );
 
+        // LINE通知（非同期・失敗してもレスポンスには影響しない）
+        notifyDraftAdded(result.rows[0]).catch(err => console.error('[LINE] OCRドラフト通知エラー:', err.message));
+
         res.status(201).json({
             message: '画像からセットリストを抽出しました',
             draft: result.rows[0]
@@ -245,6 +249,9 @@ router.post('/', authorize, adminCheck, async (req, res) => {
              RETURNING *`,
             [liveId || null, finalSource, rawText, JSON.stringify(parsedJson)]
         );
+
+        // LINE通知（非同期・失敗してもレスポンスには影響しない）
+        notifyDraftAdded(result.rows[0]).catch(err => console.error('[LINE] 手動ドラフト通知エラー:', err.message));
 
         res.status(201).json(result.rows[0]);
     } catch (err) {
