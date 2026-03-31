@@ -113,7 +113,7 @@ const Signup = () => {
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            placeholder="プレミアムパスワード"
+                            placeholder="パスワード (6文字以上)"
                             className="premium-input"
                             tabIndex={3}
                         />
