@@ -7,26 +7,33 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { notifyDraftAdded } = require('../utils/lineNotification');
 
+// アップロード先ディレクトリの設定と自動作成
+const uploadDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 // multerの設定
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, '../uploads'));
+        cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
+        const uniqueName = Date.now() + '-' + file.originalname;
+        cb(null, uniqueName);
     }
 });
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB制限
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB制限
+    },
     fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith('image/')) {
-            cb(null, true);
-        } else {
-            cb(new Error('画像ファイルのみアップロード可能です'), false);
+        if (!file.mimetype.startsWith('image/')) {
+            return cb(new Error('Only images allowed'), false);
         }
+        cb(null, true);
     }
 });
 
@@ -133,6 +140,8 @@ router.post('/upload', authorize, adminCheck, upload.single('image'), async (req
             return res.status(400).json({ message: '画像ファイルが必要です' });
         }
 
+        console.log(`[Upload] Upload success: ${req.file.filename}`);
+
         const imageUrl = `/uploads/${req.file.filename}`;
         const imagePath = req.file.path;
 
@@ -142,6 +151,8 @@ router.post('/upload', authorize, adminCheck, upload.single('image'), async (req
         // OpenAI API呼び出し (Vision)
         const OpenAI = (await import('openai')).default;
         const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+        console.log(`[OCR] OCR request sent for ${req.file.filename}`);
 
         const visionPrompt = `この画像はライブのセットリストです。
 
