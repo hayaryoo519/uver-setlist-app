@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown, AlertTriangle, MessageCircle, CheckCircle, BellRing, FileText } from 'lucide-react';
+import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown, AlertTriangle, MessageCircle, CheckCircle, BellRing, FileText, Clock } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SetlistEditor from '../components/Admin/SetlistEditor';
 import DraftManager from '../components/Admin/DraftManager';
+import CollectorLogsView from '../components/Admin/CollectorLogsView';
 
 const AdminPage = () => {
     const { currentUser } = useAuth();
@@ -72,6 +73,10 @@ const AdminPage = () => {
     const [sfmPreviewData, setSfmPreviewData] = useState(null);
     const [isImportingSFM, setIsImportingSFM] = useState(false);
 
+    // --- COLLECTOR LOGS STATE ---
+    const [collectorLogs, setCollectorLogs] = useState([]);
+    const [isLoadingCollectorLogs, setIsLoadingCollectorLogs] = useState(false);
+
 
     // Initial Fetch
     useEffect(() => {
@@ -82,6 +87,7 @@ const AdminPage = () => {
         if (activeTab === 'lives') fetchLives();
         if (activeTab === 'songs') fetchSongs();
         if (activeTab === 'corrections') fetchCorrections();
+        if (activeTab === 'collector_logs') fetchCollectorLogs();
         // Reset keyword when switching to import/collect to avoid carrying over from modal
         if (activeTab === 'collect') {
             setSfmSearchKeyword('');
@@ -140,6 +146,23 @@ const AdminPage = () => {
                 setCorrections(data.corrections);
             }
         } catch (err) { console.error(err); } finally { setIsLoadingCorrections(false); }
+    };
+
+    // --- API CALLS: COLLECTOR LOGS ---
+    const fetchCollectorLogs = async () => {
+        setIsLoadingCollectorLogs(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/logs/collector', { headers: { token } });
+            if (res.ok) {
+                const data = await res.json();
+                setCollectorLogs(data.logs);
+            }
+        } catch (err) {
+            console.error('Error fetching collector logs:', err);
+        } finally {
+            setIsLoadingCollectorLogs(false);
+        }
     };
 
     // --- MANUAL PUSH NOTIFICATION ---
@@ -1208,6 +1231,13 @@ const AdminPage = () => {
                     </div>
                 </div>
 
+                <div className={`admin-card ${activeTab === 'collector_logs' ? 'active' : ''}`} onClick={() => setActiveTab('collector_logs')}>
+                    <div className="card-header">
+                        <h2 className="card-title"><Clock size={24} color="#94a3b8" /> Collector Logs</h2>
+                        <span className="card-badge" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa' }}>LOGS</span>
+                    </div>
+                </div>
+
                 <div className={`admin-card ${activeTab === 'corrections' ? 'active' : ''}`} onClick={() => setActiveTab('corrections')}>
                     <div className="card-header">
                         <h2 className="card-title"><AlertTriangle size={24} color="#94a3b8" /> Corrections</h2>
@@ -1238,6 +1268,19 @@ const AdminPage = () => {
                             fetchSongs();
                         }}
                     />
+                )}
+
+                {/* COLLECTOR LOGS CONTENT */}
+                {activeTab === 'collector_logs' && (
+                    <div className="tab-content fade-in">
+                        {isLoadingCollectorLogs ? (
+                            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+                                <Loader className="spin" size={32} color="var(--primary-color)" />
+                            </div>
+                        ) : (
+                            <CollectorLogsView logs={collectorLogs} />
+                        )}
+                    </div>
                 )}
 
                 {/* COLLECT CONTENT */}
