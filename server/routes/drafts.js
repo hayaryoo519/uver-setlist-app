@@ -485,4 +485,100 @@ router.post('/:id/parse', authorize, adminCheck, async (req, res) => {
     }
 });
 
+// POST /api/drafts/:id/commit — ドラフト内容を本番データに反映（一括処理）
+router.post('/:id/commit', authorize, adminCheck, async (req, res) => {
+    const { id } = req.params;
+    const { liveId, setlist } = req.body;
+
+    if (!liveId) {
+        return res.status(400).json({ message: 'ライブIDが指定されていません' });
+    }
+
+    if (!setlist || !Array.isArray(setlist)) {
+        return res.status(400).json({ message: 'セットリストデータが正しくありません' });
+    }
+
+    const client = await db.pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. ドラフトをロックして存在確認
+        const draftRes = await client.query('SELECT * FROM raw_setlists WHERE id = $1 FOR UPDATE', [id]);
+        if (draftRes.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ message: 'ドラフトが見つかりません' });
+        }
+
+        // 2. ライブの存在確認
+        const liveRes = await client.query('SELECT * FROM lives WHERE id = $1', [liveId]);
+        if (liveRes.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ message: '指定されたライブが見つかりません' });
+        }
+
+        // 3. 曲の解決・登録
+        const finalSongIds = [];
+        for (const item of setlist) {
+            let songId = item.songId;
+            const title = (item.title || '').trim();
+
+            if (!songId && title) {
+                // タイトルから検索 (全角半角・空白を考慮した正規化)
+                const normalizedTitle = title.toUpperCase().replace(/\s+/g, '').replace(/[！"＃＄％＆'（）＊＋，－．／：；＜＝＞？＠［＼］＾＿｀｛｜｝～]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)).replace(/[ー−―－]/g, '-');
+                
+                // より単純な正規化で再試行
+                const songSearch = await client.query(
+                    "SELECT id FROM songs WHERE UPPER(REPLACE(title, ' ', '')) = UPPER(REPLACE($1, ' ', ''))",
+                    [title]
+                );
+
+                if (songSearch.rows.length > 0) {
+                    songId = songSearch.rows[0].id;
+                } else {
+                    // 新規作成
+                    const newSong = await client.query(
+                        "INSERT INTO songs (title) VALUES ($1) RETURNING id",
+                        [title]
+                    );
+                    songId = newSong.rows[0].id;
+                }
+            }
+
+            if (songId) {
+                finalSongIds.push({
+                    id: songId,
+                    position: item.position
+                });
+            }
+        }
+
+        // 4. セットリスト更新 (削除 -> 挿入)
+        await client.query('DELETE FROM setlists WHERE live_id = $1', [liveId]);
+        
+        for (const s of finalSongIds) {
+            await client.query(
+                'INSERT INTO setlists (live_id, song_id, position) VALUES ($1, $2, $3)',
+                [liveId, s.id, s.position]
+            );
+        }
+
+        // 5. ドラフトの更新
+        await client.query(
+            "UPDATE raw_setlists SET status = 'approved', live_id = $1, updated_at = NOW() WHERE id = $2",
+            [liveId, id]
+        );
+
+        await client.query('COMMIT');
+        res.json({ message: 'セットリストを確定しました', liveId, songCount: finalSongIds.length });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Commit エラー:', err);
+        res.status(500).json({ message: '確定処理に失敗しました', error: err.message });
+    } finally {
+        client.release();
+    }
+});
+
 module.exports = router;
+
