@@ -593,10 +593,17 @@ const AdminPage = () => {
     const fetchLives = async () => {
         setIsLoadingLives(true);
         try {
-            const res = await fetch('/api/lives?include_setlists=true');
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/lives?include_setlists=true', { headers: { token } });
             const data = await res.json();
             setLives(data);
-        } catch (err) { console.error(err); } finally { setIsLoadingLives(false); }
+            return data;
+        } catch (err) { 
+            console.error(err); 
+            return [];
+        } finally { 
+            setIsLoadingLives(false); 
+        }
     };
 
     const handleLiveSubmit = async (e) => {
@@ -773,6 +780,18 @@ const AdminPage = () => {
         } catch (err) {
             console.error(err);
             alert("Error importing setlist");
+        }
+    };
+
+    const handleDraftImported = async (liveId) => {
+        const updatedLives = await fetchLives();
+        fetchSongs();
+        
+        if (liveId) {
+            const live = updatedLives.find(l => l.id === liveId);
+            if (live) {
+                openSetlistEditor(live);
+            }
         }
     };
 
@@ -1263,10 +1282,7 @@ const AdminPage = () => {
                     <DraftManager
                         lives={lives}
                         allSongs={songs}
-                        onSetlistImported={(importedSongs) => {
-                            fetchLives();
-                            fetchSongs();
-                        }}
+                        onSetlistImported={handleDraftImported}
                     />
                 )}
 

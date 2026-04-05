@@ -176,37 +176,45 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
             .map(item => `${item.position}. ${item.title}`)
             .join('\n');
 
-        setActiveDraftForImport(draft);
         setBulkImportText(text);
+        setActiveDraftForImport(draft);
         setShowBulkImport(true);
     };
 
-    // BulkImportの結果処理
-    const handleBulkImportComplete = async (importedSongs) => {
-        setShowBulkImport(false);
+    // BulkImportの結果処理 (Commit API呼び出し)
+    const handleBulkImportComplete = async (liveId, setlistData) => {
+        if (!activeDraftForImport) return;
 
-        // ドラフトのステータスをapprovedに更新
-        if (activeDraftForImport) {
-            try {
-                const token = localStorage.getItem('token');
-                await fetch(`/api/drafts/${activeDraftForImport.id}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', token },
-                    body: JSON.stringify({ status: 'approved' })
-                });
+        setIsLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/drafts/${activeDraftForImport.id}/commit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', token },
+                body: JSON.stringify({ liveId, setlist: setlistData })
+            });
+
+            if (res.ok) {
+                showToast('セットリストを確定しました');
+                setShowBulkImport(false);
+                setActiveDraftForImport(null);
+                setBulkImportText('');
                 fetchDrafts();
-            } catch (err) {
-                console.error('ステータス更新エラー:', err);
+                
+                // 親コンポーネントに通知 (一覧のリロード等)
+                if (onSetlistImported) {
+                    onSetlistImported(liveId);
+                }
+            } else {
+                const data = await res.json();
+                showToast(data.message || '確定に失敗しました', 'error');
             }
+        } catch (err) {
+            console.error('Commit エラー:', err);
+            showToast('通信エラーが発生しました', 'error');
+        } finally {
+            setIsLoading(false);
         }
-
-        // 親コンポーネントに通知
-        if (onSetlistImported) {
-            onSetlistImported(importedSongs);
-        }
-
-        setActiveDraftForImport(null);
-        setBulkImportText('');
     };
 
     // ドラフト削除
@@ -795,7 +803,9 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
                     onClose={() => { setShowBulkImport(false); setActiveDraftForImport(null); }}
                     onImport={handleBulkImportComplete}
                     allSongs={allSongs}
+                    lives={lives}
                     initialText={bulkImportText}
+                    initialLiveId={activeDraftForImport?.live_id}
                 />
             )}
 
