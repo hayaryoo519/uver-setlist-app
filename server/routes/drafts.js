@@ -40,19 +40,24 @@ const upload = multer({
 // ===== 前処理ユーティリティ =====
 
 /**
- * テキストを正規化する（大文字化、空白・記号除去）
+ * テキストを正規化する（大文字化、空白・記号・長音すべて除去）
+ * 表記揺れによる重複を防ぐため、できる限りシンプルな文字列に変換する
+ * 例: "CORE PRIDE" / "CORE-PRIDE" / "COREPRIDE" → すべて同一ハッシュになる
  */
 function normalizeText(text) {
     if (!text) return '';
-    return text.toUpperCase()
+    return text
+        .toUpperCase()
         .replace(/[\s\W_]/g, '') // 半角空白・記号・アンダースコア除去
-        .replace(/[！"＃＄％＆'（）＊＋，－．／：；＜＝＞？＠［＼］＾＿｀｛｜｝～]/g, '') // 全角記号もカバー
-        .replace(/[ー−―－]/g, ''); // 各種ハイフン・長音も除去
+        .replace(/[！"＃＄％＆'（）＊＋，－．／：；＜＝＞？＠［＼］＾＿｀｛｜｝～]/g, '') // 全角記号除去
+        .replace(/[ー−―－ｰ]/g, '') // 各種ハイフン・長音符除去
+        .normalize('NFKC'); // 全角英数を半角に統一
 }
 
 /**
  * 生テキストからセトリのノイズを除去する
- * - 行頭のトラック番号（1. / 01 / M1. など）を削除
+ * - 行頭のトラック番号（1. / 01 / M1. / アンコール など）を削除
+ * - SE・MC などの非曲行を除去
  * - 空行を削除
  * - 前後の空白をトリム
  */
@@ -60,8 +65,11 @@ function cleanRawText(text) {
     if (!text) return [];
     return text
         .split('\n')
-        .map(line => line.replace(/^([0-9]+[\.\s]*|M[0-9]+[\.\s]*|EN[0-9]*[\.\s]*|SETLIST[0-9]*[\.\s]*)/i, '').trim())
-        .filter(line => line !== '')
+        .map(line => line
+            .replace(/^([0-9０-９]+[.．\s]*|M[0-9]+[.．\s]*|EN[0-9]*[.．\s]*|SETLIST[0-9]*[.．\s]*|アンコール[:：]?\s*|Encore[:：]?\s*|SE[:：]?\s*|MC[:：]?\s*)/i, '')
+            .trim()
+        )
+        .filter(line => line !== '' && line.length > 1)
         .filter((line, index, self) => self.indexOf(line) === index); // 重複削除
 }
 
@@ -76,11 +84,12 @@ function buildParsedJson(lines) {
 }
 
 /**
- * テキストから一意な正規化ハッシュを生成する
+ * テキストから一意な正規化ハッシュを生成する（SHA-256使用）
+ * normalizeText経由で表記揺れを吸収してからハッシュ化する
  */
 function generateHash(text) {
     const normalized = normalizeText(text);
-    return crypto.createHash('md5').update(normalized).digest('hex');
+    return crypto.createHash('sha256').update(normalized).digest('hex');
 }
 
 /**
@@ -195,24 +204,39 @@ router.post('/upload', authorize, adminCheck, upload.single('image'), async (req
 
         // 前処理
         const cleanedLines = cleanRawText(rawText);
+
+        // 曲名が1件も抽出できなかった場合のみ422を返す（低精度でも保存する）
         if (cleanedLines.length === 0) {
-            return res.status(422).json({ message: '曲名を抽出できませんでした。画像が鮮明か確認してください。' });
+            return res.status(422).json({ message: 'セットリストの曲名を1件も抽出できませんでした。画像を確認してください。' });
         }
 
         const parsedJson = buildParsedJson(cleanedLines);
         const hash = generateHash(cleanedLines.join('\n'));
         const confidence = await calculateConfidence(cleanedLines, rawText);
 
+        console.log(`[OCR] Lines: ${cleanedLines.length}, Confidence: ${confidence.toFixed(2)}, Hash: ${hash.substring(0, 8)}...`);
+
         // 重複チェック
         const dupCheck = await db.query(
-            'SELECT * FROM raw_setlists WHERE raw_text_hash = $1',
+            'SELECT id, confidence, raw_text, duplicate_count, created_at FROM raw_setlists WHERE raw_text_hash = $1',
             [hash]
         );
 
         if (dupCheck.rows.length > 0) {
+            // 重複カウントをインクリメント
+            await db.query(
+                'UPDATE raw_setlists SET duplicate_count = COALESCE(duplicate_count, 1) + 1 WHERE id = $1',
+                [dupCheck.rows[0].id]
+            );
             return res.status(409).json({
                 message: 'このセットリストは既に登録されています。',
-                draft: dupCheck.rows[0]
+                existingDraft: {
+                    id: dupCheck.rows[0].id,
+                    confidence: dupCheck.rows[0].confidence,
+                    raw_text: dupCheck.rows[0].raw_text,
+                    duplicate_count: (dupCheck.rows[0].duplicate_count || 1) + 1,
+                    created_at: dupCheck.rows[0].created_at
+                }
             });
         }
 
