@@ -33,6 +33,8 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
     // 画像アップロード用
     const fileInputRef = useRef(null);
     const [isUploading, setIsUploading] = useState(false);
+    // 重複登録時の既存ドラフト表示用
+    const [duplicateModalDraft, setDuplicateModalDraft] = useState(null);
 
     // トースト通知
     const [toast, setToast] = useState(null);
@@ -289,12 +291,15 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
 
             if (res.ok) {
                 const data = await res.json();
-                showToast('画像をアップロードし、OCR処理を完了しました');
+                showToast(`OCR完了！ ${data.draft?.parsed_json?.length || '?'}曲を抽出しました`);
                 fetchDrafts();
             } else if (res.status === 409) {
                 const data = await res.json();
-                showToast('同一のセトリが既に登録されています（Draft #' + (data.draft?.id || '?') + '）', 'error');
+                // 重複時は既存ドラフトの情報を表示する
+                setDuplicateModalDraft(data.existingDraft);
                 fetchDrafts(); // 既存のものを表示するためにリロード
+            } else if (res.status === 401 || res.status === 403) {
+                showToast('認証エラーです。再ログインしてください', 'error');
             } else {
                 const data = await res.json();
                 showToast(data.message || 'アップロードまたはOCRに失敗しました', 'error');
@@ -529,7 +534,7 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', margin: '20px 0' }}>
                     {drafts.map(draft => (
-                        <div key={draft.id} style={{
+                        <div key={draft.id} id={`draft-card-${draft.id}`} style={{
                             background: '#1e293b', borderRadius: '12px',
                             border: (draft.confidence || 0) < 0.5 
                                 ? '1px solid #ef4444' 
@@ -582,18 +587,37 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     {draft.confidence !== undefined && (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <span style={{ 
-                                                fontSize: '10px', 
-                                                fontWeight: 'bold',
-                                                padding: '2px 6px',
-                                                borderRadius: '4px',
-                                                textTransform: 'uppercase',
-                                                background: (draft.confidence || 0) >= 0.8 ? '#10b98120' : (draft.confidence || 0) < 0.5 ? '#ef444420' : 'transparent',
-                                                color: (draft.confidence || 0) >= 0.8 ? '#10b981' : (draft.confidence || 0) < 0.5 ? '#ef4444' : '#64748b',
-                                                border: (draft.confidence || 0) >= 0.8 || (draft.confidence || 0) < 0.5 ? '1px solid currentColor' : 'none'
-                                            }}>
-                                                {(draft.confidence || 0) >= 0.8 ? 'High Accuracy' : (draft.confidence || 0) < 0.5 ? 'Low Accuracy' : 'Normal'}
-                                            </span>
+                                            {/* アイコン付き Confidence バッジ — 3段階 */}
+                                            {(draft.confidence || 0) >= 0.8 ? (
+                                                <span style={{
+                                                    fontSize: '10px', fontWeight: 'bold', padding: '2px 8px',
+                                                    borderRadius: '4px', textTransform: 'uppercase',
+                                                    background: '#10b98120', color: '#10b981',
+                                                    border: '1px solid #10b98160',
+                                                    boxShadow: '0 0 6px #10b98130'
+                                                }}>
+                                                    ✨ High Accuracy
+                                                </span>
+                                            ) : (draft.confidence || 0) < 0.5 ? (
+                                                <span style={{
+                                                    fontSize: '10px', fontWeight: 'bold', padding: '2px 8px',
+                                                    borderRadius: '4px', textTransform: 'uppercase',
+                                                    background: '#ef444420', color: '#ef4444',
+                                                    border: '1px solid #ef444460'
+                                                }}>
+                                                    ⚠️ 要確認
+                                                </span>
+                                            ) : (
+                                                <span style={{
+                                                    fontSize: '10px', fontWeight: 'bold', padding: '2px 8px',
+                                                    borderRadius: '4px', background: 'transparent',
+                                                    color: '#f59e0b',
+                                                    border: '1px solid #f59e0b60'
+                                                }}>
+                                                    Normal
+                                                </span>
+                                            )}
+                                            {/* プログレスバー */}
                                             <div style={{
                                                 width: '60px', height: '6px', background: '#334155',
                                                 borderRadius: '3px', position: 'relative', overflow: 'hidden',
@@ -602,7 +626,8 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
                                                 <div style={{
                                                     position: 'absolute', left: 0, top: 0, height: '100%',
                                                     width: `${(draft.confidence || 0) * 100}%`,
-                                                    background: (draft.confidence || 0) >= 0.8 ? '#10b981' : (draft.confidence || 0) >= 0.5 ? '#f59e0b' : '#ef4444'
+                                                    background: (draft.confidence || 0) >= 0.8 ? '#10b981' : (draft.confidence || 0) >= 0.5 ? '#f59e0b' : '#ef4444',
+                                                    transition: 'width 0.4s ease'
                                                 }} />
                                             </div>
                                             <span style={{ fontSize: '11px', fontWeight: 'bold', color: (draft.confidence || 0) >= 0.8 ? '#10b981' : (draft.confidence || 0) >= 0.5 ? '#f59e0b' : '#ef4444' }}>
@@ -807,6 +832,84 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
                     initialText={bulkImportText}
                     initialLiveId={activeDraftForImport?.live_id}
                 />
+            )}
+
+            {/* 重複ドラフト読込み時の誤誘導モーダル */}
+            {duplicateModalDraft && (
+                <div style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
+                }}>
+                    <div style={{
+                        background: '#1e293b', border: '1px solid #f59e0b60', borderRadius: '16px',
+                        padding: '32px', maxWidth: '480px', width: '90%',
+                        boxShadow: '0 25px 80px rgba(0,0,0,0.6)'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                            <AlertCircle size={24} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                            <h3 style={{ margin: 0, fontSize: '18px', color: '#fff' }}>重複のセットリスト</h3>
+                        </div>
+                        <p style={{ color: '#94a3b8', fontSize: '14px', margin: '0 0 16px 0', lineHeight: '1.6' }}>
+                            この画像のセットリストは既に登録されています。
+                            既存の <strong style={{ color: '#f59e0b' }}>Draft #{duplicateModalDraft.id}</strong> を確認してください。
+                        </p>
+                        {/* 既存ドラフトの概要 */}
+                        <div style={{
+                            background: '#0f172a', borderRadius: '8px', padding: '12px 16px',
+                            marginBottom: '20px', border: '1px solid #334155'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>
+                                <span>登録日時: {duplicateModalDraft.created_at ? new Date(duplicateModalDraft.created_at).toLocaleString('ja-JP') : '-'}</span>
+                                <span>重複: {duplicateModalDraft.duplicate_count || 1}回目</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{
+                                    fontSize: '10px', fontWeight: 'bold', padding: '2px 8px', borderRadius: '4px',
+                                    background: (duplicateModalDraft.confidence || 0) >= 0.8 ? '#10b98120' : '#f59e0b20',
+                                    color: (duplicateModalDraft.confidence || 0) >= 0.8 ? '#10b981' : '#f59e0b',
+                                    border: '1px solid currentColor'
+                                }}>
+                                    {(duplicateModalDraft.confidence || 0) >= 0.8 ? '✨ High Accuracy' : 'Normal'}
+                                </span>
+                                <span style={{ fontSize: '13px', fontWeight: 'bold', color: (duplicateModalDraft.confidence || 0) >= 0.8 ? '#10b981' : '#f59e0b' }}>
+                                    {Math.round((duplicateModalDraft.confidence || 0) * 100)}%
+                                </span>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => setDuplicateModalDraft(null)}
+                                style={{
+                                    padding: '9px 20px', borderRadius: '8px',
+                                    border: '1px solid #334155', background: 'transparent',
+                                    color: '#94a3b8', cursor: 'pointer', fontSize: '13px'
+                                }}
+                            >
+                                閉じる
+                            </button>
+                            <button
+                                onClick={() => {
+                                    // 既存ドラフトへスクロール
+                                    setStatusFilter('pending');
+                                    setDuplicateModalDraft(null);
+                                    setTimeout(() => {
+                                        const el = document.getElementById(`draft-card-${duplicateModalDraft.id}`);
+                                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    }, 300);
+                                }}
+                                style={{
+                                    padding: '9px 20px', borderRadius: '8px',
+                                    background: '#f59e0b', color: '#000',
+                                    border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold',
+                                    display: 'flex', alignItems: 'center', gap: '6px'
+                                }}
+                            >
+                                <ArrowRight size={16} />
+                                既存ドラフト #{duplicateModalDraft.id} を見る
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* トースト通知 */}
