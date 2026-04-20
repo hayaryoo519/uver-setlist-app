@@ -97,6 +97,7 @@ const BulkImportModal = ({ onClose, onImport, allSongs, lives = [], initialText 
             return {
                 id: `line-${Date.now()}-${index}`,
                 original: originalText,
+                clean: cleanLine,
                 match: match ? { song: match } : null
             };
         });
@@ -149,17 +150,18 @@ const BulkImportModal = ({ onClose, onImport, allSongs, lives = [], initialText 
 
         // Commit API用のデータ形式に整形
         const setlistData = parsedLines
+            .filter(item => {
+                const song = item.match?.song;
+                return !!song || !!item.clean;
+            })
             .map((item, index) => {
                 const song = item.match?.song;
-                if (!song && !item.clean) return null;
-                
                 return {
                     songId: song?.id || null,
                     title: song?.title || item.clean, // songIdがない場合はタイトルで新規登録
                     position: index + 1
                 };
-            })
-            .filter(Boolean);
+            });
 
         onImport(selectedLiveId, setlistData);
     };
