@@ -78,16 +78,18 @@ const AdminPage = () => {
     const [isLoadingCollectorLogs, setIsLoadingCollectorLogs] = useState(false);
 
 
-    // Initial Fetch
+    // タブ切り替え時のデータ取得
     useEffect(() => {
-        if (activeTab === 'users') fetchUsers();
-        if (activeTab === 'lives') fetchLives();
-        if (activeTab === 'songs') fetchSongs();
         if (activeTab === 'users') fetchUsers();
         if (activeTab === 'lives') fetchLives();
         if (activeTab === 'songs') fetchSongs();
         if (activeTab === 'corrections') fetchCorrections();
         if (activeTab === 'collector_logs') fetchCollectorLogs();
+        // draftsタブでは楽曲リストとライブリストが必要（BulkImportのマッチング用）
+        if (activeTab === 'drafts') {
+            fetchSongs();
+            fetchLives();
+        }
         // Reset keyword when switching to import/collect to avoid carrying over from modal
         if (activeTab === 'collect') {
             setSfmSearchKeyword('');
@@ -95,6 +97,12 @@ const AdminPage = () => {
         }
         if (activeTab === 'import') setImportResult(null);
     }, [activeTab]);
+
+    // 初回マウント時に楽曲リストを取得（タブに関係なくBulkImportで常に利用できるように）
+    useEffect(() => {
+        fetchSongs();
+        fetchLives();
+    }, []);
 
     // --- API CALLS: IMPORT ---
     const handleCSVImport = async () => {
@@ -799,9 +807,13 @@ const AdminPage = () => {
     const fetchSongs = async () => {
         setIsLoadingSongs(true);
         try {
-            const res = await fetch('/api/songs');
-            const data = await res.json();
-            setSongs(data);
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/songs', { headers: { token } });
+            if (res.ok) {
+                const data = await res.json();
+                // APIが配列を直接返す場合とオブジェクト内に包まれる場合の両方に対応
+                setSongs(Array.isArray(data) ? data : (data.songs || []));
+            }
         } catch (err) { console.error(err); } finally { setIsLoadingSongs(false); }
     };
 

@@ -1,11 +1,26 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Check, AlertCircle, Upload, ArrowRight, Calendar, MapPin, List } from 'lucide-react';
+import { X, Check, AlertCircle, Upload, ArrowRight, Calendar, MapPin, List, Search, Plus, ListMusic } from 'lucide-react';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+
+import SetlistSortableItem from './SetlistSortableItem';
+import SongSelector from './SongSelector';
+
 
 const BulkImportModal = ({ onClose, onImport, allSongs, lives = [], initialText = '', initialLiveId = null }) => {
     const [rawText, setRawText] = useState(initialText);
     const [parsedLines, setParsedLines] = useState([]);
     const [step, setStep] = useState(1); // 1: Text Edit, 2: Song Matching, 3: Confirm & Live Selection
     const [selectedLiveId, setSelectedLiveId] = useState(initialLiveId || '');
+    const [activeLineId, setActiveLineId] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
     useEffect(() => {
         setRawText(initialText);
@@ -58,23 +73,71 @@ const BulkImportModal = ({ onClose, onImport, allSongs, lives = [], initialText 
         return null;
     };
 
-    const handleAnalyze = () => {
-        const lines = rawText.split('\n').filter(line => line.trim() !== '');
-        const results = lines.map((line, index) => {
-            // Cleanup: Remove leading numbers like "1.", "01", "M1."
-            let cleanLine = line.replace(/^([0-9]+[\.\s]*|M[0-9]+[\.\s]*|アンコール[:：]*|Encore[:：]*)/i, '').trim();
+    const handleParseText = () => {
+        const lines = rawText.split('\n').filter(l => l.trim());
+        const parsed = lines.map((line, index) => {
+            const originalText = line.trim();
+            
+            // 検索用にクリーンアップ（行頭の番号、M1、アンコール、SEなどを無視）
+            const cleanLine = originalText
+                .replace(/^([0-9０-９]+[\.\s]*|M[0-9]+[\.\s]*|アンコール[:：]*|Encore[:：]*|SE[:：]*|MC[:：]*)\s*/i, '')
+                .trim();
 
-            const match = findMatch(cleanLine);
+            // 楽曲リストの中からマッチするものを探す（完全一致 or クリーンアップ後の一致）
+            const match = allSongs.find(s => {
+                const title = s.title.toLowerCase();
+                const ruby = s.ruby?.toLowerCase();
+                const searchStr = cleanLine.toLowerCase();
+                
+                return title === searchStr || 
+                       ruby === searchStr ||
+                       (cleanLine.length > 2 && title.includes(searchStr)); // 部分一致も考慮
+            });
+
             return {
-                original: line,
-                clean: cleanLine,
-                match: match,
-                id: index
+                id: `line-${Date.now()}-${index}`,
+                original: originalText,
+                match: match ? { song: match } : null
             };
         });
 
-        setParsedLines(results);
+        setParsedLines(parsed);
         setStep(2);
+        
+        // 最初の手動選択をアシストするために、最初の未マッチ行をアクティブにする
+        const firstUnmatched = parsed.find(l => !l.match);
+        if (firstUnmatched) {
+            setActiveLineId(firstUnmatched.id);
+        } else if (parsed.length > 0) {
+            setActiveLineId(parsed[0].id);
+        }
+    };
+
+    const handleDragEnd = (event) => {
+        const { active, over } = event;
+        if (active.id !== over.id) {
+            setParsedLines((items) => {
+                const oldIndex = items.findIndex((item) => item.id === active.id);
+                const newIndex = items.findIndex((item) => item.id === over.id);
+                return arrayMove(items, oldIndex, newIndex);
+            });
+        }
+    };
+
+    const handleMapSong = (song) => {
+        if (activeLineId === null) return;
+        setParsedLines(prev => prev.map(line => {
+            if (line.id === activeLineId) {
+                return { ...line, match: { song, confidence: 'manual' } };
+            }
+            return line;
+        }));
+        
+        // 自動的に次の行へ進む（UX向上）
+        const currentIndex = parsedLines.findIndex(l => l.id === activeLineId);
+        if (currentIndex < parsedLines.length - 1) {
+            setActiveLineId(parsedLines[currentIndex + 1].id);
+        }
     };
 
     const handleConfirmSelection = () => {
@@ -110,6 +173,18 @@ const BulkImportModal = ({ onClose, onImport, allSongs, lives = [], initialText 
             return line;
         }));
     };
+
+    const handleRemoveLine = (lineId) => {
+        setParsedLines(prev => prev.filter(l => l.id !== lineId));
+        if (activeLineId === lineId) setActiveLineId(null);
+    };
+
+    const filteredSongs = useMemo(() => {
+        if (!searchTerm) return [];
+        return allSongs.filter(s => 
+            s.title.toLowerCase().includes(searchTerm.toLowerCase())
+        ).slice(0, 10);
+    }, [allSongs, searchTerm]);
 
     const selectedLive = useMemo(() => 
         lives.find(l => l.id === parseInt(selectedLiveId)),
@@ -163,50 +238,47 @@ const BulkImportModal = ({ onClose, onImport, allSongs, lives = [], initialText 
                     )}
 
                     {step === 2 && (
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-[1fr,1.2fr] gap-4 text-xs font-bold text-gray-500 uppercase px-3">
-                                <span>読み取りテキスト</span>
-                                <span>紐付け先の曲</span>
-                            </div>
-                            <div className="space-y-2">
-                                {parsedLines.map((line) => (
-                                    <div key={line.id} className="grid grid-cols-[1fr,1.2fr] gap-4 items-center bg-black/20 p-3 rounded-lg border border-white/5 hover:border-white/10 transition-colors">
-                                        <div className="text-sm text-gray-300 truncate" title={line.original}>
-                                            {line.original}
+                        <div className="flex flex-col md:flex-row gap-4 h-[65vh]">
+                            {/* LEFT: Mapping List */}
+                            <div className="flex-1 overflow-y-auto pr-2">
+                                <div className="flex justify-between items-center mb-3">
+                                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">楽曲紐付けリスト</h3>
+                                    <span className="text-[10px] text-gray-500 bg-white/5 px-2 py-1 rounded">
+                                        {parsedLines.length} 行
+                                    </span>
+                                </div>
+                                
+                                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                    <SortableContext items={parsedLines.map(l => l.id)} strategy={verticalListSortingStrategy}>
+                                        <div className="space-y-2">
+                                            {parsedLines.map((line, index) => (
+                                                <SetlistSortableItem
+                                                    key={line.id}
+                                                    id={line.id}
+                                                    song={line.match?.song}
+                                                    index={index}
+                                                    isActive={activeLineId === line.id}
+                                                    onEditStart={() => setActiveLineId(line.id)}
+                                                    onRemove={() => handleRemoveLine(line.id)}
+                                                    onClear={() => handleManualSelect(line.id, null)}
+                                                    originalText={line.original}
+                                                />
+                                            ))}
                                         </div>
-                                        <div>
-                                            {line.match ? (
-                                                <div className="flex items-center justify-between gap-2 text-green-400 text-sm bg-green-500/10 px-3 py-1.5 rounded-md border border-green-500/20">
-                                                    <div className="flex items-center gap-2 truncate">
-                                                        <Check size={14} className="shrink-0" />
-                                                        <span className="truncate">{line.match.song.title}</span>
-                                                    </div>
-                                                    <button 
-                                                        onClick={() => handleManualSelect(line.id, null)}
-                                                        className="text-[10px] text-gray-400 hover:text-red-400"
-                                                    >
-                                                        解除
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center gap-2">
-                                                    <select
-                                                        className="bg-[#0f172a] border border-white/20 rounded-md px-3 py-1.5 text-xs text-white w-full focus:border-blue-500 outline-none"
-                                                        onChange={(e) => handleManualSelect(line.id, e.target.value)}
-                                                        defaultValue=""
-                                                    >
-                                                        <option value="" disabled>曲を選択...</option>
-                                                        <option value="new">-- 新規作成 (テキストで登録) --</option>
-                                                        {allSongs.map(s => (
-                                                            <option key={s.id} value={s.id}>{s.title}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
+                                    </SortableContext>
+                                </DndContext>
                             </div>
+
+                            {/* RIGHT: Song Selector */}
+                            <SongSelector
+                                songs={filteredSongs}
+                                searchTerm={searchTerm}
+                                onSearchChange={setSearchTerm}
+                                onSelect={handleMapSong}
+                                isEditing={true}
+                                editingIndex={parsedLines.findIndex(l => l.id === activeLineId)}
+                                placeholder="紐付ける曲を検索..."
+                            />
                         </div>
                     )}
 
@@ -300,7 +372,7 @@ const BulkImportModal = ({ onClose, onImport, allSongs, lives = [], initialText 
                         
                         {step === 1 && (
                             <button
-                                onClick={handleAnalyze}
+                                onClick={handleParseText}
                                 disabled={!rawText.trim()}
                                 className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-900/20 font-bold"
                             >
