@@ -147,7 +147,7 @@ router.get('/:id', async (req, res) => {
         // 2. Get Setlist with Song Details
         // Join setlists -> songs
         const setlistRes = await db.query(
-            `SELECT s.id as song_id, s.title, sl.position 
+            `SELECT s.id as song_id, s.title, s.image_url, sl.position 
              FROM setlists sl
              JOIN songs s ON sl.song_id = s.id
              WHERE sl.live_id = $1

@@ -1,10 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import PageHeader from '../components/Layout/PageHeader';
 import { Link, useLocation } from 'react-router-dom';
 import { DISCOGRAPHY } from '../data/discography';
 import { useGlobalStats } from '../hooks/useGlobalStats';
 import SEO from '../components/SEO';
-import { Disc, Music, Calendar, Search, Filter, ArrowUpDown } from 'lucide-react';
+import { Music, Calendar, Search, Filter, ArrowUpDown, ChevronRight } from 'lucide-react';
+import ImageWithFallback from '../components/common/ImageWithFallback';
+
 // Simple normalization helper (client-side version)
 const normalizeSongTitle = (title) => {
     if (!title) return "";
@@ -14,8 +15,111 @@ const normalizeSongTitle = (title) => {
         .replace(/\s+/g, "");
 };
 
+// Release Item Component to handle its own image fetching if needed
+const ReleaseItem = ({ release, index, songDataMap }) => {
+    const [albumImage, setAlbumImage] = useState(null);
+    const [isFetching, setIsFetching] = useState(false);
+
+    useEffect(() => {
+        // Always fetch from the dedicated album image API (uses album_cache)
+        const fetchAlbumImage = async () => {
+            if (isFetching || albumImage) return;
+            setIsFetching(true);
+            try {
+                const res = await fetch(`/api/music/album-image/${encodeURIComponent(release.title)}`);
+                if (!res.ok) throw new Error('API response error');
+                const data = await res.json();
+                if (data.image_url) {
+                    setAlbumImage(data.image_url);
+                }
+            } catch (err) {
+                console.error(`Failed to fetch album image for ${release.title}:`, err);
+            } finally {
+                setIsFetching(false);
+            }
+        };
+
+        fetchAlbumImage();
+    }, [release.title]);
+
+    return (
+        <div
+            id={`release-${release.title}`}
+            className="scroll-mt-32 opacity-0 animate-[fade-in-up_0.5s_ease-out_forwards]"
+            style={{ animationDelay: `${index * 50}ms` }}
+        >
+            {/* Release Item Header */}
+            <div className="group flex flex-row items-center gap-3 sm:gap-6 p-3 sm:p-6 mb-6 rounded-3xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-yellow-500/30 transition-all backdrop-blur-md shadow-2xl">
+                <div className="w-20 h-20 sm:w-32 sm:h-32 bg-slate-950 rounded-2xl flex items-center justify-center flex-shrink-0 border border-slate-800 group-hover:border-yellow-500/50 transition-all duration-500 overflow-hidden shadow-inner group-hover:scale-105">
+                    <ImageWithFallback
+                        src={albumImage}
+                        alt={release.title}
+                        className="w-full h-full"
+                        isError={!isFetching && !albumImage}
+                    />
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                        <span className={`text-[9px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border tracking-[0.1em] uppercase ${
+                            release.type === 'ALBUM' 
+                                ? 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10' 
+                                : 'text-blue-400 border-blue-500/30 bg-blue-500/10'
+                        }`}>
+                            {release.type}
+                        </span>
+                        <div className="text-slate-400 text-[10px] sm:text-xs font-mono tracking-widest flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {release.date.replaceAll('-', '.')}
+                        </div>
+                    </div>
+                    <h2 className="text-lg sm:text-3xl font-black text-white group-hover:text-yellow-500 transition-colors truncate font-oswald tracking-wider uppercase">
+                        {release.title}
+                    </h2>
+                    <p className="text-slate-500 text-[10px] sm:text-xs mt-1 sm:mt-2 font-medium tracking-wide">
+                        {release.songs.length} Tracks
+                    </p>
+                </div>
+            </div>
+
+            {/* Songs Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {release.songs.map((songTitle, sIndex) => {
+                    const songData = songDataMap?.get(songTitle);
+                    const isCollected = !!songData;
+
+                    return (
+                        <Link
+                            key={sIndex}
+                            to={isCollected ? `/song/${encodeURIComponent(songTitle.replace(/\s+/g, ''))}` : '#'}
+                            className={`group flex items-center gap-5 p-4 rounded-2xl border transition-all duration-300 ${isCollected
+                                    ? 'bg-white/5 border-transparent hover:bg-white/10 hover:border-yellow-500/30 cursor-pointer hover:scale-[1.02] active:scale-95 shadow-lg hover:shadow-yellow-500/5'
+                                    : 'bg-white/5 opacity-40 border-transparent cursor-not-allowed'
+                                }`}
+                            style={{ pointerEvents: isCollected ? 'auto' : 'none' }}
+                        >
+                            {/* Song Number (Replaces Image) */}
+                            <div className="w-10 h-10 flex items-center justify-center font-mono text-sm font-black text-slate-500 group-hover:text-yellow-500 transition-colors bg-slate-900/50 rounded-xl border border-slate-800/50 group-hover:border-yellow-500/30">
+                                {String(sIndex + 1).padStart(2, '0')}
+                            </div>
+
+                            <div className={`flex-1 font-black truncate text-base tracking-wide ${isCollected ? 'text-slate-200 group-hover:text-white' : 'text-slate-500'}`}>
+                                {songTitle}
+                            </div>
+                            
+                            {isCollected && (
+                                <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-yellow-500 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
+                            )}
+                        </Link>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 function Songs() {
-    const { loading, songIdMap, allLives, songTranslationMap, error } = useGlobalStats();
+    const { loading, songDataMap, error } = useGlobalStats();
     const location = useLocation();
 
     // Handle hash scroll on mount/location change
@@ -26,7 +130,8 @@ function Songs() {
                 const element = document.getElementById(`release-${targetId}`);
                 if (element) {
                     element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    element.style.animation = 'highlight-pulse 2s ease-out';
+                    element.classList.add('highlight-pulse');
+                    setTimeout(() => element.classList.remove('highlight-pulse'), 2000);
                 }
             }, 100);
         }
@@ -37,68 +142,29 @@ function Songs() {
     const [typeFilter, setTypeFilter] = useState('ALL'); // ALL, ALBUM, SINGLE
     const [sortBy, setSortBy] = useState('date-desc'); // date-desc, date-asc, title-asc, title-desc
 
-    // Helper to find song ID matching the discography title
-    const getSongId = (title) => {
-        if (!songIdMap) return null;
-
-        // 1. Try exact match
-        if (songIdMap.has(title)) return songIdMap.get(title);
-
-        // 2. Try normalized (Japanese) title if 'title' is Romaji/English
-        // We need the reverse lookup or the translation map
-        // If we don't have the map handy, we might miss some.
-        // But DISCOGRAPHY uses mostly Romaji/English or mixed. 
-        // Let's rely on songIdMap having keys for what's in DB.
-
-        return null;
-    };
-
-    // Helper to check if song has been performed (exists in DB)
-    const getSongStatus = (title) => {
-        if (!songIdMap) return false;
-        // Check if we have an ID. If yes, check if valid.
-        const id = getSongId(title);
-        // Also check if we should try to Normalize using the server util logic?
-        // Since we can't easily import server code in Vite without config, 
-        // we'll assume the songIdMap (built from DB) contains the "Official" titles.
-        // And DISCOGRAPHY should use Official titles preferably.
-        // Update: DISCOGRAPHY uses translation keys mostly. 
-        return !!id;
-    }
-
-    // We need to resolve titles in DISCOGRAPHY to their database equivalents
-    // The songIdMap keys are the "Official" titles (Japanese usually).
-    // DISCOGRAPHY has mix. 
-    // We should probably rely on a client-side version of translations or just assume DISCOGRAPHY is correct.
-
     // Filtered and sorted discography
     const filteredDiscography = useMemo(() => {
         let result = [...DISCOGRAPHY];
 
-        // Type filter
         if (typeFilter !== 'ALL') {
             result = result.filter(r => r.type === typeFilter);
         }
 
-        // Search filter (search in release title and song titles)
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
             result = result.map(release => {
-                // Check if release title matches
                 const titleMatch = release.title.toLowerCase().includes(query);
-                // Filter songs that match
                 const matchingSongs = release.songs.filter(s => s.toLowerCase().includes(query));
 
                 if (titleMatch) {
-                    return release; // Show all songs if album title matches
+                    return release;
                 } else if (matchingSongs.length > 0) {
-                    return { ...release, songs: matchingSongs }; // Show only matching songs
+                    return { ...release, songs: matchingSongs };
                 }
                 return null;
             }).filter(Boolean);
         }
 
-        // Sort
         result.sort((a, b) => {
             switch (sortBy) {
                 case 'date-asc':
@@ -118,229 +184,107 @@ function Songs() {
     }, [typeFilter, searchQuery, sortBy]);
 
     return (
-        <div className="page-wrapper">
+        <div className="min-h-screen bg-slate-900 text-slate-100">
             <SEO title="Discography" />
 
-            <div className="container" style={{ paddingTop: '100px', paddingBottom: '80px' }}>
-                <PageHeader
-                    title="DISCOGRAPHY"
-                    subtitle={`All Releases (${filteredDiscography.length} / ${DISCOGRAPHY.length})`}
-                />
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20">
+                <div className="flex flex-col md:flex-row md:items-end justify-between mb-4 pb-2 border-b border-white/5 gap-4">
+                    <div className="flex flex-col gap-1">
+                        <h1 className="text-4xl sm:text-5xl font-black font-oswald tracking-tighter text-white uppercase leading-none">
+                            Discography
+                        </h1>
+                        <div className="text-slate-400 text-sm sm:text-base font-bold uppercase tracking-[0.2em] mt-1">
+                            Total <span className="text-yellow-500 font-black font-mono text-lg sm:text-xl ml-1">{DISCOGRAPHY.length}</span> Releases
+                        </div>
+                    </div>
 
-                {/* Filter Controls */}
-                <div style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '12px',
-                    marginBottom: '30px',
-                    padding: '20px',
-                    background: 'rgba(255,255,255,0.02)',
-                    borderRadius: '12px',
-                    border: '1px solid rgba(255,255,255,0.05)'
-                }}>
-                    {/* Search */}
-                    <div style={{ position: 'relative', flex: '1 1 250px' }}>
-                        <Search size={18} style={{ position: 'absolute', left: '12px', top: '12px', color: '#64748b' }} />
+                    <div className="flex flex-col items-end gap-2">
+                        {(searchQuery || typeFilter !== 'ALL') && (
+                            <div className="flex items-center gap-2 px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                                <Search className="w-3 h-3 text-yellow-500" />
+                                <span className="text-yellow-500 text-xs font-bold">{filteredDiscography.length} Matches Found</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap gap-4 mb-8 p-5 bg-white/5 rounded-2xl border border-white/5 shadow-lg backdrop-blur-sm">
+                    <div className="relative flex-1 min-w-[250px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
                             type="text"
                             placeholder="曲名・アルバム名で検索..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '10px 10px 10px 40px',
-                                background: 'rgba(0,0,0,0.3)',
-                                border: '1px solid #334155',
-                                borderRadius: '8px',
-                                color: 'white',
-                                fontSize: '0.9rem'
-                            }}
+                            className="w-full pl-10 pr-4 py-2.5 bg-slate-950/40 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/50 transition-colors"
                         />
                     </div>
 
-                    {/* Type Filter */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Filter size={16} color="#64748b" />
+                    <div className="flex items-center relative gap-2">
+                        <Filter className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
                         <select
                             value={typeFilter}
                             onChange={(e) => setTypeFilter(e.target.value)}
-                            style={{
-                                padding: '10px 30px 10px 12px',
-                                background: 'rgba(0,0,0,0.3)',
-                                border: '1px solid #334155',
-                                borderRadius: '8px',
-                                color: 'white',
-                                fontSize: '0.9rem',
-                                cursor: 'pointer'
-                            }}
+                            className="pl-9 pr-8 py-2.5 bg-slate-950/40 border border-slate-700 rounded-xl text-white text-sm cursor-pointer focus:outline-none focus:border-yellow-500 transition-colors appearance-none min-w-[120px]"
                         >
                             <option value="ALL">すべて</option>
                             <option value="ALBUM">アルバム</option>
                             <option value="SINGLE">シングル</option>
                         </select>
+                        <div className="absolute right-3 pointer-events-none text-slate-400 text-xs text-center pr-1">▼</div>
                     </div>
 
-                    {/* Sort */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <ArrowUpDown size={16} color="#64748b" />
+                    <div className="flex items-center relative gap-2">
+                        <ArrowUpDown className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
                         <select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
-                            style={{
-                                padding: '10px 30px 10px 12px',
-                                background: 'rgba(0,0,0,0.3)',
-                                border: '1px solid #334155',
-                                borderRadius: '8px',
-                                color: 'white',
-                                fontSize: '0.9rem',
-                                cursor: 'pointer'
-                            }}
+                            className="pl-9 pr-8 py-2.5 bg-slate-950/40 border border-slate-700 rounded-xl text-white text-sm cursor-pointer focus:outline-none focus:border-yellow-500 transition-colors appearance-none min-w-[150px]"
                         >
                             <option value="date-desc">新しい順</option>
                             <option value="date-asc">古い順</option>
                             <option value="title-asc">タイトル A→Z</option>
                             <option value="title-desc">タイトル Z→A</option>
                         </select>
+                        <div className="absolute right-3 pointer-events-none text-slate-400 text-xs text-center pr-1">▼</div>
                     </div>
                 </div>
 
                 {error ? (
-                    <div style={{ textAlign: 'center', padding: '50px', color: '#f87171', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                        <h3 style={{ marginBottom: '10px' }}>Connection Error</h3>
-                        <p>{error}</p>
-                        <p style={{ fontSize: '0.8rem', marginTop: '10px', color: '#9ca3af' }}>Please ensure the server is running and database is connected.</p>
+                    <div className="text-center p-8 bg-red-500/10 border border-red-500/20 rounded-2xl">
+                        <h3 className="text-red-400 font-bold mb-2">Connection Error</h3>
+                        <p className="text-red-300/80 mb-2">{error}</p>
                     </div>
                 ) : loading ? (
-                    <div style={{ textAlign: 'center', padding: '100px', color: '#64748b' }}>
+                    <div className="flex justify-center items-center py-20 text-slate-500 animate-pulse">
                         Loading Discography...
                     </div>
                 ) : (
-                    <div className="discography-list">
+                    <div className="space-y-16">
                         {filteredDiscography.map((release, index) => (
-                            <div
-                                key={index}
-                                id={`release-${release.title}`}
-                                className="release-card fade-in-up"
-                                style={{
-                                    marginBottom: '40px',
-                                    animationDelay: `${index * 50}ms`,
-                                    scrollMarginTop: '120px'
-                                }}
-                            >
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'baseline',
-                                    gap: '15px',
-                                    marginBottom: '15px',
-                                    borderBottom: '1px solid rgba(255,255,255,0.1)',
-                                    paddingBottom: '10px'
-                                }}>
-                                    <div style={{
-                                        fontSize: '0.8rem',
-                                        fontWeight: 'bold',
-                                        color: release.type === 'ALBUM' ? 'var(--primary-color)' : '#94a3b8',
-                                        border: `1px solid ${release.type === 'ALBUM' ? 'var(--primary-color)' : '#475569'}`,
-                                        padding: '2px 8px',
-                                        borderRadius: '4px'
-                                    }}>
-                                        {release.type}
-                                    </div>
-                                    <h2 style={{
-                                        fontSize: '1.5rem',
-                                        margin: 0,
-                                        fontFamily: 'Oswald, sans-serif'
-                                    }}>
-                                        {release.title}
-                                    </h2>
-                                    <div style={{ marginLeft: 'auto', color: '#64748b', fontSize: '0.9rem', fontFamily: 'monospace' }}>
-                                        {release.date}
-                                    </div>
-                                </div>
-
-                                <div className="song-grid" style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                                    gap: '12px'
-                                }}>
-                                    {release.songs.map((songTitle, sIndex) => {
-                                        // Try to find ID
-                                        // We need to handle the translation here manually since we can't import server util
-                                        // Or we pass a map from parent.
-                                        // For MVP, we look in songIdMap.
-
-                                        // Logic: Iterate keys of songIdMap, check if key is normalized version of songTitle?
-                                        // Too expensive.
-                                        // Better: Just assume songIdMap has the title.
-
-                                        // Let's try raw title first.
-                                        let foundId = songIdMap?.get(songTitle);
-
-                                        // If not found, existing songIdMap keys are the "Golden" titles.
-                                        // DISCOGRAPHY might have aliases. 
-                                        // We'll skip complex matching for now and just link if found.
-
-                                        const isCollected = !!foundId;
-
-                                        return (
-                                            <Link
-                                                key={sIndex}
-                                                to={isCollected ? `/song/${encodeURIComponent(songTitle.replace(/\s+/g, ''))}` : '#'}
-                                                style={{
-                                                    textDecoration: 'none',
-                                                    pointerEvents: isCollected ? 'auto' : 'none'
-                                                }}
-                                            >
-                                                <div style={{
-                                                    background: isCollected ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.01)',
-                                                    padding: '12px 16px',
-                                                    borderRadius: '8px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '12px',
-                                                    border: '1px solid transparent',
-                                                    transition: 'all 0.2s',
-                                                    opacity: isCollected ? 1 : 0.5
-                                                }}
-                                                    className={isCollected ? "hover-card" : ""}
-                                                >
-                                                    <div style={{
-                                                        color: isCollected ? 'var(--primary-color)' : '#475569',
-                                                        fontSize: '0.8rem',
-                                                        width: '20px'
-                                                    }}>
-                                                        {sIndex + 1}
-                                                    </div>
-                                                    <div style={{ flex: 1 }}>
-                                                        <div style={{
-                                                            color: isCollected ? '#e2e8f0' : '#64748b',
-                                                            fontWeight: '500'
-                                                        }}>
-                                                            {songTitle}
-                                                        </div>
-                                                    </div>
-                                                    {isCollected && <ArrowRight size={14} color="#475569" />}
-                                                </div>
-                                            </Link>
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                            <ReleaseItem 
+                                key={release.title} 
+                                release={release} 
+                                index={index} 
+                                songDataMap={songDataMap} 
+                            />
                         ))}
                     </div>
                 )}
+
+                {/* Attribution - Legal Consideration for Public Release */}
+                <div className="mt-16 pt-8 border-t border-white/5 text-center">
+                    <p className="text-slate-600 text-[10px] font-medium tracking-[0.1em] uppercase">
+                        Image Source: Apple Music / iTunes
+                    </p>
+                    <p className="text-slate-700 text-[9px] mt-1">
+                        All album artwork is property of their respective owners.
+                    </p>
+                </div>
             </div>
         </div>
     );
 }
 
-// Simple icon component if lucide import fails in this context (but it should work)
-function ArrowRight({ size, color }) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-            <polyline points="12 5 19 12 12 19"></polyline>
-        </svg>
-    )
-}
-
 export default Songs;
+

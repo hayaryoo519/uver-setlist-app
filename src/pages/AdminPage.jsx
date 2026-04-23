@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown, AlertTriangle, MessageCircle, CheckCircle, BellRing } from 'lucide-react';
+import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown, AlertTriangle, MessageCircle, CheckCircle, BellRing, FileText, Clock } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SetlistEditor from '../components/Admin/SetlistEditor';
+import DraftManager from '../components/Admin/DraftManager';
+import CollectorLogsView from '../components/Admin/CollectorLogsView';
 
 const AdminPage = () => {
     const { currentUser } = useAuth();
@@ -12,7 +14,7 @@ const AdminPage = () => {
     const [activeTab, setActiveTab] = useState('lives');
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
-    const initialTab = queryParams.get('tab');
+    const initialTab = queryParams.get('tab') || (location.pathname === '/admin/drafts' ? 'drafts' : null);
     const editId = queryParams.get('edit');
 
 
@@ -71,16 +73,23 @@ const AdminPage = () => {
     const [sfmPreviewData, setSfmPreviewData] = useState(null);
     const [isImportingSFM, setIsImportingSFM] = useState(false);
 
+    // --- COLLECTOR LOGS STATE ---
+    const [collectorLogs, setCollectorLogs] = useState([]);
+    const [isLoadingCollectorLogs, setIsLoadingCollectorLogs] = useState(false);
 
-    // Initial Fetch
+
+    // タブ切り替え時のデータ取得
     useEffect(() => {
         if (activeTab === 'users') fetchUsers();
         if (activeTab === 'lives') fetchLives();
         if (activeTab === 'songs') fetchSongs();
-        if (activeTab === 'users') fetchUsers();
-        if (activeTab === 'lives') fetchLives();
-        if (activeTab === 'songs') fetchSongs();
         if (activeTab === 'corrections') fetchCorrections();
+        if (activeTab === 'collector_logs') fetchCollectorLogs();
+        // draftsタブでは楽曲リストとライブリストが必要（BulkImportのマッチング用）
+        if (activeTab === 'drafts') {
+            fetchSongs();
+            fetchLives();
+        }
         // Reset keyword when switching to import/collect to avoid carrying over from modal
         if (activeTab === 'collect') {
             setSfmSearchKeyword('');
@@ -88,6 +97,12 @@ const AdminPage = () => {
         }
         if (activeTab === 'import') setImportResult(null);
     }, [activeTab]);
+
+    // 初回マウント時に楽曲リストを取得（タブに関係なくBulkImportで常に利用できるように）
+    useEffect(() => {
+        fetchSongs();
+        fetchLives();
+    }, []);
 
     // --- API CALLS: IMPORT ---
     const handleCSVImport = async () => {
@@ -139,6 +154,23 @@ const AdminPage = () => {
                 setCorrections(data.corrections);
             }
         } catch (err) { console.error(err); } finally { setIsLoadingCorrections(false); }
+    };
+
+    // --- API CALLS: COLLECTOR LOGS ---
+    const fetchCollectorLogs = async () => {
+        setIsLoadingCollectorLogs(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/logs/collector', { headers: { token } });
+            if (res.ok) {
+                const data = await res.json();
+                setCollectorLogs(data.logs);
+            }
+        } catch (err) {
+            console.error('Error fetching collector logs:', err);
+        } finally {
+            setIsLoadingCollectorLogs(false);
+        }
     };
 
     // --- MANUAL PUSH NOTIFICATION ---
@@ -569,10 +601,17 @@ const AdminPage = () => {
     const fetchLives = async () => {
         setIsLoadingLives(true);
         try {
-            const res = await fetch('/api/lives?include_setlists=true');
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/lives?include_setlists=true', { headers: { token } });
             const data = await res.json();
             setLives(data);
-        } catch (err) { console.error(err); } finally { setIsLoadingLives(false); }
+            return data;
+        } catch (err) { 
+            console.error(err); 
+            return [];
+        } finally { 
+            setIsLoadingLives(false); 
+        }
     };
 
     const handleLiveSubmit = async (e) => {
@@ -752,13 +791,29 @@ const AdminPage = () => {
         }
     };
 
+    const handleDraftImported = async (liveId) => {
+        const updatedLives = await fetchLives();
+        fetchSongs();
+        
+        if (liveId) {
+            const live = updatedLives.find(l => l.id === liveId);
+            if (live) {
+                openSetlistEditor(live);
+            }
+        }
+    };
+
     // --- API CALLS: SONGS ---
     const fetchSongs = async () => {
         setIsLoadingSongs(true);
         try {
-            const res = await fetch('/api/songs');
-            const data = await res.json();
-            setSongs(data);
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/songs', { headers: { token } });
+            if (res.ok) {
+                const data = await res.json();
+                // APIが配列を直接返す場合とオブジェクト内に包まれる場合の両方に対応
+                setSongs(Array.isArray(data) ? data : (data.songs || []));
+            }
         } catch (err) { console.error(err); } finally { setIsLoadingSongs(false); }
     };
 
@@ -1200,6 +1255,20 @@ const AdminPage = () => {
                     </div>
                 </div>
 
+                <div className={`admin-card ${activeTab === 'drafts' ? 'active' : ''}`} onClick={() => setActiveTab('drafts')}>
+                    <div className="card-header">
+                        <h2 className="card-title"><FileText size={24} color="#94a3b8" /> Drafts</h2>
+                        <span className="card-badge" style={{ background: '#8b5cf620', color: '#a78bfa' }}>AI</span>
+                    </div>
+                </div>
+
+                <div className={`admin-card ${activeTab === 'collector_logs' ? 'active' : ''}`} onClick={() => setActiveTab('collector_logs')}>
+                    <div className="card-header">
+                        <h2 className="card-title"><Clock size={24} color="#94a3b8" /> Collector Logs</h2>
+                        <span className="card-badge" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa' }}>LOGS</span>
+                    </div>
+                </div>
+
                 <div className={`admin-card ${activeTab === 'corrections' ? 'active' : ''}`} onClick={() => setActiveTab('corrections')}>
                     <div className="card-header">
                         <h2 className="card-title"><AlertTriangle size={24} color="#94a3b8" /> Corrections</h2>
@@ -1219,6 +1288,28 @@ const AdminPage = () => {
 
             {/* --- CONTENT AREA --- */}
             <div className="content-area">
+
+                {/* DRAFT CONTENT */}
+                {activeTab === 'drafts' && (
+                    <DraftManager
+                        lives={lives}
+                        allSongs={songs}
+                        onSetlistImported={handleDraftImported}
+                    />
+                )}
+
+                {/* COLLECTOR LOGS CONTENT */}
+                {activeTab === 'collector_logs' && (
+                    <div className="tab-content fade-in">
+                        {isLoadingCollectorLogs ? (
+                            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+                                <Loader className="spin" size={32} color="var(--primary-color)" />
+                            </div>
+                        ) : (
+                            <CollectorLogsView logs={collectorLogs} />
+                        )}
+                    </div>
+                )}
 
                 {/* COLLECT CONTENT */}
                 {activeTab === 'collect' && (
