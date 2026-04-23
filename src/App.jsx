@@ -21,7 +21,6 @@ import SecurityLogsPage from './pages/SecurityLogsPage';
 import CorrectionForm from './pages/CorrectionForm';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from './components/ProtectedRoute';
-import { EnvironmentBanner } from './components/EnvironmentBanner/EnvironmentBanner';
 import { useEnvironmentTitle } from './hooks/useEnvironmentTitle';
 
 // Wrapper for pages that need the Main Layout (Navbar, etc.)
@@ -39,7 +38,6 @@ function App() {
     <HelmetProvider>
       <AuthProvider>
         <Router>
-          <EnvironmentBanner />
           <ScrollToTop />
           <Routes>
             {/* Auth Pages (Standalone) */}
@@ -55,6 +53,7 @@ function App() {
               <Route path="/admin/security-logs" element={<SecurityLogsPage />} />
               <Route element={<LayoutRoute />}>
                 <Route path="/admin" element={<AdminPage />} />
+                <Route path="/admin/drafts" element={<AdminPage />} />
               </Route>
             </Route>
 

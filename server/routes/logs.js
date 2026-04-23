@@ -30,6 +30,22 @@ router.get('/recent', async (req, res) => {
     }
 });
 
+// SNS収集ログ取得 (最新10件)
+router.get('/collector', async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT id, level, message, details, created_at
+            FROM collector_logs
+            ORDER BY created_at DESC
+            LIMIT 10
+        `);
+        res.json({ logs: result.rows });
+    } catch (err) {
+        console.error('Error fetching collector logs:', err);
+        res.status(500).json({ message: '収集ログの取得に失敗しました' });
+    }
+});
+
 // 週間分析データ取得
 router.get('/analysis', async (req, res) => {
     try {

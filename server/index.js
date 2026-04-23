@@ -38,9 +38,13 @@ app.use('/api/external', require('./routes/external_api'));
 app.use('/api/corrections', require('./routes/corrections'));
 app.use('/api/logs', require('./routes/logs'));
 app.use('/api/push', require('./routes/push'));
+app.use('/api/drafts', require('./routes/drafts'));
+app.use('/api/music', require('./routes/music'));
 
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, '../dist')));
+// Serve uploaded images
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // The "catchall" handler: for any request that doesn't
 // match one above, send back React's index.html file.
@@ -60,4 +64,20 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+
+    // バックグラウンドサービスの開始
+    try {
+        const { startMonitoring } = require('./services/live_monitor');
+        const { startCleanup } = require('./services/cleanup_service');
+
+        // ライブ監視 (1時間おき)
+        startMonitoring(60 * 60 * 1000);
+        
+        // クリーンアップ (24時間おき)
+        startCleanup(24 * 60 * 60 * 1000);
+
+        console.log('[Services] Background services started successfully.');
+    } catch (serviceErr) {
+        console.error('[Services] Failed to start background services:', serviceErr);
+    }
 });

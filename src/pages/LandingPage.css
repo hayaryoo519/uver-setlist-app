@@ -1,9 +1,55 @@
 /* Landing Page Styles - Premium UVERworld Theme */
 
+:root {
+    --lp-gold: #d4af37;
+    --lp-gold-light: #f1d279;
+    --lp-gold-glow: rgba(212, 175, 55, 0.4);
+    --lp-black: #0f172a;
+    --lp-navy-deep: #080b15;
+    --lp-slate-800: #1e293b;
+    --lp-slate-400: #94a3b8;
+    --lp-white: #f8fafc;
+}
+
 .landing-page {
     min-height: 100vh;
-    background: var(--bg-color);
+    background: var(--lp-black);
+    color: var(--lp-white);
     overflow-x: hidden;
+    font-family: 'Inter', 'Noto Sans JP', sans-serif;
+}
+
+/* Utils */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+.pc-br {
+    display: inline;
+}
+
+.sp-text {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
+    .pc-text {
+        display: none !important;
+    }
+    .sp-text {
+        display: inline !important;
+    }
+    .sp-br {
+        display: block;
+    }
 }
 
 /* Header */
@@ -13,20 +59,26 @@
     left: 0;
     right: 0;
     z-index: 10000;
-    /* Extremely high to be above anything */
-    background: rgba(15, 23, 42, 0.9);
-    /* More opaque, less dependent on blur */
-    border-bottom: 2px solid var(--primary-color);
-    padding: 15px 0;
-    transition: all 0.3s ease;
-    pointer-events: auto;
-    /* Ensure clickable */
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+    padding: 18px 0;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(-100%);
+    opacity: 0;
+}
+
+.lp-header.is-scrolled {
+    transform: translateY(0);
+    opacity: 1;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .lp-header-container {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 0 30px;
+    padding: 0 40px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -36,68 +88,84 @@
     text-decoration: none;
     display: flex;
     align-items: center;
-    gap: 10px;
-    z-index: 10001;
+    gap: 12px;
 }
 
 .lp-logo-text {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #f8fafc;
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--lp-white);
     letter-spacing: -0.5px;
+    text-transform: uppercase;
+}
+
+.lp-logo-text .text-gold {
+    color: var(--lp-gold);
+    text-shadow: 0 0 15px var(--lp-gold-glow);
 }
 
 .lp-nav {
     display: flex;
     align-items: center;
-    gap: 20px;
-    z-index: 10001;
+    gap: 30px;
 }
 
 .lp-nav-link {
-    color: #cbd5e1;
+    color: var(--lp-slate-400);
     text-decoration: none;
     font-weight: 500;
     font-size: 0.95rem;
-    transition: color 0.3s ease;
+    transition: all 0.3s ease;
+    letter-spacing: 0.5px;
 }
 
 .lp-nav-link:hover {
-    color: var(--primary-color);
+    color: var(--lp-gold);
 }
 
 .lp-nav-btn {
-    background: var(--primary-color);
+    background: var(--lp-gold);
     color: #000;
-    padding: 10px 24px;
-    border-radius: 50px;
+    padding: 10px 28px;
+    border-radius: 4px;
     text-decoration: none;
-    font-weight: 700;
-    font-size: 0.95rem;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
+    font-weight: 800;
+    font-size: 0.9rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+    border: none;
+    cursor: pointer;
 }
 
 .lp-nav-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(251, 191, 36, 0.5);
-    background: #f59e0b;
+    background: var(--lp-gold-light);
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
 }
-
-/* ... rest of nav styles unchanged ... */
 
 /* Hero Section */
 .lp-hero {
     position: relative;
-    min-height: 100vh;
+    height: 100vh;
+    min-height: 700px;
     display: flex;
-    align-items: center;
+    align-items: flex-end; /* テキストを下部に寄せる */
     justify-content: center;
+    padding-bottom: 120px; /* 下部からの余白 */
     overflow: hidden;
-    background: radial-gradient(circle at center, #1e1e2f 0%, #131320 60%, #0f172a 100%);
-    border-bottom: 2px solid var(--primary-color);
-    z-index: 1;
-    /* Base level */
+    background: var(--lp-black);
+}
+
+.lp-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        transparent,
+        rgba(0, 0, 0, 0.75)
+    );
+    pointer-events: none;
+    z-index: 5;
 }
 
 .lp-hero-bg {
@@ -106,179 +174,144 @@
     left: 0;
     width: 100%;
     height: 100%;
-    pointer-events: none !important;
-    overflow: hidden;
-    z-index: -1;
-    /* Move behind content */
+    z-index: 1;
+}
+
+.lp-hero-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    opacity: 0;
+    animation: fadeInImage 1.5s ease-out forwards;
+}
+
+.lp-hero-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.3) 45%, transparent 100%),
+                radial-gradient(circle at 70% 30%, transparent 20%, rgba(15, 23, 42, 0.3) 60%, rgba(15, 23, 42, 0.9) 100%);
+    z-index: 2;
+}
+
+/* モバイル用：下部グラデーションを追加して文字の可読性を確保 */
+@media (max-width: 768px) {
+    .lp-hero-overlay {
+        display: none;
+    }
 }
 
 .lp-glow-effect {
     position: absolute;
-    top: 35%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 800px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(251, 191, 36, 0.2) 0%, transparent 70%);
-    animation: pulse-glow 4s ease-in-out infinite;
-    pointer-events: none !important;
+    top: 20%;
+    left: 30%;
+    width: 60vw;
+    height: 60vh;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.15) 0%, transparent 70%);
+    filter: blur(60px);
+    z-index: 3;
+    animation: pulse-glow 8s infinite alternate;
 }
 
 .lp-hero-content {
-    text-align: center;
-    z-index: 100;
-    /* Above BG */
     position: relative;
-    padding: 40px 20px;
-    max-width: 900px;
-    pointer-events: auto;
-    /* Ensure clickable */
+    z-index: 10;
+    width: 100%;
+    max-width: 1400px;
+    padding: 0 60px;
+    margin-top: 0; /* 下部配置のためmargin-topは不要 */
+    display: flex;
+    justify-content: center; /* 水平中央配置 */
 }
 
-.lp-hero-title {
-    font-size: 5rem;
-    font-weight: 900;
-    letter-spacing: -2px;
-    margin: 0 0 20px 0;
-    line-height: 1;
-    text-transform: uppercase;
-    animation: fadeInUp 1s ease-out;
-    color: #f8fafc;
-}
-
-/* Gold text for specific parts */
-.text-gold {
-    color: var(--primary-color);
-    text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
-}
-
-/* Subtitle text within title */
-.text-subtitle-small {
-    font-size: 1.5rem;
-    color: #888;
-    letter-spacing: 5px;
-    display: block;
-    margin-top: 10px;
-    font-weight: 400;
+.lp-hero-text-wrapper {
+    width: fit-content; /* 文字の長さに合わせる */
+    max-width: 90%; /* モバイル配慮 */
+    margin: 0 auto;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(30px);
+    animation: fadeInUp 1s cubic-bezier(0.2, 1, 0.3, 1) 0.5s forwards;
+    
+    /* 
+       グラスモーフィズムを廃止し、全体グラデーション（.lp-hero-overlay）に置き換え
+    */
+    background: transparent;
+    padding: 0;
 }
 
 .lp-hero-subtitle {
-    font-size: 1.5rem;
-    color: #94a3b8;
-    letter-spacing: 3px;
-    margin-bottom: 30px;
-    font-weight: 300;
-    animation: fadeInUp 1s ease-out 0.2s backwards;
+    font-size: 2.4rem; /* サイズ拡大 */
+    font-weight: 900; /* ウェイト最大化 */
+    color: var(--lp-gold);
+    margin-bottom: 24px;
+    letter-spacing: 0.12em;
+    /* 強力なテキストシャドウで背景から浮き立たせる */
+    text-shadow: 
+        0 2px 10px rgba(0, 0, 0, 0.8),
+        0 0 20px var(--lp-gold-glow);
 }
 
 .lp-hero-description {
-    font-size: 1.25rem;
-    color: #cbd5e1;
-    margin: 30px auto;
-    max-width: 700px;
+    font-size: 1.25rem; /* わずかに拡大 */
     line-height: 1.8;
-    animation: fadeInUp 1s ease-out 0.4s backwards;
-}
-
-.responsive-br {
-    display: none;
-}
-
-@media (min-width: 768px) {
-    .responsive-br {
-        display: block;
-    }
+    color: rgba(248, 250, 252, 1); /* 純白に近い色に */
+    margin-bottom: 45px;
+    font-weight: 500; /* さらに太く */
+    letter-spacing: 0.05em;
+    /* 多層シャドウで縁取りを強化 */
+    text-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.8),
+        0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .lp-hero-cta {
     display: flex;
     gap: 20px;
-    justify-content: center;
-    margin-top: 40px;
-    animation: fadeInUp 1s ease-out 0.6s backwards;
-    flex-wrap: wrap;
+    justify-content: center; /* ボタンも中央寄せ */
 }
 
 .lp-btn {
-    padding: 16px 40px;
-    border-radius: 50px;
-    font-weight: 700;
-    font-size: 1.1rem;
+    padding: 14px 42px;
+    border-radius: 4px;
+    font-weight: 800;
+    font-size: 1.05rem;
     text-decoration: none;
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     display: inline-block;
+    letter-spacing: 1px;
     border: none;
     cursor: pointer;
-    letter-spacing: 0.5px;
-    pointer-events: auto;
-    /* Force accessibility */
 }
 
 .lp-btn-primary {
-    background: linear-gradient(135deg, var(--primary-color), #f59e0b);
+    background: var(--lp-gold);
     color: #000;
-    box-shadow: 0 4px 20px rgba(251, 191, 36, 0.4);
+    box-shadow: 0 8px 25px rgba(212, 175, 55, 0.25);
 }
 
 .lp-btn-primary:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 30px rgba(251, 191, 36, 0.6);
+    transform: translateY(-4px);
+    background: var(--lp-gold-light);
+    box-shadow: 0 12px 35px rgba(212, 175, 55, 0.45);
 }
 
 .lp-btn-secondary {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-color);
-    border: 2px solid var(--primary-color);
+    background: var(--lp-slate-800); /* 塗りつぶし背景（深めのスレートブルー） */
+    color: var(--lp-white);
+    border: 1.5px solid rgba(212, 175, 55, 0.7);
     backdrop-filter: blur(10px);
 }
 
 .lp-btn-secondary:hover {
-    background: rgba(251, 191, 36, 0.2);
-    transform: translateY(-3px);
+    background: var(--lp-navy-deep);
+    border-color: var(--lp-gold);
+    transform: translateY(-4px);
 }
-
-.lp-scroll-indicator {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    opacity: 0.6;
-    animation: bounce 2s infinite;
-    z-index: 10;
-}
-
-.lp-scroll-indicator span {
-    font-size: 0.75rem;
-    letter-spacing: 2px;
-    color: var(--primary-color);
-}
-
-.lp-scroll-line {
-    width: 2px;
-    height: 30px;
-    background: linear-gradient(to bottom, var(--primary-color), transparent);
-}
-
-@media (min-width: 1024px) {
-    .lp-scroll-indicator {
-        bottom: 40px;
-        gap: 12px;
-    }
-
-    .lp-scroll-indicator span {
-        font-size: 0.85rem;
-    }
-
-    .lp-scroll-line {
-        height: 50px;
-    }
-}
-
-/* Section Container */
+/* Sections */
 .lp-section {
     padding: 100px 20px;
     max-width: 1200px;
@@ -290,16 +323,15 @@
     font-weight: 800;
     text-align: center;
     margin-bottom: 20px;
-    background: linear-gradient(135deg, var(--primary-color), #60a5fa);
+    background: linear-gradient(135deg, var(--lp-gold), #60a5fa);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    animation: fadeInUp 0.8s ease-out;
 }
 
 .lp-section-subtitle {
     text-align: center;
-    color: #94a3b8;
+    color: var(--lp-slate-400);
     font-size: 1.2rem;
     margin-bottom: 60px;
     max-width: 700px;
@@ -309,7 +341,7 @@
 
 /* Features Section */
 .lp-features {
-    background: linear-gradient(180deg, var(--bg-color) 0%, #1e293b 100%);
+    background: linear-gradient(180deg, var(--lp-black) 0%, #080b15 100%);
 }
 
 .lp-features-grid {
@@ -321,7 +353,7 @@
 
 .lp-feature-card {
     background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(251, 191, 36, 0.2);
+    border: 1px solid rgba(212, 175, 55, 0.2);
     border-radius: 20px;
     padding: 40px 30px;
     text-align: center;
@@ -331,33 +363,33 @@
 
 .lp-feature-card:hover {
     transform: translateY(-10px);
-    border-color: var(--primary-color);
-    box-shadow: 0 10px 40px rgba(251, 191, 36, 0.2);
+    border-color: var(--lp-gold);
+    box-shadow: 0 10px 40px rgba(212, 175, 55, 0.2);
     background: rgba(255, 255, 255, 0.08);
 }
 
 .lp-feature-icon {
     font-size: 4rem;
     margin-bottom: 20px;
-    filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.3));
+    filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.3));
 }
 
 .lp-feature-title {
     font-size: 1.5rem;
     font-weight: 700;
     margin-bottom: 15px;
-    color: var(--primary-color);
+    color: var(--lp-gold);
 }
 
 .lp-feature-description {
-    color: #cbd5e1;
+    color: var(--lp-slate-400);
     line-height: 1.7;
     font-size: 1rem;
 }
 
 /* How to Use Section */
 .lp-how-to-use {
-    background: var(--bg-color);
+    background: var(--lp-black);
 }
 
 .lp-steps {
@@ -379,29 +411,29 @@
     height: 60px;
     line-height: 60px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary-color), #f59e0b);
+    background: linear-gradient(135deg, var(--lp-gold), #f59e0b);
     color: #000;
     font-size: 1.5rem;
     font-weight: 900;
     margin-bottom: 20px;
-    box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4);
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
 }
 
 .lp-step-title {
     font-size: 1.3rem;
     font-weight: 700;
     margin-bottom: 15px;
-    color: var(--text-color);
+    color: var(--lp-white);
 }
 
 .lp-step-description {
-    color: #94a3b8;
+    color: var(--lp-slate-400);
     line-height: 1.6;
 }
 
 /* Disclaimer Section */
 .lp-disclaimer {
-    background: linear-gradient(180deg, var(--bg-color) 0%, #293548 100%);
+    background: linear-gradient(180deg, var(--lp-black) 0%, #080b15 100%);
 }
 
 .lp-disclaimer-grid {
@@ -424,7 +456,7 @@
 }
 
 .lp-disclaimer-card:hover {
-    border-color: var(--secondary-color);
+    border-color: #ef4444;
     box-shadow: 0 8px 30px rgba(239, 68, 68, 0.2);
 }
 
@@ -437,28 +469,28 @@
     font-size: 1.2rem;
     font-weight: 700;
     margin-bottom: 12px;
-    color: var(--text-color);
+    color: var(--lp-white);
 }
 
 .lp-disclaimer-text {
-    color: #cbd5e1;
+    color: var(--lp-slate-400);
     line-height: 1.6;
     font-size: 0.95rem;
 }
 
 /* Final CTA Section */
 .lp-final-cta {
-    background: radial-gradient(circle at center, #1a1a2e 0%, var(--bg-color) 100%);
+    background: radial-gradient(circle at center, #1a1a2e 0%, var(--lp-black) 100%);
     text-align: center;
     padding: 120px 20px;
     position: relative;
 }
 
 .lp-final-cta-title {
-    font-size: 3rem;
-    font-weight: 800;
+    font-size: 3.5rem;
+    font-weight: 900;
     margin-bottom: 30px;
-    background: linear-gradient(135deg, var(--primary-color), #60a5fa);
+    background: linear-gradient(135deg, var(--lp-gold), #60a5fa);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -473,20 +505,25 @@
 
 /* Footer */
 .lp-footer {
-    background: var(--bg-color);
+    background: var(--lp-black);
     padding: 30px 20px;
     text-align: center;
-    border-top: 1px solid rgba(251, 191, 36, 0.2);
+    border-top: 1px solid rgba(212, 175, 55, 0.2);
 }
 
 .lp-footer-text {
-    color: #94a3b8;
+    color: var(--lp-slate-400);
     font-size: 0.9rem;
     margin: 0;
     letter-spacing: 0.5px;
 }
 
 /* Animations */
+@keyframes fadeInImage {
+    from { opacity: 0; transform: scale(1.05); }
+    to { opacity: 1; transform: scale(1); }
+}
+
 @keyframes fadeInUp {
     from {
         opacity: 0;
@@ -499,94 +536,140 @@
     }
 }
 
-@keyframes bounce {
-
-    0%,
-    20%,
-    50%,
-    80%,
-    100% {
-        transform: translateX(-50%) translateY(0);
-    }
-
-    40% {
-        transform: translateX(-50%) translateY(-15px);
-    }
-
-    60% {
-        transform: translateX(-50%) translateY(-7px);
-    }
-}
 
 /* Responsive Design */
-@media (max-width: 768px) {
-    .lp-hero-title {
-        font-size: 3rem;
-    }
-
+@media (max-width: 1024px) {
     .lp-hero-subtitle {
-        font-size: 1.1rem;
-        letter-spacing: 2px;
-    }
-
-    .lp-hero-description {
-        font-size: 1rem;
-    }
-
-    .lp-section {
-        padding: 60px 20px;
+        font-size: 2rem;
     }
 
     .lp-section-title {
-        font-size: 2rem;
+        font-size: 2.8rem;
     }
 
     .lp-features-grid,
     .lp-steps {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .pc-br {
+        display: none;
     }
 
-    .lp-disclaimer-grid {
-        grid-template-columns: 1fr;
+    .sp-br {
+        display: block;
     }
 
     .lp-hero {
-        padding-top: 100px;
-        padding-bottom: 110px;
-        min-height: 100svh;
+        padding: 0;
+        height: 100vh;
+        min-height: -webkit-fill-available;
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        justify-content: flex-end; /* 下部配置 */
+        align-items: center; /* 中央に維持 */
+        background: var(--lp-navy-deep);
+    }
+
+    .lp-hero-image {
+        object-fit: contain; /* モバイルでは画像を完全に表示し、ロゴ切れを防止する */
+        object-position: center 20%; /* ロゴの垂直位置を調整 */
     }
 
     .lp-hero-content {
-        padding: 10px;
+        margin-top: 0;
+        margin-bottom: 140px; /* 位置をさらに引き下げ */
+        padding-left: 24px;
+        padding-right: 24px;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        z-index: 10;
+    }
+
+    .lp-hero-text-wrapper {
+        padding: 0 24px; /* 左右に余白を確保 */
+        background: transparent; /* プレートを非表示にしてメインビジュアルを強調 */
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .lp-hero-subtitle {
+        font-size: 22px;
+        font-weight: 600;
+        margin-bottom: 25px;
+        letter-spacing: 0.1em;
+        line-height: 1.5;
+        text-align: center;
+    }
+
+    .lp-hero-description {
+        display: none; /* スマホでは非表示 */
     }
 
     .lp-hero-cta {
-        flex-direction: column;
-        align-items: stretch;
-        margin-top: 25px;
-        gap: 15px;
+        display: flex;
+        flex-direction: column; /* 縦並びに変更して重なりを解消 */
+        align-items: center;
+        width: 100%;
+        gap: 12px;
     }
 
     .lp-btn {
-        width: 100%;
-        max-width: 320px;
-        margin: 0 auto;
-        padding: 12px 20px;
-        font-size: 1rem;
+        width: auto;
+        flex: none;
+        padding: 12px 20px; /* サイズを少し縮小 */
+        font-size: 14px;
+        white-space: nowrap;
     }
 
+    /* 副CTAをボタン形式にする */
+    .lp-hero-cta .lp-btn-secondary {
+        background: var(--lp-slate-800); /* スマホ版も塗りつぶし背景 */
+        border: 1.5px solid rgba(212, 175, 55, 0.6); /* ゴールド枠で統一感 */
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        text-decoration: none;
+        color: rgba(255, 255, 255, 0.95);
+        font-size: 14px;
+        padding: 12px 28px;
+        flex: none;
+        width: auto;
+        border-radius: 4px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
 
-    .lp-final-cta-title {
-        font-size: 2rem;
+    .lp-hero-cta .lp-btn-secondary:hover {
+        background: var(--lp-navy-deep);
+        border-color: var(--lp-gold);
+        transform: translateY(-2px);
+    }
+
+    .lp-section {
+        padding: 80px 20px;
+    }
+
+    .lp-section-title {
+        font-size: 2.2rem;
+        margin-bottom: 40px;
+    }
+
+    .lp-features-grid,
+    .lp-steps,
+    .lp-disclaimer-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
     }
 
     /* Header responsive */
     .lp-header-container {
         padding: 0 15px;
-        /* Reduce padding to give more space */
     }
 
     .lp-logo-text {
@@ -595,48 +678,43 @@
 
     .lp-nav {
         gap: 10px;
-        /* Reduce gap */
     }
 
     .lp-nav-link {
+        display: none;
+    }
+
+    .lp-nav-link[href="/login"] {
+        display: block;
         font-size: 0.85rem;
-        white-space: nowrap;
-        /* Prevent wrapping */
     }
 
     .lp-nav-btn {
-        padding: 6px 14px;
+        padding: 8px 16px;
         font-size: 0.85rem;
-        white-space: nowrap;
-        /* Prevent wrapping */
     }
 }
 
 @media (max-width: 480px) {
-    .lp-hero-title {
-        font-size: 2.5rem;
+    .lp-hero-content {
+        margin-top: 260px;
+    }
+
+    .lp-hero-subtitle {
+        font-size: 1.4rem;
+        letter-spacing: 0.05em;
     }
 
     .lp-section-title {
         font-size: 1.8rem;
     }
 
-    /* Further adjustment for very small screens (iPhone SE etc) */
     .lp-logo-text {
-        font-size: 0.9rem;
+        font-size: 1rem;
     }
 
-    /* Hide "Setlist Archive" if screens are too narrow, or just shrink more? 
-       Let's try flex-shrink on logo text to allow truncation if needed */
     .lp-logo {
         flex: 1;
         min-width: 0;
-        margin-right: 10px;
-    }
-
-    .lp-logo-text {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }
 }
