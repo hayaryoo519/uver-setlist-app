@@ -1,66 +1,90 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import registerImage from '../../assets/register-pc.png';
 
 const AuthLayout = ({ children, title, subtitle }) => {
     return (
-        <div style={{
+        <div className="auth-container" style={{
             minHeight: '100vh',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: '#0f172a',
-            padding: '20px',
+            background: 'var(--lp-black)',
+            padding: '24px',
             position: 'relative',
             overflow: 'hidden'
         }}>
             {/* Background Decor */}
             <div style={{
                 position: 'absolute',
-                top: '-10%',
+                top: '-15%',
+                right: '-10%',
+                width: '800px',
+                height: '800px',
+                background: 'radial-gradient(circle, rgba(212, 175, 55, 0.12) 0%, rgba(0,0,0,0) 70%)',
+                filter: 'blur(100px)',
+                zIndex: 0
+            }} />
+            <div style={{
+                position: 'absolute',
+                bottom: '-10%',
                 left: '-10%',
-                width: '500px',
-                height: '500px',
-                background: 'radial-gradient(circle, rgba(255, 215, 0, 0.1) 0%, rgba(0,0,0,0) 70%)',
-                filter: 'blur(60px)',
+                width: '600px',
+                height: '600px',
+                background: 'radial-gradient(circle, rgba(212, 175, 55, 0.08) 0%, rgba(0,0,0,0) 70%)',
+                filter: 'blur(80px)',
                 zIndex: 0
             }} />
 
-            <div style={{
+            <div className="glass-panel" style={{
                 width: '100%',
-                maxWidth: '450px',
-                background: 'rgba(255, 255, 255, 0.03)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                maxWidth: '1200px',
                 borderRadius: '24px',
-                padding: '40px',
+                padding: '0',
                 zIndex: 1,
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                position: 'relative',
+                overflow: 'hidden'
             }}>
-                <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-                    <Link to="/" style={{ textDecoration: 'none' }}>
-                        <h1 style={{
-                            fontSize: '1.8rem',
-                            color: '#fff',
-                            margin: '0 0 10px 0',
-                            letterSpacing: '1px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            lineHeight: '1.1'
-                        }}>
-                            <span style={{ color: 'var(--primary-color)' }}>UVERworld</span>
-                            <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 'normal', letterSpacing: '2px' }}>Setlist Archive</span>
-                        </h1>
-                    </Link>
-                    {title && <h2 style={{ fontSize: '1.5rem', marginTop: '20px', marginBottom: '5px' }}>{title}</h2>}
-                    {subtitle && <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: 0 }}>{subtitle}</p>}
-                </div>
+                <div className="auth-layout-inner">
+                    {/* Left: Form Side */}
+                    <div className="auth-form-side">
+                        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                            <Link to="/" style={{ textDecoration: 'none' }}>
+                                <h1 style={{
+                                    fontSize: '2rem',
+                                    color: '#fff',
+                                    margin: '0',
+                                    letterSpacing: '2px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    lineHeight: '1.2'
+                                }}>
+                                    <span className="text-gold" style={{ fontWeight: '900' }}>UVERworld</span>
+                                    <span style={{ fontSize: '0.85rem', color: 'var(--lp-slate-400)', fontWeight: '500', letterSpacing: '4px', marginTop: '6px' }}>SETLIST ARCHIVE</span>
+                                </h1>
+                            </Link>
+                            {title && <h2 style={{ fontSize: '1.75rem', marginTop: '32px', marginBottom: '12px', fontWeight: '800', color: '#fff' }}>{title}</h2>}
+                            {subtitle && <p style={{ color: 'var(--lp-slate-400)', fontSize: '1rem', margin: 0, lineHeight: '1.6' }}>{subtitle}</p>}
+                        </div>
 
-                {children}
+                        <div className="auth-content">
+                            {children}
+                        </div>
 
-                {/* Footer Links */}
-                <div style={{ marginTop: '30px', textAlign: 'center', fontSize: '0.85rem', color: '#64748b' }}>
-                    <Link to="/" style={{ color: '#64748b', textDecoration: 'none' }}>Back to Home</Link>
+                        {/* Footer Links */}
+                        <div style={{ marginTop: '32px', textAlign: 'center' }}>
+                            <Link to="/" className="auth-link" style={{ fontSize: '0.9rem', color: 'var(--lp-slate-500)', borderBottom: 'none' }} onMouseEnter={(e) => e.target.style.color = '#fff'} onMouseLeave={(e) => e.target.style.color = 'var(--lp-slate-500)'}>
+                                トップページへ戻る
+                            </Link>
+                        </div>
+                    </div>
+
+                    {/* Right: Image Side (Visible on PC) */}
+                    <div className="auth-image-side">
+                        <img src={registerImage} alt="Auth Backdrop" className="auth-side-img" />
+                        <div className="auth-image-overlay" />
+                    </div>
                 </div>
             </div>
         </div>
