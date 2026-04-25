@@ -16,12 +16,14 @@ const PredictionRanking = () => {
     const [liveInfo, setLiveInfo] = useState(null);
     const [tourLives, setTourLives] = useState([]);
 
+    const [sortBy, setSortBy] = useState('popular');
+
     useEffect(() => {
         fetchPredictions();
         if (liveId) {
             fetchLiveInfo();
         }
-    }, [liveId]);
+    }, [liveId, sortBy]); // sortByが変更されたら再取得
 
     const fetchLiveInfo = async () => {
         try {
@@ -50,13 +52,20 @@ const PredictionRanking = () => {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const url = liveId ? `/api/predictions?live_id=${liveId}` : '/api/predictions';
+            const url = liveId 
+                ? `/api/predictions?live_id=${liveId}&sort=${sortBy}` 
+                : `/api/predictions?sort=${sortBy}`;
             const res = await fetch(url, {
                 headers: token ? { 'token': token } : {}
             });
             if (res.ok) {
                 const data = await res.json();
                 setPredictions(data);
+
+                // もしURLにlive_idがなく、データから取得できた場合は補完する
+                if (!liveId && data.length > 0 && data[0].live_id) {
+                    navigate(`/predictions?live_id=${data[0].live_id}`, { replace: true });
+                }
             } else {
                 console.error('Failed to fetch predictions');
             }
@@ -89,7 +98,7 @@ const PredictionRanking = () => {
 
             if (res.ok) {
                 const data = await res.json();
-                // Update local state to reflect like change
+                // Update local state
                 setPredictions(prev => prev.map(p => {
                     if (p.id === id) {
                         return {
@@ -105,6 +114,13 @@ const PredictionRanking = () => {
             console.error('Error toggling like:', error);
         }
     };
+
+    // 自分の投稿をトップに持ってくるためのソート済み配列
+    const sortedPredictions = [...predictions].sort((a, b) => {
+        if (a.is_mine && !b.is_mine) return -1;
+        if (!a.is_mine && b.is_mine) return 1;
+        return 0; // それ以外はAPIの順序（いいね順 or 新着順）を維持
+    });
 
     if (isLoading) {
         return (
@@ -124,120 +140,168 @@ const PredictionRanking = () => {
                     subtitle="みんなのセトリ予想"
                 />
 
-                {/* ライブ情報 */}
-                {liveInfo && (
-                    <div className="mt-4 mb-6 bg-slate-800/50 border border-yellow-500/30 rounded-xl p-4 flex flex-col gap-4">
-                        <div className="flex items-start justify-between gap-4 flex-col md:flex-row md:items-center">
-                            <div className="flex items-start gap-3 flex-1">
-                                <span className="text-yellow-400 text-lg shrink-0 mt-0.5">🎤</span>
-                                <div>
-                                    <div className="text-white font-bold leading-tight mb-1" style={{ wordBreak: 'break-word', whiteSpace: 'normal' }}>
-                                        {liveInfo.tour_name || 'Special Live'}
+                {/* ライブ情報・セレクター */}
+                <div className="mt-4 mb-6">
+                    <div className="bg-gradient-to-r from-slate-800/80 to-slate-900/80 border border-slate-700 rounded-2xl overflow-hidden shadow-xl">
+                        {liveInfo ? (
+                            <div className="p-5 md:p-6">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-yellow-500/20 p-3 rounded-xl border border-yellow-500/30">
+                                            <Calendar className="text-yellow-400" size={24} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl font-bold text-white leading-tight">
+                                                {liveInfo.tour_name || 'Special Live'}
+                                            </h3>
+                                            <p className="text-slate-400 text-sm mt-1">
+                                                {liveInfo.date ? new Date(liveInfo.live_date || liveInfo.date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' }) : ''}
+                                                <span className="mx-2">/</span>
+                                                {liveInfo.venue}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className="text-sm text-slate-400">
-                                        {liveInfo.date ? new Date(liveInfo.date).toISOString().split('T')[0] : ''} @ {liveInfo.venue}
+                                    <div className="flex items-center gap-2">
+                                        <Link to="/lives" className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg border border-slate-700 transition-colors">
+                                            他のライブを探す
+                                        </Link>
                                     </div>
                                 </div>
-                            </div>
-                            <Link to="/predictions" className="text-xs text-blue-400 hover:text-blue-300 border border-blue-500/30 px-3 py-2 rounded-full text-center whitespace-nowrap shrink-0">
-                                すべての予想を見る
-                            </Link>
-                        </div>
 
-                        {/* ツアー日程選択ドロップダウン */}
-                        {tourLives.length > 1 && (
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mt-1">
-                                <label className="text-xs font-medium text-slate-400 whitespace-nowrap">
-                                    対象公演を変更:
-                                </label>
-                                <select
-                                    value={liveId || ''}
-                                    onChange={(e) => {
-                                        const newId = e.target.value;
-                                        navigate(`/predictions?live_id=${newId}`);
-                                    }}
-                                    className="bg-slate-800 border border-slate-700 text-white text-sm rounded-md px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer flex-1 min-w-0"
-                                >
-                                    {tourLives.map(l => (
-                                        <option key={l.id} value={l.id}>
-                                            {l.date ? new Date(l.date).toISOString().split('T')[0] : ''} @ {l.venue}
-                                        </option>
-                                    ))}
-                                </select>
+                                {tourLives.length > 1 && (
+                                    <div className="mt-5 pt-5 border-t border-slate-700/50 flex flex-col sm:flex-row sm:items-center gap-3">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                            対象公演を変更:
+                                        </label>
+                                        <select
+                                            value={liveId || ''}
+                                            onChange={(e) => navigate(`/predictions?live_id=${e.target.value}`)}
+                                            className="bg-slate-900 border border-slate-700 text-white text-sm rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer flex-1 min-w-0 appearance-none"
+                                            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
+                                        >
+                                            {tourLives.map(l => (
+                                                <option key={l.id} value={l.id}>
+                                                    {new Date(l.date).toLocaleDateString('ja-JP')} @ {l.venue}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="p-8 text-center">
+                                <p className="text-slate-400">ライブ情報が見つかりません</p>
+                                <Link to="/lives" className="mt-4 inline-block text-blue-400 hover:underline">
+                                    ライブ一覧から選ぶ
+                                </Link>
                             </div>
                         )}
                     </div>
-                )}
+                </div>
 
-                {/* CTAセクション */}
-                <div className="mt-6 mb-8">
+                {/* 投稿ボタン & ソートタブ */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                    {/* ソートタブ */}
+                    <div className="flex bg-slate-800/50 p-1 rounded-xl border border-slate-700 w-fit">
+                        <button
+                            onClick={() => setSortBy('popular')}
+                            className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${sortBy === 'popular' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                        >
+                            人気順
+                        </button>
+                        <button
+                            onClick={() => setSortBy('new')}
+                            className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${sortBy === 'new' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                        >
+                            新着順
+                        </button>
+                    </div>
+
                     <Link
                         to={liveId ? `/predictions/new?live_id=${liveId}` : "/predictions/new"}
-                        className="group bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-500/30 hover:border-blue-400/60 rounded-xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-900/30 block"
-                        style={{ textDecoration: 'none' }}
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5 active:translate-y-0"
                     >
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="bg-blue-500/20 p-2 rounded-lg">
-                                <PenTool size={22} className="text-blue-400" />
-                            </div>
-                            <h3 className="text-lg font-bold text-white group-hover:text-blue-300 transition-colors">
-                                {liveInfo ? `${liveInfo.tour_name || 'このライブ'}の予想を作成する` : "予想を作成する"}
-                            </h3>
-                        </div>
-                        <p className="text-sm text-slate-400">
-                            あなたのセトリ予想を投稿してシェアしよう
-                        </p>
+                        <Plus size={20} />
+                        予想を投稿する
                     </Link>
                 </div>
 
-                {/* ランキングセクション */}
-                <div id="ranking">
-                    <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2 border-l-4 border-yellow-500 pl-3">
-                        <Sparkles size={18} className="text-yellow-400" />
-                        予想ランキング
-                    </h2>
-                </div>
-
-                <div className="space-y-4 mt-8">
-                    {predictions.length === 0 ? (
-                        <div className="text-center py-20 text-slate-500 border border-dashed border-slate-700 rounded-xl">
-                            まだセトリ予想が投稿されていません。最初の予想を作成してみませんか？
+                {/* 予想リスト */}
+                <div className="space-y-4">
+                    {sortedPredictions.length === 0 ? (
+                        <div className="text-center py-20 bg-slate-800/30 border border-dashed border-slate-700 rounded-2xl">
+                            <Sparkles size={48} className="mx-auto text-slate-700 mb-4" />
+                            <p className="text-slate-500">まだ予想が投稿されていません</p>
+                            <p className="text-slate-600 text-sm mt-1">最初の予想を投稿して盛り上げよう！</p>
                         </div>
                     ) : (
-                        predictions.map((prediction, index) => (
-                            <Link to={`/predictions/${prediction.id}`} key={prediction.id} className="block group">
-                                <div className="bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-blue-500/50 rounded-xl px-4 py-4 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-900/20 relative overflow-hidden flex items-center">
-                                    {/* Ranking Number */}
-                                    <div className="w-12 text-center">
-                                        <span className={`text-2xl font-bold ${index === 0 ? 'text-yellow-400' : index === 1 ? 'text-slate-300' : index === 2 ? 'text-amber-600' : 'text-slate-500'}`}>
-                                            {index + 1}
-                                        </span>
+                        sortedPredictions.map((prediction, index) => (
+                            <Link 
+                                to={`/predictions/${prediction.id}`} 
+                                key={prediction.id} 
+                                className={`block group relative ${prediction.is_mine ? 'ring-2 ring-blue-500/50 rounded-2xl' : ''}`}
+                            >
+                                {prediction.is_mine && (
+                                    <div className="absolute -top-3 left-6 bg-blue-600 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full z-10 shadow-lg border border-blue-400">
+                                        MY GUESS
+                                    </div>
+                                )}
+                                
+                                <div className={`bg-slate-800/50 hover:bg-slate-800 border border-slate-700 group-hover:border-blue-500/50 rounded-2xl p-5 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-900/20 flex items-center`}>
+                                    {/* Ranking Number / Icon */}
+                                    <div className="w-10 text-center mr-4">
+                                        {sortBy === 'popular' ? (
+                                            <span className={`text-2xl font-black ${index === 0 && !prediction.is_mine ? 'text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]' : index === 1 ? 'text-slate-300' : index === 2 ? 'text-amber-600' : 'text-slate-600'}`}>
+                                                {index + 1}
+                                            </span>
+                                        ) : (
+                                            <div className="bg-slate-700/50 p-2 rounded-lg">
+                                                <Eye size={18} className="text-slate-500" />
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {/* Main Info */}
-                                    <div className="flex-1 min-w-0 px-4 border-l border-slate-700/50 ml-2 pl-4">
-                                        <h2 className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors truncate">
-                                            {prediction.username}さんの予想
-                                        </h2>
-                                        <div className="flex items-center gap-4 mt-2 text-sm text-slate-400">
-                                            <div className="flex items-center gap-1">
-                                                <User size={14} /> {prediction.username}
+                                    {/* Content */}
+                                    <div className="flex-1 min-w-0 pr-4">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h2 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors truncate">
+                                                {prediction.username}さんの予想
+                                            </h2>
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-slate-500 font-medium">
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
+                                                    <User size={12} className="text-blue-400" />
+                                                </div>
+                                                {prediction.username}
                                             </div>
-                                            <div className="flex items-center gap-1">
-                                                <Calendar size={14} /> {new Date(prediction.created_at).toLocaleDateString('ja-JP')}
+                                            <div className="flex items-center gap-1.5">
+                                                <Calendar size={12} />
+                                                {new Date(prediction.created_at).toLocaleDateString('ja-JP')}
                                             </div>
+                                            {/* モバイルのみ表示されるライブ情報 */}
+                                            {!liveId && (
+                                                <div className="flex items-center gap-1.5 text-blue-400/80">
+                                                    <Eye size={12} />
+                                                    {prediction.venue}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
-                                    {/* Likes */}
-                                    <div className="ml-auto text-center flex flex-col items-center justify-center gap-1 border-l border-slate-700/50 pl-4">
+                                    {/* Actions / Stats */}
+                                    <div className="flex flex-col items-center gap-1 border-l border-slate-700/50 pl-6">
                                         <button
                                             onClick={(e) => handleLike(e, prediction.id)}
-                                            className={`transition-all p-2 bg-slate-800 rounded-full ${prediction.is_liked ? 'text-pink-500 scale-110' : 'text-slate-500 hover:scale-110'}`}
+                                            className={`group/like flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${prediction.is_liked ? 'text-pink-500' : 'text-slate-500 hover:bg-pink-500/10 hover:text-pink-400'}`}
                                         >
-                                            <Heart size={20} fill={prediction.is_liked ? "currentColor" : "none"} />
+                                            <Heart 
+                                                size={24} 
+                                                fill={prediction.is_liked ? "currentColor" : "none"} 
+                                                className={`transition-transform duration-300 ${prediction.is_liked ? 'scale-110' : 'group-hover/like:scale-110'}`} 
+                                            />
+                                            <span className="text-xs font-black tracking-tighter">{prediction.like_count}</span>
                                         </button>
-                                        <span className="font-bold text-slate-300">{prediction.like_count}</span>
                                     </div>
                                 </div>
                             </Link>
