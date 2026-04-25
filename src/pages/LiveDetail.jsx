@@ -19,7 +19,7 @@ function LiveDetail() {
 
     const handleCorrectionClick = () => {
         if (!currentUser) {
-            navigate('/login');
+            navigate('/login', { state: { from: location } });
             return;
         }
         setIsCorrectionModalOpen(true);
@@ -55,7 +55,7 @@ function LiveDetail() {
         if (!success) {
             const shouldLogin = window.confirm("参戦記録をつけるにはログインが必要です。\nログインページに移動しますか？");
             if (shouldLogin) {
-                navigate('/login');
+                navigate('/login', { state: { from: location } });
             }
         }
     };

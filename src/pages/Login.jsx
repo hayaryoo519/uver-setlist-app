@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import AuthLayout from '../components/Auth/AuthLayout';
 import { Mail, Lock, ArrowRight, Loader } from 'lucide-react';
 
@@ -10,7 +11,12 @@ const Login = () => {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const { login } = useAuth();
+    const { showToast } = useToast();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // 遷移元ページの情報を取得
+    const fromPage = location.state?.from || '/mypage';
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -20,7 +26,8 @@ const Login = () => {
         try {
             const result = await login(email, password);
             if (result.success) {
-                navigate('/mypage');
+                showToast('ログインしました', 'success');
+                navigate(fromPage, { replace: true });
             } else {
                 setError(result.message || 'ログインに失敗しました。メールアドレスとパスワードを確認してください。');
             }
@@ -86,7 +93,7 @@ const Login = () => {
 
             <div className="auth-footer-text">
                 アカウントをお持ちでないですか？<br />
-                <Link to="/signup" className="auth-link">新規アカウント作成</Link>
+                <Link to="/signup" state={{ from: fromPage }} className="auth-link">新規アカウント作成</Link>
             </div>
         </AuthLayout>
     );
