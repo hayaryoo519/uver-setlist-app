@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import DailyLogsView from '../components/Admin/DailyLogsView';
 import WeeklyAnalysisView from '../components/Admin/WeeklyAnalysisView';
@@ -9,6 +9,7 @@ import SEO from '../components/SEO';
 export default function SecurityLogsPage() {
     const { currentUser } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [viewMode, setViewMode] = useState(null); // 'daily' | 'weekly' | null
     const [recentLogs, setRecentLogs] = useState([]);
@@ -16,12 +17,7 @@ export default function SecurityLogsPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [cleanupResult, setCleanupResult] = useState(null);
 
-    // Redirect if not admin
-    React.useEffect(() => {
-        if (!currentUser || currentUser.role !== 'admin') {
-            navigate('/');
-        }
-    }, [currentUser, navigate]);
+    // Redirect if not admin - Now handled by ProtectedRoute in App.jsx
 
     const handleDailyCheck = async () => {
         setIsLoading(true);
@@ -32,7 +28,7 @@ export default function SecurityLogsPage() {
             const token = localStorage.getItem('token');
             if (!token) {
                 alert('認証トークンが見つかりません。再度ログインしてください。');
-                navigate('/login');
+                navigate('/login', { state: { from: location } });
                 return;
             }
 
@@ -46,7 +42,7 @@ export default function SecurityLogsPage() {
             } else {
                 if (res.status === 403 || res.status === 401) {
                     alert('認証エラー：再ログインが必要です。');
-                    navigate('/login');
+                    navigate('/login', { state: { from: location } });
                     return;
                 }
                 alert('ログの取得に失敗しました');
@@ -68,7 +64,7 @@ export default function SecurityLogsPage() {
             const token = localStorage.getItem('token');
             if (!token) {
                 alert('認証トークンが見つかりません。再度ログインしてください。');
-                navigate('/login');
+                navigate('/login', { state: { from: location } });
                 return;
             }
 
@@ -82,7 +78,7 @@ export default function SecurityLogsPage() {
             } else {
                 if (res.status === 403 || res.status === 401) {
                     alert('認証エラー：再ログインが必要です。');
-                    navigate('/login');
+                    navigate('/login', { state: { from: location } });
                     return;
                 }
                 const errorData = await res.json().catch(() => ({}));
@@ -126,7 +122,7 @@ export default function SecurityLogsPage() {
     };
 
     if (!currentUser || currentUser.role !== 'admin') {
-        return null;
+        return null; // Safety fallback
     }
 
     return (
