@@ -48,20 +48,15 @@ const SetlistPredictionCreate = () => {
         })
     );
 
-    // Initial check for Auth
+    // Initial check for Auth - Now handled by ProtectedRoute
     useEffect(() => {
-        if (!currentUser) {
-            alert("ログインが必要です");
-            navigate('/login', { state: { from: location.pathname + location.search } });
-        } else {
-            fetchAllSongs();
-            // ライブ情報を取得
-            if (liveId) {
-                setSelectedLiveId(liveId);
-                fetchLiveInfo(liveId);
-            }
+        fetchAllSongs();
+        // ライブ情報を取得
+        if (liveId) {
+            setSelectedLiveId(liveId);
+            fetchLiveInfo(liveId);
         }
-    }, [currentUser, navigate, location, liveId]);
+    }, [liveId]);
 
     const fetchLiveInfo = async (id) => {
         try {
