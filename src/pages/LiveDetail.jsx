@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAttendance } from '../hooks/useAttendance';
 import { useAuth } from '../contexts/AuthContext';
 import CorrectionModal from '../components/CorrectionModal';
-import { AlertTriangle, Tag, MapPin, Check, Plus, Star, Music } from 'lucide-react';
+import { AlertTriangle, Tag, MapPin, Check, Plus, Star, Music, Sparkles } from 'lucide-react';
 import SEO from '../components/SEO';
 
 function LiveDetail() {
@@ -218,6 +218,45 @@ function LiveDetail() {
                             <p className="font-medium">SETLIST DATA NOT FOUND</p>
                         </div>
                     )}
+                </div>
+
+                {/* セトリ予想セクション */}
+                <div className="mt-12">
+                    <Link
+                        to={`/predictions?live_id=${liveId}`}
+                        className="group block relative overflow-hidden bg-gradient-to-br from-blue-600/10 via-slate-800/40 to-indigo-600/10 border border-blue-500/20 hover:border-blue-500/50 rounded-3xl p-8 transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/10"
+                    >
+                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <Sparkles size={120} className="text-blue-400" />
+                        </div>
+                        
+                        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                            <div>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <div className="bg-blue-500/20 p-2 rounded-lg">
+                                        <Sparkles size={20} className="text-blue-400" />
+                                    </div>
+                                    <span className="text-xs font-black tracking-widest text-blue-400 uppercase">PREDICTION</span>
+                                </div>
+                                <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">
+                                    このライブのセトリを予想しよう！
+                                </h3>
+                                <p className="text-slate-400 text-sm max-w-md">
+                                    みんなの予想ランキングをチェックしたり、自分だけの最強のセットリストを投稿してシェアしましょう。
+                                </p>
+                            </div>
+                            
+                            <div className="flex items-center gap-4">
+                                <div className="text-right hidden md:block">
+                                    <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-tighter">View Rankings</div>
+                                    <div className="text-white font-black text-xl">みんなの予想 &rarr;</div>
+                                </div>
+                                <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-900/40 group-hover:scale-110 transition-transform">
+                                    <Plus size={24} />
+                                </div>
+                            </div>
+                        </div>
+                    </Link>
                 </div>
 
                 <div className="mt-16 text-center">
