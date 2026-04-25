@@ -33,19 +33,7 @@ function CorrectionForm() {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
 
-    // Redirect if not logged in
-    useEffect(() => {
-        // We need to wait for auth check to complete, but useAuth doesn't expose loading state directly here easily 
-        // without wrapping. Assuming AuthContext handles initial load.
-        // For simplicity, checking currentUser directly. If it's null on mount, we might redirect too early if it's still loading.
-        // Ideally useAuth provides loading state. 
-        // Let's implement a check securely.
-
-        const token = localStorage.getItem('token');
-        if (!token) {
-            navigate('/login');
-        }
-    }, [currentUser, navigate]);
+    // Redirect if not logged in - Now handled by ProtectedRoute in App.jsx
 
     if (!currentUser) return null; // Prevent flash
 
