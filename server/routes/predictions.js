@@ -3,21 +3,47 @@ const db = require('../db');
 const { authorize } = require('../middleware/authorization');
 
 // 1. GET All Predictions (Ranking)
-// Query params: live_id
+// Query params: live_id, sort (popular | new)
 router.get('/', async (req, res) => {
     try {
-        const { live_id } = req.query;
+        let { live_id, sort } = req.query;
         const currentUserId = req.header('token') ? require('jsonwebtoken').decode(req.header('token'))?.user_id : null;
+
+        // 1. If live_id is not provided, find the most recent/upcoming live
+        if (!live_id) {
+            const nextLive = await db.query(`
+                SELECT id FROM lives 
+                WHERE date >= CURRENT_DATE 
+                ORDER BY date ASC 
+                LIMIT 1
+            `);
+            if (nextLive.rows.length > 0) {
+                live_id = nextLive.rows[0].id;
+            } else {
+                // If no upcoming lives, get the latest past live
+                const lastLive = await db.query(`
+                    SELECT id FROM lives 
+                    ORDER BY date DESC 
+                    LIMIT 1
+                `);
+                if (lastLive.rows.length > 0) {
+                    live_id = lastLive.rows[0].id;
+                }
+            }
+        }
 
         let query = `
             SELECT 
                 p.*, 
                 u.username,
-                COUNT(DISTINCT l.user_id) as like_count,
-                EXISTS(SELECT 1 FROM prediction_likes WHERE prediction_id = p.id AND user_id = $1) as is_liked
+                li.tour_name, li.venue, li.date as live_date,
+                COUNT(DISTINCT pl.user_id) as like_count,
+                EXISTS(SELECT 1 FROM prediction_likes WHERE prediction_id = p.id AND user_id = $1) as is_liked,
+                (p.user_id = $1) as is_mine
             FROM predictions p
             JOIN users u ON p.user_id = u.id
-            LEFT JOIN prediction_likes l ON p.id = l.prediction_id
+            JOIN lives li ON p.live_id = li.id
+            LEFT JOIN prediction_likes pl ON p.id = pl.prediction_id
         `;
 
         const params = [currentUserId];
@@ -29,10 +55,14 @@ router.get('/', async (req, res) => {
             paramIndex++;
         }
 
-        query += `
-            GROUP BY p.id, u.username
-            ORDER BY like_count DESC, p.created_at DESC
-        `;
+        query += ` GROUP BY p.id, u.username, li.id `;
+
+        if (sort === 'new') {
+            query += ` ORDER BY p.created_at DESC `;
+        } else {
+            // Default: popular (like_count)
+            query += ` ORDER BY like_count DESC, p.created_at DESC `;
+        }
 
         const result = await db.query(query, params);
         res.json(result.rows);
