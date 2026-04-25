@@ -73,6 +73,9 @@ const Navbar = () => {
                         <Link to="/lives" className="nav-link">
                             <Calendar size={18} /> LiveArchive
                         </Link>
+                        <Link to="/predictions" className="nav-link">
+                            <ListMusic size={18} /> Prediction
+                        </Link>
                         {currentUser && (
                             <Link to="/mypage" className="nav-link">
                                 <User size={18} /> My Page
@@ -111,6 +114,7 @@ const Navbar = () => {
                     <Link to="/" className="mobile-nav-link">Home</Link>
                     <Link to="/songs" className="mobile-nav-link">Discography</Link>
                     <Link to="/lives" className="mobile-nav-link">LiveArchive</Link>
+                    <Link to="/predictions" className="mobile-nav-link">Prediction</Link>
                     {currentUser && <Link to="/mypage" className="mobile-nav-link">My Page</Link>}
                     {currentUser?.role === 'admin' && (
                         <Link to="/admin" className="mobile-nav-link" style={{ color: '#fbbf24' }}>Admin Panel</Link>

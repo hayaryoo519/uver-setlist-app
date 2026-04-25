@@ -16,7 +16,7 @@ export const UpcomingLives = ({ lives }) => {
                     Next Live
                 </div>
                 <span className="next-live-sub">
-                    （セットリスト予想 - Coming Soon）
+                    （セットリスト予想受付中！）
                 </span>
             </h2>
 
@@ -83,25 +83,26 @@ export const UpcomingLives = ({ lives }) => {
                             zIndex: 1
                         }}>
                             <div style={{ display: 'flex', gap: '10px' }}>
-                                <button
-                                    disabled
+                                <Link
+                                    to={`/predictions/new?live_id=${live.id}`}
                                     style={{
                                         flex: 1,
                                         padding: '10px',
                                         borderRadius: '8px',
-                                        background: 'rgba(255,255,255,0.05)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        color: '#64748b',
+                                        background: 'rgba(59, 130, 246, 0.2)',
+                                        border: '1px solid rgba(59, 130, 246, 0.4)',
+                                        color: '#60a5fa',
                                         fontSize: '0.8rem',
-                                        cursor: 'not-allowed',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        gap: '6px'
+                                        gap: '6px',
+                                        textDecoration: 'none'
                                     }}
+                                    className="hover:bg-blue-600/30 transition-all"
                                 >
-                                    <Sparkles size={14} /> 予想する (準備中)
-                                </button>
+                                    <Sparkles size={14} /> 予想する
+                                </Link>
                             </div>
                         </div>
                     </div>
