@@ -26,11 +26,11 @@ router.get('/lives', async (req, res) => {
 // Query params: live_id, sort (popular | new)
 router.get('/', async (req, res) => {
     try {
-        let { live_id, sort } = req.query;
+        let { live_id, sort, mine } = req.query;
         const currentUserId = req.header('token') ? require('jsonwebtoken').decode(req.header('token'))?.user_id : null;
 
-        // 1. If live_id is not provided, find the most recent/upcoming live
-        if (!live_id) {
+        // 1. If live_id is not provided, and we are not explicitly requesting 'mine', find the most recent/upcoming live
+        if (!live_id && mine !== 'true') {
             const nextLive = await db.query(`
                 SELECT id FROM lives 
                 WHERE date >= CURRENT_DATE 
@@ -68,11 +68,23 @@ router.get('/', async (req, res) => {
 
         const params = [currentUserId];
         let paramIndex = 2;
+        let conditions = [];
 
         if (live_id) {
-            query += ` WHERE p.live_id = $${paramIndex}`;
+            conditions.push(`p.live_id = $${paramIndex}`);
             params.push(live_id);
             paramIndex++;
+        }
+
+        if (mine === 'true') {
+            if (!currentUserId) return res.status(401).json("Unauthorized");
+            conditions.push(`p.user_id = $${paramIndex}`);
+            params.push(currentUserId);
+            paramIndex++;
+        }
+
+        if (conditions.length > 0) {
+            query += ` WHERE ` + conditions.join(' AND ');
         }
 
         query += ` GROUP BY p.id, u.username, li.id `;
@@ -105,6 +117,7 @@ router.get('/:id', async (req, res) => {
                 u.username,
                 COUNT(DISTINCT l.user_id) as like_count,
                 EXISTS(SELECT 1 FROM prediction_likes WHERE prediction_id = p.id AND user_id = $1) as is_liked,
+                (p.user_id = $1) as is_mine,
                 li.tour_name, li.venue, li.date as live_date
             FROM predictions p
             JOIN users u ON p.user_id = u.id
