@@ -9,6 +9,7 @@ router.get('/', async (req, res) => {
     try {
         const {
             search,
+            tour_name,
             startDate,
             endDate,
             prefecture,
@@ -26,6 +27,13 @@ router.get('/', async (req, res) => {
         if (search) {
             whereClauses.push(`(l.title ILIKE $${paramIndex} OR l.venue ILIKE $${paramIndex} OR l.tour_name ILIKE $${paramIndex} OR l.special_note ILIKE $${paramIndex})`);
             params.push(`%${search}%`);
+            paramIndex++;
+        }
+
+        // ツアー名による完全一致フィルタ
+        if (tour_name) {
+            whereClauses.push(`l.tour_name = $${paramIndex}`);
+            params.push(tour_name);
             paramIndex++;
         }
 

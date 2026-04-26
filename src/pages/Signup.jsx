@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import AuthLayout from '../components/Auth/AuthLayout';
 import { Mail, Lock, User, ArrowRight, Loader, CheckCircle } from 'lucide-react';
 
@@ -12,7 +13,10 @@ const Signup = () => {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const { register } = useAuth();
+    const { showToast } = useToast();
     const navigate = useNavigate();
+    const location = useLocation();
+    const fromPage = location.state?.from || '/mypage';
 
     const [verificationSent, setVerificationSent] = useState(false);
 
@@ -30,9 +34,11 @@ const Signup = () => {
             const result = await register(username, email, password);
             if (result.success) {
                 if (result.requireVerification) {
+                    showToast('登録完了！認証メールを送信しました。', 'info');
                     setVerificationSent(true);
                 } else {
-                    navigate('/mypage');
+                    showToast('アカウントを作成しました', 'success');
+                    navigate(fromPage, { replace: true });
                 }
             } else {
                 setError(result.message || 'アカウント作成に失敗しました。');

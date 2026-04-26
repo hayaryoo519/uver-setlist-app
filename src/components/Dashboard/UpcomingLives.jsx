@@ -13,10 +13,10 @@ export const UpcomingLives = ({ lives }) => {
             <h2 className="section-title next-live-header" style={{ marginBottom: '20px' }}>
                 <div className="next-live-label">
                     <Sparkles size={20} color="#fbbf24" style={{ animation: 'pulse 2s infinite' }} />
-                    Next Live
+                    次回のライブ
                 </div>
                 <span className="next-live-sub">
-                    （セットリスト予想 - Coming Soon）
+                    （セットリスト予想受付中！）
                 </span>
             </h2>
 
@@ -49,7 +49,7 @@ export const UpcomingLives = ({ lives }) => {
                                 alignItems: 'center',
                                 gap: '6px'
                             }}>
-                                {index === 0 ? '★ NEXT LIVE' : 'UPCOMING'}
+                                {index === 0 ? '★ 次回のライブ' : '開催予定'}
                             </div>
 
                             <h3 style={{
@@ -65,7 +65,16 @@ export const UpcomingLives = ({ lives }) => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#cbd5e1', fontSize: '0.95rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <Calendar size={16} color="var(--primary-color)" />
-                                    <span style={{ fontWeight: '500', color: '#fff' }}>{live.date}</span>
+                                    <span style={{ fontWeight: 'bold', color: '#fff' }}>
+                                        {(() => {
+                                            const d = new Date(live.date);
+                                            return isNaN(d.getTime()) ? live.date : d.toLocaleDateString('ja-JP', {
+                                                year: 'numeric',
+                                                month: '2-digit',
+                                                day: '2-digit'
+                                            }).replace(/\//g, '.');
+                                        })()}
+                                    </span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <MapPin size={16} color="var(--primary-color)" />
@@ -82,26 +91,49 @@ export const UpcomingLives = ({ lives }) => {
                             position: 'relative',
                             zIndex: 1
                         }}>
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                <button
-                                    disabled
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <Link
+                                    to={`/predictions/new?live_id=${live.id}`}
                                     style={{
-                                        flex: 1,
                                         padding: '10px',
                                         borderRadius: '8px',
-                                        background: 'rgba(255,255,255,0.05)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        color: '#64748b',
-                                        fontSize: '0.8rem',
-                                        cursor: 'not-allowed',
+                                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                                        border: 'none',
+                                        color: '#fff',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 'bold',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        gap: '6px'
+                                        gap: '6px',
+                                        textDecoration: 'none',
+                                        boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)'
                                     }}
+                                    className="hover:scale-105 transition-all"
                                 >
-                                    <Sparkles size={14} /> 予想する (準備中)
-                                </button>
+                                    <Sparkles size={14} /> 予想する
+                                </Link>
+                                <Link
+                                    to={`/predictions?live_id=${live.id}`}
+                                    style={{
+                                        padding: '10px',
+                                        borderRadius: '8px',
+                                        background: 'rgba(255, 255, 255, 0.3)', /* さらに明るく */
+                                        border: '1px solid rgba(255, 255, 255, 0.6)', /* 枠線をくっきり */
+                                        color: '#fff',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 'bold',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '6px',
+                                        textDecoration: 'none',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    className="hover:bg-white/40 hover:scale-105 transition-all"
+                                >
+                                    みんなの予想
+                                </Link>
                             </div>
                         </div>
                     </div>
