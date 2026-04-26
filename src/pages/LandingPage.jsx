@@ -11,25 +11,6 @@ const LandingPage = () => {
     const { currentUser, logout } = useAuth();
     const navigate = useNavigate();
     const [isScrolled, setIsScrolled] = React.useState(false);
-    const [upcomingLives, setUpcomingLives] = React.useState([]);
-    const [loading, setLoading] = React.useState(true);
-
-    React.useEffect(() => {
-        const fetchUpcoming = async () => {
-            try {
-                const res = await fetch('/api/lives?upcoming=true');
-                if (res.ok) {
-                    const data = await res.json();
-                    setUpcomingLives(data.slice(0, 2));
-                }
-            } catch (err) {
-                console.error('Fetch upcoming lives failed:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchUpcoming();
-    }, []);
 
     React.useEffect(() => {
         const handleScroll = () => {
@@ -65,7 +46,7 @@ const LandingPage = () => {
                     <nav className="lp-nav">
                         {currentUser ? (
                             <>
-                                <Link to="/mypage" className="lp-nav-link">My Page</Link>
+                                <Link to="/mypage" className="lp-nav-link">マイページ</Link>
                                 <button onClick={handleLogout} className="lp-nav-btn">ログアウト</button>
                             </>
                         ) : (
@@ -110,37 +91,6 @@ const LandingPage = () => {
                                 <span className="sp-text">データを見る →</span>
                             </Link>
                         </div>
-
-                        {/* Next Live Teaser */}
-                        {!loading && upcomingLives.length > 0 && (
-                            <div className="lp-next-live-teaser fade-in">
-                                <div className="lp-next-live-label">
-                                    <span className="lp-pulse-dot"></span>
-                                    NEXT LIVE PREDICTION
-                                </div>
-                                <div className="lp-next-live-info">
-                                    <span className="lp-next-live-title">{upcomingLives[0].tour_name || upcomingLives[0].title}</span>
-                                    <span className="lp-next-live-meta">
-                                        {(() => {
-                                            const d = new Date(upcomingLives[0].date);
-                                            return isNaN(d.getTime()) ? upcomingLives[0].date : d.toLocaleDateString('ja-JP', {
-                                                year: 'numeric',
-                                                month: '2-digit',
-                                                day: '2-digit'
-                                            }).replace(/\//g, '.');
-                                        })()} @ {upcomingLives[0].venue}
-                                    </span>
-                                </div>
-                                <div className="lp-next-live-actions">
-                                    <Link to={`/predictions/new?live_id=${upcomingLives[0].id}`} className="lp-next-btn-primary">
-                                        予想する
-                                    </Link>
-                                    <Link to={`/predictions?live_id=${upcomingLives[0].id}`} className="lp-next-btn-secondary">
-                                        みんなの予想
-                                    </Link>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
             </section>
@@ -191,7 +141,7 @@ const LandingPage = () => {
                         <div className="lp-step-number">1</div>
                         <h3 className="lp-step-title">アカウント作成</h3>
                         <p className="lp-step-description">
-                            まずは無料登録。メールアドレスだけで、あなたの参戦履歴を保存する「マイページ」が作られます。
+                            まずは無料登録。メールアドレスだけで、あなたのマイページが作られます。
                         </p>
                     </div>
 
@@ -258,7 +208,7 @@ const LandingPage = () => {
                         <h3 className="lp-disclaimer-title">お問い合わせ</h3>
                         <p className="lp-disclaimer-text">
                             データの修正依頼は、「不具合・データ修正依頼」からご連絡ください。その他、運営に関するお問い合わせは下記までご連絡ください。<br />
-                            <strong>X (Twitter):</strong> @setlist_archive
+                            <strong>公式 X (Twitter):</strong> @setlist_archive
                         </p>
                     </div>
                 </div>
@@ -280,7 +230,7 @@ const LandingPage = () => {
             {/* Footer */}
             <footer className="lp-footer">
                 <p className="lp-footer-text">
-                    © {new Date().getFullYear()} UVERworld Setlist Archive. Unofficial fan project.
+                    © {new Date().getFullYear()} UVERworld Setlist Archive. 非公式ファンプロジェクト
                 </p>
             </footer>
         </div>
