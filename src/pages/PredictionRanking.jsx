@@ -14,6 +14,16 @@ const PredictionRanking = () => {
     const location = useLocation();
     const [searchParams] = useSearchParams();
     const liveId = searchParams.get('live_id');
+    const fromPath = location.state?.from;
+
+    // 戻り先のラベルとパスを決定
+    let backLabel = 'セトリ予想一覧へ';
+    let backPath = '/predictions';
+
+    if (fromPath?.startsWith('/live/')) {
+        backLabel = 'ライブ詳細に戻る';
+        backPath = fromPath;
+    }
     const [liveInfo, setLiveInfo] = useState(null);
     const [tourLives, setTourLives] = useState([]);
 
@@ -152,7 +162,7 @@ const PredictionRanking = () => {
             <div className="max-w-4xl mx-auto px-4">
                 <PageHeader
                     title="セトリ予想"
-                    subtitle={liveId ? "みんなのセトリ予想" : "予想ポータル"}
+                    subtitle={liveId ? "みんなのセトリ予想" : "受付中のライブ一覧"}
                 />
 
                 {!liveId ? (
@@ -255,13 +265,13 @@ const PredictionRanking = () => {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <button 
-                                                    onClick={() => navigate('/predictions')}
+                                                    onClick={() => navigate(backPath)}
                                                     className="text-xs bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 px-3 py-2 rounded-lg border border-blue-500/30 transition-colors font-bold"
                                                 >
-                                                    ポータルに戻る
+                                                    {backLabel}
                                                 </button>
-                                                <Link to="/lives" className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg border border-slate-700 transition-colors">
-                                                    他のライブを探す
+                                                <Link to="/dashboard" className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg border border-slate-700 transition-colors">
+                                                    ダッシュボードへ
                                                 </Link>
                                             </div>
                                         </div>
@@ -290,7 +300,7 @@ const PredictionRanking = () => {
                                     <div className="p-8 text-center">
                                         <p className="text-slate-400">ライブ情報が見つかりません</p>
                                         <button onClick={() => navigate('/predictions')} className="mt-4 inline-block text-blue-400 hover:underline">
-                                            ポータルから選ぶ
+                                            セトリ予想一覧から選ぶ
                                         </button>
                                     </div>
                                 )}
