@@ -46,6 +46,41 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
     }, []);
 
+    // Global Fetch Interceptor for 401/403 handling
+    useEffect(() => {
+        const originalFetch = window.fetch;
+
+        window.fetch = async (...args) => {
+            const response = await originalFetch(...args);
+            
+            // Extract URL safely
+            const url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url ? args[0].url : '');
+            
+            // If the API returns 401 or 403 and the user is supposedly logged in
+            if ((response.status === 401 || response.status === 403) && url.includes('/api/')) {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    console.warn(`[API] 認証エラー (${response.status}) を検知しました。再ログインが必要です。URL: ${url}`);
+                    
+                    // Cleanup session data
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    setCurrentUser(null);
+                    
+                    // Alert and redirect
+                    alert('セッションの有効期限が切れました。再度ログインしてください。');
+                    window.location.href = '/login';
+                }
+            }
+            
+            return response;
+        };
+
+        return () => {
+            window.fetch = originalFetch; // Cleanup on unmount
+        };
+    }, []);
+
     // Periodic token validation (every 5 minutes)
     useEffect(() => {
         if (!currentUser) return;
