@@ -94,6 +94,7 @@ export const UpcomingLives = ({ lives }) => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                 <Link
                                     to={`/predictions/new?live_id=${live.id}`}
+                                    state={{ from: '/dashboard' }}
                                     style={{
                                         padding: '10px',
                                         borderRadius: '8px',
@@ -115,6 +116,7 @@ export const UpcomingLives = ({ lives }) => {
                                 </Link>
                                 <Link
                                     to={`/predictions?live_id=${live.id}`}
+                                    state={{ from: '/dashboard' }}
                                     style={{
                                         padding: '10px',
                                         borderRadius: '8px',
