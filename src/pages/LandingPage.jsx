@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import SEO from '../components/SEO';
-import { Music, BarChart3, Heart, ChevronDown, AlertTriangle, User, ShieldAlert, Mail } from 'lucide-react';
+import { Music, BarChart3, AlertTriangle, User, ShieldAlert, Mail, ListMusic } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import './LandingPage.css';
 import mainVisualPc from '../assets/main-visual2-pc.png';
@@ -104,7 +104,9 @@ const LandingPage = () => {
 
                 <div className="lp-features-grid">
                     <div className="lp-feature-card">
-                        <div className="lp-feature-icon">📝</div>
+                        <div className="lp-feature-icon">
+                            <ListMusic size={48} className="text-gold" />
+                        </div>
                         <h3 className="lp-feature-title">セットリスト閲覧</h3>
                         <p className="lp-feature-description">
                             過去のライブセットリストを日付・会場・ツアー別に閲覧。あの日のライブで何が演奏されたか、すぐに確認できます。
@@ -112,7 +114,9 @@ const LandingPage = () => {
                     </div>
 
                     <div className="lp-feature-card">
-                        <div className="lp-feature-icon">📊</div>
+                        <div className="lp-feature-icon">
+                            <BarChart3 size={48} className="text-gold" />
+                        </div>
                         <h3 className="lp-feature-title">統計分析</h3>
                         <p className="lp-feature-description">
                             参加したライブの年別推移、よく聴いた楽曲のランキングなど、あなたのライブ体験を可視化します。
@@ -120,7 +124,9 @@ const LandingPage = () => {
                     </div>
 
                     <div className="lp-feature-card">
-                        <div className="lp-feature-icon">🎵</div>
+                        <div className="lp-feature-icon">
+                            <Music size={48} className="text-gold" />
+                        </div>
                         <h3 className="lp-feature-title">楽曲コレクション</h3>
                         <p className="lp-feature-description">
                             リリースされた全楽曲の演奏情報をデータベース化。定番曲からレア曲まで、過去のライブでいつ披露されたかを詳しくチェックできます。
@@ -180,7 +186,9 @@ const LandingPage = () => {
 
                 <div className="lp-disclaimer-grid">
                     <div className="lp-disclaimer-card">
-                        <div className="lp-disclaimer-icon">⚠️</div>
+                        <div className="lp-disclaimer-icon">
+                            <AlertTriangle size={40} className="text-red" />
+                        </div>
                         <h3 className="lp-disclaimer-title">非公式ファンサイト</h3>
                         <p className="lp-disclaimer-text">
                             本サイトはUVERworld、所属事務所、レコード会社とは一切関係のない、ファンによる非公式サイトです。
@@ -188,7 +196,9 @@ const LandingPage = () => {
                     </div>
 
                     <div className="lp-disclaimer-card">
-                        <div className="lp-disclaimer-icon">👤</div>
+                        <div className="lp-disclaimer-icon">
+                            <User size={40} className="text-red" />
+                        </div>
                         <h3 className="lp-disclaimer-title">個人運営</h3>
                         <p className="lp-disclaimer-text">
                             個人が趣味で運営しているファンサイトです。データの完全性や継続性を保証するものではありません。
@@ -196,7 +206,9 @@ const LandingPage = () => {
                     </div>
 
                     <div className="lp-disclaimer-card">
-                        <div className="lp-disclaimer-icon">🚫</div>
+                        <div className="lp-disclaimer-icon">
+                            <ShieldAlert size={40} className="text-red" />
+                        </div>
                         <h3 className="lp-disclaimer-title">免責事項</h3>
                         <p className="lp-disclaimer-text">
                             本サイトの利用によって生じたいかなる損害についても、運営者は責任を負いかねます。自己責任でご利用ください。
@@ -204,7 +216,9 @@ const LandingPage = () => {
                     </div>
 
                     <div className="lp-disclaimer-card">
-                        <div className="lp-disclaimer-icon">📧</div>
+                        <div className="lp-disclaimer-icon">
+                            <Mail size={40} className="text-red" />
+                        </div>
                         <h3 className="lp-disclaimer-title">お問い合わせ</h3>
                         <p className="lp-disclaimer-text">
                             データの修正依頼は、「不具合・データ修正依頼」からご連絡ください。その他、運営に関するお問い合わせは下記までご連絡ください。<br />
