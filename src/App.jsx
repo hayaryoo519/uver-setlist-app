@@ -20,9 +20,6 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import SecurityLogsPage from './pages/SecurityLogsPage';
 import CorrectionForm from './pages/CorrectionForm';
-import PredictionRanking from './pages/PredictionRanking';
-import SetlistPredictionCreate from './pages/SetlistPredictionCreate';
-import SetlistPredictionDetail from './pages/SetlistPredictionDetail';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useEnvironmentTitle } from './hooks/useEnvironmentTitle';
@@ -66,7 +63,6 @@ function App() {
                   <Route path="/mypage" element={<MyPage />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/corrections/new" element={<CorrectionForm />} />
-                  <Route path="/predictions/new" element={<SetlistPredictionCreate />} />
                 </Route>
               </Route>
 
@@ -79,8 +75,6 @@ function App() {
                 <Route path="/lives" element={<LiveList />} />
                 <Route path="/live/:id" element={<LiveDetail />} />
                 <Route path="/song/:id" element={<SongDetail />} />
-                <Route path="/predictions" element={<PredictionRanking />} />
-                <Route path="/predictions/:id" element={<SetlistPredictionDetail />} />
               </Route>
             </Routes>
           </Router>
