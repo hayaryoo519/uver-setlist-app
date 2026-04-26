@@ -204,7 +204,7 @@ const SetlistPredictionCreate = () => {
         <div className="min-h-screen bg-slate-900 text-white fade-in" style={{ paddingTop: '100px', paddingBottom: '80px' }}>
             <SEO title="セトリ予想を作成" />
             <div className="max-w-4xl mx-auto px-4">
-                <PageHeader title="CREATE PREDICTION" subtitle="新しいセトリ予想を作成" />
+                <PageHeader title="予想を作成" subtitle="新しいセトリ予想を作成" />
 
                 {/* ライブ情報表示 */}
                 {liveInfo && (
@@ -212,7 +212,7 @@ const SetlistPredictionCreate = () => {
                         <div className="flex items-start gap-3 flex-1">
                             <span className="text-yellow-400 text-lg shrink-0 mt-0.5">🎤</span>
                             <div>
-                                <div className="text-white font-bold leading-tight mb-1">{liveInfo.tour_name || 'Special Live'}</div>
+                                <div className="text-white font-bold leading-tight mb-1">{liveInfo.tour_name || 'スペシャルライブ'}</div>
                                 <div className="text-sm text-slate-400">
                                     {liveInfo.date ? new Date(liveInfo.date).toISOString().split('T')[0] : ''} @ {liveInfo.venue}
                                 </div>
