@@ -61,7 +61,7 @@ function LiveDetail() {
     };
 
     if (loading) {
-        return <div className="container" style={{ paddingTop: '100px', textAlign: 'center' }}>Loading...</div>;
+        return <div className="container" style={{ paddingTop: '100px', textAlign: 'center' }}>読み込み中...</div>;
     }
 
     if (!live) {
@@ -69,7 +69,7 @@ function LiveDetail() {
     }
 
     const setlist = live.setlist || [];
-    const mainTitle = live.tour_name || live.title || "Unknown Live";
+    const mainTitle = live.tour_name || live.title || "不明なライブ";
 
     // Determine back link destination
     const backLink = location.state?.from || '/lives';
@@ -169,8 +169,8 @@ function LiveDetail() {
 
                 <div className="setlist bg-slate-800/20 rounded-3xl p-4 md:p-8 border border-slate-800/50">
                     <div className="mb-8 flex items-center justify-between">
-                        <h2 className="text-xs font-black tracking-[0.3em] text-slate-500 uppercase">SETLIST PERFORMANCE</h2>
-                        <div className="text-[10px] font-mono text-slate-600">{setlist.length} TRACKS</div>
+                        <h2 className="text-xs font-black tracking-[0.3em] text-slate-500 uppercase">セットリスト</h2>
+                        <div className="text-[10px] font-mono text-slate-600">{setlist.length} 曲</div>
                     </div>
 
                     {setlist.length > 0 ? (
@@ -215,7 +215,7 @@ function LiveDetail() {
                         </div>
                     ) : (
                         <div className="text-center py-20 text-slate-600 bg-slate-900/40 rounded-2xl border border-dashed border-slate-800">
-                            <p className="font-medium">SETLIST DATA NOT FOUND</p>
+                            <p className="font-medium">セットリストデータが見つかりません</p>
                         </div>
                     )}
                 </div>
@@ -236,7 +236,7 @@ function LiveDetail() {
                                     <div className="bg-blue-500/20 p-2 rounded-lg">
                                         <Sparkles size={20} className="text-blue-400" />
                                     </div>
-                                    <span className="text-xs font-black tracking-widest text-blue-400 uppercase">PREDICTION</span>
+                                    <span className="text-xs font-black tracking-widest text-blue-400 uppercase">予想ポータル</span>
                                 </div>
                                 <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">
                                     このライブのセトリを予想しよう！
