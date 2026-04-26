@@ -31,7 +31,7 @@ const SongDetail = () => {
         let result = [...song.performances];
 
         // Filter by Year
-        if (filterYear !== 'All') {
+        if (filterYear !== '全期間') {
             result = result.filter(live => new Date(live.date).getFullYear().toString() === filterYear.toString());
         }
 
@@ -114,12 +114,12 @@ const SongDetail = () => {
     if (error) {
         return (
             <div className="min-h-screen bg-slate-900 flex justify-center items-center text-red-400 p-8 flex-col text-center">
-                <div className="text-2xl font-bold mb-4">Error Loading Song</div>
+                <div className="text-2xl font-bold mb-4">読み込みエラー</div>
                 <div className="bg-red-900/20 p-4 rounded border border-red-500/30">
                     {error}
                 </div>
                 <Link to="/songs" className="mt-8 text-blue-400 hover:text-blue-300 underline">
-                    Return to Song List
+                    楽曲一覧に戻る
                 </Link>
             </div>
         );
@@ -128,7 +128,7 @@ const SongDetail = () => {
     if (!song) {
         return (
             <div className="min-h-screen bg-slate-900 flex justify-center items-center text-white">
-                Song not found.
+                楽曲が見つかりません。
             </div>
         );
     }
@@ -163,7 +163,7 @@ const SongDetail = () => {
 
     return (
         <div className="min-h-screen bg-slate-900 text-white fade-in" style={{ paddingTop: '100px', paddingBottom: '40px' }}>
-            <SEO title={`${song.title} - Song Stats`} description={`Performance history of ${song.title} by UVERworld.`} />
+            <SEO title={`${song.title} - 楽曲分析`} description={`UVERworld ${song.title} のライブ演奏履歴と統計データ。`} />
 
             <div className="max-w-4xl mx-auto px-4">
                 <Link
@@ -195,7 +195,7 @@ const SongDetail = () => {
                                 <div className="flex items-center justify-between mb-4">
                                     <div className="flex items-center gap-3 text-blue-400 font-mono text-sm">
                                         <Music size={16} />
-                                        <span>SONG ANALYTICS</span>
+                                        <span>楽曲分析</span>
                                     </div>
                                     {song.is_rare && (
                                         <div className="relative group">
@@ -224,7 +224,7 @@ const SongDetail = () => {
                                         return (
                                             <div className="mt-4 pt-4 border-t border-slate-700/50">
                                                 <div className="text-slate-500 text-[10px] uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-                                                <Music size={12} /> FEATURED IN
+                                                <Music size={12} /> 収録作品
                                                 </div>
                                                 <div className="flex flex-wrap gap-2">
                                                     {containingReleases.map(release => (
@@ -336,7 +336,7 @@ const SongDetail = () => {
 
                 {/* Performance History Controls */}
                 <div id="performance-history" className="flex flex-col md:flex-row items-start md:items-center mb-6 gap-4">
-                    <h2 className="text-2xl font-bold font-oswald border-l-4 border-blue-500 pl-4">PERFORMANCE HISTORY</h2>
+                    <h2 className="text-2xl font-bold font-oswald border-l-4 border-blue-500 pl-4">演奏履歴</h2>
                     <div className="flex flex-wrap gap-3 w-full md:w-auto">
                         {/* Year Filter */}
                         <div className="relative">
@@ -345,7 +345,7 @@ const SongDetail = () => {
                                 onChange={(e) => setFilterYear(e.target.value)}
                                 className="appearance-none bg-slate-800 border border-slate-700 rounded-lg py-2 px-4 pr-8 text-sm focus:outline-none focus:border-blue-500 transition-colors w-full md:w-auto"
                             >
-                                <option value="All">全期間</option>
+                                <option value="全期間">全期間</option>
                                 {uniqueYears.map(year => (
                                     <option key={year} value={year}>{year}</option>
                                 ))}
@@ -385,9 +385,9 @@ const SongDetail = () => {
                                                     ${live.type === 'FESTIVAL' ? 'bg-purple-600' :
                                                         live.type === 'EVENT' ? 'bg-orange-600' :
                                                             'bg-emerald-600'}`}>
-                                                    {live.type === 'FESTIVAL' ? 'FESTIVAL' :
-                                                        live.type === 'EVENT' ? 'EVENT' :
-                                                            'ONE MAN'}
+                                                    {live.type === 'FESTIVAL' ? 'フェス' :
+                                                        live.type === 'EVENT' ? 'イベント' :
+                                                            'ワンマン'}
                                                 </span>
                                             </div>
                                             <div className="font-bold text-white group-hover:text-blue-400 transition-colors">

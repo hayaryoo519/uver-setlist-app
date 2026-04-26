@@ -79,7 +79,7 @@ function Settings() {
 
     return (
         <div className="container" style={{ paddingTop: '100px', maxWidth: '600px' }}>
-            <SEO title="Account Settings" />
+            <SEO title="アカウント設定" />
 
             <div style={{ marginBottom: '30px' }}>
                 <Link to="/mypage" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', textDecoration: 'none', fontSize: '0.9rem' }}>
@@ -118,7 +118,7 @@ function Settings() {
                                 type="text"
                                 value={formData.username}
                                 onChange={(e) => handleInputChange('username', e.target.value)}
-                                placeholder="Username"
+                                placeholder="ユーザー名"
                                 minLength={2}
                                 maxLength={30}
                                 title="2文字以上30文字以内で入力してください"
@@ -131,7 +131,7 @@ function Settings() {
                                 type="email"
                                 value={formData.email}
                                 onChange={(e) => handleInputChange('email', e.target.value)}
-                                placeholder="email@example.com"
+                                placeholder="メールアドレス"
                             />
                         </div>
                     </div>

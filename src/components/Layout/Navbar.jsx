@@ -68,23 +68,23 @@ const Navbar = () => {
                     {/* Desktop Menu */}
                     <div className="nav-links desktop-only">
                         <Link to="/songs" className="nav-link">
-                            <ListMusic size={18} /> Discography
+                            <ListMusic size={18} /> 楽曲一覧
                         </Link>
                         <Link to="/lives" className="nav-link">
-                            <Calendar size={18} /> LiveArchive
+                            <Calendar size={18} /> ライブ履歴
                         </Link>
                         <Link to="/predictions" className="nav-link">
-                            <ListMusic size={18} /> Prediction
+                            <Sparkles size={18} /> セトリ予想
                         </Link>
                         {currentUser && (
                             <Link to="/mypage" className="nav-link">
-                                <User size={18} /> My Page
+                                <User size={18} /> マイページ
                             </Link>
                         )}
 
                         {currentUser?.role === 'admin' && (
                             <Link to="/admin" className="nav-link" style={{ color: '#fbbf24' }}>
-                                <Shield size={18} /> Admin Panel
+                                <Shield size={18} /> 管理者パネル
                             </Link>
                         )}
                         {currentUser ? (
@@ -111,13 +111,13 @@ const Navbar = () => {
             {/* Mobile Menu Overlay */}
             <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}>
                 <div className="mobile-nav-links">
-                    <Link to="/" className="mobile-nav-link">Home</Link>
-                    <Link to="/songs" className="mobile-nav-link">Discography</Link>
-                    <Link to="/lives" className="mobile-nav-link">LiveArchive</Link>
-                    <Link to="/predictions" className="mobile-nav-link">Prediction</Link>
-                    {currentUser && <Link to="/mypage" className="mobile-nav-link">My Page</Link>}
+                    <Link to="/" className="mobile-nav-link">ホーム</Link>
+                    <Link to="/songs" className="mobile-nav-link">楽曲一覧</Link>
+                    <Link to="/lives" className="mobile-nav-link">ライブ履歴</Link>
+                    <Link to="/predictions" className="mobile-nav-link">セトリ予想</Link>
+                    {currentUser && <Link to="/mypage" className="mobile-nav-link">マイページ</Link>}
                     {currentUser?.role === 'admin' && (
-                        <Link to="/admin" className="mobile-nav-link" style={{ color: '#fbbf24' }}>Admin Panel</Link>
+                        <Link to="/admin" className="mobile-nav-link" style={{ color: '#fbbf24' }}>管理者パネル</Link>
                     )}
 
                     <div className="mobile-nav-divider"></div>

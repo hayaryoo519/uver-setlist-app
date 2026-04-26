@@ -217,14 +217,14 @@ const LiveList = () => {
                 {/* Sidebar Navigation */}
                 <aside className="live-sidebar">
                     <div className="sidebar-group">
-                        <div className="sidebar-label">YEAR FILTER</div>
+                        <div className="sidebar-label">年度フィルター</div>
                         <div className="sidebar-items">
                             <div
                                 className={`sidebar-item ${!selectedYear ? 'active' : ''}`}
                                 onClick={() => setSearchParams({})}
                             >
                                 <Calendar size={18} className="sidebar-icon" />
-                                <span className="sidebar-text">ALL TIME</span>
+                                <span className="sidebar-text">全期間</span>
                                 <span className="sidebar-count">{lives.length}</span>
                             </div>
                             {annualSummaries.map(summary => (
@@ -259,7 +259,7 @@ const LiveList = () => {
                                     <ArrowRight size={20} className="rotate-180" />
                                 </Link>
                                 <h1 className="archive-title">
-                                    LIVE TOUR ARCHIVE
+                                    ライブアーカイブ
                                 </h1>
                             </div>
                         </header>
@@ -271,7 +271,7 @@ const LiveList = () => {
                                     className={`mobile-tab-btn ${!selectedYear ? 'active' : ''}`}
                                     onClick={() => setSearchParams({})}
                                 >
-                                    ALL TIME
+                                    全期間
                                 </button>
                                 {annualSummaries.map(summary => (
                                     <button 
@@ -307,14 +307,14 @@ const LiveList = () => {
                                                 >
                                                     {/* Desktop View: Columns */}
                                                     <div className="card-column tour-name-col desktop-only">
-                                                        <label>Tour / Live Title</label>
+                                                        <label>ツアー / ライブ名</label>
                                                         <h3 className="tour-name-text">
                                                             <span className={`mobile-type-badge ${
                                                                 live.type === 'FESTIVAL' ? 'badge-fes-m' : 
                                                                 live.type === 'EVENT' ? 'badge-event-m' : 'badge-oneman-m'
                                                             }`}>
                                                                 {live.type === 'FESTIVAL' ? 'FES' : 
-                                                                 live.type === 'EVENT' ? 'EVENT' : 'ONE-MAN'}
+                                                                 live.type === 'EVENT' ? 'EVENT' : 'ワンマン'}
                                                             </span>
                                                             <span className="title-text-wrap">
                                                                 {live.title || live.tour_name}
@@ -322,7 +322,7 @@ const LiveList = () => {
                                                         </h3>
                                                     </div>
                                                     <div className="card-column period-col desktop-only">
-                                                        <label>Date</label>
+                                                        <label>開催日</label>
                                                         <div className="period-text">
                                                             {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.')}
                                                         </div>
@@ -338,7 +338,7 @@ const LiveList = () => {
                                                                 live.type === 'EVENT' ? 'badge-event-m' : 'badge-oneman-m'
                                                             }`}>
                                                                 {live.type === 'FESTIVAL' ? 'FES' : 
-                                                                 live.type === 'EVENT' ? 'EVENT' : 'ONE-MAN'}
+                                                                 live.type === 'EVENT' ? 'EVENT' : 'ワンマン'}
                                                             </span>
                                                         </div>
                                                         <h3 className="card-title-text">
@@ -384,7 +384,7 @@ const LiveList = () => {
                         ) : (
                             /* Specific Year View (Flat List) */
                             <div className="filtered-list-container">
-                                <h2 className="fade-in">{selectedYear} ARCHIVE ({filteredLives.length})</h2>
+                                <h2 className="fade-in">{selectedYear} アーカイブ ({filteredLives.length})</h2>
                                 <div className="space-y-4">
                                     {filteredLives.map((live, idx) => (
                                         <Link 
@@ -395,14 +395,14 @@ const LiveList = () => {
                                         >
                                              {/* Desktop View: Columns */}
                                              <div className="card-column tour-name-col desktop-only">
-                                                 <label>Tour / Live Title</label>
+                                                 <label>ツアー / ライブ名</label>
                                                  <h3 className="tour-name-text">
                                                      <span className={`mobile-type-badge ${
                                                          live.type === 'FESTIVAL' ? 'badge-fes-m' : 
                                                          live.type === 'EVENT' ? 'badge-event-m' : 'badge-oneman-m'
                                                      }`}>
                                                          {live.type === 'FESTIVAL' ? 'FES' : 
-                                                          live.type === 'EVENT' ? 'EVENT' : 'ONE-MAN'}
+                                                          live.type === 'EVENT' ? 'EVENT' : 'ワンマン'}
                                                      </span>
                                                      <span className="title-text-wrap">
                                                          {live.title || live.tour_name}
@@ -410,13 +410,13 @@ const LiveList = () => {
                                                  </h3>
                                              </div>
                                              <div className="card-column period-col desktop-only">
-                                                 <label>Date</label>
+                                                 <label>開催日</label>
                                                  <div className="period-text">
                                                      {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.')}
                                                  </div>
                                              </div>
                                              <div className="card-column shows-col desktop-only">
-                                                 <label>Venue</label>
+                                                 <label>会場</label>
                                                  <div className="shows-text">{live.venue}</div>
                                              </div>
 
@@ -431,7 +431,7 @@ const LiveList = () => {
                                                          live.type === 'EVENT' ? 'badge-event-m' : 'badge-oneman-m'
                                                      }`}>
                                                          {live.type === 'FESTIVAL' ? 'FES' : 
-                                                          live.type === 'EVENT' ? 'EVENT' : 'ONE-MAN'}
+                                                          live.type === 'EVENT' ? 'EVENT' : 'ワンマン'}
                                                      </span>
                                                  </div>
                                                  <h3 className="card-title-text">
