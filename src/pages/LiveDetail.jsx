@@ -248,7 +248,7 @@ function LiveDetail() {
                             
                             <div className="flex items-center gap-4">
                                 <div className="text-right hidden md:block">
-                                    <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-tighter">View Rankings</div>
+                                    <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-tighter">ランキングを見る</div>
                                     <div className="text-white font-black text-xl">みんなの予想 &rarr;</div>
                                 </div>
                                 <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-900/40 group-hover:scale-110 transition-transform">
@@ -261,7 +261,7 @@ function LiveDetail() {
 
                 <div className="mt-16 text-center">
                     <p className="text-slate-500 text-sm mb-6 max-w-sm mx-auto leading-relaxed">
-                        If you found any errors in the setlist or live information, please let us know.
+                        セットリストやライブ情報に誤りがある場合は、こちらからお知らせください。
                     </p>
                     <button
                         className={`inline-flex items-center gap-3 px-8 py-4 rounded-full text-sm font-black tracking-widest transition-all duration-300
@@ -271,7 +271,7 @@ function LiveDetail() {
                         onClick={handleCorrectionClick}
                     >
                         <AlertTriangle size={16} />
-                        {currentUser ? 'REPORT CORRECTION' : 'LOGIN TO REPORT'}
+                        {currentUser ? '不備を報告する' : 'ログインして報告'}
                     </button>
                 </div>
             </div>
