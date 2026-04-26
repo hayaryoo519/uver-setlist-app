@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Heart, User, Calendar, MapPin, Music, ArrowLeft, Share2, Sparkles } from 'lucide-react';
+import { Heart, User, Calendar, MapPin, Music, ArrowLeft, Share2, Sparkles, ChevronRight, Copy } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/Layout/PageHeader';
 import SEO from '../components/SEO';
@@ -112,9 +112,11 @@ const SetlistPredictionDetail = () => {
                         <ArrowLeft size={18} />
                         <span className="text-sm font-medium">セトリ予想一覧へ</span>
                     </Link>
-                    <button onClick={handleShare} className="p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors">
-                        <Share2 size={18} />
-                    </button>
+                    {prediction.is_mine && (
+                        <button onClick={handleShare} className="p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors">
+                            <Share2 size={18} />
+                        </button>
+                    )}
                 </div>
 
                 <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-3xl p-6 md:p-10 border border-slate-700 shadow-2xl relative overflow-hidden">
@@ -195,7 +197,7 @@ const SetlistPredictionDetail = () => {
                                         to={`/song/${encodeURIComponent(song.title.replace(/\s+/g, ''))}`}
                                         className="p-2 text-slate-600 hover:text-blue-400 transition-colors"
                                     >
-                                        <Share2 size={16} />
+                                        <ChevronRight size={18} />
                                     </Link>
                                 </div>
                             ))}
@@ -204,33 +206,47 @@ const SetlistPredictionDetail = () => {
                 </div>
 
                 <div className="mt-12 space-y-6">
-                    {/* Share Section */}
-                    <div className="bg-slate-800/30 rounded-3xl p-8 border border-slate-700/50 text-center">
-                        <p className="text-slate-400 text-sm mb-6 font-medium">この予想をあなたのSNSでシェアしませんか？</p>
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                            <button 
-                                onClick={() => {
-                                    const songsText = prediction.songs?.map((s, i) => `${i + 1}. ${s.title}`).join('\n') || '';
-                                    const text = `セットリストを予想しました！\n${prediction.tour_name}\n${prediction.venue} / ${new Date(prediction.live_date).toLocaleDateString('ja-JP')}\n\n${songsText}\n\n当たると思う？👇\n`;
-                                    const url = window.location.href;
-                                    const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=UVERworld,セトリ予想`;
-                                    window.open(xUrl, '_blank');
-                                }}
-                                className="flex items-center gap-3 px-8 py-4 bg-[#1DA1F2] text-white font-black rounded-full hover:brightness-110 transition-all shadow-lg shadow-blue-500/20 w-full sm:w-auto"
-                            >
-                                <Share2 size={20} />
-                                Xでシェア
-                            </button>
-                            
-                            <button 
-                                onClick={handleShare}
-                                className="flex items-center gap-3 px-8 py-4 bg-slate-700 text-white font-black rounded-full hover:bg-slate-600 transition-all w-full sm:w-auto"
-                            >
-                                <Link size={20} />
-                                リンクをコピー
-                            </button>
+                    {/* Share Section - Only show for owner */}
+                    {prediction.is_mine && (
+                        <div className="bg-slate-800/30 rounded-3xl p-8 border border-slate-700/50 text-center">
+                            <p className="text-slate-400 text-sm mb-6 font-medium">この予想をあなたのSNSでシェアしませんか？</p>
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                                <button 
+                                    onClick={() => {
+                                        const dateStr = prediction.live_date ? new Date(prediction.live_date).toLocaleDateString('ja-JP', {
+                                            year: 'numeric',
+                                            month: '2-digit',
+                                            day: '2-digit'
+                                        }).replace(/\//g, '.') : '';
+                                        
+                                        const songsText = prediction.songs?.map((s, i) => `${i + 1}. ${s.title}`).join('\n') || '';
+                                        const url = window.location.href;
+                                        const tourTag = prediction.tour_name ? prediction.tour_name.replace(/\s+/g, '') : '';
+                                        
+                                        const headerText = `セットリストを予想しました！`;
+                                        
+                                        // 本文にURLとハッシュタグを詰め込んで改行を制御
+                                        const text = `${headerText}\n${prediction.tour_name}\n${dateStr} @ ${prediction.venue}\n\n${songsText}\n\nセトリ予想はこちらから👇\n${url}\n\n#UVERworld #セトリ予想 ${tourTag ? '#' + tourTag : ''}`;
+                                        
+                                        const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+                                        window.open(xUrl, '_blank');
+                                    }}
+                                    className="flex items-center gap-3 px-8 py-4 bg-[#1DA1F2] text-white font-black rounded-full hover:brightness-110 transition-all shadow-lg shadow-blue-500/20 w-full sm:w-auto"
+                                >
+                                    <Share2 size={20} />
+                                    Xでシェア
+                                </button>
+                                
+                                <button 
+                                    onClick={handleShare}
+                                    className="flex items-center gap-3 px-8 py-4 bg-slate-700 text-white font-black rounded-full hover:bg-slate-600 transition-all w-full sm:w-auto"
+                                >
+                                    <Copy size={20} />
+                                    リンクをコピー
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Guest CTA Section - Only show if not the owner and not logged in (or just not the owner to encourage more) */}
                     {!prediction.is_mine && (
