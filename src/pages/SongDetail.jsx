@@ -224,7 +224,7 @@ const SongDetail = () => {
                                         return (
                                             <div className="mt-4 pt-4 border-t border-slate-700/50">
                                                 <div className="text-slate-500 text-[10px] uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-                                                <Music size={12} /> 収録作品
+                                                <Music size={12} /> FEATURED IN
                                                 </div>
                                                 <div className="flex flex-wrap gap-2">
                                                     {containingReleases.map(release => (
@@ -336,7 +336,7 @@ const SongDetail = () => {
 
                 {/* Performance History Controls */}
                 <div id="performance-history" className="flex flex-col md:flex-row items-start md:items-center mb-6 gap-4">
-                    <h2 className="text-2xl font-bold font-oswald border-l-4 border-blue-500 pl-4">演奏履歴</h2>
+                    <h2 className="text-2xl font-bold font-oswald border-l-4 border-blue-500 pl-4">PERFORMANCE HISTORY</h2>
                     <div className="flex flex-wrap gap-3 w-full md:w-auto">
                         {/* Year Filter */}
                         <div className="relative">
@@ -345,7 +345,7 @@ const SongDetail = () => {
                                 onChange={(e) => setFilterYear(e.target.value)}
                                 className="appearance-none bg-slate-800 border border-slate-700 rounded-lg py-2 px-4 pr-8 text-sm focus:outline-none focus:border-blue-500 transition-colors w-full md:w-auto"
                             >
-                                <option value="全期間">全期間</option>
+                                <option value="All">All</option>
                                 {uniqueYears.map(year => (
                                     <option key={year} value={year}>{year}</option>
                                 ))}
@@ -385,9 +385,9 @@ const SongDetail = () => {
                                                     ${live.type === 'FESTIVAL' ? 'bg-purple-600' :
                                                         live.type === 'EVENT' ? 'bg-orange-600' :
                                                             'bg-emerald-600'}`}>
-                                                    {live.type === 'FESTIVAL' ? 'フェス' :
-                                                        live.type === 'EVENT' ? 'イベント' :
-                                                            'ワンマン'}
+                                                    {live.type === 'FESTIVAL' ? 'FESTIVAL' :
+                                                        live.type === 'EVENT' ? 'EVENT' :
+                                                            'ONE MAN'}
                                                 </span>
                                             </div>
                                             <div className="font-bold text-white group-hover:text-blue-400 transition-colors">
