@@ -13,7 +13,7 @@ export const UpcomingLives = ({ lives }) => {
             <h2 className="section-title next-live-header" style={{ marginBottom: '20px' }}>
                 <div className="next-live-label">
                     <Sparkles size={20} color="#fbbf24" style={{ animation: 'pulse 2s infinite' }} />
-                    Next Live
+                    次回のライブ
                 </div>
                 <span className="next-live-sub">
                     （セットリスト予想受付中！）
@@ -49,7 +49,7 @@ export const UpcomingLives = ({ lives }) => {
                                 alignItems: 'center',
                                 gap: '6px'
                             }}>
-                                {index === 0 ? '★ NEXT LIVE' : 'UPCOMING'}
+                                {index === 0 ? '★ 次回のライブ' : '開催予定'}
                             </div>
 
                             <h3 style={{

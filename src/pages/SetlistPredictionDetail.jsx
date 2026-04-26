@@ -84,7 +84,7 @@ const SetlistPredictionDetail = () => {
             <div className="flex justify-center items-center h-screen bg-slate-900 text-white">
                 <div className="animate-pulse flex flex-col items-center gap-4">
                     <div className="w-12 h-12 rounded-full border-4 border-blue-500 border-t-transparent animate-spin"></div>
-                    <p className="text-slate-400 font-mono text-sm">LOADING PREDICTION...</p>
+                    <p className="text-slate-400 font-mono text-sm">予想を読み込み中...</p>
                 </div>
             </div>
         );
@@ -128,7 +128,7 @@ const SetlistPredictionDetail = () => {
                             <div>
                                 <div className="flex items-center gap-2 text-blue-400 mb-2">
                                     <Sparkles size={16} />
-                                    <span className="text-xs font-black tracking-widest uppercase">Setlist Guess</span>
+                                    <span className="text-xs font-black tracking-widest uppercase">セトリ予想</span>
                                 </div>
                                 <h1 className="text-3xl md:text-4xl font-black text-white mb-4">
                                     {prediction.username} <span className="text-slate-500 font-normal">の予想</span>
@@ -141,7 +141,7 @@ const SetlistPredictionDetail = () => {
                                     <div className="w-1 h-1 bg-slate-700 rounded-full"></div>
                                     <div className="flex items-center gap-1.5">
                                         <Heart size={14} className={prediction.is_liked ? "text-pink-500" : ""} fill={prediction.is_liked ? "currentColor" : "none"} />
-                                        {prediction.like_count} likes
+                                        {prediction.like_count} いいね
                                     </div>
                                 </div>
                             </div>
@@ -155,7 +155,7 @@ const SetlistPredictionDetail = () => {
                                 }`}
                             >
                                 <Heart size={18} fill={prediction.is_liked ? "currentColor" : "none"} />
-                                {prediction.is_liked ? 'LIKED' : 'LIKE THIS'}
+                                {prediction.is_liked ? 'いいね済' : 'いいね！'}
                             </button>
                         </div>
 
@@ -166,7 +166,7 @@ const SetlistPredictionDetail = () => {
                                     <Music size={20} className="text-blue-400" />
                                 </div>
                                 <div>
-                                    <div className="text-xs font-bold text-blue-400 mb-1 uppercase tracking-wider">Target Performance</div>
+                                    <div className="text-xs font-bold text-blue-400 mb-1 uppercase tracking-wider">対象の公演</div>
                                     <div className="text-lg font-bold text-white mb-1">{prediction.tour_name}</div>
                                     <div className="flex items-center gap-3 text-sm text-slate-400">
                                         <span className="flex items-center gap-1"><MapPin size={14} /> {prediction.venue}</span>
@@ -177,7 +177,7 @@ const SetlistPredictionDetail = () => {
                         )}
 
                         <div className="space-y-3">
-                            <h2 className="text-xs font-black tracking-[0.3em] text-slate-500 uppercase mb-4 pl-1">Predicted Setlist</h2>
+                            <h2 className="text-xs font-black tracking-[0.3em] text-slate-500 uppercase mb-4 pl-1">予想セットリスト</h2>
                             {prediction.songs?.map((song, index) => (
                                 <div 
                                     key={index} 
@@ -219,7 +219,7 @@ const SetlistPredictionDetail = () => {
                                 className="flex items-center gap-3 px-8 py-4 bg-[#1DA1F2] text-white font-black rounded-full hover:brightness-110 transition-all shadow-lg shadow-blue-500/20 w-full sm:w-auto"
                             >
                                 <Share2 size={20} />
-                                SHARE ON X
+                                Xでシェア
                             </button>
                             
                             <button 
@@ -227,7 +227,7 @@ const SetlistPredictionDetail = () => {
                                 className="flex items-center gap-3 px-8 py-4 bg-slate-700 text-white font-black rounded-full hover:bg-slate-600 transition-all w-full sm:w-auto"
                             >
                                 <Link size={20} />
-                                COPY LINK
+                                リンクをコピー
                             </button>
                         </div>
                     </div>

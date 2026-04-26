@@ -2,6 +2,26 @@ const router = require('express').Router();
 const db = require('../db');
 const { authorize } = require('../middleware/authorization');
 
+// 0. GET Predictable Lives (Portal)
+router.get('/lives', async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT 
+                l.id, l.tour_name, l.title, l.date, l.venue, l.type,
+                COUNT(p.id) as prediction_count
+            FROM lives l
+            LEFT JOIN predictions p ON l.id = p.live_id
+            WHERE l.date >= CURRENT_DATE - INTERVAL '1 day'
+            GROUP BY l.id
+            ORDER BY l.date ASC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Fetch predictable lives error:', err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 // 1. GET All Predictions (Ranking)
 // Query params: live_id, sort (popular | new)
 router.get('/', async (req, res) => {
