@@ -15,9 +15,6 @@ export const UpcomingLives = ({ lives }) => {
                     <Sparkles size={20} color="#fbbf24" style={{ animation: 'pulse 2s infinite' }} />
                     次回のライブ
                 </div>
-                <span className="next-live-sub">
-                    （セットリスト予想受付中！）
-                </span>
             </h2>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
@@ -83,7 +80,6 @@ export const UpcomingLives = ({ lives }) => {
                             </div>
                         </div>
 
-                        {/* Future Actions Area */}
                         <div style={{
                             marginTop: '20px',
                             paddingTop: '15px',
@@ -91,50 +87,27 @@ export const UpcomingLives = ({ lives }) => {
                             position: 'relative',
                             zIndex: 1
                         }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                <Link
-                                    to={`/predictions/new?live_id=${live.id}`}
-                                    style={{
-                                        padding: '10px',
-                                        borderRadius: '8px',
-                                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                                        border: 'none',
-                                        color: '#fff',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 'bold',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '6px',
-                                        textDecoration: 'none',
-                                        boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)'
-                                    }}
-                                    className="hover:scale-105 transition-all"
-                                >
-                                    <Sparkles size={14} /> 予想する
-                                </Link>
-                                <Link
-                                    to={`/predictions?live_id=${live.id}`}
-                                    style={{
-                                        padding: '10px',
-                                        borderRadius: '8px',
-                                        background: 'rgba(255, 255, 255, 0.3)', /* さらに明るく */
-                                        border: '1px solid rgba(255, 255, 255, 0.6)', /* 枠線をくっきり */
-                                        color: '#fff',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 'bold',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '6px',
-                                        textDecoration: 'none',
-                                        transition: 'all 0.2s'
-                                    }}
-                                    className="hover:bg-white/40 hover:scale-105 transition-all"
-                                >
-                                    みんなの予想
-                                </Link>
-                            </div>
+                            <Link
+                                to={`/live/${live.id}`}
+                                style={{
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    color: '#fff',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '6px',
+                                    textDecoration: 'none',
+                                    transition: 'all 0.2s'
+                                }}
+                                className="hover:bg-white/20 hover:scale-105 transition-all"
+                            >
+                                ライブ詳細を見る
+                            </Link>
                         </div>
                     </div>
                 ))}
