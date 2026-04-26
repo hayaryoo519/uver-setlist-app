@@ -224,6 +224,7 @@ function LiveDetail() {
                 <div className="mt-12">
                     <Link
                         to={`/predictions?live_id=${liveId}`}
+                        state={{ from: location.pathname }}
                         className="group block relative overflow-hidden bg-gradient-to-br from-blue-600/10 via-slate-800/40 to-indigo-600/10 border border-blue-500/20 hover:border-blue-500/50 rounded-3xl p-8 transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/10"
                     >
                         <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -236,7 +237,7 @@ function LiveDetail() {
                                     <div className="bg-blue-500/20 p-2 rounded-lg">
                                         <Sparkles size={20} className="text-blue-400" />
                                     </div>
-                                    <span className="text-xs font-black tracking-widest text-blue-400 uppercase">予想ポータル</span>
+                                    <span className="text-xs font-black tracking-widest text-blue-400 uppercase">セトリ予想</span>
                                 </div>
                                 <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">
                                     このライブのセトリを予想しよう！
