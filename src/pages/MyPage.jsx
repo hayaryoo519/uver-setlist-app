@@ -134,7 +134,7 @@ function MyPage() {
 
     if (loading) return (
         <div className="container" style={{ paddingTop: '100px', textAlign: 'center' }}>
-            <p style={{ color: '#888' }}>Loading your records...</p>
+            <p style={{ color: '#888' }}>データを読み込み中...</p>
         </div>
     );
 
@@ -154,7 +154,7 @@ function MyPage() {
                 </Link>
             </div>
             <PageHeader
-                title="MY PAGE"
+                title="マイページ"
                 rightElement={<NotificationSettings />}
             />
 
@@ -207,7 +207,7 @@ function MyPage() {
                                 letterSpacing: '0.05em',
                                 textTransform: 'uppercase'
                             }}>
-                                🛡️ Administrator
+                                🛡️ 管理者
                             </span>
                         )}
                     </div>

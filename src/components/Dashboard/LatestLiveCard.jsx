@@ -30,7 +30,7 @@ export const LatestLiveCard = ({ live }) => {
                     gap: '8px'
                 }}>
                     <span style={{ width: '6px', height: '6px', background: '#fbbf24', borderRadius: '50%', display: 'inline-block' }}></span>
-                    LATEST LIVE
+                    最新のライブ結果
                 </div>
 
                 <h3 style={{
