@@ -203,14 +203,60 @@ const SetlistPredictionDetail = () => {
                     </div>
                 </div>
 
-                <div className="mt-12 text-center">
-                    <p className="text-slate-500 text-sm mb-6">この予想をあなたのSNSでシェアしませんか？</p>
-                    <button 
-                        onClick={handleShare}
-                        className="inline-flex items-center gap-2 px-8 py-3 bg-white text-black font-black rounded-full hover:bg-blue-500 hover:text-white transition-all shadow-xl"
-                    >
-                        SHARE THIS GUESS
-                    </button>
+                <div className="mt-12 space-y-6">
+                    {/* Share Section */}
+                    <div className="bg-slate-800/30 rounded-3xl p-8 border border-slate-700/50 text-center">
+                        <p className="text-slate-400 text-sm mb-6 font-medium">この予想をあなたのSNSでシェアしませんか？</p>
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                            <button 
+                                onClick={() => {
+                                    const songsText = prediction.songs?.map((s, i) => `${i + 1}. ${s.title}`).join('\n') || '';
+                                    const text = `セットリストを予想しました！\n${prediction.tour_name}\n${prediction.venue} / ${new Date(prediction.live_date).toLocaleDateString('ja-JP')}\n\n${songsText}\n\n当たると思う？👇\n`;
+                                    const url = window.location.href;
+                                    const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=UVERworld,セトリ予想`;
+                                    window.open(xUrl, '_blank');
+                                }}
+                                className="flex items-center gap-3 px-8 py-4 bg-[#1DA1F2] text-white font-black rounded-full hover:brightness-110 transition-all shadow-lg shadow-blue-500/20 w-full sm:w-auto"
+                            >
+                                <Share2 size={20} />
+                                SHARE ON X
+                            </button>
+                            
+                            <button 
+                                onClick={handleShare}
+                                className="flex items-center gap-3 px-8 py-4 bg-slate-700 text-white font-black rounded-full hover:bg-slate-600 transition-all w-full sm:w-auto"
+                            >
+                                <Link size={20} />
+                                COPY LINK
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Guest CTA Section - Only show if not the owner and not logged in (or just not the owner to encourage more) */}
+                    {!prediction.is_mine && (
+                        <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-3xl p-8 border border-blue-500/30 relative overflow-hidden group">
+                            <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                                <Sparkles size={160} />
+                            </div>
+                            <div className="relative z-10 text-center md:text-left md:flex items-center justify-between gap-8">
+                                <div className="mb-6 md:mb-0">
+                                    <h3 className="text-2xl font-black text-white mb-2 italic">ARE YOU READY?</h3>
+                                    <p className="text-slate-300 text-sm leading-relaxed">
+                                        あなたなら、どんなセットリストを組みますか？<br className="hidden md:block" />
+                                        自分だけの最強の予想を投稿して、みんなと盛り上がりましょう！
+                                    </p>
+                                </div>
+                                <Link 
+                                    to={currentUser ? `/predictions/new?live_id=${prediction.live_id}` : "/login"}
+                                    state={!currentUser ? { from: `/predictions/new?live_id=${prediction.live_id}` } : null}
+                                    className="inline-flex items-center gap-3 px-10 py-5 bg-white text-black font-black rounded-full hover:bg-blue-400 hover:text-white transition-all shadow-2xl whitespace-nowrap"
+                                >
+                                    {currentUser ? '自分の予想を作る' : 'ログインして予想する'}
+                                    <ArrowLeft size={20} className="rotate-180" />
+                                </Link>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

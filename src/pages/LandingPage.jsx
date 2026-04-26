@@ -11,6 +11,25 @@ const LandingPage = () => {
     const { currentUser, logout } = useAuth();
     const navigate = useNavigate();
     const [isScrolled, setIsScrolled] = React.useState(false);
+    const [upcomingLives, setUpcomingLives] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        const fetchUpcoming = async () => {
+            try {
+                const res = await fetch('/api/lives?upcoming=true');
+                if (res.ok) {
+                    const data = await res.json();
+                    setUpcomingLives(data.slice(0, 2));
+                }
+            } catch (err) {
+                console.error('Fetch upcoming lives failed:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchUpcoming();
+    }, []);
 
     React.useEffect(() => {
         const handleScroll = () => {
@@ -91,6 +110,37 @@ const LandingPage = () => {
                                 <span className="sp-text">データを見る →</span>
                             </Link>
                         </div>
+
+                        {/* Next Live Teaser */}
+                        {!loading && upcomingLives.length > 0 && (
+                            <div className="lp-next-live-teaser fade-in">
+                                <div className="lp-next-live-label">
+                                    <span className="lp-pulse-dot"></span>
+                                    NEXT LIVE PREDICTION
+                                </div>
+                                <div className="lp-next-live-info">
+                                    <span className="lp-next-live-title">{upcomingLives[0].tour_name || upcomingLives[0].title}</span>
+                                    <span className="lp-next-live-meta">
+                                        {(() => {
+                                            const d = new Date(upcomingLives[0].date);
+                                            return isNaN(d.getTime()) ? upcomingLives[0].date : d.toLocaleDateString('ja-JP', {
+                                                year: 'numeric',
+                                                month: '2-digit',
+                                                day: '2-digit'
+                                            }).replace(/\//g, '.');
+                                        })()} @ {upcomingLives[0].venue}
+                                    </span>
+                                </div>
+                                <div className="lp-next-live-actions">
+                                    <Link to={`/predictions/new?live_id=${upcomingLives[0].id}`} className="lp-next-btn-primary">
+                                        予想する
+                                    </Link>
+                                    <Link to={`/predictions?live_id=${upcomingLives[0].id}`} className="lp-next-btn-secondary">
+                                        みんなの予想
+                                    </Link>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </section>
