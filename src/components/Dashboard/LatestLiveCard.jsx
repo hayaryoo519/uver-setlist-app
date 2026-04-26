@@ -44,34 +44,65 @@ export const LatestLiveCard = ({ live }) => {
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', marginBottom: '15px', color: '#cbd5e1' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        📅 <span style={{ fontWeight: '500', color: '#fff', fontSize: '1rem' }}>{live.date}</span>
+                        📅 <span style={{ fontWeight: 'bold', color: '#fff', fontSize: '1rem' }}>
+                            {(() => {
+                                const d = new Date(live.date);
+                                return isNaN(d.getTime()) ? live.date : d.toLocaleDateString('ja-JP', {
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit'
+                                }).replace(/\//g, '.');
+                            })()}
+                        </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         📍 <span style={{ fontWeight: '500', color: '#fff', fontSize: '0.9rem' }}>{live.venue}</span>
                     </div>
                 </div>
 
-                <Link
-                    to={`/live/${live.id}`}
-                    state={{ from: location.pathname }}
-                    style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        background: '#fbbf24',
-                        color: '#000',
-                        padding: '12px 24px',
-                        borderRadius: '50px',
-                        textDecoration: 'none',
-                        fontWeight: 'bold',
-                        fontSize: '0.9rem',
-                        transition: 'transform 0.2s',
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-                >
-                    セットリストを見る <ArrowRight size={16} />
-                </Link>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    <Link
+                        to={`/live/${live.id}`}
+                        state={{ from: location.pathname }}
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: '#fbbf24',
+                            color: '#000',
+                            padding: '12px 24px',
+                            borderRadius: '50px',
+                            textDecoration: 'none',
+                            fontWeight: 'bold',
+                            fontSize: '0.9rem',
+                            transition: 'all 0.2s',
+                            boxShadow: '0 4px 15px rgba(251, 191, 36, 0.3)'
+                        }}
+                        className="hover:scale-105"
+                    >
+                        セットリストを見る <ArrowRight size={16} />
+                    </Link>
+                    <Link
+                        to={`/predictions?live_id=${live.id}`}
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: 'rgba(255, 255, 255, 0.3)', /* さらに明るく */
+                            border: '1px solid rgba(255, 255, 255, 0.6)', /* 枠線を強調 */
+                            color: '#fff',
+                            padding: '12px 24px',
+                            borderRadius: '50px',
+                            textDecoration: 'none',
+                            fontWeight: 'bold',
+                            fontSize: '0.9rem',
+                            transition: 'all 0.2s',
+                        }}
+                        className="hover:bg-white/40 hover:scale-105"
+                    >
+                        みんなの予想を見る
+                    </Link>
+                </div>
             </div>
         </div>
     );
