@@ -16,6 +16,7 @@ const PredictionRanking = () => {
     const [liveInfo, setLiveInfo] = useState(null);
     const [tourLives, setTourLives] = useState([]);
 
+
     const [sortBy, setSortBy] = useState('popular');
 
     useEffect(() => {

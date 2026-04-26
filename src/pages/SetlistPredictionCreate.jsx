@@ -120,6 +120,10 @@ const SetlistPredictionCreate = () => {
     };
 
     const handleAddSong = (song) => {
+        if (selectedSongs.length >= 30) {
+            alert("予想曲は最大30曲までです。");
+            return;
+        }
         // Create a unique ID for the list item because same song can be added twice
         const newEntry = {
             uniqueId: `list-item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
