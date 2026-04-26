@@ -94,7 +94,7 @@ const SetlistPredictionDetail = () => {
         return (
             <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-4">
                 <h1 className="text-2xl font-bold mb-4">予想が見つかりません</h1>
-                <Link to="/predictions" className="text-blue-400 hover:underline">ランキングに戻る</Link>
+                <Link to="/predictions" className="text-blue-400 hover:underline">セトリ予想一覧へ</Link>
             </div>
         );
     }
@@ -110,7 +110,7 @@ const SetlistPredictionDetail = () => {
                 <div className="mb-8 flex items-center justify-between">
                     <Link to="/predictions" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
                         <ArrowLeft size={18} />
-                        <span className="text-sm font-medium">ランキングに戻る</span>
+                        <span className="text-sm font-medium">セトリ予想一覧へ</span>
                     </Link>
                     <button onClick={handleShare} className="p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors">
                         <Share2 size={18} />
