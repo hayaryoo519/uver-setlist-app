@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { Heart, Plus, Calendar, User, Sparkles, Eye, PenTool } from 'lucide-react';
+import { Heart, Plus, Calendar, User, Sparkles, Eye, PenTool, MapPin } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/Layout/PageHeader';
 import SEO from '../components/SEO';
@@ -8,6 +8,8 @@ import SEO from '../components/SEO';
 const PredictionRanking = () => {
     const [predictions, setPredictions] = useState([]);
     const [predictableLives, setPredictableLives] = useState([]);
+    const [myPredictions, setMyPredictions] = useState([]);
+    const [portalTab, setPortalTab] = useState('upcoming'); // 'upcoming' | 'mine'
     const [isLoading, setIsLoading] = useState(true);
     const { currentUser } = useAuth();
     const navigate = useNavigate();
@@ -35,9 +37,13 @@ const PredictionRanking = () => {
             fetchPredictions();
             fetchLiveInfo();
         } else {
-            fetchPredictableLives();
+            if (portalTab === 'upcoming') {
+                fetchPredictableLives();
+            } else if (portalTab === 'mine') {
+                fetchMyPredictions();
+            }
         }
-    }, [liveId, sortBy]); // sortByが変更されたら再取得
+    }, [liveId, sortBy, portalTab]);
 
     const fetchPredictableLives = async () => {
         setIsLoading(true);
@@ -49,6 +55,33 @@ const PredictionRanking = () => {
             }
         } catch (error) {
             console.error('Failed to fetch predictable lives', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const fetchMyPredictions = async () => {
+        setIsLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                if (window.confirm("自分の予想を見るにはログインが必要です。\nログインページに移動しますか？")) {
+                    navigate('/login', { state: { from: location.pathname } });
+                }
+                return;
+            }
+            const url = `/api/predictions?mine=true&sort=new`;
+            const res = await fetch(url, {
+                headers: { 'token': token }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setMyPredictions(data);
+            } else {
+                console.error('Failed to fetch my predictions');
+            }
+        } catch (error) {
+            console.error('Error:', error);
         } finally {
             setIsLoading(false);
         }
@@ -168,17 +201,30 @@ const PredictionRanking = () => {
                 {!liveId ? (
                     /* --- PORTAL VIEW --- */
                     <div className="mt-8 space-y-6">
-                        <div className="flex items-center justify-between">
+                        <div className="mb-2">
                             <h2 className="text-xl font-bold flex items-center gap-2">
                                 <Sparkles className="text-yellow-400" size={20} />
-                                予想受付中のライブ
+                                セトリ予想ポータル
                             </h2>
-                            <Link to="/lives" className="text-sm text-slate-400 hover:text-blue-400 transition-colors">
-                                アーカイブを見る
-                            </Link>
                         </div>
 
-                        {predictableLives.length === 0 ? (
+                        <div className="flex bg-slate-800/50 p-1 rounded-xl border border-slate-700 w-fit mb-6">
+                            <button
+                                onClick={() => setPortalTab('upcoming')}
+                                className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${portalTab === 'upcoming' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                            >
+                                受付中のライブ
+                            </button>
+                            <button
+                                onClick={() => setPortalTab('mine')}
+                                className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${portalTab === 'mine' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                            >
+                                自分の予想一覧
+                            </button>
+                        </div>
+
+                        {portalTab === 'upcoming' ? (
+                            predictableLives.length === 0 ? (
                             <div className="text-center py-20 bg-slate-800/30 border border-dashed border-slate-700 rounded-3xl">
                                 <Calendar size={48} className="mx-auto text-slate-700 mb-4" />
                                 <p className="text-slate-500">現在、予想受付中のライブはありません</p>
@@ -236,6 +282,65 @@ const PredictionRanking = () => {
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                            )
+                        ) : (
+                            <div className="grid gap-4">
+                                {myPredictions.length === 0 ? (
+                                    <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-3xl p-8 md:p-12 border border-blue-500/30 relative overflow-hidden group text-center">
+                                        <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                                            <Sparkles size={160} />
+                                        </div>
+                                        <div className="relative z-10 max-w-lg mx-auto">
+                                            <h3 className="text-3xl md:text-4xl font-black text-white mb-4 italic">ARE YOU READY?</h3>
+                                            <p className="text-slate-300 text-sm md:text-base leading-relaxed mb-8">
+                                                まだあなたの予想が投稿されていません。<br />
+                                                「受付中のライブ」から、あなただけの最強のセットリストを投稿して、みんなと盛り上がりましょう！
+                                            </p>
+                                            <button 
+                                                onClick={() => setPortalTab('upcoming')}
+                                                className="inline-flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-full transition-all shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95"
+                                            >
+                                                <PenTool size={20} />
+                                                ライブを選んで予想する
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    myPredictions.map((prediction) => (
+                                        <Link 
+                                            to={`/predictions/${prediction.id}`} 
+                                            key={prediction.id} 
+                                            className={`block group relative ring-2 ring-blue-500/50 rounded-2xl`}
+                                        >
+                                           <div className={`bg-slate-800/50 hover:bg-slate-800 border border-slate-700 group-hover:border-blue-500/50 rounded-2xl p-5 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-900/20 flex items-center`}>
+                                                <div className="flex-1 min-w-0 pr-4">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <h2 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors truncate">
+                                                            {prediction.tour_name || 'Special Live'}
+                                                        </h2>
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-slate-500 font-medium">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Calendar size={12} />
+                                                            {new Date(prediction.live_date).toLocaleDateString('ja-JP')}
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <MapPin size={12} />
+                                                            {prediction.venue}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col items-center gap-1 border-l border-slate-700/50 pl-6">
+                                                    <div className={`group/like flex flex-col items-center gap-1 p-2 rounded-xl ${prediction.is_liked ? 'text-pink-500' : 'text-slate-500'}`}>
+                                                        <Heart size={24} fill={prediction.is_liked ? "currentColor" : "none"} />
+                                                        <span className="text-xs font-black tracking-tighter">{prediction.like_count}</span>
+                                                    </div>
+                                                </div>
+                                           </div>
+                                        </Link>
+                                    ))
+                                )}
                             </div>
                         )}
                     </div>
