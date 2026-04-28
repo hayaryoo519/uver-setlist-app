@@ -30,7 +30,7 @@ export const LatestLiveCard = ({ live }) => {
                     gap: '8px'
                 }}>
                     <span style={{ width: '6px', height: '6px', background: '#fbbf24', borderRadius: '50%', display: 'inline-block' }}></span>
-                    最新のライブ結果
+                    LATEST LIVE
                 </div>
 
                 <h3 style={{
@@ -80,8 +80,29 @@ export const LatestLiveCard = ({ live }) => {
                         }}
                         className="hover:scale-105"
                     >
-                        セットリストを見る <ArrowRight size={16} />
+                        View Setlist <ArrowRight size={16} />
                     </Link>
+                    <Link
+                        to={`/predictions?live_id=${live.id}`}
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: 'rgba(255, 255, 255, 0.3)', /* さらに明るく */
+                            border: '1px solid rgba(255, 255, 255, 0.6)', /* 枠線を強調 */
+                            color: '#fff',
+                            padding: '12px 24px',
+                            borderRadius: '50px',
+                            textDecoration: 'none',
+                            fontWeight: 'bold',
+                            fontSize: '0.9rem',
+                            transition: 'all 0.2s',
+                        }}
+                        className="hover:bg-white/40 hover:scale-105"
+                    >
+                        View Predictions
+                    </Link>
+
                 </div>
             </div>
         </div>
