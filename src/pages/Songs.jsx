@@ -66,7 +66,7 @@ const ReleaseItem = ({ release, index, songDataMap }) => {
                                 ? 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10' 
                                 : 'text-blue-400 border-blue-500/30 bg-blue-500/10'
                         }`}>
-                            {release.type === 'ALBUM' ? 'アルバム' : 'シングル'}
+                            {release.type}
                         </span>
                         <div className="text-slate-400 text-[10px] sm:text-xs font-mono tracking-widest flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
@@ -77,7 +77,7 @@ const ReleaseItem = ({ release, index, songDataMap }) => {
                         {release.title}
                     </h2>
                     <p className="text-slate-500 text-[10px] sm:text-xs mt-1 sm:mt-2 font-medium tracking-wide">
-                        {release.songs.length} 収録曲
+                        {release.songs.length} Tracks
                     </p>
                 </div>
             </div>
@@ -185,16 +185,16 @@ function Songs() {
 
     return (
         <div className="min-h-screen bg-slate-900 text-slate-100">
-            <SEO title="ディスコグラフィ" />
+            <SEO title="Discography" />
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20">
                 <div className="flex flex-col md:flex-row md:items-end justify-between mb-4 pb-2 border-b border-white/5 gap-4">
                     <div className="flex flex-col gap-1">
                         <h1 className="text-4xl sm:text-5xl font-black font-oswald tracking-tighter text-white uppercase leading-none">
-                            ディスコグラフィ
+                            Discography
                         </h1>
                         <div className="text-slate-400 text-sm sm:text-base font-bold uppercase tracking-[0.2em] mt-1">
-                            全 <span className="text-yellow-500 font-black font-mono text-lg sm:text-xl ml-1">{DISCOGRAPHY.length}</span> 作品
+                            Total <span className="text-yellow-500 font-black font-mono text-lg sm:text-xl ml-1">{DISCOGRAPHY.length}</span> Releases
                         </div>
                     </div>
 
@@ -202,7 +202,7 @@ function Songs() {
                         {(searchQuery || typeFilter !== 'ALL') && (
                             <div className="flex items-center gap-2 px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                                 <Search className="w-3 h-3 text-yellow-500" />
-                                <span className="text-yellow-500 text-xs font-bold">{filteredDiscography.length} 件見つかりました</span>
+                                <span className="text-yellow-500 text-xs font-bold">{filteredDiscography.length} Matches Found</span>
                             </div>
                         )}
                     </div>
@@ -252,12 +252,12 @@ function Songs() {
 
                 {error ? (
                     <div className="text-center p-8 bg-red-500/10 border border-red-500/20 rounded-2xl">
-                        <h3 className="text-red-400 font-bold mb-2">接続エラー</h3>
+                        <h3 className="text-red-400 font-bold mb-2">Connection Error</h3>
                         <p className="text-red-300/80 mb-2">{error}</p>
                     </div>
                 ) : loading ? (
                     <div className="flex justify-center items-center py-20 text-slate-500 animate-pulse">
-                        ディスコグラフィを読み込み中...
+                        Loading Discography...
                     </div>
                 ) : (
                     <div className="space-y-16">
@@ -275,10 +275,10 @@ function Songs() {
                 {/* Attribution - Legal Consideration for Public Release */}
                 <div className="mt-16 pt-8 border-t border-white/5 text-center">
                     <p className="text-slate-600 text-[10px] font-medium tracking-[0.1em] uppercase">
-                        画像出典: Apple Music / iTunes
+                        Image Source: Apple Music / iTunes
                     </p>
                     <p className="text-slate-700 text-[9px] mt-1">
-                        すべてのアルバムアートワークの著作権は、それぞれの権利者に帰属します。
+                        All album artwork is property of their respective owners.
                     </p>
                 </div>
             </div>
