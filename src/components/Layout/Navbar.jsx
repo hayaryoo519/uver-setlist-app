@@ -18,10 +18,10 @@ const Navbar = () => {
     // Handle scroll effect
     useEffect(() => {
         let lastScrollY = window.scrollY;
-        
+
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
-            
+
             // 背景色の切り替え (50px以上で背景あり)
             if (currentScrollY > 50) {
                 setIsScrolled(true);
@@ -42,7 +42,7 @@ const Navbar = () => {
                 // 上スクロールで表示
                 document.body.classList.remove('header-hidden');
             }
-            
+
             lastScrollY = currentScrollY;
         };
 
@@ -71,7 +71,7 @@ const Navbar = () => {
                             <ListMusic size={18} /> Discography
                         </Link>
                         <Link to="/lives" className="nav-link">
-                            <Calendar size={18} /> Archive
+                            <Calendar size={18} /> Live Archive
                         </Link>
                         {currentUser && (
                             <Link to="/mypage" className="nav-link">
