@@ -80,7 +80,7 @@ export const LatestLiveCard = ({ live }) => {
                         }}
                         className="hover:scale-105"
                     >
-                        セットリストを見る <ArrowRight size={16} />
+                        View Setlist <ArrowRight size={16} />
                     </Link>
                     <Link
                         to={`/predictions?live_id=${live.id}`}
@@ -100,7 +100,7 @@ export const LatestLiveCard = ({ live }) => {
                         }}
                         className="hover:bg-white/40 hover:scale-105"
                     >
-                        みんなの予想を見る
+                        View Predictions
                     </Link>
                 </div>
             </div>

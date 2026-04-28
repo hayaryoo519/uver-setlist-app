@@ -78,7 +78,7 @@ const SongRanking = ({ songs }) => {
                                 {song.title}
                             </div>
                             <div style={{ color: '#fbbf24', fontWeight: 'bold', marginRight: '10px', whiteSpace: 'nowrap' }}>
-                                {song.count}回
+                                {song.count} Plays
                             </div>
                             {hasLives && (
                                 isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />
@@ -155,11 +155,12 @@ const SongRanking = ({ songs }) => {
                                             fontSize: '0.85rem'
                                         }}
                                     >
-                                        さらに表示 ({song.lives.length - liveLimit}件)
+                                        Show more ({song.lives.length - liveLimit} more)
                                     </button>
                                 )}
                             </div>
                         )}
+
                     </div>
                 );
             })}
