@@ -13,10 +13,10 @@ export const UpcomingLives = ({ lives }) => {
             <h2 className="section-title next-live-header" style={{ marginBottom: '20px' }}>
                 <div className="next-live-label">
                     <Sparkles size={20} color="#fbbf24" style={{ animation: 'pulse 2s infinite' }} />
-                    次回のライブ
+                    Next Live
                 </div>
                 <span className="next-live-sub">
-                    （セットリスト予想受付中！）
+                    (Setlist prediction in progress!)
                 </span>
             </h2>
 
@@ -49,7 +49,7 @@ export const UpcomingLives = ({ lives }) => {
                                 alignItems: 'center',
                                 gap: '6px'
                             }}>
-                                {index === 0 ? '★ 次回のライブ' : '開催予定'}
+                                {index === 0 ? '★ NEXT LIVE' : 'UPCOMING'}
                             </div>
 
                             <h3 style={{
@@ -112,7 +112,7 @@ export const UpcomingLives = ({ lives }) => {
                                     }}
                                     className="hover:scale-105 transition-all"
                                 >
-                                    <Sparkles size={14} /> 予想する
+                                    <Sparkles size={14} /> Predict
                                 </Link>
                                 <Link
                                     to={`/predictions?live_id=${live.id}`}
@@ -134,13 +134,14 @@ export const UpcomingLives = ({ lives }) => {
                                     }}
                                     className="hover:bg-white/40 hover:scale-105 transition-all"
                                 >
-                                    みんなの予想
+                                    Predictions
                                 </Link>
                             </div>
                         </div>
                     </div>
                 ))}
             </div>
+
 
             <style>{`
                 @keyframes pulse {

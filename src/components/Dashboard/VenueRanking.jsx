@@ -45,7 +45,7 @@ const VenueRanking = ({ venues, onVenueClick }) => {
                         {venue.name}
                     </div>
                     <div style={{ color: '#fbbf24', fontWeight: 'bold', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                        {venue.count}回
+                        {venue.count} Shows
                     </div>
                 </div>
             ))}
