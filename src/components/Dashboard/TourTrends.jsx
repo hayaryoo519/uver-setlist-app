@@ -70,15 +70,16 @@ export const TourTrends = ({ tour }) => {
                     style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                     className="hover:text-white"
                 >
-                    Song Title {sortConfig.key === 'title' && <ArrowUpDown size={12} />}
+                    曲名 {sortConfig.key === 'title' && <ArrowUpDown size={12} />}
                 </div>
                 <div
                     onClick={() => handleSort('count')}
                     style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                     className="hover:text-white"
                 >
-                    Plays {sortConfig.key === 'count' && <ArrowUpDown size={12} />}
+                    回数 {sortConfig.key === 'count' && <ArrowUpDown size={12} />}
                 </div>
+
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0' }}>
@@ -128,12 +129,13 @@ export const TourTrends = ({ tour }) => {
                         <div style={{ textAlign: 'right' }}>
                             <div>
                                 <span style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>{song.count}</span>
-                                <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '2px' }}>Plays</span>
+                                <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '2px' }}>回</span>
                             </div>
                             <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                                Play Rate {song.percentage}%
+                                演奏率 {song.percentage}%
                             </div>
                         </div>
+
                     </div>
                 ))}
             </div>
@@ -183,14 +185,15 @@ export const TourTrends = ({ tour }) => {
                 >
                     {viewMode === 2 ? (
                         <>
-                            Close <ChevronUp size={14} />
+                            閉じる <ChevronUp size={14} />
                         </>
                     ) : (
                         <>
-                            {viewMode === 0 ? 'Show More' : 'Show All'}
+                            {viewMode === 0 ? 'もっと見る' : '全表示'}
                             {viewMode === 0 ? <ChevronDown size={14} /> : <ChevronsDown size={14} />}
                         </>
                     )}
+
                 </button>
             )}
 
@@ -237,11 +240,12 @@ export const TourTrends = ({ tour }) => {
                         }}>
                             <div>
                                 <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px' }}>
-                                    Performance History
+                                    演奏履歴
                                 </div>
                                 <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary-color)' }}>
                                     {selectedSong.title}
                                 </h3>
+
                             </div>
                             <button
                                 onClick={() => setSelectedSong(null)}
@@ -271,9 +275,10 @@ export const TourTrends = ({ tour }) => {
                                 justifyContent: 'space-between',
                                 fontSize: '0.9rem'
                             }}>
-                                <span>Total Plays: <b>{selectedSong.count}</b></span>
-                                <span>Play Rate: <b>{selectedSong.percentage}%</b></span>
+                                <span>合計回数: <b>{selectedSong.count}</b></span>
+                                <span>演奏率: <b>{selectedSong.percentage}%</b></span>
                             </div>
+
 
                             {selectedSong.lives && selectedSong.lives.map((live, idx) => (
                                 <Link
