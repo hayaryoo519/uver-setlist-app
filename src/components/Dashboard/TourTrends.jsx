@@ -50,7 +50,7 @@ export const TourTrends = ({ tour }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                 <div>
                     <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fff', marginLeft: '2px' }}>
-                        {tour.name} <span style={{ fontSize: '0.9rem', color: 'var(--primary-color)', fontWeight: 'normal', whiteSpace: 'nowrap' }}>({tour.liveCount} 公演)</span>
+                        {tour.name} <span style={{ fontSize: '0.9rem', color: 'var(--primary-color)', fontWeight: 'normal', whiteSpace: 'nowrap' }}>({tour.liveCount} Shows)</span>
                     </div>
                 </div>
             </div>
@@ -70,14 +70,14 @@ export const TourTrends = ({ tour }) => {
                     style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                     className="hover:text-white"
                 >
-                    曲名 {sortConfig.key === 'title' && <ArrowUpDown size={12} />}
+                    Song Title {sortConfig.key === 'title' && <ArrowUpDown size={12} />}
                 </div>
                 <div
                     onClick={() => handleSort('count')}
                     style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                     className="hover:text-white"
                 >
-                    回数 {sortConfig.key === 'count' && <ArrowUpDown size={12} />}
+                    Plays {sortConfig.key === 'count' && <ArrowUpDown size={12} />}
                 </div>
             </div>
 
@@ -128,10 +128,10 @@ export const TourTrends = ({ tour }) => {
                         <div style={{ textAlign: 'right' }}>
                             <div>
                                 <span style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>{song.count}</span>
-                                <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '2px' }}>回</span>
+                                <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '2px' }}>Plays</span>
                             </div>
                             <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                                演奏率 {song.percentage}%
+                                Play Rate {song.percentage}%
                             </div>
                         </div>
                     </div>
@@ -183,11 +183,11 @@ export const TourTrends = ({ tour }) => {
                 >
                     {viewMode === 2 ? (
                         <>
-                            閉じる <ChevronUp size={14} />
+                            Close <ChevronUp size={14} />
                         </>
                     ) : (
                         <>
-                            {viewMode === 0 ? 'もっと見る' : '全部表示する'}
+                            {viewMode === 0 ? 'Show More' : 'Show All'}
                             {viewMode === 0 ? <ChevronDown size={14} /> : <ChevronsDown size={14} />}
                         </>
                     )}
@@ -237,7 +237,7 @@ export const TourTrends = ({ tour }) => {
                         }}>
                             <div>
                                 <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px' }}>
-                                    演奏履歴
+                                    Performance History
                                 </div>
                                 <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary-color)' }}>
                                     {selectedSong.title}
@@ -271,8 +271,8 @@ export const TourTrends = ({ tour }) => {
                                 justifyContent: 'space-between',
                                 fontSize: '0.9rem'
                             }}>
-                                <span>総演奏回数: <b>{selectedSong.count}</b></span>
-                                <span>演奏率: <b>{selectedSong.percentage}%</b></span>
+                                <span>Total Plays: <b>{selectedSong.count}</b></span>
+                                <span>Play Rate: <b>{selectedSong.percentage}%</b></span>
                             </div>
 
                             {selectedSong.lives && selectedSong.lives.map((live, idx) => (

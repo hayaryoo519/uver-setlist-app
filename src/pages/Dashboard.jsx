@@ -205,7 +205,7 @@ function Dashboard() {
 
     if (loading) return (
         <div style={{ padding: '100px', textAlign: 'center', color: '#888' }}>
-            統計データを読み込み中...
+            Loading statistics...
         </div>
     );
 
@@ -214,15 +214,15 @@ function Dashboard() {
     );
 
     const metrics = [
-        { id: 'liveCount', label: 'ライブ数', icon: <Calendar size={14} /> },
-        { id: 'totalSongs', label: '総披露曲数', icon: <Music size={14} /> },
+        { id: 'liveCount', label: 'Shows', icon: <Calendar size={14} /> },
+        { id: 'totalSongs', label: 'Total Songs', icon: <Music size={14} /> },
     ];
 
     return (
         <div className="page-wrapper">
             <SEO title="ダッシュボード" />
             <div className="container" style={{ position: 'relative', zIndex: 10, paddingTop: '100px' }}>
-                <PageHeader title="DASHBOARD" subtitle="データで見るUVERworld" />
+                <PageHeader title="DASHBOARD" subtitle="UVERworld in Data" />
 
                 {/* Latest Live Highlight with Trends */}
                 {stats.recentLives && stats.recentLives.length > 0 && (
@@ -241,7 +241,7 @@ function Dashboard() {
                     <div style={{ marginBottom: '40px' }}>
                         <h2 className="section-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <Music size={20} color="var(--primary-color)" />
-                            ツアーハイライト
+                            Tour Highlights
                         </h2>
                         <TourTrends tour={stats.currentTour} />
                     </div>
@@ -250,7 +250,7 @@ function Dashboard() {
                 {/* Stats Cards */}
                 <h2 className="section-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <Activity size={20} color="var(--primary-color)" />
-                    これまでの歩み
+                    History & Milestones
                 </h2>
                 <div style={{
                     display: 'grid',
@@ -260,20 +260,20 @@ function Dashboard() {
                 }}>
                     <div className="stat-card">
                         <div className="stat-icon"><Calendar size={28} /></div>
-                        <div className="stat-label">通算公演数</div>
+                        <div className="stat-label">Total Shows</div>
                         <div className="stat-value">{stats.totalLives}</div>
                     </div>
                     <div className="stat-card">
                         <div className="stat-icon"><Music size={28} /></div>
-                        <div className="stat-label">総披露曲数</div>
+                        <div className="stat-label">Total Songs</div>
                         <div className="stat-value">{stats.totalSongsPerformed}</div>
                     </div>
                     <div className="stat-card highlight" style={{ cursor: 'pointer' }}>
                         <Link to="/lives" style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
                             <div className="stat-icon"><List size={28} /></div>
-                            <div className="stat-label">ライブアーカイブ</div>
+                            <div className="stat-label">Live Archive</div>
                             <div className="stat-value" style={{ fontSize: '1.5rem', marginTop: '10px' }}>
-                                全てのライブを見る &rarr;
+                                View all lives &rarr;
                             </div>
                         </Link>
                     </div>
@@ -284,7 +284,7 @@ function Dashboard() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
                         <h2 className="section-title" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <TrendingUp size={20} color="var(--primary-color)" />
-                            年間トレンド
+                            Yearly Trends
                         </h2>
 
                         <div style={{ display: 'flex', gap: '10px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '8px' }}>
@@ -318,7 +318,7 @@ function Dashboard() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <Filter size={14} />
-                                表示期間: {yearRange[0]}年 - {yearRange[1]}年
+                                Period: {yearRange[0]} - {yearRange[1]}
                             </div>
                         </div>
                         <LiveGraph
@@ -334,12 +334,12 @@ function Dashboard() {
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <h2 className="section-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <Trophy size={20} color="var(--primary-color)" />
-                            演奏回数ランキング
+                            Top Songs
                         </h2>
                         <div className="dashboard-panel" style={{ padding: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
                             {(!stats.globalSongRanking || stats.globalSongRanking.length === 0) ? (
                                 <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    楽曲データがありません
+                                    No Song Data Available
                                 </div>
                             ) : (
                                 <div style={{ flex: 1 }}>
@@ -382,7 +382,7 @@ function Dashboard() {
                                                 </div>
                                                 <div style={{ textAlign: 'right', paddingLeft: '15px' }}>
                                                     <div style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>
-                                                        {song.count} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: '#64748b' }}>回</span>
+                                                        {song.count} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: '#64748b' }}>Plays</span>
                                                     </div>
                                                     <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
                                                         {song.percentage}%
@@ -401,14 +401,14 @@ function Dashboard() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '20px' }}>
                             <h2 className="section-title" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <History size={20} color="var(--primary-color)" />
-                                最近のライブ
+                                Recent Lives
                             </h2>
-                            <Link to="/lives" style={{ color: '#94a3b8', fontSize: '0.85rem', textDecoration: 'none' }}>全て見る &rarr;</Link>
+                            <Link to="/lives" style={{ color: '#94a3b8', fontSize: '0.85rem', textDecoration: 'none' }}>View All &rarr;</Link>
                         </div>
                         <div className="dashboard-panel" style={{ padding: '0', flex: 1, display: 'flex', flexDirection: 'column' }}>
                             {(!stats.recentLives || stats.recentLives.length === 0) ? (
                                 <div style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '0.9rem', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    最近のライブ記録がありません
+                                    No recent live records.
                                 </div>
                             ) : (
                                 <div style={{ flex: 1 }}>
@@ -466,7 +466,7 @@ function Dashboard() {
                     <div className="dashboard-panel" style={{ gridColumn: '1 / -1' }}>
                         <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Disc size={20} color="var(--primary-color)" />
-                            アルバム別演奏数 ({yearRange[0]}年 - {yearRange[1]}年)
+                            Songs by Album ({yearRange[0]} - {yearRange[1]})
                         </h3>
                         <div style={{ minHeight: '400px' }}>
                             <AlbumDistribution data={(() => {
@@ -527,12 +527,12 @@ function Dashboard() {
                 <div style={{ marginTop: '60px', marginBottom: '100px' }}>
                     <h2 className="section-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <List size={20} color="var(--primary-color)" />
-                        過去ツアー分析
+                        Past Tour Analysis
                     </h2>
 
                     <div className="dashboard-panel">
                         <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', color: '#94a3b8', marginBottom: '8px', fontSize: '0.9rem' }}>ツアーを選択</label>
+                            <label style={{ display: 'block', color: '#94a3b8', marginBottom: '8px', fontSize: '0.9rem' }}>Select Tour</label>
                             <select
                                 value={selectedAnalysisTour ? selectedAnalysisTour.name : ''}
                                 onChange={(e) => {
@@ -568,7 +568,7 @@ function Dashboard() {
                                     return Object.entries(groups)
                                         .sort((a, b) => b[0].localeCompare(a[0]))
                                         .map(([year, tours]) => (
-                                            <optgroup key={year} label={`${year}年`} style={{ color: '#94a3b8', background: '#0f172a' }}>
+                                            <optgroup key={year} label={`${year}`} style={{ color: '#94a3b8', background: '#0f172a' }}>
                                                 {tours.map((tour, idx) => (
                                                     <option key={`${year}-${idx}`} value={tour.name} style={{ background: '#1e293b', color: '#fff' }}>
                                                         {tour.name} ({tour.startDate} ~ {tour.endDate} / {tour.liveCount} shows)
@@ -678,9 +678,9 @@ function Dashboard() {
                         >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                                 <h2 style={{ margin: 0 }}>
-                                    {modalFilter.type === 'year' ? `${modalFilter.value.name}年の楽曲ランキング` :
-                                        modalFilter.type === 'album' ? `${modalFilter.value.name} 収録楽曲` :
-                                            `${modalFilter.value.name} 楽曲分析`}
+                                    {modalFilter.type === 'year' ? `${modalFilter.value.name} Song Ranking` :
+                                        modalFilter.type === 'album' ? `${modalFilter.value.name} (Album) Songs` :
+                                            `${modalFilter.value.name} Analysis`}
                                 </h2>
                                 <button
                                     onClick={closeModal}
@@ -706,7 +706,7 @@ function Dashboard() {
                             ) : (
                                 <>
                                     <div style={{ color: '#888', marginBottom: '20px', display: 'flex', justifyContent: 'space-between' }}>
-                                        <span>全{modalFilter.value.liveCount}公演 / 総披露{modalFilter.value.totalSongs}曲</span>
+                                        <span>{modalFilter.value.liveCount} Shows / {modalFilter.value.totalSongs} Songs</span>
                                         <span>{modalFilter.value.startDate} 〜 {modalFilter.value.endDate}</span>
                                     </div>
 
@@ -762,8 +762,8 @@ function Dashboard() {
                                                         </div>
                                                     </div>
                                                     <div style={{ textAlign: 'right', marginLeft: '20px' }}>
-                                                        <div style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>{song.count}回</div>
-                                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>演奏率 {song.percentage}%</div>
+                                                        <div style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>{song.count} Plays</div>
+                                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Play Rate {song.percentage}%</div>
                                                     </div>
                                                 </div>
 

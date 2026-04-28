@@ -61,7 +61,7 @@ function LiveDetail() {
     };
 
     if (loading) {
-        return <div className="container" style={{ paddingTop: '100px', textAlign: 'center' }}>読み込み中...</div>;
+        return <div className="container" style={{ paddingTop: '100px', textAlign: 'center' }}>Loading...</div>;
     }
 
     if (!live) {
@@ -69,7 +69,7 @@ function LiveDetail() {
     }
 
     const setlist = live.setlist || [];
-    const mainTitle = live.tour_name || live.title || "不明なライブ";
+    const mainTitle = live.tour_name || live.title || "Unknown Live";
 
     // Determine back link destination
     const backLink = location.state?.from || '/lives';
@@ -169,8 +169,8 @@ function LiveDetail() {
 
                 <div className="setlist bg-slate-800/20 rounded-3xl p-4 md:p-8 border border-slate-800/50">
                     <div className="mb-8 flex items-center justify-between">
-                        <h2 className="text-xs font-black tracking-[0.3em] text-slate-500 uppercase">セットリスト</h2>
-                        <div className="text-[10px] font-mono text-slate-600">{setlist.length} 曲</div>
+                        <h2 className="text-xs font-black tracking-[0.3em] text-slate-500 uppercase">SETLIST PERFORMANCE</h2>
+                        <div className="text-[10px] font-mono text-slate-600">{setlist.length} TRACKS</div>
                     </div>
 
                     {setlist.length > 0 ? (
@@ -215,9 +215,63 @@ function LiveDetail() {
                         </div>
                     ) : (
                         <div className="text-center py-20 text-slate-600 bg-slate-900/40 rounded-2xl border border-dashed border-slate-800">
-                            <p className="font-medium">セットリストデータが見つかりません</p>
+                            <p className="font-medium">SETLIST DATA NOT FOUND</p>
                         </div>
                     )}
+                </div>
+
+                {/* セトリ予想セクション */}
+                <div className="mt-12">
+                    {(() => {
+                        // 過去のライブかどうか判定（セトリがあるか、日付が過去か）
+                        const isPastLive = setlist.length > 0 || new Date(live.date) < new Date(new Date().setHours(0,0,0,0));
+                        
+                        // 過去のライブで、予想が1件もない場合は非表示にする
+                        if (isPastLive && parseInt(live.prediction_count || 0, 10) === 0) {
+                            return null;
+                        }
+                        
+                        return (
+                            <Link
+                                to={`/predictions?live_id=${liveId}`}
+                                state={{ from: location.pathname }}
+                                className="group block relative overflow-hidden bg-gradient-to-br from-blue-600/10 via-slate-800/40 to-indigo-600/10 border border-blue-500/20 hover:border-blue-500/50 rounded-3xl p-8 transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/10"
+                            >
+                                <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <Sparkles size={120} className="text-blue-400" />
+                                </div>
+                                
+                                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <div className="bg-blue-500/20 p-2 rounded-lg">
+                                                <Sparkles size={20} className="text-blue-400" />
+                                            </div>
+                                            <span className="text-xs font-black tracking-widest text-blue-400 uppercase">セトリ予想</span>
+                                        </div>
+                                        <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">
+                                            {isPastLive ? "みんなのセトリ予想ランキング" : "このライブのセトリを予想しよう！"}
+                                         </h3>
+                                        <p className="text-slate-400 text-sm max-w-md">
+                                            {isPastLive 
+                                                ? "ライブ開催前に投稿された、みんなのセトリ予想結果を見てみましょう！"
+                                                : "みんなの予想ランキングをチェックしたり、自分だけの最強のセットリストを投稿してシェアしましょう。"}
+                                        </p>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-right hidden md:block">
+                                            <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-tighter">ランキングを見る</div>
+                                            <div className="text-white font-black text-xl">みんなの予想 &rarr;</div>
+                                        </div>
+                                        <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-900/40 group-hover:scale-110 transition-transform">
+                                            <Plus size={24} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </Link>
+                        );
+                    })()}
                 </div>
 
 

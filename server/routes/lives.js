@@ -139,8 +139,13 @@ router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // 1. Get Live Details
-        const liveRes = await db.query("SELECT * FROM lives WHERE id = $1", [id]);
+        // 1. Get Live Details with prediction count
+        const liveRes = await db.query(
+            `SELECT l.*, 
+                    (SELECT COUNT(*) FROM predictions p WHERE p.live_id = l.id) as prediction_count
+             FROM lives l WHERE id = $1`, 
+            [id]
+        );
         if (liveRes.rows.length === 0) return res.status(404).json("Live not found");
         const live = liveRes.rows[0];
 
