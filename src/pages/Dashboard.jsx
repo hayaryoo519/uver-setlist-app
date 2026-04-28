@@ -214,8 +214,8 @@ function Dashboard() {
     );
 
     const metrics = [
-        { id: 'liveCount', label: 'Shows', icon: <Calendar size={14} /> },
-        { id: 'totalSongs', label: 'Total Songs', icon: <Music size={14} /> },
+        { id: 'liveCount', label: 'ライブ数', icon: <Calendar size={14} /> },
+        { id: 'totalSongs', label: '総披露曲数', icon: <Music size={14} /> },
     ];
 
     return (
@@ -241,8 +241,9 @@ function Dashboard() {
                     <div style={{ marginBottom: '40px' }}>
                         <h2 className="section-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <Music size={20} color="var(--primary-color)" />
-                            Tour Highlights
+                            TOUR HIGHLIGHTS
                         </h2>
+
                         <TourTrends tour={stats.currentTour} />
                     </div>
                 )}
@@ -250,8 +251,9 @@ function Dashboard() {
                 {/* Stats Cards */}
                 <h2 className="section-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <Activity size={20} color="var(--primary-color)" />
-                    History & Milestones
+                    HISTORY
                 </h2>
+
                 <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
@@ -271,12 +273,13 @@ function Dashboard() {
                     <div className="stat-card highlight" style={{ cursor: 'pointer' }}>
                         <Link to="/lives" style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
                             <div className="stat-icon"><List size={28} /></div>
-                            <div className="stat-label">Live Archive</div>
+                            <div className="stat-label">Archive</div>
                             <div className="stat-value" style={{ fontSize: '1.5rem', marginTop: '10px' }}>
-                                View all lives &rarr;
+                                View All Lives &rarr;
                             </div>
                         </Link>
                     </div>
+
                 </div>
 
                 {/* Yearly Chart */}
@@ -284,8 +287,9 @@ function Dashboard() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
                         <h2 className="section-title" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <TrendingUp size={20} color="var(--primary-color)" />
-                            Yearly Trends
+                            YEARLY TRENDS
                         </h2>
+
 
                         <div style={{ display: 'flex', gap: '10px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '8px' }}>
                             {metrics.map(m => (
