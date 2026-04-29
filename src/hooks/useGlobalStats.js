@@ -51,9 +51,9 @@ export const useGlobalStats = () => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        // Separate Past and Future
-        const pastLives = allLives.filter(live => new Date(live.date) < today);
-        const upcomingLives = allLives.filter(live => new Date(live.date) >= today)
+        // Separate Past and Future (今日以前 = pastLives, 明日以降 = upcomingLives)
+        const pastLives = allLives.filter(live => new Date(live.date) <= today);
+        const upcomingLives = allLives.filter(live => new Date(live.date) > today)
             .sort((a, b) => new Date(a.date) - new Date(b.date))
             .map(live => ({ ...live, date: formatDate(live.date) }));
 
@@ -256,16 +256,24 @@ export const useGlobalStats = () => {
             });
         });
 
-        // Map titles to IDs using allSongs if missing
+        // Map titles to IDs and Images using allSongs
+        const songDataMap = new Map();
         const songIdMap = new Map();
-        allSongs.forEach(s => songIdMap.set(s.title, s.id));
+        allSongs.forEach(s => {
+            songDataMap.set(s.title, { id: s.id, image_url: s.image_url });
+            songIdMap.set(s.title, s.id);
+        });
 
         const globalSongRanking = Object.values(globalSongCounts)
-            .map(s => ({
-                ...s,
-                id: s.id || songIdMap.get(s.title), // Fallback to allSongs lookup
-                percentage: ((s.count / totalLives) * 100).toFixed(1)
-            }))
+            .map(s => {
+                const songData = songDataMap.get(s.title);
+                return {
+                    ...s,
+                    id: s.id || (songData ? songData.id : null),
+                    image_url: songData ? songData.image_url : null,
+                    percentage: ((s.count / totalLives) * 100).toFixed(1)
+                };
+            })
             .sort((a, b) => b.count - a.count)
             .slice(0, 50); // Keep top 50 in stats, Dashboard can slice 10
 
@@ -280,6 +288,7 @@ export const useGlobalStats = () => {
             albumStats,
             songAlbumMap: songAlbumMap,
             songIdMap,
+            songDataMap,
             globalSongRanking,
             upcomingLives
         };

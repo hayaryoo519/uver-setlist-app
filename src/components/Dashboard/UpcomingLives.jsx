@@ -38,8 +38,6 @@ export const UpcomingLives = ({ lives }) => {
                             minHeight: '200px'
                         }}
                     >
-
-
                         <div style={{ position: 'relative', zIndex: 1, flex: 1 }}>
                             <div style={{
                                 fontSize: '0.8rem',
@@ -133,7 +131,7 @@ export const UpcomingLives = ({ lives }) => {
                     display: flex;
                     align-items: center;
                     gap: 10px;
-                    white-space: nowrap; /* Prevent "Next Live" line break */
+                    white-space: nowrap;
                 }
                 .next-live-sub {
                     font-size: 0.8rem;
@@ -149,7 +147,7 @@ export const UpcomingLives = ({ lives }) => {
                     }
                     .next-live-sub {
                         font-size: 0.75rem;
-                        margin-left: 30px; /* Align with text, skipping icon width */
+                        margin-left: 30px;
                     }
                 }
             `}</style>
