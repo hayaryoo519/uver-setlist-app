@@ -65,19 +65,22 @@ UPDATE users SET
     email = 'dummy_' || id || '@example.com',
     username = 'user_' || id,
     password = 'anonymized_hash',
-    avatar_url = NULL;
+    verification_token = NULL,
+    reset_password_token = NULL,
+    reset_password_expires = NULL;
 
--- 自由入力項目や機密情報のクリア
--- 例: prediction_comments がある場合
+-- セキュリティログ、プッシュ通知設定、生ログのクリア
+TRUNCATE TABLE security_logs CASCADE;
+TRUNCATE TABLE push_subscriptions CASCADE;
+TRUNCATE TABLE collector_logs CASCADE;
+
+-- 修正申請などの自由入力項目があればクリア (テーブルが存在する場合のみ)
 DO \$\$ 
 BEGIN 
-    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'prediction_comments') THEN
-        UPDATE prediction_comments SET content = '（非公開）';
+    IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'corrections' AND column_name = 'comment') THEN
+        UPDATE corrections SET comment = '（非公開）';
     END IF;
 END \$\$;
-
--- セッションやトークン情報のクリア
-TRUNCATE TABLE sessions CASCADE;
 EOF
 
 if [ $? -ne 0 ]; then
