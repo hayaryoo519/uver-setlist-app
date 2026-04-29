@@ -43,6 +43,7 @@
 ## 3. 技術仕様
 - **システム構成**: [🔗 Notion](https://www.notion.so/3050e21e344d811f9bb8feb1d3e4516e)
 - **フロントエンド**: React (Vite), lucide-react (アイコン), dnd-kit (ドラッグ&ドロップ) [🔗 Notion](https://www.notion.so/3050e21e344d81859805e945566af6c4)
+- **データベース運用**: バックアップ、環境間同期、匿名化の方針 [🔗 db_operations.md](./db_operations.md)
 - **バックエンド**: Node.js (Express) [🔗 Notion](https://www.notion.so/3050e21e344d81139d79c8423744f68d)
 - **データベース**: PostgreSQL [🔗 Notion](https://www.notion.so/3050e21e344d81b5a68ce71f92075312)
 - **認証**: JWT (AuthContextによる管理)
