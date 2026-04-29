@@ -2,6 +2,7 @@ const router = require('express').Router();
 const db = require('../db');
 const { authorize, adminCheck } = require('../middleware/authorization');
 const { normalizeVenueName } = require('../utils/songTranslations');
+const { notifyNewLive } = require('../utils/pushNotification');
 
 // GET All Lives with Advanced Filters
 router.get('/', async (req, res) => {
@@ -138,7 +139,7 @@ router.get('/:id', async (req, res) => {
         // 2. Get Setlist with Song Details
         // Join setlists -> songs
         const setlistRes = await db.query(
-            `SELECT s.id as song_id, s.title, sl.position 
+            `SELECT s.id as song_id, s.title, s.image_url, sl.position 
              FROM setlists sl
              JOIN songs s ON sl.song_id = s.id
              WHERE sl.live_id = $1
@@ -169,7 +170,13 @@ router.post('/', authorize, adminCheck, async (req, res) => {
             [tour_name, title, date, venue, type, special_note]
         );
 
-        res.json(newLive.rows[0]);
+        const createdLive = newLive.rows[0];
+        res.json(createdLive);
+
+        // プッシュ通知を非同期で送信（レスポンスをブロックしない）
+        notifyNewLive(createdLive).catch(err => {
+            console.error('Push notification error:', err);
+        });
     } catch (err) {
         console.error(err.message);
         res.status(500).json({ message: "Server Error: " + err.message });

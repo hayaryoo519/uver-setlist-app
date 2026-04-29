@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown, AlertTriangle, MessageCircle, CheckCircle } from 'lucide-react';
+import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown, AlertTriangle, MessageCircle, CheckCircle, BellRing, FileText, Clock } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SetlistEditor from '../components/Admin/SetlistEditor';
+import DraftManager from '../components/Admin/DraftManager';
+import CollectorLogsView from '../components/Admin/CollectorLogsView';
 
 const AdminPage = () => {
     const { currentUser } = useAuth();
@@ -12,7 +14,7 @@ const AdminPage = () => {
     const [activeTab, setActiveTab] = useState('lives');
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
-    const initialTab = queryParams.get('tab');
+    const initialTab = queryParams.get('tab') || (location.pathname === '/admin/drafts' ? 'drafts' : null);
     const editId = queryParams.get('edit');
 
 
@@ -71,16 +73,23 @@ const AdminPage = () => {
     const [sfmPreviewData, setSfmPreviewData] = useState(null);
     const [isImportingSFM, setIsImportingSFM] = useState(false);
 
+    // --- COLLECTOR LOGS STATE ---
+    const [collectorLogs, setCollectorLogs] = useState([]);
+    const [isLoadingCollectorLogs, setIsLoadingCollectorLogs] = useState(false);
 
-    // Initial Fetch
+
+    // タブ切り替え時のデータ取得
     useEffect(() => {
         if (activeTab === 'users') fetchUsers();
         if (activeTab === 'lives') fetchLives();
         if (activeTab === 'songs') fetchSongs();
-        if (activeTab === 'users') fetchUsers();
-        if (activeTab === 'lives') fetchLives();
-        if (activeTab === 'songs') fetchSongs();
         if (activeTab === 'corrections') fetchCorrections();
+        if (activeTab === 'collector_logs') fetchCollectorLogs();
+        // draftsタブでは楽曲リストとライブリストが必要（BulkImportのマッチング用）
+        if (activeTab === 'drafts') {
+            fetchSongs();
+            fetchLives();
+        }
         // Reset keyword when switching to import/collect to avoid carrying over from modal
         if (activeTab === 'collect') {
             setSfmSearchKeyword('');
@@ -88,6 +97,12 @@ const AdminPage = () => {
         }
         if (activeTab === 'import') setImportResult(null);
     }, [activeTab]);
+
+    // 初回マウント時に楽曲リストを取得（タブに関係なくBulkImportで常に利用できるように）
+    useEffect(() => {
+        fetchSongs();
+        fetchLives();
+    }, []);
 
     // --- API CALLS: IMPORT ---
     const handleCSVImport = async () => {
@@ -139,6 +154,48 @@ const AdminPage = () => {
                 setCorrections(data.corrections);
             }
         } catch (err) { console.error(err); } finally { setIsLoadingCorrections(false); }
+    };
+
+    // --- API CALLS: COLLECTOR LOGS ---
+    const fetchCollectorLogs = async () => {
+        setIsLoadingCollectorLogs(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/logs/collector', { headers: { token } });
+            if (res.ok) {
+                const data = await res.json();
+                setCollectorLogs(data.logs);
+            }
+        } catch (err) {
+            console.error('Error fetching collector logs:', err);
+        } finally {
+            setIsLoadingCollectorLogs(false);
+        }
+    };
+
+    // --- MANUAL PUSH NOTIFICATION ---
+    const handleManualPush = async (live) => {
+        const confirmMsg = `「${live.title || live.tour_name}」のプッシュ通知を送信しますか？\n\n日付: ${live.date}\n会場: ${live.venue}`;
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/push/notify-live', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', token },
+                body: JSON.stringify({ liveId: live.id })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                alert(`Notification sent!\nSuccess: ${data.details.sent}\nFailed: ${data.details.failed}`);
+            } else {
+                alert(`Failed to send notification: ${data.message}`);
+            }
+        } catch (err) {
+            console.error('Push functionality error:', err);
+            alert('Error sending notification');
+        }
     };
 
     const updateCorrectionStatus = async (id, status, note) => {
@@ -544,10 +601,17 @@ const AdminPage = () => {
     const fetchLives = async () => {
         setIsLoadingLives(true);
         try {
-            const res = await fetch('/api/lives?include_setlists=true');
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/lives?include_setlists=true', { headers: { token } });
             const data = await res.json();
             setLives(data);
-        } catch (err) { console.error(err); } finally { setIsLoadingLives(false); }
+            return data;
+        } catch (err) { 
+            console.error(err); 
+            return [];
+        } finally { 
+            setIsLoadingLives(false); 
+        }
     };
 
     const handleLiveSubmit = async (e) => {
@@ -727,13 +791,29 @@ const AdminPage = () => {
         }
     };
 
+    const handleDraftImported = async (liveId) => {
+        const updatedLives = await fetchLives();
+        fetchSongs();
+        
+        if (liveId) {
+            const live = updatedLives.find(l => l.id === liveId);
+            if (live) {
+                openSetlistEditor(live);
+            }
+        }
+    };
+
     // --- API CALLS: SONGS ---
     const fetchSongs = async () => {
         setIsLoadingSongs(true);
         try {
-            const res = await fetch('/api/songs');
-            const data = await res.json();
-            setSongs(data);
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/songs', { headers: { token } });
+            if (res.ok) {
+                const data = await res.json();
+                // APIが配列を直接返す場合とオブジェクト内に包まれる場合の両方に対応
+                setSongs(Array.isArray(data) ? data : (data.songs || []));
+            }
         } catch (err) { console.error(err); } finally { setIsLoadingSongs(false); }
     };
 
@@ -1130,7 +1210,7 @@ const AdminPage = () => {
 
 
     return (
-        <div style={{ padding: '100px 20px', maxWidth: '1200px', margin: '0 auto', color: '#fff' }} className="fade-in">
+        <div style={{ padding: '100px 20px', maxWidth: '1200px', margin: '0 auto', color: '#fff' }} className="fade-in admin-page-root">
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '40px' }}>
                 <Shield size={40} color="var(--primary-color)" />
@@ -1138,7 +1218,7 @@ const AdminPage = () => {
             </div>
 
             {/* Navigation Tabs */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+            <div className="admin-nav-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '40px' }}>
 
                 <div className={`admin-card ${activeTab === 'lives' ? 'active' : ''}`} onClick={() => setActiveTab('lives')}>
                     <div className="card-header">
@@ -1175,6 +1255,20 @@ const AdminPage = () => {
                     </div>
                 </div>
 
+                <div className={`admin-card ${activeTab === 'drafts' ? 'active' : ''}`} onClick={() => setActiveTab('drafts')}>
+                    <div className="card-header">
+                        <h2 className="card-title"><FileText size={24} color="#94a3b8" /> Drafts</h2>
+                        <span className="card-badge" style={{ background: '#8b5cf620', color: '#a78bfa' }}>AI</span>
+                    </div>
+                </div>
+
+                <div className={`admin-card ${activeTab === 'collector_logs' ? 'active' : ''}`} onClick={() => setActiveTab('collector_logs')}>
+                    <div className="card-header">
+                        <h2 className="card-title"><Clock size={24} color="#94a3b8" /> Collector Logs</h2>
+                        <span className="card-badge" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa' }}>LOGS</span>
+                    </div>
+                </div>
+
                 <div className={`admin-card ${activeTab === 'corrections' ? 'active' : ''}`} onClick={() => setActiveTab('corrections')}>
                     <div className="card-header">
                         <h2 className="card-title"><AlertTriangle size={24} color="#94a3b8" /> Corrections</h2>
@@ -1195,6 +1289,28 @@ const AdminPage = () => {
             {/* --- CONTENT AREA --- */}
             <div className="content-area">
 
+                {/* DRAFT CONTENT */}
+                {activeTab === 'drafts' && (
+                    <DraftManager
+                        lives={lives}
+                        allSongs={songs}
+                        onSetlistImported={handleDraftImported}
+                    />
+                )}
+
+                {/* COLLECTOR LOGS CONTENT */}
+                {activeTab === 'collector_logs' && (
+                    <div className="tab-content fade-in">
+                        {isLoadingCollectorLogs ? (
+                            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+                                <Loader className="spin" size={32} color="var(--primary-color)" />
+                            </div>
+                        ) : (
+                            <CollectorLogsView logs={collectorLogs} />
+                        )}
+                    </div>
+                )}
+
                 {/* COLLECT CONTENT */}
                 {activeTab === 'collect' && (
                     <div className="tab-content fade-in">
@@ -1202,7 +1318,7 @@ const AdminPage = () => {
                             <h3>Collect from Setlist.fm</h3>
                         </div>
                         <div className="collect-panel" style={{ padding: '20px' }}>
-                            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                            <div className="collect-search-row" style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
                                 <select
                                     value={sfmSearchYear}
                                     onChange={(e) => setSfmSearchYear(e.target.value)}
@@ -1218,7 +1334,7 @@ const AdminPage = () => {
                                     value={sfmSearchKeyword}
                                     onChange={(e) => setSfmSearchKeyword(e.target.value)}
                                     placeholder="Optional: Keyword (Tour/Venue)"
-                                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #334155', background: '#1e293b', color: '#fff', width: '250px' }}
+                                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #334155', background: '#1e293b', color: '#fff', flex: 1, minWidth: '120px' }}
                                 />
                                 <button className="btn-primary" onClick={handleSetlistFMSearch} disabled={isSearchingSFM}>
                                     {isSearchingSFM ? <Loader className="spin" size={18} /> : <Search size={18} />} Search
@@ -1534,7 +1650,7 @@ const AdminPage = () => {
                             </div>
                         </div>
 
-                        <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <div className="admin-filter-row" style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                             <div style={{ position: 'relative' }}>
                                 <Search size={16} className="search-icon" />
                                 <input
@@ -1682,6 +1798,9 @@ const AdminPage = () => {
                                                     }} className="action-btn" title="Search on Setlist.fm" style={{ color: '#8b5cf6' }}>
                                                         <Search size={18} />
                                                     </button>
+                                                    <button onClick={() => handleManualPush(live)} className="action-btn" title="Send Push Notification" style={{ color: '#ec4899' }}>
+                                                        <BellRing size={18} />
+                                                    </button>
                                                     <button onClick={() => handleDeleteLive(live.id)} className="action-btn delete" title="Delete"><Trash2 size={18} /></button>
                                                 </div>
                                             </td>
@@ -1699,7 +1818,7 @@ const AdminPage = () => {
                     <div className="tab-content fade-in">
                         <div className="table-header-panel">
                             <h3>Songs Master ({processedSongs.length} / {songs.length})</h3>
-                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <div className="admin-filter-row" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                                 <div style={{ position: 'relative' }}>
                                     <Search size={16} className="search-icon" />
                                     <input
@@ -2212,6 +2331,84 @@ const AdminPage = () => {
                 .empty-cell { padding: 30px; text-align: center; color: #94a3b8; }
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
                 .fade-in { animation: fadeIn 0.3s ease-out; }
+
+                /* モバイルレスポンシブ対応 */
+                @media (max-width: 768px) {
+                    .admin-page-root { padding: 80px 10px 20px !important; }
+                    .admin-page-root > div:first-child h1 { font-size: 1.6rem !important; }
+                    .admin-nav-grid {
+                        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+                        gap: 10px !important;
+                        margin-bottom: 20px !important;
+                    }
+                    .admin-card { padding: 15px !important; }
+                    .card-title { font-size: 1.1rem !important; }
+                    .card-title svg { width: 18px; height: 18px; }
+                    .table-header-panel {
+                        flex-direction: column !important;
+                        align-items: flex-start !important;
+                        gap: 10px !important;
+                    }
+                    /* テーブルのカード型レイアウト化 */
+                    .table-container { overflow-x: visible !important; background: transparent !important; border: none !important; }
+                    .admin-table { min-width: 100% !important; display: block !important; }
+                    .admin-table thead { display: none !important; } /* ヘッダーを隠す */
+                    .admin-table tbody { display: block !important; width: 100% !important; }
+                    .admin-table tr { 
+                        display: block !important; 
+                        background: rgba(30, 41, 59, 0.7) !important; 
+                        border: 1px solid #334155 !important; 
+                        border-radius: 12px !important; 
+                        margin-bottom: 16px !important; 
+                        padding: 15px !important;
+                    }
+                    .admin-table td { 
+                        display: block !important; 
+                        padding: 6px 0 !important; 
+                        border-bottom: 1px dashed rgba(255,255,255,0.05) !important; 
+                        width: 100% !important; 
+                        text-align: left !important; 
+                        font-size: 0.95rem !important;
+                    }
+                    .admin-table td:last-child { border-bottom: none !important; }
+                    .empty-cell { text-align: center !important; }
+                    
+                    .search-input { width: 100% !important; }
+                    .admin-filter-row { flex-direction: column !important; width: 100% !important; }
+                    .admin-filter-row > div,
+                    .admin-filter-row > select,
+                    .admin-filter-row > button { width: 100% !important; }
+                    .admin-filter-row .search-input { width: 100% !important; }
+                    .collect-search-row { flex-direction: column !important; }
+                    .collect-search-row input,
+                    .collect-search-row select,
+                    .collect-search-row button { width: 100% !important; }
+                    
+                    .actions-wrapper { 
+                        width: 100% !important;
+                        display: flex !important; 
+                        flex-wrap: wrap !important;
+                        gap: 8px !important; 
+                        justify-content: center !important;
+                        margin-top: 10px !important;
+                        padding-top: 15px !important;
+                        border-top: 1px solid rgba(255,255,255,0.1) !important;
+                    }
+                    .action-btn { 
+                        flex: 1 1 calc(33% - 8px) !important; /* ボタンが多ければ複数行になるように調整 */
+                        background: rgba(15, 23, 42, 0.6) !important; 
+                        border: 1px solid #334155 !important;
+                        padding: 12px 10px !important; 
+                        min-height: 44px !important; 
+                        display: inline-flex !important; 
+                        align-items: center !important; 
+                        justify-content: center !important; 
+                        border-radius: 8px !important;
+                    }
+                    .btn-primary, .btn-cancel { padding: 12px 14px !important; font-size: 1rem !important; }
+                    .modal-content { padding: 20px !important; width: 95% !important; }
+                    .modal-content h2 { font-size: 1.2rem !important; }
+                }
             `}</style>
             {/* IMPORT MODAL FOR EXISTING LIVE */}
             {showImportModal && activeLiveForImport && (
