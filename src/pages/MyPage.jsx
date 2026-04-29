@@ -13,6 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 import AttendedLiveList from '../components/Dashboard/AttendedLiveList';
 import VenueRanking from '../components/Dashboard/VenueRanking';
+import NotificationSettings from '../components/NotificationSettings';
 
 function MyPage() {
     const [modalFilter, setModalFilter] = useState(null);
@@ -152,7 +153,10 @@ function MyPage() {
                     <SettingsIcon size={16} /> アカウント設定
                 </Link>
             </div>
-            <PageHeader title="MY PAGE" />
+            <PageHeader
+                title="MY PAGE"
+                rightElement={<NotificationSettings />}
+            />
 
             <div className="profile-header-section" style={{
                 display: 'flex',
@@ -280,7 +284,7 @@ function MyPage() {
                             <VenueRanking venues={stats.venueRanking} onVenueClick={handleVenueClick} />
                         </div>
                         <div className="dashboard-panel chart-panel">
-                            <h3>よく聴く曲</h3>
+                            <h3>よく聴いた曲</h3>
                             <SongRanking songs={stats.songRanking} />
                         </div>
                         <div className="dashboard-panel chart-panel" style={{ gridColumn: '1 / -1' }}>

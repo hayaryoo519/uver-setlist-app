@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Music, Calendar, MapPin, Play, Clock, ArrowLeft, Loader, Sparkles, Disc, ChevronDown, ChevronsDown, ChevronUp } from 'lucide-react';
+import { Music, Calendar, MapPin, Play, Clock, ArrowLeft, Loader, Sparkles, ChevronDown, ChevronsDown, ChevronUp } from 'lucide-react';
+import ImageWithFallback from '../components/common/ImageWithFallback';
 import SEO from '../components/SEO';
 import { DISCOGRAPHY } from '../data/discography';
 
@@ -12,21 +13,15 @@ const SongDetail = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [filterYear, setFilterYear] = useState('All');
-    const [filterType, setFilterType] = useState('All');
     const [visibleCount, setVisibleCount] = useState(10);
     const [sortOrder, setSortOrder] = useState('newest');
+    const [isImageFetching, setIsImageFetching] = useState(false);
 
     // Extract Unique Filter Options
     const uniqueYears = React.useMemo(() => {
         if (!song || !song.performances) return [];
         const years = new Set(song.performances.map(p => new Date(p.date).getFullYear()));
         return Array.from(years).sort((a, b) => b - a);
-    }, [song]);
-
-    const uniqueTypes = React.useMemo(() => {
-        if (!song || !song.performances) return [];
-        const types = new Set(song.performances.map(p => p.type || 'ONEMAN'));
-        return Array.from(types).sort();
     }, [song]);
 
     // Filter and Sort Logic
@@ -40,11 +35,6 @@ const SongDetail = () => {
             result = result.filter(live => new Date(live.date).getFullYear().toString() === filterYear.toString());
         }
 
-        // Filter by Type
-        if (filterType !== 'All') {
-            result = result.filter(live => (live.type || 'ONEMAN') === filterType);
-        }
-
         // Sort
         result.sort((a, b) => {
             const dateA = new Date(a.date);
@@ -53,7 +43,7 @@ const SongDetail = () => {
         });
 
         return result;
-    }, [song, filterYear, filterType, sortOrder]);
+    }, [song, filterYear, sortOrder]);
 
     useEffect(() => {
         const fetchSong = async () => {
@@ -78,8 +68,30 @@ const SongDetail = () => {
         };
 
         fetchSong();
-        fetchSong();
     }, [id]);
+
+    // Fetch image if missing
+    useEffect(() => {
+        if (!isLoading && song && !song.image_url && !isImageFetching) {
+            const fetchImage = async () => {
+                setIsImageFetching(true);
+                try {
+                    const res = await fetch(`/api/music/song-image/${encodeURIComponent(song.title)}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.image_url) {
+                            setSong(prev => ({ ...prev, image_url: data.image_url }));
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch image", e);
+                } finally {
+                    setIsImageFetching(false);
+                }
+            };
+            fetchImage();
+        }
+    }, [isLoading, song, isImageFetching]);
 
     // Handle hash scroll
     useEffect(() => {
@@ -168,60 +180,74 @@ const SongDetail = () => {
                     <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
 
                     <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-3 text-blue-400 font-mono text-sm">
-                                <Music size={16} />
-                                <span>SONG ANALYTICS</span>
+                        <div className="flex flex-col md:flex-row gap-8 items-start">
+                            {/* Jacket Image */}
+                            <div className="w-32 h-32 md:w-48 md:h-48 rounded-lg overflow-hidden bg-slate-800 border border-slate-700 shadow-2xl flex-shrink-0">
+                                <ImageWithFallback
+                                    src={song.image_url}
+                                    alt={song.title}
+                                    className="w-full h-full"
+                                    isError={!isImageFetching && !song.image_url}
+                                />
                             </div>
-                            {song.is_rare && (
-                                <div className="relative group">
-                                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-red-500/20 border border-amber-500/50 text-amber-400 text-sm font-bold shadow-[0_0_15px_rgba(245,158,11,0.2)] animate-pulse cursor-help">
-                                        <Sparkles size={14} />
-                                        <span>レア曲</span>
+
+                            <div className="flex-1">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3 text-blue-400 font-mono text-sm">
+                                        <Music size={16} />
+                                        <span>SONG ANALYTICS</span>
                                     </div>
-                                    <div className="absolute top-full right-0 mt-2 w-64 p-3 bg-slate-800 border border-slate-600 rounded-lg text-xs text-slate-300 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 shadow-xl">
-                                        <div className="font-bold text-amber-400 mb-1">レア曲とは？</div>
-                                        <div>演奏率が低い（5%以下）または長期間演奏されていない（3年以上）曲のことです。ライブで聴けたらラッキー！✨</div>
-                                    </div>
+                                    {song.is_rare && (
+                                        <div className="relative group">
+                                            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-red-500/20 border border-amber-500/50 text-amber-400 text-sm font-bold shadow-[0_0_15px_rgba(245,158,11,0.2)] animate-pulse cursor-help">
+                                                <Sparkles size={14} />
+                                                <span>レア曲</span>
+                                            </div>
+                                            <div className="absolute top-full right-0 mt-2 w-64 p-3 bg-slate-800 border border-slate-600 rounded-lg text-xs text-slate-300 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 shadow-xl">
+                                                <div className="font-bold text-amber-400 mb-1">レア曲とは？</div>
+                                                <div>演奏率が低い（5%以下）または長期間演奏されていない（3年以上）曲のことです。ライブで聴けたらラッキー！✨</div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                            )}
+
+                                <h1 className="text-4xl md:text-5xl font-bold font-oswald mb-4 tracking-tight">
+                                    {song.title}
+                                </h1>
+
+                                {/* 収録作品セクション */}
+                                {song && (() => {
+                                    const containingReleases = DISCOGRAPHY.filter(release =>
+                                        release.songs.some(s => s === song.title || s.toLowerCase() === song.title.toLowerCase())
+                                    );
+                                    if (containingReleases.length > 0) {
+                                        return (
+                                            <div className="mt-4 pt-4 border-t border-slate-700/50">
+                                                <div className="text-slate-500 text-[10px] uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                                                <Music size={12} /> FEATURED IN
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {containingReleases.map(release => (
+                                                        <Link
+                                                            to={`/songs#${encodeURIComponent(release.title)}`}
+                                                            key={release.title}
+                                                            className={`text-xs px-3 py-1.5 rounded-full border transition-all hover:scale-105 active:scale-95 flex items-center gap-2 ${release.type === 'ALBUM'
+                                                                ? 'bg-amber-900/30 text-amber-300 border-amber-600/50 hover:bg-amber-800/40'
+                                                                : 'bg-slate-700/50 text-slate-300 border-slate-500/50 hover:bg-slate-600/50'
+                                                                }`}
+                                                        >
+                                                            <span className="opacity-50 font-bold">{release.type === 'ALBUM' ? 'ALBUM' : 'SINGLE'}</span>
+                                                            <span className="font-medium">{release.title}</span>
+                                                        </Link>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                })()}
+                            </div>
                         </div>
-
-                        <h1 className="text-4xl md:text-5xl font-bold font-oswald mb-4 flex items-center gap-4">
-                            {song.title}
-                        </h1>
-
-                        {/* 収録作品セクション */}
-                        {song && (() => {
-                            const containingReleases = DISCOGRAPHY.filter(release =>
-                                release.songs.some(s => s === song.title || s.toLowerCase() === song.title.toLowerCase())
-                            );
-                            if (containingReleases.length > 0) {
-                                return (
-                                    <div className="mt-4 pt-4 border-t border-slate-700">
-                                        <div className="text-slate-500 text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
-                                            <Disc size={12} /> 収録作品
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            {containingReleases.map(release => (
-                                                <Link
-                                                    to={`/songs#${encodeURIComponent(release.title)}`}
-                                                    key={release.title}
-                                                    className={`text-xs px-3 py-1.5 rounded-full border transition-all hover:scale-105 ${release.type === 'ALBUM'
-                                                        ? 'bg-amber-900/30 text-amber-300 border-amber-600/50 hover:bg-amber-800/40'
-                                                        : 'bg-slate-700/50 text-slate-300 border-slate-500/50 hover:bg-slate-600/50'
-                                                        }`}
-                                                >
-                                                    <span className="opacity-70 mr-1">{release.type === 'ALBUM' ? 'ALBUM' : 'SINGLE'}</span>
-                                                    {release.title} <span className="opacity-60">({release.date.split('.')[0]})</span>
-                                                </Link>
-                                            ))}
-                                        </div>
-                                    </div>
-                                );
-                            }
-                            return null;
-                        })()}
 
 
                     </div>
@@ -246,7 +272,7 @@ const SongDetail = () => {
                                     <span className="text-slate-500">日前</span>
                                 </div>
                                 <div className="text-sm text-slate-400 mt-2">
-                                    前回の演奏: <span className="text-white font-mono">{lastPlayed.toISOString().split('T')[0]}</span>
+                                    前回の演奏: <span className="text-white font-mono">{`${lastPlayed.getFullYear()}-${String(lastPlayed.getMonth() + 1).padStart(2, '0')}-${String(lastPlayed.getDate()).padStart(2, '0')}`}</span>
                                 </div>
                             </div>
                         ) : (
@@ -292,9 +318,13 @@ const SongDetail = () => {
                             <Calendar size={14} /> 初披露
                         </div>
                         <div className="text-lg font-bold font-mono">
-                            {song.first_performed_at ? (
-                                <span className="text-white">{new Date(song.first_performed_at).toISOString().split('T')[0]}</span>
-                            ) : (
+                            {song.first_performed_at ? (() => {
+                                const d = new Date(song.first_performed_at);
+                                const year = d.getFullYear();
+                                const month = String(d.getMonth() + 1).padStart(2, '0');
+                                const day = String(d.getDate()).padStart(2, '0');
+                                return <span className="text-white">{`${year}-${month}-${day}`}</span>;
+                            })() : (
                                 <span className="text-amber-400">ライブ未披露</span>
                             )}
                         </div>
@@ -305,7 +335,7 @@ const SongDetail = () => {
                 </div>
 
                 {/* Performance History Controls */}
-                <div id="performance-history" className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <div id="performance-history" className="flex flex-col md:flex-row items-start md:items-center mb-6 gap-4">
                     <h2 className="text-2xl font-bold font-oswald border-l-4 border-blue-500 pl-4">PERFORMANCE HISTORY</h2>
                     <div className="flex flex-wrap gap-3 w-full md:w-auto">
                         {/* Year Filter */}
@@ -325,22 +355,7 @@ const SongDetail = () => {
                             </div>
                         </div>
 
-                        {/* Type Filter */}
-                        <div className="relative">
-                            <select
-                                value={filterType}
-                                onChange={(e) => setFilterType(e.target.value)}
-                                className="appearance-none bg-slate-800 border border-slate-700 rounded-lg py-2 px-4 pr-8 text-sm focus:outline-none focus:border-blue-500 transition-colors w-full md:w-auto"
-                            >
-                                <option value="All">全タイプ</option>
-                                {uniqueTypes.map(type => (
-                                    <option key={type} value={type}>{type}</option>
-                                ))}
-                            </select>
-                            <div className="absolute right-3 top-2.5 text-slate-500 pointer-events-none">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                            </div>
-                        </div>
+
 
                         {/* Sort Toggle */}
                         <button
@@ -365,7 +380,7 @@ const SongDetail = () => {
                                     <div className="bg-slate-800/40 hover:bg-slate-700 border border-slate-700 rounded-lg p-4 transition-colors flex items-center justify-between">
                                         <div>
                                             <div className="flex items-center gap-3 text-sm text-slate-400 mb-1">
-                                                <span className="font-mono">{new Date(live.date).toISOString().split('T')[0]}</span>
+                                                <span className="font-mono">{`${new Date(live.date).getFullYear()}-${String(new Date(live.date).getMonth() + 1).padStart(2, '0')}-${String(new Date(live.date).getDate()).padStart(2, '0')}`}</span>
                                                 <span className={`text-[10px] px-2 py-0.5 rounded font-bold text-white
                                                     ${live.type === 'FESTIVAL' ? 'bg-purple-600' :
                                                         live.type === 'EVENT' ? 'bg-orange-600' :
@@ -419,7 +434,7 @@ const SongDetail = () => {
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

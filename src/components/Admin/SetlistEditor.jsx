@@ -1,71 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Save, X, ArrowUp, ArrowDown, Edit2, GripVertical, Replace } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Search, Plus, Trash2, Save, X, ArrowUp, ArrowDown, Edit2, GripVertical, Replace, CheckCircle, ListMusic, ChevronUp, ChevronDown } from 'lucide-react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
 import BulkImportModal from './BulkImportModal';
+import SetlistSortableItem from './SetlistSortableItem';
+import SongSelector from './SongSelector';
 
-// Sortable Item Component
-const SortableItem = ({ id, song, index, styles, onRemove, onEditStart, isEditingTarget }) => {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging
-    } = useSortable({ id });
-
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        zIndex: isDragging ? 10 : 1,
-        opacity: isDragging ? 0.5 : 1,
-        position: 'relative',
-        ...styles
-    };
-
-    return (
-        <div
-            ref={setNodeRef}
-            style={style}
-            className={`flex items-center gap-3 bg-slate-800 p-2 rounded border group transition-colors ${isEditingTarget
-                    ? 'border-yellow-400 bg-yellow-400/10'
-                    : 'border-slate-700 hover:border-blue-500/50'
-                }`}
-        >
-            <div {...attributes} {...listeners} className="cursor-grab hover:text-white text-slate-600 flex items-center justify-center p-1">
-                <GripVertical size={16} />
-            </div>
-
-            <div className={`w-6 text-center font-mono font-bold ${isEditingTarget ? 'text-yellow-400' : 'text-slate-500'}`}>
-                {index + 1}
-            </div>
-
-            <div className="flex-1 font-medium text-slate-200 truncate">
-                {song.title}
-            </div>
-
-            <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                <button
-                    onClick={() => onEditStart(index)}
-                    className={`p-1 rounded transition-colors ${isEditingTarget ? 'bg-yellow-400 text-black' : 'hover:bg-slate-700 text-slate-400 hover:text-blue-400'}`}
-                    title="Replace this song"
-                >
-                    <Replace size={16} />
-                </button>
-                <button
-                    onClick={() => onRemove(index)}
-                    className="p-1 hover:bg-red-900/50 rounded text-slate-400 hover:text-red-400"
-                    title="Remove"
-                >
-                    <Trash2 size={16} />
-                </button>
-            </div>
-        </div>
-    );
-};
 
 const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => {
     const [currentSetlist, setCurrentSetlist] = useState([]);
@@ -77,6 +19,22 @@ const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => 
 
     // Index of the song currently being replaced (null if adding new)
     const [editingIndex, setEditingIndex] = useState(null);
+
+    // トースト通知
+    const [toast, setToast] = useState(null);
+    // セトリストプレビュー表示フラグ
+    const [showSetlistPreview, setShowSetlistPreview] = useState(false);
+    // セトリスト側のスクロールコンテナ参照
+    const setlistScrollRef = useRef(null);
+
+    // 追加済み曲IDのセット（高速判定用）
+    const addedSongIds = useMemo(() => new Set(currentSetlist.map(s => s.id)), [currentSetlist]);
+
+    // トースト表示ヘルパー
+    const showToast = useCallback((message) => {
+        setToast(message);
+        setTimeout(() => setToast(null), 2500);
+    }, []);
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -127,7 +85,17 @@ const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => 
             setEditingIndex(null); // Exit edit mode
         } else {
             // Add Mode
-            setCurrentSetlist([...currentSetlist, { ...song, tempId: `item-${song.id}-${Math.random()}` }]);
+            const newTempId = `item-${song.id}-${Math.random()}`;
+            setCurrentSetlist([...currentSetlist, { ...song, tempId: newTempId }]);
+
+            // トースト通知
+            showToast(`✅ 「${song.title}」を追加しました（#${currentSetlist.length + 1}）`);
+            // 追加後にリスト末尾へ自動スクロール
+            setTimeout(() => {
+                if (setlistScrollRef.current) {
+                    setlistScrollRef.current.scrollTo({ top: setlistScrollRef.current.scrollHeight, behavior: 'smooth' });
+                }
+            }, 100);
         }
     };
 
@@ -189,28 +157,28 @@ const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => 
     return (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
             <div className="bg-slate-900 rounded-lg w-full max-w-4xl h-[90vh] flex flex-col border border-slate-700 shadow-2xl">
-                {/* Header */}
-                <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800 rounded-t-lg">
-                    <div>
-                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                {/* ヘッダー */}
+                <div className="p-3 md:p-4 border-b border-slate-700 flex flex-wrap justify-between items-center gap-2 bg-slate-800 rounded-t-lg">
+                    <div className="min-w-0">
+                        <h2 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
                             Setlist Editor
-                            <span className="text-sm font-normal text-slate-400 bg-slate-700 px-2 py-1 rounded">
+                            <span className="text-xs md:text-sm font-normal text-slate-400 bg-slate-700 px-2 py-1 rounded truncate max-w-[200px] md:max-w-none">
                                 {liveDate} {liveTitle}
                             </span>
                         </h2>
                     </div>
-                    <div className="flex gap-2">
-                        <button onClick={() => setShowBulkImport(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded font-medium transition-colors">
-                            <ArrowDown size={18} /> Bulk Import
+                    <div className="flex flex-wrap gap-2">
+                        <button onClick={() => setShowBulkImport(true)} className="flex items-center gap-1 md:gap-2 bg-blue-600 hover:bg-blue-500 text-white px-2 md:px-4 py-2 rounded font-medium transition-colors text-sm">
+                            <ArrowDown size={16} /> <span className="hidden md:inline">Bulk Import</span>
                         </button>
-                        <button onClick={onEditLive} className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded font-medium transition-colors">
-                            <Edit2 size={18} /> Edit Details
+                        <button onClick={onEditLive} className="flex items-center gap-1 md:gap-2 bg-slate-700 hover:bg-slate-600 text-white px-2 md:px-4 py-2 rounded font-medium transition-colors text-sm">
+                            <Edit2 size={16} /> <span className="hidden md:inline">Edit Details</span>
                         </button>
-                        <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded font-medium transition-colors">
-                            <Save size={18} /> {isSaving ? 'Saving...' : 'Save Setlist'}
+                        <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-1 md:gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-2 md:px-4 py-2 rounded font-medium transition-colors text-sm">
+                            <Save size={16} /> {isSaving ? '...' : <span className="hidden md:inline">Save Setlist</span>}
                         </button>
                         <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors">
-                            <X size={24} />
+                            <X size={20} />
                         </button>
                     </div>
                 </div>
@@ -219,7 +187,7 @@ const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => 
                 <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
 
                     {/* LEFT: Current Setlist (Droppable) */}
-                    <div className="flex-1 overflow-y-auto p-4 border-r border-slate-700">
+                    <div ref={setlistScrollRef} className="flex-1 overflow-y-auto p-4 border-r border-slate-700">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-slate-400 font-bold uppercase text-xs tracking-wider">Current List ({currentSetlist.length} Songs)</h3>
                             {editingIndex !== null && (
@@ -247,7 +215,7 @@ const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => 
                                 >
                                     <div className="space-y-2 pb-20">
                                         {currentSetlist.map((song, index) => (
-                                            <SortableItem
+                                            <SetlistSortableItem
                                                 key={song.tempId}
                                                 id={song.tempId}
                                                 song={song}
@@ -264,51 +232,19 @@ const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => 
                     </div>
 
                     {/* RIGHT: Song Selector */}
-                    <div className={`w-full md:w-80 bg-slate-800/50 p-4 flex flex-col border-l border-slate-700 transition-colors ${editingIndex !== null ? 'border-l-yellow-400/30 bg-yellow-900/5' : ''}`}>
-                        <h3 className={`font-bold mb-4 uppercase text-xs tracking-wider transition-colors ${editingIndex !== null ? 'text-yellow-400' : 'text-slate-400'}`}>
-                            {editingIndex !== null ? 'Replace Song' : 'Add Songs'}
-                        </h3>
-
-                        <div className="mb-4 relative">
-                            <Search className="absolute left-3 top-2.5 text-slate-500" size={16} />
-                            <input
-                                type="text"
-                                placeholder="Search song title..."
-                                className="w-full bg-slate-900 border border-slate-700 rounded pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto space-y-1">
-                            {filteredSongs.length === 0 && searchTerm && (
-                                <div className="text-slate-500 text-sm text-center py-4">No matching songs.</div>
-                            )}
-                            {filteredSongs.map(song => (
-                                <button
-                                    key={song.id}
-                                    onClick={() => handleAddOrSwapSong(song)}
-                                    className={`w-full text-left px-3 py-2 rounded text-sm flex justify-between group transition-colors ${editingIndex !== null
-                                            ? 'hover:bg-yellow-400/20 hover:text-yellow-200 text-slate-300'
-                                            : 'hover:bg-blue-600/20 hover:text-blue-400 text-slate-300'
-                                        }`}
-                                >
-                                    <span>{song.title}</span>
-                                    {editingIndex !== null ? (
-                                        <Replace size={16} className="opacity-0 group-hover:opacity-100 text-yellow-400" />
-                                    ) : (
-                                        <Plus size={16} className="opacity-0 group-hover:opacity-100" />
-                                    )}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="mt-4 pt-4 border-t border-slate-700">
-                            <p className="text-xs text-slate-500 text-center">
-                                Can't find a song?<br />Add it in the "Songs" tab first.
-                            </p>
-                        </div>
-                    </div>
+                    <SongSelector
+                        songs={filteredSongs}
+                        searchTerm={searchTerm}
+                        onSearchChange={setSearchTerm}
+                        onSelect={handleAddOrSwapSong}
+                        isEditing={editingIndex !== null}
+                        editingIndex={editingIndex}
+                        addedSongIds={addedSongIds}
+                        showSetlistPreview={showSetlistPreview}
+                        onTogglePreview={() => setShowSetlistPreview(!showSetlistPreview)}
+                        currentSetlistCount={currentSetlist.length}
+                        currentSetlist={currentSetlist}
+                    />
                 </div>
 
                 {/* Bulk Import Modal */}
@@ -319,6 +255,21 @@ const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => 
                         allSongs={allSongs}
                     />
                 )}
+
+                {/* トースト通知 */}
+                {toast && (
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-6 py-3 rounded-lg shadow-2xl text-sm font-medium z-[60] animate-bounce-in"
+                        style={{ animation: 'toastSlideUp 0.3s ease-out' }}>
+                        {toast}
+                    </div>
+                )}
+
+                <style>{`
+                    @keyframes toastSlideUp {
+                        from { opacity: 0; transform: translate(-50%, 20px); }
+                        to { opacity: 1; transform: translate(-50%, 0); }
+                    }
+                `}</style>
             </div>
         </div>
     );
