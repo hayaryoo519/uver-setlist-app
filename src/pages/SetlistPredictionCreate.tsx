@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import type { Song } from '../types/api';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useSongs, useSearchSongs } from '../hooks/queries/useSongs';
 import { useLiveDetail, useLives } from '../hooks/queries/useLives';
@@ -10,6 +11,7 @@ import {
     PointerSensor,
     useSensor,
     useSensors,
+    type DragEndEvent,
 } from '@dnd-kit/core';
 import {
     arrayMove,
@@ -25,10 +27,10 @@ import { SortableSongItem } from '../components/SortableSongItem';
 import { DISCOGRAPHY } from '../data/discography';
 
 const SetlistPredictionCreate = () => {
-    const [selectedSongs, setSelectedSongs] = useState([]); // [{ uniqueId: '...', song: { id: 1, title: '...' } }]
+    const [selectedSongs, setSelectedSongs] = useState<{ uniqueId: string; song: Song }[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedQuery, setDebouncedQuery] = useState('');
-    const [selectedLiveId, setSelectedLiveId] = useState(null); // 選択中のライブID
+    const [selectedLiveId, setSelectedLiveId] = useState<string | null>(null);
     const { currentUser } = useAuth();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -45,7 +47,7 @@ const SetlistPredictionCreate = () => {
     const { data: searchResults = [] } = useSearchSongs(debouncedQuery);
 
     // selectedLiveId が変更された場合はそちらの詳細を表示する
-    const { data: liveInfo = null } = useLiveDetail(selectedLiveId || liveId);
+    const { data: liveInfo = null } = useLiveDetail(selectedLiveId ?? liveId ?? undefined);
     const { data: tourLives = [] } = useLives({
         tour_name: liveInfo?.tour_name,
         enabled: !!liveInfo?.tour_name,
@@ -69,7 +71,7 @@ const SetlistPredictionCreate = () => {
         if (liveId) setSelectedLiveId(liveId);
     }, [liveId]);
 
-    const handleAddSong = (song) => {
+    const handleAddSong = (song: Song) => {
         if (selectedSongs.length >= 30) {
             alert("予想曲は最大30曲までです。");
             return;
@@ -83,7 +85,7 @@ const SetlistPredictionCreate = () => {
         setSearchQuery('');
     };
 
-    const handleSelectSong = (e) => {
+    const handleSelectSong = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const songId = parseInt(e.target.value, 10);
         if (!songId) return;
 
@@ -94,11 +96,11 @@ const SetlistPredictionCreate = () => {
         e.target.value = ""; // Reset selection
     };
 
-    const handleRemoveSong = (uniqueId) => {
+    const handleRemoveSong = (uniqueId: string) => {
         setSelectedSongs(selectedSongs.filter(s => s.uniqueId !== uniqueId));
     };
 
-    const handleDragEnd = (event) => {
+    const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
 
         if (over && active.id !== over.id) {
@@ -110,7 +112,7 @@ const SetlistPredictionCreate = () => {
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
         if (selectedSongs.length === 0) {
             alert("1曲以上の楽曲を選択してください。");
@@ -134,9 +136,9 @@ const SetlistPredictionCreate = () => {
 
     return (
         <div className="min-h-screen bg-slate-900 text-white fade-in" style={{ paddingTop: '100px', paddingBottom: '80px' }}>
-            <SEO title="セトリ予想を作成" />
+            <SEO title="セトリ予想を作成" description="UVERworldのライブのセトリを予想して公開しましょう。" />
             <div className="max-w-4xl mx-auto px-4">
-                <PageHeader title="予想を作成" subtitle="新しいセトリ予想を作成" />
+                <PageHeader title="予想を作成" subtitle="新しいセトリ予想を作成" rightElement={null} />
 
                 {/* ライブ情報表示 */}
                 {liveInfo && (
@@ -203,10 +205,9 @@ const SetlistPredictionCreate = () => {
                                     {/* Group by DISCOGRAPHY releases */}
                                     {DISCOGRAPHY.slice().reverse().map((release, index) => {
                                         // Filter songs that exist in the database (allSongs)
-                                        const availableSongs = release.songs.map(songTitle => {
-                                            // Find the song in allSongs by exact title
-                                            return allSongs.find(s => s.title === songTitle);
-                                        }).filter(Boolean); // Keep only found songs
+                                        const availableSongs = release.songs
+                                            .map(songTitle => allSongs.find(s => s.title === songTitle))
+                                            .filter((s): s is Song => s !== undefined);
 
                                         if (availableSongs.length === 0) return null;
 

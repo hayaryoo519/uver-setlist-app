@@ -23,6 +23,7 @@ const SetlistPredictionDetail = () => {
         }
 
         try {
+            if (!id) return;
             await likeMutation.mutateAsync(id);
         } catch (error) {
             console.error('Error toggling like:', error);
@@ -30,6 +31,7 @@ const SetlistPredictionDetail = () => {
     };
 
     const handleShare = () => {
+        if (!prediction) return;
         if (navigator.share) {
             navigator.share({
                 title: `${prediction.username}さんのセトリ予想`,
@@ -135,7 +137,7 @@ const SetlistPredictionDetail = () => {
                                     <div className="text-lg font-bold text-white mb-1">{prediction.tour_name}</div>
                                     <div className="flex items-center gap-3 text-sm text-slate-400">
                                         <span className="flex items-center gap-1"><MapPin size={14} /> {prediction.venue}</span>
-                                        <span className="flex items-center gap-1"><Calendar size={14} /> {new Date(prediction.live_date).toLocaleDateString('ja-JP')}</span>
+                                        <span className="flex items-center gap-1"><Calendar size={14} /> {prediction.live_date ? new Date(prediction.live_date).toLocaleDateString('ja-JP') : ''}</span>
                                     </div>
                                 </div>
                             </div>

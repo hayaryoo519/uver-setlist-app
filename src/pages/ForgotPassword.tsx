@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import AuthLayout from '../components/Auth/AuthLayout';
 import { Mail, ArrowRight, Loader, CheckCircle } from 'lucide-react';
 import { useForgotPassword } from '../hooks/queries/useAuthMutations';
+import { ApiError } from '../lib/apiClient';
 
 const ForgotPassword = () => {
     const [email, setEmail] = useState('');
@@ -12,7 +13,7 @@ const ForgotPassword = () => {
 
     const mutation = useForgotPassword();
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError('');
         mutation.mutate(email, {
@@ -21,7 +22,7 @@ const ForgotPassword = () => {
                 setMessage(data.message);
             },
             onError: (err) => {
-                setError(err.data?.message || 'エラーが発生しました。');
+                setError(err instanceof ApiError ? (err.data?.message ?? 'エラーが発生しました。') : 'エラーが発生しました。');
             },
         });
     };

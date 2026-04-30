@@ -15,11 +15,14 @@ import AttendedLiveList from '../components/Dashboard/AttendedLiveList';
 import VenueRanking from '../components/Dashboard/VenueRanking';
 import NotificationSettings from '../components/NotificationSettings';
 
+type ModalFilter = { type: string; value: string }
+type SongRankItem = { title: string; count: number; lives: Array<{ id: number; date: string; tour_name?: string; tourTitle?: string; title?: string; venue?: string }>; album: string }
+
 function MyPage() {
-    const [modalFilter, setModalFilter] = useState(null);
+    const [modalFilter, setModalFilter] = useState<ModalFilter | null>(null);
     const location = useLocation();
     const [yearRange, setYearRange] = useState([2005, 2024]);
-    const [selectedSong, setSelectedSong] = useState(null);
+    const [selectedSong, setSelectedSong] = useState<SongRankItem | null>(null);
 
     const { loading, ...stats } = useLiveStats();
     const { currentUser } = useAuth();
@@ -39,7 +42,7 @@ function MyPage() {
         return () => setModalFilter(null);
     }, [loading, stats.myLives, yearFilterMode]);
 
-    const handleYearFilterChange = (e) => {
+    const handleYearFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const mode = e.target.value;
         setYearFilterMode(mode);
         const currentYear = new Date().getFullYear();
@@ -57,22 +60,22 @@ function MyPage() {
     };
 
 
-    const handleYearClick = (data) => {
-        const year = data.year || data; // Handle object or direct value
+    const handleYearClick = (data: { year?: number } | number) => {
+        const year = typeof data === 'object' ? data.year : data;
         setModalFilter({ type: 'year', value: String(year) });
     };
 
-    const handleAlbumClick = (data) => {
+    const handleAlbumClick = (data: { name?: string }) => {
         if (data && data.name) {
             setModalFilter({ type: 'album', value: data.name });
         }
     };
 
-    const handleVenueTypeClick = (venueType) => {
+    const handleVenueTypeClick = (venueType: string) => {
         setModalFilter({ type: 'venueType', value: venueType });
     };
 
-    const handleVenueClick = (venueName) => {
+    const handleVenueClick = (venueName: string) => {
         setModalFilter({ type: 'venue', value: venueName });
     };
 
@@ -84,7 +87,7 @@ function MyPage() {
         setModalFilter({ type: 'collectedSongs', value: '収集した楽曲リスト' });
     };
 
-    const handleSongClick = (song) => {
+    const handleSongClick = (song: SongRankItem) => {
         setSelectedSong(song);
     };
 
@@ -106,7 +109,7 @@ function MyPage() {
                 const d = live.date || live.attended_at;
                 if (!d) return false;
                 const year = new Date(d).getFullYear();
-                return year == modalFilter.value;
+                return year === parseInt(modalFilter.value, 10);
             });
         } else if (modalFilter.type === 'venueType') {
             filtered = stats.myLives.filter(live => live.type === modalFilter.value);
@@ -119,7 +122,7 @@ function MyPage() {
         return filtered.sort((a, b) => {
             const dateA = new Date(a.date || a.attended_at);
             const dateB = new Date(b.date || b.attended_at);
-            return dateB - dateA;
+            return dateB.getTime() - dateA.getTime();
         });
     };
 
@@ -144,7 +147,7 @@ function MyPage() {
 
     return (
         <div className="container" style={{ paddingTop: '100px' }}>
-            <SEO title="My Page" />
+            <SEO title="My Page" description="あなたのUVERworld参戦記録と統計データ。" />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <Link to="/dashboard" style={{ color: '#94a3b8', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px' }}>
                     &larr; <span style={{ fontSize: '0.9rem' }}>ダッシュボードに戻る</span>
@@ -155,6 +158,7 @@ function MyPage() {
             </div>
             <PageHeader
                 title="マイページ"
+                subtitle=""
                 rightElement={<NotificationSettings />}
             />
 
@@ -275,7 +279,7 @@ function MyPage() {
                                 <option value="10" style={{ backgroundColor: '#1e293b', color: 'white' }}>直近10年</option>
                             </select>
                         </div>
-                        <LiveGraph data={filteredYearlyStats} onBarClick={handleYearClick} />
+                        <LiveGraph data={filteredYearlyStats} onBarClick={handleYearClick} label="公演" />
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginBottom: '50px' }}>
