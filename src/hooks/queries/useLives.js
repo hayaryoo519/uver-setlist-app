@@ -9,6 +9,7 @@ const buildLivesUrl = (params = {}) => {
   if (params.startDate) searchParams.set('startDate', params.startDate)
   if (params.endDate) searchParams.set('endDate', params.endDate)
   if (params.include_setlists) searchParams.set('include_setlists', 'true')
+  if (params.tour_name) searchParams.set('tour_name', params.tour_name)
   const qs = searchParams.toString()
   return `/api/lives${qs ? `?${qs}` : ''}`
 }
