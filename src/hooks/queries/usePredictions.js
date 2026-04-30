@@ -11,16 +11,17 @@ export const usePredictableLives = () =>
   })
 
 export const usePredictions = (params = {}) => {
+  const { enabled, ...queryParams } = params
   const searchParams = new URLSearchParams()
-  if (params.liveId) searchParams.set('live_id', params.liveId)
-  if (params.sort) searchParams.set('sort', params.sort)
-  if (params.mine) searchParams.set('mine', 'true')
+  if (queryParams.liveId) searchParams.set('live_id', queryParams.liveId)
+  if (queryParams.sort) searchParams.set('sort', queryParams.sort)
+  if (queryParams.mine) searchParams.set('mine', 'true')
 
   return useQuery({
-    queryKey: queryKeys.predictions.all(params),
+    queryKey: queryKeys.predictions.all(queryParams),
     queryFn: () => apiClient.get(`/api/predictions?${searchParams.toString()}`),
     staleTime: STALE_TIMES.predictions,
-    enabled: params.enabled !== false,
+    enabled: enabled !== false,
   })
 }
 

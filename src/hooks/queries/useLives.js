@@ -25,13 +25,16 @@ const filterValidLives = (data) => {
     .sort((a, b) => new Date(b.date) - new Date(a.date))
 }
 
-export const useLives = (params = {}) =>
-  useQuery({
-    queryKey: queryKeys.lives.filtered(params),
-    queryFn: () => apiClient.get(buildLivesUrl(params)),
+export const useLives = (params = {}) => {
+  const { enabled, ...queryParams } = params
+  return useQuery({
+    queryKey: queryKeys.lives.filtered(queryParams),
+    queryFn: () => apiClient.get(buildLivesUrl(queryParams)),
     staleTime: STALE_TIMES.lives,
     select: filterValidLives,
+    enabled: enabled !== false,
   })
+}
 
 export const useLiveDetail = (id) =>
   useQuery({
