@@ -42,11 +42,13 @@
 
 ## 3. 技術仕様
 - **システム構成**: [🔗 Notion](https://www.notion.so/3050e21e344d811f9bb8feb1d3e4516e)
-- **フロントエンド**: React (Vite), lucide-react (アイコン), dnd-kit (ドラッグ&ドロップ) [🔗 Notion](https://www.notion.so/3050e21e344d81859805e945566af6c4)
+- **フロントエンド**: React + TypeScript (Vite), TanStack Query (サーバー状態管理), lucide-react (アイコン), dnd-kit (ドラッグ&ドロップ) [🔗 Notion](https://www.notion.so/3050e21e344d81859805e945566af6c4)
+  - 型チェック: `allowJs: true` / `checkJs: false`（JSファイルはチェック対象外、TSXは厳格チェック）
+  - 主要な型定義: `src/types/api.ts`（Live, Song, Prediction, User 等）
 - **データベース運用**: バックアップ、環境間同期、匿名化の方針 [🔗 db_operations.md](./db_operations.md)
 - **バックエンド**: Node.js (Express) [🔗 Notion](https://www.notion.so/3050e21e344d81139d79c8423744f68d)
 - **データベース**: PostgreSQL [🔗 Notion](https://www.notion.so/3050e21e344d81b5a68ce71f92075312)
-- **認証**: JWT (AuthContextによる管理)
+- **認証**: JWT (`src/contexts/AuthContext.tsx` による管理)
 - **ルーティング**:
   - `/predictions`: 予想ポータル / ランキング
   - `/predictions/new`: 予想作成画面
