@@ -12,11 +12,14 @@ import { UpcomingLives } from '../components/Dashboard/UpcomingLives';
 
 import SEO from '../components/SEO';
 
+type DashboardFilter = { type: string; value: any } | null
+type SongMapEntry = { title: string; id: any; count: number; lives: Array<{ id: any; date: string; venue: string; title?: string }> }
+
 function Dashboard() {
     const { loading, ...stats } = useGlobalStats();
     const location = useLocation();
-    const [modalFilter, setModalFilter] = useState(null);
-    const [expandedSong, setExpandedSong] = useState(null);
+    const [modalFilter, setModalFilter] = useState<DashboardFilter>(null);
+    const [expandedSong, setExpandedSong] = useState<number | null>(null);
     const [graphMetric, setGraphMetric] = useState('liveCount');
     const [yearRange, setYearRange] = useState([2005, new Date().getFullYear() + 1]);
 
@@ -33,23 +36,23 @@ function Dashboard() {
         }
     }, [loading, stats.yearlyDetailedStats]);
 
-    const formatDate = (dateStr) => {
+    const formatDate = (dateStr: string | null | undefined) => {
         if (!dateStr) return '';
         const d = new Date(dateStr);
         return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.');
     };
 
-    const handleYearClick = (data) => {
+    const handleYearClick = (data: { year?: string | number }) => {
         if (!data || !data.year) return;
         const year = data.year.toString();
 
         // 1. Filter lives by year
-        const targetLives = stats.allLives.filter(live => live.date && live.date.startsWith(year));
+        const targetLives = (stats.allLives || []).filter((live: any) => live.date && live.date.startsWith(year));
         let totalSongsCount = 0;
-        const uniqueLives = new Set(targetLives.map(l => l.id));
+        const uniqueLives = new Set(targetLives.map((l: any) => l.id));
 
         // 2. Aggregate Songs
-        const songMap = {};
+        const songMap: Record<string, SongMapEntry> = {};
 
         targetLives.forEach(live => {
             if (!live.setlist) return;
@@ -82,7 +85,7 @@ function Dashboard() {
             .map(s => ({
                 ...s,
                 percentage: liveCount > 0 ? ((s.count / liveCount) * 100).toFixed(1) : "0.0",
-                lives: s.lives.sort((a, b) => new Date(b.date) - new Date(a.date))
+                lives: s.lives.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
             }));
 
         setModalFilter({
@@ -98,37 +101,37 @@ function Dashboard() {
         });
     };
 
-    const handleAlbumClick = (data) => {
+    const handleAlbumClick = (data: { name?: string }) => {
         if (!data || !data.name) return;
         const albumName = data.name;
 
         // Local helper to match useGlobalStats logic
-        const normTitle = (t) => {
+        const normTitle = (t: string | null | undefined) => {
             if (!t) return "";
             if (t === "=") return "=";
             return t.toLowerCase().replace(/[!'#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/g, "").replace(/\s+/g, "");
         };
 
         // Filter lives by current year range
-        const targetLives = stats.allLives.filter(live => {
+        const targetLives = (stats.allLives || []).filter((live: any) => {
             if (!live.date) return false;
             const y = new Date(live.date).getFullYear();
             return y >= yearRange[0] && y <= yearRange[1];
         });
 
         // Collect songs for this album
-        const songMap = {};
+        const songMap: Record<string, SongMapEntry> = {};
         const uniqueLives = new Set();
         let totalSongsCount = 0;
 
-        targetLives.forEach(live => {
+        targetLives.forEach((live: any) => {
             if (!live.setlist) return;
-            live.setlist.forEach(song => {
+            live.setlist.forEach((song: any) => {
                 if (!song || !song.title) return;
 
                 // Get album for this song using NORMALIZED title
                 const nTitle = normTitle(song.title);
-                let songAlbum = stats.songAlbumMap.get(nTitle);
+                let songAlbum = stats.songAlbumMap?.get(nTitle);
                 if (!songAlbum) songAlbum = 'Unknown';
 
                 if (songAlbum === albumName) {
@@ -160,7 +163,7 @@ function Dashboard() {
             .map(s => ({
                 ...s,
                 percentage: ((s.count / totalSongsCount) * 100).toFixed(1),
-                lives: s.lives.sort((a, b) => new Date(b.date) - new Date(a.date)) // Sort lives desc
+                lives: s.lives.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
             }));
 
         setModalFilter({
@@ -176,7 +179,7 @@ function Dashboard() {
         });
     };
 
-    const handleTourClick = (tour) => {
+    const handleTourClick = (tour: any) => {
         setModalFilter({ type: 'tour', value: tour });
     };
 
@@ -188,12 +191,12 @@ function Dashboard() {
     const getFilteredLives = () => {
         if (!modalFilter) return [];
         if (modalFilter.type === 'year') {
-            return stats.allLives.filter(live => live.date && live.date.startsWith(modalFilter.value));
+            return (stats.allLives || []).filter((live: any) => live.date && live.date.startsWith(modalFilter.value));
         }
         return [];
     };
 
-    const [selectedAnalysisTour, setSelectedAnalysisTour] = useState(null);
+    const [selectedAnalysisTour, setSelectedAnalysisTour] = useState<any>(null);
 
     // Set default analysis tour when data loads
     React.useEffect(() => {
@@ -220,9 +223,9 @@ function Dashboard() {
 
     return (
         <div className="page-wrapper">
-            <SEO title="ダッシュボード" />
+            <SEO title="ダッシュボード" description="UVERworldのライブデータを統計・分析したダッシュボード。" />
             <div className="container" style={{ position: 'relative', zIndex: 10, paddingTop: '100px' }}>
-                <PageHeader title="DASHBOARD" subtitle="UVERworld in Data" />
+                <PageHeader title="DASHBOARD" subtitle="UVERworld in Data" rightElement={null} />
 
                 {/* Latest Live Highlight with Trends */}
                 {stats.recentLives && stats.recentLives.length > 0 && (
@@ -329,6 +332,7 @@ function Dashboard() {
                             data={filteredGraphData}
                             onBarClick={handleYearClick}
                             dataKey={graphMetric}
+                            label="公演"
                         />
                     </div>
                 </div>
@@ -483,21 +487,21 @@ function Dashboard() {
                                 });
 
                                 // Local normalization helper for consistency
-                                const normTitle = (t) => {
+                                const normTitle = (t: string | null | undefined) => {
                                     if (!t) return "";
                                     if (t === "=") return "=";
                                     return t.toLowerCase().replace(/[!'#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/g, "").replace(/\s+/g, "");
                                 };
 
                                 const map = new Map();
-                                targetLives.forEach(live => {
+                                targetLives.forEach((live: any) => {
                                     if (!live.setlist) return;
-                                    live.setlist.forEach(song => {
+                                    live.setlist.forEach((song: any) => {
                                         if (!song || !song.title) return;
 
                                         // Use Normalized Title to lookup in the map (which is also built with normalized keys now)
                                         const nTitle = normTitle(song.title);
-                                        const album = stats.songAlbumMap.get(nTitle);
+                                        const album = stats.songAlbumMap?.get(nTitle);
 
                                         // Only count if mapped (Strict Album Only)
                                         if (album) {
@@ -540,7 +544,7 @@ function Dashboard() {
                             <select
                                 value={selectedAnalysisTour ? selectedAnalysisTour.name : ''}
                                 onChange={(e) => {
-                                    const tour = stats.tourRanking.find(t => t.name === e.target.value);
+                                    const tour = stats.tourRanking?.find((t: any) => t.name === e.target.value);
                                     setSelectedAnalysisTour(tour);
                                 }}
                                 style={{
@@ -562,8 +566,8 @@ function Dashboard() {
                             >
                                 {(() => {
                                     if (!stats.tourRanking) return null;
-                                    const groups = {};
-                                    stats.tourRanking.forEach(tour => {
+                                    const groups: Record<string, any[]> = {};
+                                    stats.tourRanking.forEach((tour: any) => {
                                         const year = tour.startDate.split('.')[0];
                                         if (!groups[year]) groups[year] = [];
                                         groups[year].push(tour);
@@ -573,7 +577,7 @@ function Dashboard() {
                                         .sort((a, b) => b[0].localeCompare(a[0]))
                                         .map(([year, tours]) => (
                                             <optgroup key={year} label={`${year}`} style={{ color: '#94a3b8', background: '#0f172a' }}>
-                                                {tours.map((tour, idx) => (
+                                                {tours.map((tour: any, idx: number) => (
                                                     <option key={`${year}-${idx}`} value={tour.name} style={{ background: '#1e293b', color: '#fff' }}>
                                                         {tour.name} ({tour.startDate} ~ {tour.endDate} / {tour.liveCount} shows)
                                                     </option>
@@ -715,7 +719,7 @@ function Dashboard() {
                                     </div>
 
                                     <div>
-                                        {modalFilter.value.songRanking.map((song, idx) => (
+                                        {modalFilter.value.songRanking.map((song: any, idx: number) => (
                                             <div key={idx} style={{
                                                 borderBottom: '1px solid rgba(255,255,255,0.05)',
                                             }}>
@@ -778,7 +782,7 @@ function Dashboard() {
                                                         borderRadius: '8px',
                                                         marginBottom: '10px'
                                                     }}>
-                                                        {song.lives.map(live => (
+                                                        {song.lives.map((live: any) => (
                                                             <Link
                                                                 key={live.id}
                                                                 to={`/live/${live.id}`}

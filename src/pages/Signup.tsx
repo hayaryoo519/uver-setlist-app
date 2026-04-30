@@ -20,7 +20,7 @@ const Signup = () => {
 
     const [verificationSent, setVerificationSent] = useState(false);
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         if (password !== confirmPassword) {
@@ -45,7 +45,7 @@ const Signup = () => {
             }
         } catch (err) {
             console.error("Signup Catch Error:", err);
-            setError('予期せぬエラーが発生しました: ' + (err.message || String(err)));
+            setError('予期せぬエラーが発生しました: ' + ((err as Error).message || String(err)));
         } finally {
             setIsLoading(false);
         }

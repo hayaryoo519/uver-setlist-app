@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
 import { AlertTriangle, Send, CheckCircle, ArrowLeft, Info } from 'lucide-react';
 import { useSubmitCorrection } from '../hooks/queries/useCorrections';
+import { ApiError } from '../lib/apiClient';
 import './CorrectionForm.css';
 
 const CORRECTION_TYPES = [
@@ -35,7 +36,7 @@ function CorrectionForm() {
 
     if (!currentUser) return null; // Prevent flash
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError('');
 
@@ -60,7 +61,7 @@ function CorrectionForm() {
                     setCorrectionType(''); setDescription('');
                 },
                 onError: (err) => {
-                    setError(err.data?.message || '送信に失敗しました');
+                    setError(err instanceof ApiError ? (err.data?.message ?? '送信に失敗しました') : '送信に失敗しました');
                 },
             }
         );
@@ -69,7 +70,7 @@ function CorrectionForm() {
     if (success) {
         return (
             <div className="container" style={{ paddingTop: '100px' }}>
-                <SEO title="送信完了 - データ修正依頼" />
+                <SEO title="送信完了 - データ修正依頼" description="" />
                 <div className="correction-form-container">
                     <div className="correction-form-card" style={{ textAlign: 'center', padding: '60px 20px' }}>
                         <CheckCircle size={64} color="#10b981" style={{ marginBottom: '20px' }} />

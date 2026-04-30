@@ -8,7 +8,7 @@ import { Calendar, Search, Filter, ArrowUpDown, ChevronRight } from 'lucide-reac
 import ImageWithFallback from '../components/common/ImageWithFallback';
 
 // Release Item Component to handle its own image fetching if needed
-const ReleaseItem = ({ release, index, songDataMap }) => {
+const ReleaseItem = ({ release, index, songDataMap }: { release: any; index: number; songDataMap: any }) => {
     const { data, isLoading: isFetching } = useAlbumImage(release.title);
     const albumImage = data?.image_url;
 
@@ -22,10 +22,10 @@ const ReleaseItem = ({ release, index, songDataMap }) => {
             <div className="group flex flex-row items-center gap-3 sm:gap-6 p-3 sm:p-6 mb-6 rounded-3xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-yellow-500/30 transition-all backdrop-blur-md shadow-2xl">
                 <div className="w-20 h-20 sm:w-32 sm:h-32 bg-slate-950 rounded-2xl flex items-center justify-center flex-shrink-0 border border-slate-800 group-hover:border-yellow-500/50 transition-all duration-500 overflow-hidden shadow-inner group-hover:scale-105">
                     <ImageWithFallback
-                        src={albumImage}
+                        src={albumImage ?? ''}
                         alt={release.title}
                         className="w-full h-full"
-                        isError={!isFetching && !albumImage}
+                        fallbackType="music"
                     />
                 </div>
                 
@@ -54,7 +54,7 @@ const ReleaseItem = ({ release, index, songDataMap }) => {
 
             {/* Songs Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {release.songs.map((songTitle, sIndex) => {
+                {release.songs.map((songTitle: string, sIndex: number) => {
                     const songData = songDataMap?.get(songTitle);
                     const isCollected = !!songData;
 
@@ -132,15 +132,15 @@ function Songs() {
                     return { ...release, songs: matchingSongs };
                 }
                 return null;
-            }).filter(Boolean);
+            }).filter((x): x is NonNullable<typeof x> => x !== null);
         }
 
         result.sort((a, b) => {
             switch (sortBy) {
                 case 'date-asc':
-                    return new Date(a.date) - new Date(b.date);
+                    return new Date(a.date).getTime() - new Date(b.date).getTime();
                 case 'date-desc':
-                    return new Date(b.date) - new Date(a.date);
+                    return new Date(b.date).getTime() - new Date(a.date).getTime();
                 case 'title-asc':
                     return a.title.localeCompare(b.title, 'ja');
                 case 'title-desc':
@@ -155,7 +155,7 @@ function Songs() {
 
     return (
         <div className="min-h-screen bg-slate-900 text-slate-100">
-            <SEO title="Discography" />
+            <SEO title="Discography" description="" />
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20">
                 <div className="flex flex-col md:flex-row md:items-end justify-between mb-4 pb-2 border-b border-white/5 gap-4">

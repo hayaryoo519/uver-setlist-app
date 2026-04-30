@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSongStats, useSongImage } from '../hooks/queries/useSongs';
 import { Music, Calendar, MapPin, Play, Clock, ArrowLeft, Loader, Sparkles, ChevronDown, ChevronsDown, ChevronUp } from 'lucide-react';
@@ -40,7 +40,7 @@ const SongDetail = () => {
         result.sort((a, b) => {
             const dateA = new Date(a.date);
             const dateB = new Date(b.date);
-            return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+            return sortOrder === 'newest' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
         });
 
         return result;
@@ -70,7 +70,7 @@ const SongDetail = () => {
             <div className="min-h-screen bg-slate-900 flex justify-center items-center text-red-400 p-8 flex-col text-center">
                 <div className="text-2xl font-bold mb-4">読み込みエラー</div>
                 <div className="bg-red-900/20 p-4 rounded border border-red-500/30">
-                    {error}
+                    {(error as Error)?.message ?? String(error)}
                 </div>
                 <Link to="/songs" className="mt-8 text-blue-400 hover:text-blue-300 underline">
                     楽曲一覧に戻る
@@ -87,13 +87,13 @@ const SongDetail = () => {
         );
     }
 
-    const playCount = song.performances.length;
-    const lastPlayed = playCount > 0 ? new Date(song.performances[0].date) : null;
-    const firstPlayed = playCount > 0 ? new Date(song.performances[playCount - 1].date) : null;
+    const playCount = song.performances?.length ?? 0;
+    const lastPlayed = playCount > 0 ? new Date(song.performances![0].date) : null;
+    const firstPlayed = playCount > 0 ? new Date(song.performances![playCount - 1].date) : null;
 
     // Calculate "days since last played"
     const now = new Date();
-    const daysSince = lastPlayed ? Math.floor((now - lastPlayed) / (1000 * 60 * 60 * 24)) : null;
+    const daysSince = lastPlayed ? Math.floor((now.getTime() - lastPlayed.getTime()) / (1000 * 60 * 60 * 24)) : null;
 
 
 
@@ -108,7 +108,7 @@ const SongDetail = () => {
         return '前に戻る';
     };
 
-    const handleBack = (e) => {
+    const handleBack = (e: React.MouseEvent) => {
         if (hasHistory) {
             e.preventDefault();
             navigate(-1);
@@ -138,10 +138,10 @@ const SongDetail = () => {
                             {/* Jacket Image */}
                             <div className="w-32 h-32 md:w-48 md:h-48 rounded-lg overflow-hidden bg-slate-800 border border-slate-700 shadow-2xl flex-shrink-0">
                                 <ImageWithFallback
-                                    src={imageUrl}
-                                    alt={song.title}
+                                    src={imageUrl ?? ''}
+                                    alt={song.title ?? ''}
                                     className="w-full h-full"
-                                    isError={!isLoading && !imageUrl}
+                                    fallbackType="music"
                                 />
                             </div>
 
@@ -172,7 +172,7 @@ const SongDetail = () => {
                                 {/* 収録作品セクション */}
                                 {song && (() => {
                                     const containingReleases = DISCOGRAPHY.filter(release =>
-                                        release.songs.some(s => s === song.title || s.toLowerCase() === song.title.toLowerCase())
+                                        release.songs.some(s => s === song.title || s.toLowerCase() === (song.title ?? '').toLowerCase())
                                     );
                                     if (containingReleases.length > 0) {
                                         return (
@@ -226,7 +226,7 @@ const SongDetail = () => {
                                     <span className="text-slate-500">日前</span>
                                 </div>
                                 <div className="text-sm text-slate-400 mt-2">
-                                    前回の演奏: <span className="text-white font-mono">{`${lastPlayed.getFullYear()}-${String(lastPlayed.getMonth() + 1).padStart(2, '0')}-${String(lastPlayed.getDate()).padStart(2, '0')}`}</span>
+                                    前回の演奏: <span className="text-white font-mono">{lastPlayed ? `${lastPlayed.getFullYear()}-${String(lastPlayed.getMonth() + 1).padStart(2, '0')}-${String(lastPlayed.getDate()).padStart(2, '0')}` : ''}</span>
                                 </div>
                             </div>
                         ) : (
@@ -251,17 +251,17 @@ const SongDetail = () => {
                             {song.total_performances}
                             <span className="text-sm font-normal text-slate-500">回</span>
                         </div>
-                        {song.play_rate > 0 && (
+                        {(song.play_rate ?? 0) > 0 && (
                             <div className="w-full bg-slate-700 h-1.5 mt-3 rounded-full overflow-hidden">
                                 <div
                                     className="bg-blue-500 h-full rounded-full"
-                                    style={{ width: `${Math.min(song.play_rate, 100)}%` }}
+                                    style={{ width: `${Math.min(song.play_rate ?? 0, 100)}%` }}
                                 ></div>
                             </div>
                         )}
                         <div className="text-xs text-slate-500 mt-2 flex justify-between">
                             <span>演奏率: <span className="text-blue-400 font-bold">{song.play_rate}%</span></span>
-                            {song.total_possible_lives > 0 && (
+                            {(song.total_possible_lives ?? 0) > 0 && (
                                 <span>(全 {song.total_possible_lives} 公演中)</span>
                             )}
                         </div>

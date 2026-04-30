@@ -8,6 +8,8 @@ export interface SetlistEntry {
   order: number
   is_encore?: boolean
   album?: string | null
+  note?: string | null
+  position?: number
 }
 
 // ライブ
@@ -22,6 +24,8 @@ export interface Live {
   setlist?: SetlistEntry[]
   attended_at?: string
   created_at?: string
+  prediction_count?: number
+  live_date?: string
 }
 
 // 楽曲
@@ -39,9 +43,19 @@ export interface Song {
 // 楽曲統計（詳細ページ用）
 export interface SongStats {
   total_performances: number
-  lives: Live[]
+  lives?: Live[]
+  performances?: Array<{ id: number; date: string; venue: string; tour_name: string; type: LiveType }>
   first_performed?: string
   last_performed?: string
+  title?: string
+  image_url?: string | null
+  is_rare?: boolean
+  days_since_last?: number | null
+  play_rate?: number
+  total_possible_lives?: number
+  first_performed_at?: string | null
+  album?: string | null
+  mv_url?: string | null
 }
 
 // ユーザー
@@ -71,12 +85,20 @@ export interface Prediction {
   created_at: string
   username?: string
   liked_by_user?: boolean
+  is_mine?: boolean
+  is_liked?: boolean
+  tour_name?: string
+  live_date?: string
+  venue?: string
+  songs?: Array<{ id: number; title: string }>
 }
 
 // セトリ予想作成リクエスト
 export interface CreatePredictionInput {
-  live_id: number
-  content: string
+  live_id: number | null
+  content?: string
+  title?: string
+  songs?: number[]
   song_ids?: number[]
 }
 

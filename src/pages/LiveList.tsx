@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import type { Live } from '../types/api';
 import PageHeader from '../components/Layout/PageHeader';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, MapPin, Calendar, Tag, Check, Plus, ArrowRight, Loader } from 'lucide-react';
@@ -38,12 +39,12 @@ const LiveList = () => {
         return fetchedLives.filter(live => new Date(live.date) < today);
     }, [fetchedLives]);
 
-    const handleFilterChange = (newFilters) => {
+    const handleFilterChange = (newFilters: any) => {
         setFilters(newFilters);
         navigate(location.pathname, { replace: true, state: { filters: newFilters } });
     };
 
-    const handleToggleAttendance = async (e, liveId) => {
+    const handleToggleAttendance = async (e: React.MouseEvent, liveId: number | string) => {
         // Stop both default Link navigation and event bubbling
         if (e) {
             e.preventDefault();
@@ -85,8 +86,9 @@ const LiveList = () => {
     };
 
     // Calculate Annual Summaries for grouped List view
+    type YearSummary = { year: number; performanceCount: number; lives: Live[] }
     const annualSummaries = useMemo(() => {
-        const summaries = {};
+        const summaries: Record<number, YearSummary> = {};
         
         lives.forEach(live => {
             if (!live.date) return;
@@ -109,7 +111,7 @@ const LiveList = () => {
         
         return Object.values(summaries).map(s => ({
             ...s,
-            lives: s.lives.sort((a, b) => new Date(b.date) - new Date(a.date))
+            lives: s.lives.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         })).sort((a, b) => b.year - a.year);
     }, [lives]);
 
@@ -180,7 +182,7 @@ const LiveList = () => {
                                 <div
                                     key={summary.year}
                                     className={`sidebar-item ${selectedYear === summary.year.toString() ? 'active' : ''}`}
-                                    onClick={() => setSearchParams({ year: summary.year })}
+                                    onClick={() => setSearchParams({ year: summary.year.toString() })}
                                 >
                                     <Calendar size={18} className="sidebar-icon" />
                                     <span className="sidebar-text">{summary.year}</span>
@@ -226,7 +228,7 @@ const LiveList = () => {
                                     <button 
                                         key={summary.year}
                                         className={`mobile-tab-btn ${selectedYear === summary.year.toString() ? 'active' : ''}`}
-                                        onClick={() => setSearchParams({ year: summary.year })}
+                                        onClick={() => setSearchParams({ year: summary.year.toString() })}
                                     >
                                         {summary.year}
                                     </button>

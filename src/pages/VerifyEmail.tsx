@@ -4,6 +4,7 @@ import AuthLayout from '../components/Auth/AuthLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { CheckCircle, XCircle, Loader, ArrowRight } from 'lucide-react';
 import { apiClient, ApiError } from '../lib/apiClient';
+import type { User } from '../types/api';
 
 const VerifyEmail = () => {
     const [searchParams] = useSearchParams();
@@ -20,7 +21,7 @@ const VerifyEmail = () => {
             return;
         }
 
-        apiClient.post('/api/auth/verify-email', { token })
+        apiClient.post<{ token: string; user: User }>('/api/auth/verify-email', { token })
             .then((data) => {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));

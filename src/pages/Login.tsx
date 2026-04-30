@@ -18,7 +18,7 @@ const Login = () => {
     // 遷移元ページの情報を取得
     const fromPage = location.state?.from || '/mypage';
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError('');
         setIsLoading(true);
@@ -63,7 +63,7 @@ const Login = () => {
                 <div className="auth-input-group" style={{ marginBottom: '32px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                         <label htmlFor="password" className="auth-label" style={{ marginBottom: 0 }}>パスワード</label>
-                        <Link to="/forgot-password" tabIndex={4} className="auth-link" style={{ fontSize: '0.8rem', marginTop: 0, borderBottom: 'none', color: 'var(--lp-slate-500)', fontWeight: '500' }} onMouseEnter={(e) => e.target.style.color = 'var(--lp-gold)'} onMouseLeave={(e) => e.target.style.color = 'var(--lp-slate-500)'}>忘れた場合</Link>
+                        <Link to="/forgot-password" tabIndex={4} className="auth-link" style={{ fontSize: '0.8rem', marginTop: 0, borderBottom: 'none', color: 'var(--lp-slate-500)', fontWeight: '500' }} onMouseEnter={(e) => (e.target as HTMLAnchorElement).style.color = 'var(--lp-gold)'} onMouseLeave={(e) => (e.target as HTMLAnchorElement).style.color = 'var(--lp-slate-500)'}>忘れた場合</Link>
                     </div>
                     <div className="auth-input-wrapper">
                         <input

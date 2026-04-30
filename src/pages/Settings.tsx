@@ -18,15 +18,15 @@ function Settings() {
     });
     const [message, setMessage] = useState({ text: '', type: '' });
 
-    const handleInputChange = (field, value) => {
+    const handleInputChange = (field: string, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
-    const handlePasswordChange = (field, value) => {
+    const handlePasswordChange = (field: string, value: string) => {
         setPasswordData(prev => ({ ...prev, [field]: value }));
     };
 
-    const handleSave = async (e) => {
+    const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setMessage({ text: '', type: '' });
 
@@ -38,7 +38,7 @@ function Settings() {
             return;
         }
 
-        const payload = { ...formData };
+        const payload: Record<string, string> = { ...formData };
 
         if (isPasswordChanged) {
             if (!passwordData.currentPassword) {
@@ -79,7 +79,7 @@ function Settings() {
 
     return (
         <div className="container" style={{ paddingTop: '100px', maxWidth: '600px' }}>
-            <SEO title="アカウント設定" />
+            <SEO title="アカウント設定" description="" />
 
             <div style={{ marginBottom: '30px' }}>
                 <Link to="/mypage" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', textDecoration: 'none', fontSize: '0.9rem' }}>

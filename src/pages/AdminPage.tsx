@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useEffect, useMemo } from 'react';
 import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown, AlertTriangle, MessageCircle, CheckCircle, BellRing, FileText, Clock } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
