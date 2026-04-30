@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
+import { useSongStats, useSongImage } from '../hooks/queries/useSongs';
 import { Music, Calendar, MapPin, Play, Clock, ArrowLeft, Loader, Sparkles, ChevronDown, ChevronsDown, ChevronUp } from 'lucide-react';
 import ImageWithFallback from '../components/common/ImageWithFallback';
 import SEO from '../components/SEO';
@@ -9,13 +10,13 @@ const SongDetail = () => {
     const { id } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
-    const [song, setSong] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const { data: song = null, isLoading, error } = useSongStats(id);
+    const { data: songImageData } = useSongImage(song?.title, { enabled: !song?.image_url });
     const [filterYear, setFilterYear] = useState('All');
     const [visibleCount, setVisibleCount] = useState(10);
     const [sortOrder, setSortOrder] = useState('newest');
-    const [isImageFetching, setIsImageFetching] = useState(false);
+
+    const imageUrl = song?.image_url ?? songImageData?.image_url ?? null;
 
     // Extract Unique Filter Options
     const uniqueYears = React.useMemo(() => {
@@ -45,53 +46,6 @@ const SongDetail = () => {
         return result;
     }, [song, filterYear, sortOrder]);
 
-    useEffect(() => {
-        const fetchSong = async () => {
-            try {
-                // Ensure spaces are removed to match Dashboard link format (CORE PRIDE -> COREPRIDE)
-                const spacelessId = id.toString().replace(/\s+/g, '');
-                const encodedId = encodeURIComponent(spacelessId);
-                const res = await fetch(`/api/songs/${encodedId}/stats`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setSong(data);
-                } else {
-                    console.error("Failed to fetch song");
-                    setError(`Failed to fetch song: ${res.status} ${res.statusText}`);
-                }
-            } catch (error) {
-                console.error("Error:", error);
-                setError(error.message);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchSong();
-    }, [id]);
-
-    // Fetch image if missing
-    useEffect(() => {
-        if (!isLoading && song && !song.image_url && !isImageFetching) {
-            const fetchImage = async () => {
-                setIsImageFetching(true);
-                try {
-                    const res = await fetch(`/api/music/song-image/${encodeURIComponent(song.title)}`);
-                    if (res.ok) {
-                        const data = await res.json();
-                        if (data.image_url) {
-                            setSong(prev => ({ ...prev, image_url: data.image_url }));
-                        }
-                    }
-                } catch (e) {
-                    console.error("Failed to fetch image", e);
-                } finally {
-                    setIsImageFetching(false);
-                }
-            };
-            fetchImage();
-        }
-    }, [isLoading, song, isImageFetching]);
 
     // Handle hash scroll
     useEffect(() => {
@@ -184,10 +138,10 @@ const SongDetail = () => {
                             {/* Jacket Image */}
                             <div className="w-32 h-32 md:w-48 md:h-48 rounded-lg overflow-hidden bg-slate-800 border border-slate-700 shadow-2xl flex-shrink-0">
                                 <ImageWithFallback
-                                    src={song.image_url}
+                                    src={imageUrl}
                                     alt={song.title}
                                     className="w-full h-full"
-                                    isError={!isImageFetching && !song.image_url}
+                                    isError={!isLoading && !imageUrl}
                                 />
                             </div>
 

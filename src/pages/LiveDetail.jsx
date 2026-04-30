@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAttendance } from '../hooks/useAttendance';
 import { useAuth } from '../contexts/AuthContext';
+import { useLiveDetail } from '../hooks/queries/useLives';
 import CorrectionModal from '../components/CorrectionModal';
 import { AlertTriangle, Tag, MapPin, Check, Plus, Star, Music, Sparkles } from 'lucide-react';
 import SEO from '../components/SEO';
@@ -9,8 +10,7 @@ import SEO from '../components/SEO';
 function LiveDetail() {
     const { id } = useParams();
     const liveId = parseInt(id, 10);
-    const [live, setLive] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const { data: live = null, isLoading: loading } = useLiveDetail(id);
     const { isAttended, addLive, removeLive, loading: attendanceLoading } = useAttendance();
     const { currentUser } = useAuth();
     const [isCorrectionModalOpen, setIsCorrectionModalOpen] = useState(false);
@@ -24,25 +24,6 @@ function LiveDetail() {
         }
         setIsCorrectionModalOpen(true);
     };
-
-    useEffect(() => {
-        const fetchLive = async () => {
-            try {
-                const res = await fetch(`/api/lives/${id}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setLive(data);
-                } else {
-                    setLive(null);
-                }
-            } catch (e) {
-                console.error("Failed to fetch live detail", e);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchLive();
-    }, [id]);
 
     const handleToggleAttendance = async () => {
         let success;
