@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import SetlistEditor from '../components/Admin/SetlistEditor';
 import DraftManager from '../components/Admin/DraftManager';
 import CollectorLogsView from '../components/Admin/CollectorLogsView';
+import { apiClient } from '../lib/apiClient';
 
 const AdminPage = () => {
     const { currentUser } = useAuth();
@@ -147,12 +148,8 @@ const AdminPage = () => {
     const fetchCorrections = async () => {
         setIsLoadingCorrections(true);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('/api/corrections', { headers: { token } });
-            if (res.ok) {
-                const data = await res.json();
-                setCorrections(data.corrections);
-            }
+            const data = await apiClient.get('/api/corrections');
+            setCorrections(data.corrections);
         } catch (err) { console.error(err); } finally { setIsLoadingCorrections(false); }
     };
 
@@ -160,12 +157,8 @@ const AdminPage = () => {
     const fetchCollectorLogs = async () => {
         setIsLoadingCollectorLogs(true);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('/api/logs/collector', { headers: { token } });
-            if (res.ok) {
-                const data = await res.json();
-                setCollectorLogs(data.logs);
-            }
+            const data = await apiClient.get('/api/logs/collector');
+            setCollectorLogs(data.logs);
         } catch (err) {
             console.error('Error fetching collector logs:', err);
         } finally {
@@ -179,58 +172,34 @@ const AdminPage = () => {
         if (!window.confirm(confirmMsg)) return;
 
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('/api/push/notify-live', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', token },
-                body: JSON.stringify({ liveId: live.id })
-            });
-
-            const data = await res.json();
-            if (res.ok) {
-                alert(`Notification sent!\nSuccess: ${data.details.sent}\nFailed: ${data.details.failed}`);
-            } else {
-                alert(`Failed to send notification: ${data.message}`);
-            }
+            const data = await apiClient.post('/api/push/notify-live', { liveId: live.id });
+            alert(`Notification sent!\nSuccess: ${data.details.sent}\nFailed: ${data.details.failed}`);
         } catch (err) {
             console.error('Push functionality error:', err);
-            alert('Error sending notification');
+            alert(`Failed to send notification: ${err.data?.message || err.message}`);
         }
     };
 
     const updateCorrectionStatus = async (id, status, note) => {
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`/api/corrections/${id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', token },
-                body: JSON.stringify({ status, admin_note: note })
-            });
-
-            if (res.ok) {
-                fetchCorrections();
-            } else {
-                alert('Failed to update correction');
-            }
-        } catch (err) { console.error(err); }
+            await apiClient.patch(`/api/corrections/${id}`, { status, admin_note: note });
+            fetchCorrections();
+        } catch (err) {
+            console.error(err);
+            alert('Failed to update correction');
+        }
     };
 
     const handleQuickCreateSong = async (title) => {
         if (!window.confirm(`Create new song "${title}"?`)) return;
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('/api/songs', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', token },
-                body: JSON.stringify({ title })
-            });
-            if (res.ok) {
-                alert(`Song "${title}" created!`);
-                fetchSongs();
-            } else {
-                alert('Failed to create song');
-            }
-        } catch (err) { console.error(err); }
+            await apiClient.post('/api/songs', { title });
+            alert(`Song "${title}" created!`);
+            fetchSongs();
+        } catch (err) {
+            console.error(err);
+            alert('Failed to create song');
+        }
     };
 
     const handleApplySetlist = async (liveId, setlistData, correctionId) => {
@@ -257,25 +226,11 @@ const AdminPage = () => {
         if (!window.confirm(confirmMsg)) return;
 
         try {
-            const token = localStorage.getItem('token');
-            // Format for API: { songs: [id, id, ...] }
-            // API expects plain array of IDs
             const songIds = validSongs.map(s => s.songId);
-
-            const res = await fetch(`/api/lives/${liveId}/setlist`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', token },
-                body: JSON.stringify({ songs: songIds })
-            });
-
-            if (res.ok) {
-                alert('Setlist updated successfully!');
-                // Auto-resolve the correction request
-                if (window.confirm('Mark this correction request as RESOLVED?')) {
-                    updateCorrectionStatus(correctionId, 'resolved', 'Setlist applied via Admin Panel');
-                }
-            } else {
-                alert('Failed to update setlist');
+            await apiClient.put(`/api/lives/${liveId}/setlist`, { songs: songIds });
+            alert('Setlist updated successfully!');
+            if (window.confirm('Mark this correction request as RESOLVED?')) {
+                updateCorrectionStatus(correctionId, 'resolved', 'Setlist applied via Admin Panel');
             }
         } catch (err) {
             console.error(err);
@@ -294,7 +249,6 @@ const AdminPage = () => {
         setIsSearchingSFM(true);
         setSfmResults([]);
         try {
-            const token = localStorage.getItem('token');
             let allResults = [];
             let page = 1;
             let totalPages = 1;
@@ -303,25 +257,24 @@ const AdminPage = () => {
                 // Respect API Rate Limits
                 if (page > 1) { await new Promise(resolve => setTimeout(resolve, 1500)); }
 
-                const res = await fetch(`/api/external/setlistfm/search?year=${sfmSearchYear}&keyword=${encodeURIComponent(keywordToUse)}&page=${page}`, {
-                    headers: { token }
-                });
-                const data = await res.json();
-
-                if (res.ok && data.setlist) {
-                    allResults = [...allResults, ...data.setlist];
-                    const itemsPerPage = data.itemsPerPage || 20;
-                    totalPages = Math.ceil(data.total / itemsPerPage);
-                    page++;
-                } else if (page === 1) {
-                    // Handle 404 or other errors as "No results found" gracefully
-                    if (res.status === 404) {
-                        setSfmResults([]);
+                try {
+                    const data = await apiClient.get(`/api/external/setlistfm/search?year=${sfmSearchYear}&keyword=${encodeURIComponent(keywordToUse)}&page=${page}`);
+                    if (data.setlist) {
+                        allResults = [...allResults, ...data.setlist];
+                        const itemsPerPage = data.itemsPerPage || 20;
+                        totalPages = Math.ceil(data.total / itemsPerPage);
+                        page++;
                     } else {
-                        alert(data.message || 'Error occurred during search');
+                        break;
                     }
-                    break;
-                } else {
+                } catch (pageErr) {
+                    if (page === 1) {
+                        if (pageErr.status === 404) {
+                            setSfmResults([]);
+                        } else {
+                            alert(pageErr.data?.message || 'Error occurred during search');
+                        }
+                    }
                     break;
                 }
             } while (page <= totalPages && page <= 10); // Check up to 10 pages (~200 items) to cover full year tours
@@ -520,69 +473,35 @@ const AdminPage = () => {
     const handleImportFromSetlistFM = async (sfmSetlist) => {
         setIsImportingSFM(true);
         try {
-            const token = localStorage.getItem('token');
-
-            // Format data for our internal API
-            // Note: Our import API currently takes CSV. We should probably add a JSON import endpoint or 
-            // format it as single record inserts. For simplicity, let's use the standard POST /lives and then /setlist.
-
-            // 1. Create/Update Live
             let finalTourName = sfmSetlist.tour?.name;
             if (!finalTourName || finalTourName.trim() === '') {
-                // Fallback for festivals or events without tour names
-                if (sfmSetlist.info) {
-                    finalTourName = sfmSetlist.info;
-                } else {
-                    finalTourName = `${sfmSetlist.venue.name} Event`;
-                }
+                finalTourName = sfmSetlist.info || `${sfmSetlist.venue.name} Event`;
             }
 
             const liveData = {
-                tour_name: finalTourName, // Improved name logic
-                title: '', // Empty subtitle by default per user request
-                date: sfmSetlist.eventDate.split('-').reverse().join('-'), // DD-MM-YYYY to YYYY-MM-DD
+                tour_name: finalTourName,
+                title: '',
+                date: sfmSetlist.eventDate.split('-').reverse().join('-'),
                 venue: sfmSetlist.venue.name,
                 type: sfmSetlist.suggestedType || (sfmSetlist.tour?.name ? 'ONEMAN' : 'EVENT'),
                 special_note: sfmSetlist.specialNote || null
             };
 
-            // Refine type detection if possible
-            // if (sfmSetlist.tour?.name) liveData.type = 'ONEMAN'; // Removed to respect suggestedType
+            const newLive = await apiClient.post('/api/lives', liveData);
 
-            const liveRes = await fetch('/api/lives', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', token },
-                body: JSON.stringify(liveData)
-            });
-            const newLive = await liveRes.json();
-
-            if (!liveRes.ok) throw new Error('Failed to create live event');
-
-            // 2. Add songs to setlist
-            const songs = [];
+            const songIds = [];
             if (sfmSetlist.sets && sfmSetlist.sets.set) {
                 const flatSongs = sfmSetlist.sets.set.flatMap(s => s.song);
                 for (const sfmSong of flatSongs) {
-                    // Try to finding/creating song is handled by our upcoming logic or we just push titles?
-                    // Actually, the current POST /api/lives/setlist expects IDs. 
-                    // So we need to ensure songs exist first.
-
-                    const songRes = await fetch('/api/songs', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', token },
-                        body: JSON.stringify({ title: sfmSong.name })
-                    });
-                    const sData = await songRes.json();
-                    if (songRes.ok) songs.push(sData.id);
+                    try {
+                        const sData = await apiClient.post('/api/songs', { title: sfmSong.name });
+                        songIds.push(sData.id);
+                    } catch (err) { console.error('Song create error:', err); }
                 }
             }
 
-            if (songs.length > 0) {
-                await fetch(`/api/lives/${newLive.id}/setlist`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', token },
-                    body: JSON.stringify({ songs })
-                });
+            if (songIds.length > 0) {
+                await apiClient.put(`/api/lives/${newLive.id}/setlist`, { songs: songIds });
             }
 
             alert('Import successful!');
@@ -601,50 +520,40 @@ const AdminPage = () => {
     const fetchLives = async () => {
         setIsLoadingLives(true);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('/api/lives?include_setlists=true', { headers: { token } });
-            const data = await res.json();
+            const data = await apiClient.get('/api/lives?include_setlists=true');
             setLives(data);
             return data;
-        } catch (err) { 
-            console.error(err); 
+        } catch (err) {
+            console.error(err);
             return [];
-        } finally { 
-            setIsLoadingLives(false); 
+        } finally {
+            setIsLoadingLives(false);
         }
     };
 
     const handleLiveSubmit = async (e) => {
         e.preventDefault();
         const url = editingLive ? `/api/lives/${editingLive.id}` : '/api/lives';
-        const method = editingLive ? 'PUT' : 'POST';
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(url, {
-                method, headers: { 'Content-Type': 'application/json', token },
-                body: JSON.stringify(liveFormData)
-            });
-            if (res.ok) {
-                fetchLives(); setShowLiveModal(false);
-                setEditingLive(null); setLiveFormData({ tour_name: '', title: '', date: '', venue: '', type: 'ONEMAN', special_note: '' });
+            if (editingLive) {
+                await apiClient.put(url, liveFormData);
             } else {
-                const errorData = await res.json().catch(() => ({}));
-                alert(`Failed to save live: ${res.status} ${errorData.message || ''}`);
+                await apiClient.post(url, liveFormData);
             }
+            fetchLives(); setShowLiveModal(false);
+            setEditingLive(null); setLiveFormData({ tour_name: '', title: '', date: '', venue: '', type: 'ONEMAN', special_note: '' });
         } catch (err) {
             console.error(err);
-            alert("Error saving live: " + err.message);
+            alert(`Failed to save live: ${err.data?.message || err.message}`);
         }
     };
 
     const handleDeleteLive = async (id) => {
         if (!window.confirm("Delete this live event?")) return;
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`/api/lives/${id}`, { method: 'DELETE', headers: { token } });
-            if (res.ok) fetchLives();
-            else alert('Failed to delete live');
-        } catch (err) { console.error(err); alert('Error deleting live'); }
+            await apiClient.delete(`/api/lives/${id}`);
+            fetchLives();
+        } catch (err) { console.error(err); alert('Failed to delete live'); }
     };
 
     // --- DEEP LINKING EFFECTS ---
@@ -672,28 +581,16 @@ const AdminPage = () => {
     };
 
     const executeDeleteLives = async () => {
-        setShowDeleteConfirm(false); // Close modal first
+        setShowDeleteConfirm(false);
         setIsDeletingLives(true);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('/api/lives/batch-delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', token },
-                body: JSON.stringify({ ids: selectedLiveIds })
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                alert(`Successfully deleted ${data.count} lives.`);
-                setSelectedLiveIds([]);
-                fetchLives();
-            } else {
-                const errorData = await res.json().catch(() => ({}));
-                alert(`Failed to delete selected lives: ${res.status} ${errorData.message || ''}`);
-            }
+            const data = await apiClient.post('/api/lives/batch-delete', { ids: selectedLiveIds });
+            alert(`Successfully deleted ${data.count} lives.`);
+            setSelectedLiveIds([]);
+            fetchLives();
         } catch (err) {
             console.error(err);
-            alert("Error during bulk delete: " + err.message);
+            alert(`Error during bulk delete: ${err.data?.message || err.message}`);
         } finally {
             setIsDeletingLives(false);
         }
@@ -756,14 +653,6 @@ const AdminPage = () => {
         if (!confirm(`Import setlist for "${activeLiveForImport.tour_name}"? Existing setlist will be overwritten.`)) return;
 
         try {
-            const token = localStorage.getItem('token');
-            const songs = setlistData.sets.set.flatMap(s => s.song).map((s, i) => ({
-                title: s.name,
-                order: i + 1 // Simplified order, ideally flatten properly
-            }));
-
-            // Flatten properly for Encore handling if needed, but flatMap is ok for MVP structure
-            // Actually, let's process accurate order across sets
             let flatSongs = [];
             let orderCounter = 1;
             setlistData.sets.set.forEach(set => {
@@ -772,19 +661,10 @@ const AdminPage = () => {
                 });
             });
 
-            const res = await fetch(`/api/lives/${activeLiveForImport.id}/import-setlist`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', token },
-                body: JSON.stringify({ songs: flatSongs })
-            });
-
-            if (res.ok) {
-                alert("Setlist imported successfully!");
-                setShowImportModal(false);
-                fetchLives(); // Refresh list to show checkmark
-            } else {
-                alert("Failed to import setlist");
-            }
+            await apiClient.post(`/api/lives/${activeLiveForImport.id}/import-setlist`, { songs: flatSongs });
+            alert("Setlist imported successfully!");
+            setShowImportModal(false);
+            fetchLives();
         } catch (err) {
             console.error(err);
             alert("Error importing setlist");
@@ -807,13 +687,8 @@ const AdminPage = () => {
     const fetchSongs = async () => {
         setIsLoadingSongs(true);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('/api/songs', { headers: { token } });
-            if (res.ok) {
-                const data = await res.json();
-                // APIが配列を直接返す場合とオブジェクト内に包まれる場合の両方に対応
-                setSongs(Array.isArray(data) ? data : (data.songs || []));
-            }
+            const data = await apiClient.get('/api/songs');
+            setSongs(Array.isArray(data) ? data : (data.songs || []));
         } catch (err) { console.error(err); } finally { setIsLoadingSongs(false); }
     };
 
@@ -832,29 +707,22 @@ const AdminPage = () => {
         };
 
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(url, {
-                method, headers: { 'Content-Type': 'application/json', token },
-                body: JSON.stringify(payload)
-            });
-            if (res.ok) {
-                fetchSongs(); setShowSongModal(false);
-                setEditingSong(null); setSongFormData({ title: '', album: '', release_year: '', mv_url: '', author: '' });
+            if (editingSong) {
+                await apiClient.put(url, payload);
             } else {
-                const data = await res.json().catch(() => ({}));
-                alert(`Failed to save song: ${data.message || res.statusText}`);
+                await apiClient.post(url, payload);
             }
-        } catch (err) { console.error(err); alert("Error saving song: " + err.message); }
+            fetchSongs(); setShowSongModal(false);
+            setEditingSong(null); setSongFormData({ title: '', album: '', release_year: '', mv_url: '', author: '' });
+        } catch (err) { console.error(err); alert(`Failed to save song: ${err.data?.message || err.message}`); }
     };
 
     const handleDeleteSong = async (id) => {
         if (!window.confirm("Delete this song? (If it's in a setlist, this might fail)")) return;
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`/api/songs/${id}`, { method: 'DELETE', headers: { token } });
-            if (res.ok) fetchSongs();
-            else { const d = await res.json(); alert(d.message || "Failed"); }
-        } catch (err) { console.error(err); }
+            await apiClient.delete(`/api/songs/${id}`);
+            fetchSongs();
+        } catch (err) { console.error(err); alert(err.data?.message || 'Failed to delete song'); }
     };
 
     const openEditSong = (song) => {
@@ -918,9 +786,8 @@ const AdminPage = () => {
     const fetchUsers = async () => {
         setIsLoadingUsers(true);
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch('/api/users', { headers: { token: token } });
-            if (response.ok) { const data = await response.json(); setUsers(data); }
+            const data = await apiClient.get('/api/users');
+            setUsers(data);
         } catch (err) { console.error(err); } finally { setIsLoadingUsers(false); }
     };
 
@@ -938,21 +805,14 @@ const AdminPage = () => {
 
         setIsLoadingUsers(true);
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`/api/users/${userToDelete.id}`, { method: 'DELETE', headers: { token: token } });
-
-            if (response.ok) {
-                await fetchUsers();
-                setShowDeleteUserModal(false);
-                setUserToDelete(null);
-                alert('ユーザーを削除しました。');
-            } else {
-                const errorData = await response.json().catch(() => ({}));
-                alert(`削除に失敗しました: ${errorData.message || response.statusText}`);
-            }
+            await apiClient.delete(`/api/users/${userToDelete.id}`);
+            await fetchUsers();
+            setShowDeleteUserModal(false);
+            setUserToDelete(null);
+            alert('ユーザーを削除しました。');
         } catch (err) {
             console.error(err);
-            alert('通信エラーが発生しました');
+            alert(`削除に失敗しました: ${err.data?.message || err.message}`);
         } finally {
             setIsLoadingUsers(false);
         }
@@ -973,24 +833,14 @@ const AdminPage = () => {
         const newRole = userToUpdate.role === 'admin' ? 'user' : 'admin';
         setIsLoadingUsers(true);
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`/api/users/${userToUpdate.id}/role`, {
-                method: 'PUT', headers: { 'Content-Type': 'application/json', token: token },
-                body: JSON.stringify({ role: newRole })
-            });
-            if (response.ok) {
-                await fetchUsers();
-                setShowRoleUpdateModal(false);
-                setUserToUpdate(null);
-                alert(`ユーザー権限を「${newRole}」に変更しました。`);
-            } else {
-                const errorData = await response.json().catch(() => ({}));
-                alert(`権限の変更に失敗しました: ${errorData.message || response.statusText}`);
-                setIsLoadingUsers(false);
-            }
+            await apiClient.put(`/api/users/${userToUpdate.id}/role`, { role: newRole });
+            await fetchUsers();
+            setShowRoleUpdateModal(false);
+            setUserToUpdate(null);
+            alert(`ユーザー権限を「${newRole}」に変更しました。`);
         } catch (err) {
             console.error(err);
-            alert('通信エラーが発生しました');
+            alert(`権限の変更に失敗しました: ${err.data?.message || err.message}`);
             setIsLoadingUsers(false);
         }
     };
@@ -1143,53 +993,32 @@ const AdminPage = () => {
 
             for (const setlist of selectedObjects) {
                 try {
-                    const token = localStorage.getItem('token');
-
-                    // 1. Create/Update Live
                     const liveData = {
                         tour_name: setlist.tour?.name,
-                        title: '', // Empty subtitle by default
+                        title: '',
                         date: setlist.eventDate.split('-').reverse().join('-'),
                         venue: setlist.venue.name,
                         type: setlist.suggestedType || 'ONEMAN',
                         special_note: setlist.specialNote || ''
                     };
 
-                    const liveRes = await fetch('/api/lives', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', token },
-                        body: JSON.stringify(liveData)
-                    });
-                    const newLive = await liveRes.json();
+                    const newLive = await apiClient.post('/api/lives', liveData);
 
-                    if (liveRes.ok) {
-                        // 2. Add songs
-                        const songs = [];
-                        if (setlist.sets && setlist.sets.set) {
-                            const flatSongs = setlist.sets.set.flatMap(s => s.song);
-                            for (const sfmSong of flatSongs) {
-                                const songRes = await fetch('/api/songs', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json', token },
-                                    body: JSON.stringify({ title: sfmSong.name })
-                                });
-                                const sData = await songRes.json();
-                                if (songRes.ok) songs.push(sData.id);
-                            }
+                    const songIds = [];
+                    if (setlist.sets && setlist.sets.set) {
+                        const flatSongs = setlist.sets.set.flatMap(s => s.song);
+                        for (const sfmSong of flatSongs) {
+                            try {
+                                const sData = await apiClient.post('/api/songs', { title: sfmSong.name });
+                                songIds.push(sData.id);
+                            } catch (songErr) { console.error('Song create error:', songErr); }
                         }
-
-                        if (songs.length > 0) {
-                            await fetch(`/api/lives/${newLive.id}/setlist`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json', token },
-                                body: JSON.stringify({ songs })
-                            });
-                        }
-                        successCount++;
-                    } else {
-                        failCount++;
-                        console.error('Failed to create live', newLive);
                     }
+
+                    if (songIds.length > 0) {
+                        await apiClient.put(`/api/lives/${newLive.id}/setlist`, { songs: songIds });
+                    }
+                    successCount++;
 
                 } catch (e) {
                     console.error("Bulk Import Error for " + setlist.eventDate, e);
