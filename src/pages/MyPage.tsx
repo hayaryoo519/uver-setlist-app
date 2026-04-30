@@ -16,7 +16,7 @@ import VenueRanking from '../components/Dashboard/VenueRanking';
 import NotificationSettings from '../components/NotificationSettings';
 
 type ModalFilter = { type: string; value: string }
-type SongRankItem = { title: string; count: number; lives: Array<{ id: number; date: string; tour_name?: string; tourTitle?: string; title?: string; venue?: string }>; album: string }
+type SongRankItem = { title: string; count: number; lives: Array<{ id: number; date: string; tour_name?: string; tourTitle?: string; title?: string | null; venue?: string }>; album: string }
 
 function MyPage() {
     const [modalFilter, setModalFilter] = useState<ModalFilter | null>(null);
@@ -32,7 +32,7 @@ function MyPage() {
     // Set default year range based on data
     useEffect(() => {
         if (!loading && stats.myLives.length > 0 && yearFilterMode === 'ALL') {
-            const years = stats.myLives.map(live => new Date(live.date || live.attended_at).getFullYear());
+            const years = stats.myLives.map(live => new Date(live.date || live.attended_at || '').getFullYear());
             const minYear = Math.min(...years);
             const currentYear = new Date().getFullYear();
             setYearRange([minYear, currentYear]);
@@ -53,7 +53,7 @@ function MyPage() {
         } else {
             // ALL (handled by useEffect or immediate calculation)
             if (stats.myLives.length > 0) {
-                const years = stats.myLives.map(live => new Date(live.date || live.attended_at).getFullYear());
+                const years = stats.myLives.map(live => new Date(live.date || live.attended_at || '').getFullYear());
                 setYearRange([Math.min(...years), currentYear]);
             }
         }
@@ -102,7 +102,7 @@ function MyPage() {
 
     const getFilteredLives = () => {
         if (!modalFilter) return [];
-        let filtered = [];
+        let filtered: typeof stats.myLives = [];
 
         if (modalFilter.type === 'year') {
             filtered = stats.myLives.filter(live => {
@@ -120,8 +120,8 @@ function MyPage() {
         }
 
         return filtered.sort((a, b) => {
-            const dateA = new Date(a.date || a.attended_at);
-            const dateB = new Date(b.date || b.attended_at);
+            const dateA = new Date(a.date || a.attended_at || '');
+            const dateB = new Date(b.date || b.attended_at || '');
             return dateB.getTime() - dateA.getTime();
         });
     };
@@ -427,7 +427,7 @@ function MyPage() {
                             ) : (
                                 <div className="live-list-compact">
                                     {getFilteredLives().map((live) => {
-                                        const d = new Date(live.date || live.attended_at);
+                                        const d = new Date(live.date || live.attended_at || '');
                                         return (
                                             <Link
                                                 key={live.id}

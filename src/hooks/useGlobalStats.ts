@@ -2,9 +2,36 @@ import { useMemo } from 'react';
 import { DISCOGRAPHY } from '../data/discography';
 import { useLives } from './queries/useLives';
 import { useSongs } from './queries/useSongs';
+import type { Live, Song } from '../types/api';
 
-// Helper for normalization
-const normalizeSongTitle = (title) => {
+interface YearlyDetail {
+    year: string;
+    liveCount: number;
+    totalSongs: number;
+    uniqueSongsList: Set<string>;
+}
+
+interface TourSongEntry {
+    count: number;
+    lives: Array<{ id: number; date: string; venue: string; title: string | null }>;
+    id?: number;
+}
+
+interface TourEntry {
+    count: number;
+    songCounts: Record<string, TourSongEntry>;
+    latestDate: string;
+    startDate: string;
+    endDate: string;
+}
+
+interface SongCountEntry {
+    count: number;
+    id: number | null;
+    title: string;
+}
+
+const normalizeSongTitle = (title: string | null | undefined): string => {
     if (!title) return "";
     if (title === "=") return "=";
     return title.toLowerCase().replace(/[!'#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/g, "").replace(/\s+/g, "");
@@ -20,7 +47,7 @@ export const useGlobalStats = () => {
     const stats = useMemo(() => {
         if (!allLives.length) return null;
 
-        const formatDate = (dateStr) => {
+        const formatDate = (dateStr: string | null | undefined): string => {
             if (!dateStr) return '';
             const d = new Date(dateStr);
             return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.');
@@ -29,19 +56,16 @@ export const useGlobalStats = () => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        // Separate Past and Future (今日以前 = pastLives, 明日以降 = upcomingLives)
-        const pastLives = allLives.filter(live => new Date(live.date) <= today);
-        const upcomingLives = allLives.filter(live => new Date(live.date) > today)
-            .sort((a, b) => new Date(a.date) - new Date(b.date))
+        const pastLives = (allLives as Live[]).filter(live => new Date(live.date) <= today);
+        const upcomingLives = (allLives as Live[]).filter(live => new Date(live.date) > today)
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
             .map(live => ({ ...live, date: formatDate(live.date) }));
 
         const totalLives = pastLives.length;
 
-        // Total Songs: sum lengths of live.setlist (only for past lives)
         const totalSongsPerformed = pastLives.reduce((acc, live) => acc + (live.setlist ? live.setlist.length : 0), 0);
 
-        // Detailed Yearly Stats
-        const yearlyDetails = {};
+        const yearlyDetails: Record<string, YearlyDetail> = {};
         pastLives.forEach(live => {
             const year = live.date ? live.date.split('-')[0] : 'Unknown';
             if (!yearlyDetails[year]) {
@@ -59,7 +83,7 @@ export const useGlobalStats = () => {
         });
 
         const yearlyDetailedStats = Object.values(yearlyDetails)
-            .sort((a, b) => a.year - b.year)
+            .sort((a, b) => Number(a.year) - Number(b.year))
             .map(data => ({
                 year: data.year,
                 liveCount: data.liveCount,
@@ -68,10 +92,8 @@ export const useGlobalStats = () => {
                 avgSongs: (data.totalSongs / data.liveCount).toFixed(1)
             }));
 
-        // Tour Ranking with Song Counts & Duration
-        const tourData = {};
+        const tourData: Record<string, TourEntry> = {};
         pastLives.forEach(live => {
-            // Filter out Festivals/Events from Tour Analysis
             const isFestival = (
                 live.type === 'FESTIVAL' ||
                 live.type === 'EVENT' ||
@@ -91,13 +113,13 @@ export const useGlobalStats = () => {
             }
             tourData[title].count += 1;
 
-            if (new Date(live.date) > new Date(tourData[title].endDate)) {
+            if (new Date(live.date).getTime() > new Date(tourData[title].endDate).getTime()) {
                 tourData[title].endDate = live.date;
             }
-            if (new Date(live.date) < new Date(tourData[title].startDate)) {
+            if (new Date(live.date).getTime() < new Date(tourData[title].startDate).getTime()) {
                 tourData[title].startDate = live.date;
             }
-            if (new Date(live.date) > new Date(tourData[title].latestDate)) {
+            if (new Date(live.date).getTime() > new Date(tourData[title].latestDate).getTime()) {
                 tourData[title].latestDate = live.date;
             }
 
@@ -111,17 +133,14 @@ export const useGlobalStats = () => {
                     id: live.id,
                     date: live.date,
                     venue: live.venue,
-                    title: live.title // Added title for Day/Night distinction
+                    title: live.title
                 });
 
-                // Capture ID if available
                 if (song.id && !tourData[title].songCounts[song.title].id) {
                     tourData[title].songCounts[song.title].id = song.id;
                 }
             });
         });
-
-
 
         const tourStats = Object.entries(tourData)
             .map(([name, data]) => {
@@ -129,7 +148,6 @@ export const useGlobalStats = () => {
                 const songRanking = Object.entries(data.songCounts)
                     .map(([songTitle, songInfo]) => ({
                         title: songTitle,
-                        // id: songInfo.id, // ID no longer strictly needed for linking!
                         count: songInfo.count,
                         lives: songInfo.lives.map(l => ({ ...l, date: formatDate(l.date) })),
                         percentage: ((songInfo.count / data.count) * 100).toFixed(1)
@@ -153,21 +171,16 @@ export const useGlobalStats = () => {
         const currentTour = [...tourStats]
             .sort((a, b) => b.latestDate.localeCompare(a.latestDate))[0];
 
-        // Recent lives (Archive Top 10)
         const recentLives = [...pastLives]
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
             .slice(0, 10)
             .map(live => ({ ...live, date: formatDate(live.date) }));
 
-        // --- Album Stats (Global) - NEW LOGIC ---
-        // --- Album Stats (Global) - NEW LOGIC ---
-        // 1. Create Song -> Album Map from DISCOGRAPHY (Normalized)
-        const songAlbumMap = new Map();
+        const songAlbumMap = new Map<string, string>();
 
-        // Pass 1: Map Albums First (Priority)
         DISCOGRAPHY.forEach(release => {
             if (release.type === 'ALBUM') {
-                release.songs.forEach(songTitle => {
+                release.songs.forEach((songTitle: string) => {
                     const norm = normalizeSongTitle(songTitle);
                     if (!songAlbumMap.has(norm)) {
                         songAlbumMap.set(norm, release.title);
@@ -176,10 +189,9 @@ export const useGlobalStats = () => {
             }
         });
 
-        // Pass 2: Map Singles (Only if not in Album -> B-sides, etc.)
         DISCOGRAPHY.forEach(release => {
             if (release.type === 'SINGLE') {
-                release.songs.forEach(songTitle => {
+                release.songs.forEach((songTitle: string) => {
                     const norm = normalizeSongTitle(songTitle);
                     if (!songAlbumMap.has(norm)) {
                         songAlbumMap.set(norm, "Singles");
@@ -188,25 +200,20 @@ export const useGlobalStats = () => {
             }
         });
 
-        // 2. Count Albums from Past Lives
-        const albumMap = new Map();
+        const albumMap = new Map<string, number>();
         pastLives.forEach(live => {
             const list = live.setlist || [];
             list.forEach(song => {
                 const norm = normalizeSongTitle(song.title);
                 const album = songAlbumMap.get(norm);
-
-                // Count if mapped (Album Name or "Singles")
                 if (album) {
                     albumMap.set(album, (albumMap.get(album) || 0) + 1);
                 }
             });
         });
 
-        // Sort by DISCOGRAPHY order (Release Order)
-        const albumStats = [];
+        const albumStats: Array<{ name: string; value: number }> = [];
 
-        // Add Summarized Singles FIRST
         const singlesCount = albumMap.get("Singles") || 0;
         albumStats.push({ name: "Singles", value: singlesCount });
 
@@ -217,27 +224,24 @@ export const useGlobalStats = () => {
             }
         });
 
-        // --- Global Song Ranking ---
-        const globalSongCounts = {};
+        const globalSongCounts: Record<string, SongCountEntry> = {};
         pastLives.forEach(live => {
             const list = live.setlist || [];
             list.forEach(song => {
                 if (!song || !song.title) return;
                 if (!globalSongCounts[song.title]) {
-                    globalSongCounts[song.title] = { count: 0, id: song.id, title: song.title };
+                    globalSongCounts[song.title] = { count: 0, id: song.id ?? null, title: song.title };
                 }
                 globalSongCounts[song.title].count += 1;
-                // Ensure ID is captured if available from first occurrence
                 if (song.id && !globalSongCounts[song.title].id) {
                     globalSongCounts[song.title].id = song.id;
                 }
             });
         });
 
-        // Map titles to IDs and Images using allSongs
-        const songDataMap = new Map();
-        const songIdMap = new Map();
-        allSongs.forEach(s => {
+        const songDataMap = new Map<string, { id: number; image_url: string | null }>();
+        const songIdMap = new Map<string, number>();
+        (allSongs as Song[]).forEach(s => {
             songDataMap.set(s.title, { id: s.id, image_url: s.image_url });
             songIdMap.set(s.title, s.id);
         });
@@ -253,7 +257,7 @@ export const useGlobalStats = () => {
                 };
             })
             .sort((a, b) => b.count - a.count)
-            .slice(0, 50); // Keep top 50 in stats, Dashboard can slice 10
+            .slice(0, 50);
 
         return {
             totalLives,
@@ -264,7 +268,7 @@ export const useGlobalStats = () => {
             recentLives,
             allLives,
             albumStats,
-            songAlbumMap: songAlbumMap,
+            songAlbumMap,
             songIdMap,
             songDataMap,
             globalSongRanking,

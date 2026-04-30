@@ -1785,7 +1785,7 @@ const AdminPage = () => {
                                             <td style={{ width: '120px' }}>
                                                 <div className="actions-wrapper">
                                                     <button onClick={() => handleRoleUpdate(user)} className="action-btn promote" title="Update Role"><ShieldAlert size={18} /></button>
-                                                    <button onClick={() => handleDeleteUser(user)} disabled={currentUser && user.id === currentUser.id} className={`action-btn delete ${currentUser && user.id === currentUser.id ? 'disabled' : ''}`} title="Delete"><Trash2 size={18} /></button>
+                                                    <button onClick={() => handleDeleteUser(user)} disabled={!!(currentUser && user.id === currentUser.id)} className={`action-btn delete ${currentUser && user.id === currentUser.id ? 'disabled' : ''}`} title="Delete"><Trash2 size={18} /></button>
                                                 </div>
                                             </td>
                                         </tr>

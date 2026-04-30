@@ -26,7 +26,7 @@ function Dashboard() {
     // Update year range dynamically based on data
     React.useEffect(() => {
         if (!loading && stats.yearlyDetailedStats && stats.yearlyDetailedStats.length > 0) {
-            const years = stats.yearlyDetailedStats.map(d => d.year);
+            const years = stats.yearlyDetailedStats.map(d => Number(d.year));
             const maxYear = Math.max(...years);
             // Ensure we cover at least up to current year, or data max if future shows exist
             const currentYear = new Date().getFullYear();
@@ -213,7 +213,7 @@ function Dashboard() {
     );
 
     const filteredGraphData = (stats.yearlyDetailedStats || []).filter(
-        d => d.year >= yearRange[0] && d.year <= yearRange[1]
+        d => Number(d.year) >= yearRange[0] && Number(d.year) <= yearRange[1]
     );
 
     const metrics = [

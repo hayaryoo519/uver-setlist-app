@@ -1,14 +1,18 @@
 import { useMemo } from 'react';
 
-/**
- * 現在の環境を判定するカスタムフック
- * @returns {Object} 環境情報
- *   - name: 環境名 ('development' | 'staging' | 'production')
- *   - label: 表示用ラベル
- *   - color: バッジの背景色
- *   - isProduction: 本番環境かどうか
- */
-export const useEnvironment = () => {
+type EnvName = 'development' | 'staging' | 'production';
+
+interface EnvInfo {
+    name: EnvName;
+    label: string;
+    color: string | null;
+    textColor: string | null;
+    isProduction: boolean;
+    isDevelopment: boolean;
+    isStaging: boolean;
+}
+
+export const useEnvironment = (): EnvInfo => {
     const env = useMemo(() => {
         // Viteの環境変数から環境を判定
         const mode = import.meta.env.MODE;
@@ -38,17 +42,17 @@ export const useEnvironment = () => {
         }
 
         // 環境ごとの設定
-        const environments = {
+        const environments: Record<EnvName, { name: EnvName; label: string; color: string | null; textColor: string | null }> = {
             development: {
                 name: 'development',
                 label: 'ローカル開発',
-                color: '#10b981', // 濃い緑
+                color: '#10b981',
                 textColor: '#ffffff'
             },
             staging: {
                 name: 'staging',
                 label: '検証環境',
-                color: '#f97316', // 濃いオレンジ
+                color: '#f97316',
                 textColor: '#ffffff'
             },
             production: {
@@ -59,7 +63,7 @@ export const useEnvironment = () => {
             }
         };
 
-        return environments[envName] || environments.production;
+        return environments[envName as EnvName] ?? environments.production;
     }, []);
 
     const isProduction = env.name === 'production';
