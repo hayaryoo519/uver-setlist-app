@@ -2,40 +2,28 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import AuthLayout from '../components/Auth/AuthLayout';
 import { Mail, ArrowRight, Loader, CheckCircle } from 'lucide-react';
+import { useForgotPassword } from '../hooks/queries/useAuthMutations';
 
 const ForgotPassword = () => {
     const [email, setEmail] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
     const [submitted, setSubmitted] = useState(false);
 
-    const handleSubmit = async (e) => {
+    const mutation = useForgotPassword();
+
+    const handleSubmit = (e) => {
         e.preventDefault();
-        setIsLoading(true);
         setError('');
-        setMessage('');
-
-        try {
-            const response = await fetch('/api/auth/forgot-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
+        mutation.mutate(email, {
+            onSuccess: (data) => {
                 setSubmitted(true);
                 setMessage(data.message);
-            } else {
-                setError(data.message || 'エラーが発生しました。');
-            }
-        } catch (err) {
-            setError('サーバーとの通信に失敗しました。');
-        } finally {
-            setIsLoading(false);
-        }
+            },
+            onError: (err) => {
+                setError(err.data?.message || 'エラーが発生しました。');
+            },
+        });
     };
 
     if (submitted) {
@@ -102,7 +90,7 @@ const ForgotPassword = () => {
 
                 <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={mutation.isPending}
                     style={{
                         width: '100%',
                         padding: '14px',
@@ -112,16 +100,16 @@ const ForgotPassword = () => {
                         fontSize: '1rem',
                         border: 'none',
                         borderRadius: '8px',
-                        cursor: isLoading ? 'not-allowed' : 'pointer',
+                        cursor: mutation.isPending ? 'not-allowed' : 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '8px',
                         transition: 'transform 0.1s, opacity 0.2s',
-                        opacity: isLoading ? 0.7 : 1
+                        opacity: mutation.isPending ? 0.7 : 1
                     }}
                 >
-                    {isLoading ? <Loader size={20} className="animate-spin" /> : <>再設定メールを送信 <ArrowRight size={20} /></>}
+                    {mutation.isPending ? <Loader size={20} className="animate-spin" /> : <>再設定メールを送信 <ArrowRight size={20} /></>}
                 </button>
             </form>
 
