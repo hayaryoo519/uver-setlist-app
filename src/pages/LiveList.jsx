@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import PageHeader from '../components/Layout/PageHeader';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, MapPin, Calendar, Tag, Check, Plus, ArrowRight, Loader } from 'lucide-react';
@@ -6,6 +6,8 @@ import { useAttendance } from '../hooks/useAttendance';
 import { useAuth } from '../contexts/AuthContext';
 import FilterPanel from '../components/FilterPanel';
 import SEO from '../components/SEO';
+import { useLives } from '../hooks/queries/useLives';
+import { useSongs } from '../hooks/queries/useSongs';
 import './LiveListPrototype.css';
 
 const LiveList = () => {
@@ -13,85 +15,32 @@ const LiveList = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const location = useLocation();
     const selectedYear = searchParams.get('year');
-    const [lives, setLives] = useState([]);
-    const [availableSongs, setAvailableSongs] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    // filters state: songIds is array of integers, album is string
+    const navigate = useNavigate();
+
     const initialFilters = location.state?.filters || { text: '', venue: '', songIds: [], startDate: '', endDate: '' };
     const [filters, setFilters] = useState(initialFilters);
-    const [selectedTour, setSelectedTour] = useState(null);
-    const navigate = useNavigate();
+
+    const { attendedIds, addLive, removeLive, isAttended, loading: attendanceLoading } = useAttendance();
+
+    const queryParams = {
+        songIds: filters.songIds,
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+    };
+
+    const { data: fetchedLives = [], isLoading } = useLives(queryParams);
+    const { data: availableSongs = [] } = useSongs();
+
+    // 過去のライブのみ表示
+    const lives = useMemo(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return fetchedLives.filter(live => new Date(live.date) < today);
+    }, [fetchedLives]);
 
     const handleFilterChange = (newFilters) => {
         setFilters(newFilters);
-        // 現在の履歴エントリにfiltersを保存し、ブラウザの「戻る」ボタン使用時に復元できるようにする
         navigate(location.pathname, { replace: true, state: { filters: newFilters } });
-    };
-
-    // Use Attendance Hook
-    const { attendedIds, addLive, removeLive, isAttended, loading: attendanceLoading } = useAttendance();
-
-    useEffect(() => {
-        // Fetch Dictionary Data (Songs)
-        const fetchSongs = async () => {
-            try {
-                const res = await fetch('/api/songs');
-                const data = await res.json();
-                setAvailableSongs(data);
-            } catch (error) {
-                console.error('Error fetching songs:', error);
-            }
-        };
-        fetchSongs();
-    }, []);
-
-    useEffect(() => {
-        // Fetch Lives (server-side filter for complex relations)
-        fetchLives();
-    }, [filters.songIds, filters.startDate, filters.endDate]);
-
-    const fetchLives = async () => {
-        setIsLoading(true);
-        try {
-            const params = new URLSearchParams();
-            if (filters.songIds.length > 0) {
-                params.append('songIds', filters.songIds.join(','));
-            }
-            if (filters.startDate) {
-                params.append('startDate', filters.startDate);
-            }
-            if (filters.endDate) {
-                params.append('endDate', filters.endDate);
-            }
-
-            const res = await fetch(`/api/lives?${params.toString()}`);
-            const data = await res.json();
-
-            if (Array.isArray(data)) {
-                // Filter out invalid or unrealistic dates (like year 202612)
-                const validData = data.filter(live => {
-                    if (!live.date) return false;
-                    const d = new Date(live.date);
-                    if (isNaN(d.getTime())) return false;
-                    const year = d.getFullYear();
-                    return year > 1990 && year < 2100;
-                });
-
-                validData.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const pastLives = validData.filter(live => new Date(live.date) < today);
-
-                setLives(pastLives);
-            } else {
-                setLives([]);
-            }
-        } catch (error) {
-            console.error('Error fetching lives:', error);
-        } finally {
-            setIsLoading(false);
-        }
     };
 
     const handleToggleAttendance = async (e, liveId) => {
