@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Trash2, Loader, Sparkles, ArrowRight, FileText, Clock, CheckCircle, XCircle, RefreshCw, AlertCircle, Image as ImageIcon } from 'lucide-react';
 import BulkImportModal from './BulkImportModal';
+import { apiClient } from '../../lib/apiClient';
 
 /**
  * セトリドラフト管理コンポーネント
@@ -53,15 +54,11 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
     const fetchDrafts = useCallback(async () => {
         setIsLoading(true);
         try {
-            const token = localStorage.getItem('token');
             const url = statusFilter !== 'all'
                 ? `/api/drafts?status=${statusFilter}`
                 : '/api/drafts';
-            const res = await fetch(url, { headers: { token } });
-            if (res.ok) {
-                const data = await res.json();
-                setDrafts(data);
-            }
+            const data = await apiClient.get(url);
+            setDrafts(data);
         } catch (err) {
             console.error('ドラフト取得エラー:', err);
         } finally {
@@ -79,30 +76,19 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
 
         setIsCreating(true);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('/api/drafts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', token },
-                body: JSON.stringify({
-                    rawText: newRawText,
-                    source: newSource,
-                    liveId: newLiveId ? parseInt(newLiveId) : null
-                })
+            await apiClient.post('/api/drafts', {
+                rawText: newRawText,
+                source: newSource,
+                liveId: newLiveId ? parseInt(newLiveId) : null
             });
-
-            if (res.ok) {
-                showToast('ドラフトを作成しました');
-                setNewRawText('');
-                setNewLiveId('');
-                setShowCreateForm(false);
-                fetchDrafts();
-            } else {
-                const data = await res.json();
-                showToast(data.message || '作成に失敗しました', 'error');
-            }
+            showToast('ドラフトを作成しました');
+            setNewRawText('');
+            setNewLiveId('');
+            setShowCreateForm(false);
+            fetchDrafts();
         } catch (err) {
             console.error(err);
-            showToast('通信エラーが発生しました', 'error');
+            showToast(err.message || '作成に失敗しました', 'error');
         } finally {
             setIsCreating(false);
         }
@@ -112,55 +98,27 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
     const handleParse = async (draftId) => {
         setParsingDraftId(draftId);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`/api/drafts/${draftId}/parse`, {
-                method: 'POST',
-                headers: { token }
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                showToast(`GPT整形完了（${data.usage?.total_tokens || '?'}トークン使用）`);
-                fetchDrafts();
-            } else {
-                const data = await res.json();
-                showToast(data.message || 'GPT整形に失敗しました', 'error');
-            }
+            const data = await apiClient.post(`/api/drafts/${draftId}/parse`);
+            showToast(`GPT整形完了（${data.usage?.total_tokens || '?'}トークン使用）`);
+            fetchDrafts();
         } catch (err) {
             console.error(err);
-            showToast('GPT整形中にエラーが発生しました', 'error');
+            showToast(err.message || 'GPT整形に失敗しました', 'error');
         } finally {
             setParsingDraftId(null);
         }
     };
 
-    /**
-     * 公式フラグの切り替え
-     */
+    // 公式フラグの切り替え
     const handleToggleOfficial = async (id, currentVal) => {
         try {
             setIsUpdatingOfficial(id);
-            const token = localStorage.getItem('token');
-            const response = await fetch(`/api/drafts/${id}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    token
-                },
-                body: JSON.stringify({ officialSetlist: !currentVal })
-            });
-
-            if (response.ok) {
-                const updated = await response.json();
-                setDrafts(prev => prev.map(d => d.id === id ? updated : d));
-                showToast(`公式フラグを${!currentVal ? 'オン' : 'オフ'}にしました`, 'success');
-            } else {
-                const data = await response.json();
-                showToast(data.message || 'フラグ更新に失敗しました', 'error');
-            }
+            const updated = await apiClient.patch(`/api/drafts/${id}`, { officialSetlist: !currentVal });
+            setDrafts(prev => prev.map(d => d.id === id ? updated : d));
+            showToast(`公式フラグを${!currentVal ? 'オン' : 'オフ'}にしました`, 'success');
         } catch (err) {
             console.error(err);
-            showToast('フラグ更新に失敗しました', 'error');
+            showToast(err.message || 'フラグ更新に失敗しました', 'error');
         } finally {
             setIsUpdatingOfficial(null);
         }
@@ -189,31 +147,18 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
 
         setIsLoading(true);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`/api/drafts/${activeDraftForImport.id}/commit`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', token },
-                body: JSON.stringify({ liveId, setlist: setlistData })
-            });
-
-            if (res.ok) {
-                showToast('セットリストを確定しました');
-                setShowBulkImport(false);
-                setActiveDraftForImport(null);
-                setBulkImportText('');
-                fetchDrafts();
-                
-                // 親コンポーネントに通知 (一覧のリロード等)
-                if (onSetlistImported) {
-                    onSetlistImported(liveId);
-                }
-            } else {
-                const data = await res.json();
-                showToast(data.message || '確定に失敗しました', 'error');
+            await apiClient.post(`/api/drafts/${activeDraftForImport.id}/commit`, { liveId, setlist: setlistData });
+            showToast('セットリストを確定しました');
+            setShowBulkImport(false);
+            setActiveDraftForImport(null);
+            setBulkImportText('');
+            fetchDrafts();
+            if (onSetlistImported) {
+                onSetlistImported(liveId);
             }
         } catch (err) {
             console.error('Commit エラー:', err);
-            showToast('通信エラーが発生しました', 'error');
+            showToast(err.message || '確定に失敗しました', 'error');
         } finally {
             setIsLoading(false);
         }
@@ -224,45 +169,25 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
         if (!window.confirm('このドラフトを削除しますか？')) return;
 
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`/api/drafts/${draftId}`, {
-                method: 'DELETE',
-                headers: { token }
-            });
-
-            if (res.ok) {
-                showToast('ドラフトを削除しました');
-                fetchDrafts();
-            } else {
-                const data = await res.json();
-                showToast(data.message || '削除に失敗しました', 'error');
-            }
+            await apiClient.delete(`/api/drafts/${draftId}`);
+            showToast('ドラフトを削除しました');
+            fetchDrafts();
         } catch (err) {
             console.error(err);
-            showToast('削除に失敗しました', 'error');
+            showToast(err.message || '削除に失敗しました', 'error');
         }
     };
 
     // テキスト編集保存
     const handleSaveText = async (draftId) => {
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`/api/drafts/${draftId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', token },
-                body: JSON.stringify({ rawText: editText })
-            });
-
-            if (res.ok) {
-                showToast('テキストを更新しました');
-                setEditingDraftId(null);
-                fetchDrafts();
-            } else {
-                showToast('更新に失敗しました', 'error');
-            }
+            await apiClient.patch(`/api/drafts/${draftId}`, { rawText: editText });
+            showToast('テキストを更新しました');
+            setEditingDraftId(null);
+            fetchDrafts();
         } catch (err) {
             console.error(err);
-            showToast('通信エラーが発生しました', 'error');
+            showToast(err.message || '更新に失敗しました', 'error');
         }
     };
     

@@ -40,6 +40,11 @@ export const handlers = [
   http.get('/api/music/song-image/:title', () => {
     return HttpResponse.json({ image_url: 'https://example.com/image.jpg' })
   }),
+  
+  // アルバム画像
+  http.get('/api/music/album-image/:title', () => {
+    return HttpResponse.json({ image_url: 'https://example.com/image.jpg' })
+  }),
 
   // セトリ予想一覧
   http.get('/api/predictions', () => {

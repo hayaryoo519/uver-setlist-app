@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom';
-import { useSongs } from '../hooks/queries/useSongs';
-import { useLiveDetail } from '../hooks/queries/useLives';
-import { useLives } from '../hooks/queries/useLives';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useSongs, useSearchSongs } from '../hooks/queries/useSongs';
+import { useLiveDetail, useLives } from '../hooks/queries/useLives';
 import { useCreatePrediction } from '../hooks/queries/usePredictions';
 import {
     DndContext,
@@ -28,15 +27,23 @@ import { DISCOGRAPHY } from '../data/discography';
 const SetlistPredictionCreate = () => {
     const [selectedSongs, setSelectedSongs] = useState([]); // [{ uniqueId: '...', song: { id: 1, title: '...' } }]
     const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState([]);
+    const [debouncedQuery, setDebouncedQuery] = useState('');
     const [selectedLiveId, setSelectedLiveId] = useState(null); // 選択中のライブID
     const { currentUser } = useAuth();
     const navigate = useNavigate();
-    const location = useLocation();
     const [searchParams] = useSearchParams();
     const liveId = searchParams.get('live_id');
 
     const { data: allSongs = [] } = useSongs();
+    
+    // Debounce searchQuery
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    const { data: searchResults = [] } = useSearchSongs(debouncedQuery);
+
     // selectedLiveId が変更された場合はそちらの詳細を表示する
     const { data: liveInfo = null } = useLiveDetail(selectedLiveId || liveId);
     const { data: tourLives = [] } = useLives({
@@ -62,30 +69,6 @@ const SetlistPredictionCreate = () => {
         if (liveId) setSelectedLiveId(liveId);
     }, [liveId]);
 
-    // Search effect
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (searchQuery.trim().length > 0) {
-                fetchSongs(searchQuery);
-            } else {
-                setSearchResults([]);
-            }
-        }, 300); // debounce
-        return () => clearTimeout(timer);
-    }, [searchQuery]);
-
-    const fetchSongs = async (q) => {
-        try {
-            const res = await fetch(`/api/songs?q=${encodeURIComponent(q)}`);
-            if (res.ok) {
-                const data = await res.json();
-                setSearchResults(data);
-            }
-        } catch (err) {
-            console.error('Fetch songs failed:', err);
-        }
-    };
-
     const handleAddSong = (song) => {
         if (selectedSongs.length >= 30) {
             alert("予想曲は最大30曲までです。");
@@ -98,7 +81,6 @@ const SetlistPredictionCreate = () => {
         };
         setSelectedSongs([...selectedSongs, newEntry]);
         setSearchQuery('');
-        setSearchResults([]);
     };
 
     const handleSelectSong = (e) => {

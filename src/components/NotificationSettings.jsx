@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Bell, BellRing, BellOff, Loader } from 'lucide-react';
+import { apiClient } from '../lib/apiClient';
 
 /**
  * 通知設定コンポーネント
@@ -52,11 +53,7 @@ export default function NotificationSettings() {
             }
 
             // VAPID公開鍵を取得
-            const keyRes = await fetch('/api/push/vapid-public-key');
-            if (!keyRes.ok) {
-                throw new Error('プッシュ通知の設定がサーバーで完了していません');
-            }
-            const { publicKey } = await keyRes.json();
+            const { publicKey } = await apiClient.get('/api/push/vapid-public-key');
 
             // Service Workerの準備を待つ
             const registration = await navigator.serviceWorker.ready;
@@ -68,19 +65,7 @@ export default function NotificationSettings() {
             });
 
             // サーバーに購読情報を送信
-            const token = localStorage.getItem('token');
-            const headers = { 'Content-Type': 'application/json' };
-            if (token) headers.token = token;
-
-            const res = await fetch('/api/push/subscribe', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({ subscription })
-            });
-
-            if (!res.ok) {
-                throw new Error('購読の登録に失敗しました');
-            }
+            await apiClient.post('/api/push/subscribe', { subscription });
 
             setIsSubscribed(true);
         } catch (err) {
@@ -101,11 +86,7 @@ export default function NotificationSettings() {
 
             if (subscription) {
                 // サーバーから削除
-                await fetch('/api/push/unsubscribe', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ endpoint: subscription.endpoint })
-                });
+                await apiClient.post('/api/push/unsubscribe', { endpoint: subscription.endpoint });
 
                 // ブラウザの購読を解除
                 await subscription.unsubscribe();
