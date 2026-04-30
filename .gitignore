@@ -27,6 +27,9 @@ dist-ssr
 .env
 .env.production
 
+# Temp data exports
+User*.json
+
 # Development/Debug Scripts (temporary)
 server/check_*.js
 server/debug_*.js
