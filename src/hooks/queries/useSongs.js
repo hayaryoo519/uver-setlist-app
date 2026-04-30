@@ -17,3 +17,21 @@ export const useSongDetail = (id) =>
     staleTime: STALE_TIMES.songs,
     enabled: !!id,
   })
+
+export const useSongStats = (id) => {
+  const encodedId = id ? encodeURIComponent(id.toString().replace(/\s+/g, '')) : null
+  return useQuery({
+    queryKey: [...queryKeys.songs.detail(id), 'stats'],
+    queryFn: () => apiClient.get(`/api/songs/${encodedId}/stats`),
+    staleTime: STALE_TIMES.songs,
+    enabled: !!id,
+  })
+}
+
+export const useSongImage = (title, options = {}) =>
+  useQuery({
+    queryKey: ['song-image', title],
+    queryFn: () => apiClient.get(`/api/music/song-image/${encodeURIComponent(title)}`),
+    staleTime: STALE_TIMES.songs,
+    enabled: !!title && options.enabled !== false,
+  })
