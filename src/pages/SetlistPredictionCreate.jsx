@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom';
+import { useSongs } from '../hooks/queries/useSongs';
+import { useLiveDetail } from '../hooks/queries/useLives';
+import { useLives } from '../hooks/queries/useLives';
+import { useCreatePrediction } from '../hooks/queries/usePredictions';
 import {
     DndContext,
     closestCenter,
@@ -23,18 +27,23 @@ import { DISCOGRAPHY } from '../data/discography';
 
 const SetlistPredictionCreate = () => {
     const [selectedSongs, setSelectedSongs] = useState([]); // [{ uniqueId: '...', song: { id: 1, title: '...' } }]
-    const [allSongs, setAllSongs] = useState([]); // Array of all songs for the select box
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
-    const [isSaving, setIsSaving] = useState(false);
-    const [liveInfo, setLiveInfo] = useState(null); // ライブ情報
-    const [tourLives, setTourLives] = useState([]); // 同じツアーのライブ一覧
     const [selectedLiveId, setSelectedLiveId] = useState(null); // 選択中のライブID
     const { currentUser } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const [searchParams] = useSearchParams();
     const liveId = searchParams.get('live_id');
+
+    const { data: allSongs = [] } = useSongs();
+    // selectedLiveId が変更された場合はそちらの詳細を表示する
+    const { data: liveInfo = null } = useLiveDetail(selectedLiveId || liveId);
+    const { data: tourLives = [] } = useLives({
+        tour_name: liveInfo?.tour_name,
+        enabled: !!liveInfo?.tour_name,
+    });
+    const createPrediction = useCreatePrediction();
 
     // Dnd-kit sensors
     const sensors = useSensors(
@@ -48,52 +57,10 @@ const SetlistPredictionCreate = () => {
         })
     );
 
-    // Initial check for Auth - Now handled by ProtectedRoute
+    // liveId が変わったら selectedLiveId も同期
     useEffect(() => {
-        fetchAllSongs();
-        // ライブ情報を取得
-        if (liveId) {
-            setSelectedLiveId(liveId);
-            fetchLiveInfo(liveId);
-        }
+        if (liveId) setSelectedLiveId(liveId);
     }, [liveId]);
-
-    const fetchLiveInfo = async (id) => {
-        try {
-            const res = await fetch(`/api/lives/${id}`);
-            if (res.ok) {
-                const data = await res.json();
-                setLiveInfo(data);
-
-                // 同じツアーの別日程を取得
-                if (data.tour_name) {
-                    const tourRes = await fetch(`/api/lives?tour_name=${encodeURIComponent(data.tour_name)}`);
-                    if (tourRes.ok) {
-                        const tourData = await tourRes.json();
-                        // サーバー側でツアー名完全一致済み。日付順にソートしてセット
-                        tourData.sort((a, b) => new Date(a.date) - new Date(b.date));
-                        setTourLives(tourData);
-                    }
-                }
-            }
-        } catch (err) {
-            console.error('Fetch live info failed:', err);
-        }
-    };
-
-    const fetchAllSongs = async () => {
-        try {
-            const res = await fetch('/api/songs'); // Assuming this returns all songs if no 'q' is provided
-            if (res.ok) {
-                const data = await res.json();
-                // Optionally sort songs by title alphabetically or id
-                data.sort((a, b) => a.title.localeCompare(b.title, 'ja'));
-                setAllSongs(data);
-            }
-        } catch (err) {
-            console.error('Fetch all songs failed:', err);
-        }
-    };
 
     // Search effect
     useEffect(() => {
@@ -161,41 +128,24 @@ const SetlistPredictionCreate = () => {
         }
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
         if (selectedSongs.length === 0) {
             alert("1曲以上の楽曲を選択してください。");
             return;
         }
 
-        setIsSaving(true);
-        try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('/api/predictions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'token': token
-                },
-                body: JSON.stringify({
-                    title: 'セットリスト予想',
-                    songs: selectedSongs.map(s => s.song.id),
-                    live_id: selectedLiveId ? parseInt(selectedLiveId) : null
-                })
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                navigate(`/predictions/${data.id}`);
-            } else {
-                alert("予想の保存に失敗しました。");
+        createPrediction.mutate(
+            {
+                title: 'セットリスト予想',
+                songs: selectedSongs.map(s => s.song.id),
+                live_id: selectedLiveId ? parseInt(selectedLiveId) : null,
+            },
+            {
+                onSuccess: (data) => navigate(`/predictions/${data.id}`),
+                onError: () => alert("予想の保存に失敗しました。"),
             }
-        } catch (error) {
-            console.error('Save prediction failed:', error);
-            alert("予期せぬエラーが発生しました。");
-        } finally {
-            setIsSaving(false);
-        }
+        );
     };
 
     if (!currentUser) return null;
@@ -227,13 +177,7 @@ const SetlistPredictionCreate = () => {
                                 </label>
                                 <select
                                     value={selectedLiveId || ''}
-                                    onChange={(e) => {
-                                        const newId = e.target.value;
-                                        setSelectedLiveId(newId);
-                                        // 選択したライブの情報に更新（UI表示用）
-                                        const selected = tourLives.find(l => l.id.toString() === newId);
-                                        if (selected) setLiveInfo(selected);
-                                    }}
+                                    onChange={(e) => setSelectedLiveId(e.target.value)}
                                     className="bg-slate-800 border border-slate-700 text-white text-sm rounded-md px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer flex-1 min-w-0"
                                 >
                                     {tourLives.map(l => (
@@ -337,10 +281,10 @@ const SetlistPredictionCreate = () => {
 
                         <button
                             onClick={handleSubmit}
-                            disabled={isSaving || selectedSongs.length === 0}
+                            disabled={createPrediction.isPending || selectedSongs.length === 0}
                             className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all mt-4"
                         >
-                            {isSaving ? '保存中...' : <><Save size={20} /> 予想を保存して公開する</>}
+                            {createPrediction.isPending ? '保存中...' : <><Save size={20} /> 予想を保存して公開する</>}
                         </button>
                     </div>
 

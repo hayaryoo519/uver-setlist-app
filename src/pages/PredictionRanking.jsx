@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { Heart, Plus, Calendar, User, Sparkles, Eye, PenTool, MapPin } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/Layout/PageHeader';
 import SEO from '../components/SEO';
+import { usePredictableLives, usePredictions, useLikePrediction } from '../hooks/queries/usePredictions';
+import { useLiveDetail } from '../hooks/queries/useLives';
+import { useLives } from '../hooks/queries/useLives';
 
 const PredictionRanking = () => {
-    const [predictions, setPredictions] = useState([]);
-    const [predictableLives, setPredictableLives] = useState([]);
-    const [myPredictions, setMyPredictions] = useState([]);
     const [portalTab, setPortalTab] = useState('upcoming'); // 'upcoming' | 'mine'
-    const [isLoading, setIsLoading] = useState(true);
+    const [sortBy, setSortBy] = useState('popular');
     const { currentUser } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -21,117 +21,36 @@ const PredictionRanking = () => {
     // 戻り先のラベルとパスを決定
     let backLabel = 'セトリ予想一覧へ';
     let backPath = '/predictions';
-
     if (fromPath?.startsWith('/live/')) {
         backLabel = 'ライブ詳細に戻る';
         backPath = fromPath;
     }
-    const [liveInfo, setLiveInfo] = useState(null);
-    const [tourLives, setTourLives] = useState([]);
 
+    // --- クエリ ---
+    const { data: predictableLives = [], isLoading: predictableLivesLoading } = usePredictableLives();
+    const { data: predictions = [], isLoading: predictionsLoading } = usePredictions({
+        liveId,
+        sort: sortBy,
+        enabled: !!liveId,
+    });
+    const { data: myPredictions = [], isLoading: myPredictionsLoading } = usePredictions({
+        mine: true,
+        sort: 'new',
+        enabled: !liveId && portalTab === 'mine' && !!currentUser,
+    });
+    const { data: liveInfo = null } = useLiveDetail(liveId);
+    const { data: tourLives = [] } = useLives({
+        tour_name: liveInfo?.tour_name,
+        enabled: !!liveInfo?.tour_name,
+    });
 
-    const [sortBy, setSortBy] = useState('popular');
+    const isLoading = liveId
+        ? predictionsLoading
+        : portalTab === 'mine' ? myPredictionsLoading : predictableLivesLoading;
 
-    useEffect(() => {
-        if (liveId) {
-            fetchPredictions();
-            fetchLiveInfo();
-        } else {
-            if (portalTab === 'upcoming') {
-                fetchPredictableLives();
-            } else if (portalTab === 'mine') {
-                fetchMyPredictions();
-            }
-        }
-    }, [liveId, sortBy, portalTab]);
+    const likeMutation = useLikePrediction();
 
-    const fetchPredictableLives = async () => {
-        setIsLoading(true);
-        try {
-            const res = await fetch('/api/predictions/lives');
-            if (res.ok) {
-                const data = await res.json();
-                setPredictableLives(data);
-            }
-        } catch (error) {
-            console.error('Failed to fetch predictable lives', error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const fetchMyPredictions = async () => {
-        setIsLoading(true);
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                if (window.confirm("自分の予想を見るにはログインが必要です。\nログインページに移動しますか？")) {
-                    navigate('/login', { state: { from: location.pathname } });
-                }
-                return;
-            }
-            const url = `/api/predictions?mine=true&sort=new`;
-            const res = await fetch(url, {
-                headers: { 'token': token }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setMyPredictions(data);
-            } else {
-                console.error('Failed to fetch my predictions');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const fetchLiveInfo = async () => {
-        try {
-            const res = await fetch(`/api/lives/${liveId}`);
-            if (res.ok) {
-                const data = await res.json();
-                setLiveInfo(data);
-
-                // 同じツアーのライブ一覧を取得
-                if (data.tour_name) {
-                    const tourRes = await fetch(`/api/lives?tour_name=${encodeURIComponent(data.tour_name)}`);
-                    if (tourRes.ok) {
-                        const tourData = await tourRes.json();
-                        // 日付昇順にソート
-                        tourData.sort((a, b) => new Date(a.date) - new Date(b.date));
-                        setTourLives(tourData);
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Failed to fetch live info', error);
-        }
-    };
-
-    const fetchPredictions = async () => {
-        setIsLoading(true);
-        try {
-            const token = localStorage.getItem('token');
-            const url = `/api/predictions?live_id=${liveId}&sort=${sortBy}`;
-            const res = await fetch(url, {
-                headers: token ? { 'token': token } : {}
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setPredictions(data);
-            } else {
-                console.error('Failed to fetch predictions');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleLike = async (e, id) => {
+    const handleLike = (e, id) => {
         e.preventDefault();
         e.stopPropagation();
 
@@ -142,32 +61,7 @@ const PredictionRanking = () => {
             return;
         }
 
-        try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`/api/predictions/${id}/like`, {
-                method: 'POST',
-                headers: {
-                    'token': token
-                }
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                // Update local state
-                setPredictions(prev => prev.map(p => {
-                    if (p.id === id) {
-                        return {
-                            ...p,
-                            is_liked: data.liked,
-                            like_count: data.liked ? p.like_count + 1 : p.like_count - 1
-                        };
-                    }
-                    return p;
-                }));
-            }
-        } catch (error) {
-            console.error('Error toggling like:', error);
-        }
+        likeMutation.mutate(id);
     };
 
     // 自分の投稿をトップに持ってくるためのソート済み配列
