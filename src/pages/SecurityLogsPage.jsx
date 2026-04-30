@@ -5,6 +5,7 @@ import DailyLogsView from '../components/Admin/DailyLogsView';
 import WeeklyAnalysisView from '../components/Admin/WeeklyAnalysisView';
 import { Calendar, BarChart3, Trash2, Loader } from 'lucide-react';
 import SEO from '../components/SEO';
+import { apiClient } from '../lib/apiClient';
 
 export default function SecurityLogsPage() {
     const { currentUser } = useAuth();
@@ -23,33 +24,12 @@ export default function SecurityLogsPage() {
         setIsLoading(true);
         setViewMode('daily');
         setCleanupResult(null);
-
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('認証トークンが見つかりません。再度ログインしてください。');
-                navigate('/login', { state: { from: location } });
-                return;
-            }
-
-            const res = await fetch('/api/logs/recent', {
-                headers: { token }
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                setRecentLogs(data.logs);
-            } else {
-                if (res.status === 403 || res.status === 401) {
-                    alert('認証エラー：再ログインが必要です。');
-                    navigate('/login', { state: { from: location } });
-                    return;
-                }
-                alert('ログの取得に失敗しました');
-            }
+            const data = await apiClient.get('/api/logs/recent');
+            setRecentLogs(data.logs);
         } catch (err) {
             console.error(err);
-            alert('エラーが発生しました');
+            alert('ログの取得に失敗しました');
         } finally {
             setIsLoading(false);
         }
@@ -59,34 +39,12 @@ export default function SecurityLogsPage() {
         setIsLoading(true);
         setViewMode('weekly');
         setCleanupResult(null);
-
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('認証トークンが見つかりません。再度ログインしてください。');
-                navigate('/login', { state: { from: location } });
-                return;
-            }
-
-            const res = await fetch('/api/logs/analysis', {
-                headers: { token }
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                setAnalysisData(data);
-            } else {
-                if (res.status === 403 || res.status === 401) {
-                    alert('認証エラー：再ログインが必要です。');
-                    navigate('/login', { state: { from: location } });
-                    return;
-                }
-                const errorData = await res.json().catch(() => ({}));
-                alert(`分析データの取得に失敗しました: ${errorData.message || res.statusText}`);
-            }
+            const data = await apiClient.get('/api/logs/analysis');
+            setAnalysisData(data);
         } catch (err) {
             console.error(err);
-            alert('エラーが発生しました');
+            alert('分析データの取得に失敗しました');
         } finally {
             setIsLoading(false);
         }
@@ -96,26 +54,14 @@ export default function SecurityLogsPage() {
         if (!window.confirm('30日以上前のログを削除しますか？\nこの操作は取り消せません。')) {
             return;
         }
-
         setIsLoading(true);
         setViewMode(null);
-
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('/api/logs/cleanup', {
-                method: 'DELETE',
-                headers: { token }
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                setCleanupResult(data);
-            } else {
-                alert('ログの削除に失敗しました');
-            }
+            const data = await apiClient.delete('/api/logs/cleanup');
+            setCleanupResult(data);
         } catch (err) {
             console.error(err);
-            alert('エラーが発生しました');
+            alert('ログの削除に失敗しました');
         } finally {
             setIsLoading(false);
         }

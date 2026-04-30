@@ -1,8 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { setlists } from '../data/setlists'; // Keep using local setlist data for now
 import { lives as localLives } from '../data/lives'; // Fallback or reference
 import { DISCOGRAPHY } from '../data/discography';
+import { useAttendedLives } from './queries/useUser';
+import { useSongs } from './queries/useSongs';
 
 // Logic to calculate stats from a list of Live Objects
 export const useLiveStatsLogic = (myLives, allSongs = []) => {
@@ -181,57 +183,13 @@ export const useLiveStatsLogic = (myLives, allSongs = []) => {
 
 export const useLiveStats = () => {
     const { currentUser } = useAuth();
-    const [attendedLives, setAttendedLives] = useState([]);
-    const [allSongs, setAllSongs] = useState([]); // Store fetched songs
-    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (!currentUser) {
-            setLoading(false);
-            return;
-        }
+    const { data: attendedLives = [], isLoading: livesLoading } = useAttendedLives(!!currentUser);
+    const { data: allSongs = [], isLoading: songsLoading } = useSongs();
 
-        const fetchData = async () => {
-            try {
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    setLoading(false);
-                    return;
-                }
+    const loading = livesLoading || songsLoading;
 
-                // Fetch Attended Lives
-                const livesRes = await fetch('/api/users/me/attended_lives', {
-                    headers: { 'token': token }
-                });
-
-                // Fetch All Songs (Metadata)
-                const songsRes = await fetch('/api/songs', {
-                    headers: { 'token': token } // Optional auth if required
-                });
-
-                if (livesRes.ok && songsRes.ok) {
-                    const livesData = await livesRes.json();
-                    const songsData = await songsRes.json();
-                    setAttendedLives(livesData);
-                    setAllSongs(songsData);
-                } else {
-                    console.error("Failed to fetch data");
-                }
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-    }, [currentUser]);
-
-    // Memoize the logic result, including allSongs dependency
     const stats = useMemo(() => useLiveStatsLogic(attendedLives, allSongs), [attendedLives, allSongs]);
 
-    return {
-        ...stats,
-        loading
-    };
+    return { ...stats, loading };
 };

@@ -2,48 +2,35 @@ import React, { useState } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/Auth/AuthLayout';
 import { Lock, ArrowRight, Loader, CheckCircle, AlertTriangle } from 'lucide-react';
+import { useResetPassword } from '../hooks/queries/useAuthMutations';
 
 const ResetPassword = () => {
     const [searchParams] = useSearchParams();
     const token = searchParams.get('token');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
     const [status, setStatus] = useState('input'); // input, success, error
     const [message, setMessage] = useState('');
     const navigate = useNavigate();
+    const mutation = useResetPassword();
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
         if (password !== confirmPassword) {
             setMessage('パスワードが一致しません');
             return;
         }
-
-        setIsLoading(true);
         setMessage('');
-
-        try {
-            const response = await fetch('/api/auth/reset-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token, password })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
+        mutation.mutate({ token, password }, {
+            onSuccess: (data) => {
                 setStatus('success');
                 setMessage(data.message);
                 setTimeout(() => navigate('/login'), 3000);
-            } else {
-                setMessage(data.message || 'パスワードの再設定に失敗しました。');
-            }
-        } catch (err) {
-            setMessage('サーバーとの通信に失敗しました。');
-        } finally {
-            setIsLoading(false);
-        }
+            },
+            onError: (err) => {
+                setMessage(err.data?.message || 'パスワードの再設定に失敗しました。');
+            },
+        });
     };
 
     if (!token) {
@@ -143,7 +130,7 @@ const ResetPassword = () => {
 
                 <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={mutation.isPending}
                     style={{
                         width: '100%',
                         padding: '14px',
@@ -153,16 +140,16 @@ const ResetPassword = () => {
                         fontSize: '1rem',
                         border: 'none',
                         borderRadius: '8px',
-                        cursor: isLoading ? 'not-allowed' : 'pointer',
+                        cursor: mutation.isPending ? 'not-allowed' : 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '8px',
                         transition: 'transform 0.1s, opacity 0.2s',
-                        opacity: isLoading ? 0.7 : 1
+                        opacity: mutation.isPending ? 0.7 : 1
                     }}
                 >
-                    {isLoading ? <Loader size={20} className="animate-spin" /> : <>パスワードを更新 <ArrowRight size={20} /></>}
+                    {mutation.isPending ? <Loader size={20} className="animate-spin" /> : <>パスワードを更新 <ArrowRight size={20} /></>}
                 </button>
             </form>
         </AuthLayout>

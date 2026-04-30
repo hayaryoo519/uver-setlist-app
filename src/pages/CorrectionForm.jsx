@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
 import { AlertTriangle, Send, CheckCircle, ArrowLeft, Info } from 'lucide-react';
+import { useSubmitCorrection } from '../hooks/queries/useCorrections';
 import './CorrectionForm.css';
 
 const CORRECTION_TYPES = [
@@ -28,70 +29,41 @@ function CorrectionForm() {
     const [correctionType, setCorrectionType] = useState('');
     const [description, setDescription] = useState('');
 
-    // UI State
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
-
-    // Redirect if not logged in - Now handled by ProtectedRoute in App.jsx
+    const submitCorrection = useSubmitCorrection();
 
     if (!currentUser) return null; // Prevent flash
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
         setError('');
-        setSuccess(false);
 
-        // Validation
-        if (!correctionType) {
-            setError('修正対象を選択してください');
-            return;
-        }
-
+        if (!correctionType) { setError('修正対象を選択してください'); return; }
         if (description.length < MIN_DESCRIPTION_LENGTH) {
             setError(`詳細説明は${MIN_DESCRIPTION_LENGTH}文字以上で入力してください`);
             return;
         }
 
-        setIsSubmitting(true);
-
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch('/api/corrections', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'token': token
+        submitCorrection.mutate(
+            {
+                live_date: liveDate || null,
+                live_venue: liveVenue || null,
+                live_title: liveTitle || null,
+                correction_type: correctionType,
+                description,
+            },
+            {
+                onSuccess: () => {
+                    setSuccess(true);
+                    setLiveDate(''); setLiveVenue(''); setLiveTitle('');
+                    setCorrectionType(''); setDescription('');
                 },
-                body: JSON.stringify({
-                    live_date: liveDate || null,
-                    live_venue: liveVenue || null,
-                    live_title: liveTitle || null,
-                    correction_type: correctionType,
-                    description: description
-                })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || '送信に失敗しました');
+                onError: (err) => {
+                    setError(err.data?.message || '送信に失敗しました');
+                },
             }
-
-            setSuccess(true);
-
-            // Clear form
-            setLiveDate('');
-            setLiveVenue('');
-            setLiveTitle('');
-            setCorrectionType('');
-            setDescription('');
-
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setIsSubmitting(false);
-        }
+        );
     };
 
     if (success) {
@@ -222,9 +194,9 @@ function CorrectionForm() {
                     <button
                         type="submit"
                         className="correction-submit-btn"
-                        disabled={isSubmitting}
+                        disabled={submitCorrection.isPending}
                     >
-                        {isSubmitting ? '送信中...' : (
+                        {submitCorrection.isPending ? '送信中...' : (
                             <>
                                 <Send size={18} /> 依頼を送信する
                             </>
