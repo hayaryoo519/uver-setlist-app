@@ -4,7 +4,7 @@ import { ApiError } from '../lib/apiClient'
 export const useApiError = () => {
   const { showToast } = useToast()
 
-  return (error) => {
+  return (error: unknown): void => {
     if (!(error instanceof ApiError)) {
       console.error('Unexpected error:', error)
       showToast('予期しないエラーが発生しました', 'error')
