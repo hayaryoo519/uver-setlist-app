@@ -1,40 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Heart, User, Calendar, MapPin, Music, ArrowLeft, Share2, Sparkles, ChevronRight, Copy } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { usePredictionDetail, useLikePrediction } from '../hooks/queries/usePredictions';
 import PageHeader from '../components/Layout/PageHeader';
 import SEO from '../components/SEO';
 
 const SetlistPredictionDetail = () => {
     const { id } = useParams();
-    const [prediction, setPrediction] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
     const { currentUser } = useAuth();
     const navigate = useNavigate();
 
-    useEffect(() => {
-        fetchPredictionDetail();
-    }, [id]);
-
-    const fetchPredictionDetail = async () => {
-        setIsLoading(true);
-        try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`/api/predictions/${id}`, {
-                headers: token ? { 'token': token } : {}
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setPrediction(data);
-            } else {
-                console.error('Failed to fetch prediction detail');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const { data: prediction, isLoading } = usePredictionDetail(id);
+    const likeMutation = useLikePrediction();
 
     const handleLike = async () => {
         if (!currentUser) {
@@ -45,22 +23,7 @@ const SetlistPredictionDetail = () => {
         }
 
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`/api/predictions/${id}/like`, {
-                method: 'POST',
-                headers: {
-                    'token': token
-                }
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                setPrediction(prev => ({
-                    ...prev,
-                    is_liked: data.liked,
-                    like_count: data.liked ? prev.like_count + 1 : prev.like_count - 1
-                }));
-            }
+            await likeMutation.mutateAsync(id);
         } catch (error) {
             console.error('Error toggling like:', error);
         }

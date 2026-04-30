@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { AlertTriangle, Send, X, CheckCircle, List, Play, RefreshCw, AlertCircle } from 'lucide-react';
+import { useSongs } from '../hooks/queries/useSongs';
+import { useSubmitCorrection } from '../hooks/queries/useCorrections';
 import './CorrectionModal.css';
 
 const CORRECTION_TYPES = [
@@ -17,31 +19,16 @@ function CorrectionModal({ isOpen, onClose, liveId, liveDate, liveVenue, liveTit
     const { currentUser } = useAuth();
     const [correctionType, setCorrectionType] = useState('');
     const [description, setDescription] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
 
     // Setlist Structured Data State
     const [rawSetlist, setRawSetlist] = useState('');
     const [parsedSetlist, setParsedSetlist] = useState(null);
-    const [allSongs, setAllSongs] = useState([]);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-    React.useEffect(() => {
-        if (correctionType === 'setlist' && allSongs.length === 0) {
-            const fetchSongs = async () => {
-                try {
-                    const token = localStorage.getItem('token');
-                    const res = await fetch('/api/songs', { headers: { token } });
-                    if (res.ok) {
-                        const data = await res.json();
-                        setAllSongs(data);
-                    }
-                } catch (err) { console.error('Failed to load songs'); }
-            };
-            fetchSongs();
-        }
-    }, [correctionType]);
+    const { data: allSongs = [] } = useSongs({ enabled: isOpen && correctionType === 'setlist' });
+    const correctionMutation = useSubmitCorrection();
 
     // Auto-analyze effect
     React.useEffect(() => {
@@ -111,29 +98,13 @@ function CorrectionModal({ isOpen, onClose, liveId, liveDate, liveVenue, liveTit
             return;
         }
 
-        setIsSubmitting(true);
-
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch('/api/corrections', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'token': token
-                },
-                body: JSON.stringify({
-                    live_id: liveId,
-                    correction_type: correctionType,
-                    description: description,
-                    suggested_data: correctionType === 'setlist' && parsedSetlist ? { setlist: parsedSetlist } : null
-                })
+            await correctionMutation.mutateAsync({
+                live_id: liveId,
+                correction_type: correctionType,
+                description: description,
+                suggested_data: correctionType === 'setlist' && parsedSetlist ? { setlist: parsedSetlist } : null
             });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || '送信に失敗しました');
-            }
 
             setSuccess(true);
             // Auto close after 2 seconds
@@ -142,9 +113,7 @@ function CorrectionModal({ isOpen, onClose, liveId, liveDate, liveVenue, liveTit
             }, 2000);
 
         } catch (err) {
-            setError(err.message);
-        } finally {
-            setIsSubmitting(false);
+            setError(err.response?.data?.message || err.message || '送信に失敗しました');
         }
     };
 
@@ -281,9 +250,9 @@ function CorrectionModal({ isOpen, onClose, liveId, liveDate, liveVenue, liveTit
                                 <button
                                     type="submit"
                                     className="submit-btn"
-                                    disabled={isSubmitting}
+                                    disabled={correctionMutation.isPending}
                                 >
-                                    {isSubmitting ? '送信中...' : (
+                                    {correctionMutation.isPending ? '送信中...' : (
                                         <>
                                             <Send size={16} /> 送信
                                         </>

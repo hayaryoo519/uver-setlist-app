@@ -100,11 +100,13 @@ export interface Correction {
 
 // 修正依頼作成リクエスト
 export interface CorrectionInput {
-  live_date: string | null
-  live_venue: string | null
-  live_title: string | null
+  live_id?: number
+  live_date?: string | null
+  live_venue?: string | null
+  live_title?: string | null
   correction_type: string
   description: string
+  suggested_data?: any
 }
 
 // ライブ一覧フィルターパラメータ

@@ -30,9 +30,18 @@ export const useLikePrediction = () =>
   useMutation({
     mutationFn: (predictionId: number | string) =>
       apiClient.post(`/api/predictions/${predictionId}/like`),
-    onSuccess: () => {
+    onSuccess: (_, predictionId) => {
       queryClient.invalidateQueries({ queryKey: ['predictions'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.predictions.detail(predictionId) })
     },
+  })
+
+export const usePredictionDetail = (id: number | string | undefined) =>
+  useQuery({
+    queryKey: queryKeys.predictions.detail(id!),
+    queryFn: () => apiClient.get<Prediction>(`/api/predictions/${id}`),
+    staleTime: STALE_TIMES.predictions,
+    enabled: !!id,
   })
 
 export const useCreatePrediction = () =>

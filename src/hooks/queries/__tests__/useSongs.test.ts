@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { server } from '../../../test/mocks/server'
 import { createWrapper } from '../../../test/utils'
 import { mockSongs } from '../../../test/mocks/data'
-import { useSongs, useSongDetail, useSongStats, useSongImage } from '../useSongs'
+import { useSongs, useSongDetail, useSongStats, useSongImage, useAlbumImage, useSearchSongs } from '../useSongs'
 
 describe('useSongs', () => {
   it('楽曲一覧を取得する', async () => {
@@ -79,5 +79,32 @@ describe('useSongImage', () => {
       wrapper: createWrapper(),
     })
     expect(result.current.isFetching).toBe(false)
+  })
+})
+
+describe('useAlbumImage', () => {
+  it('アルバム画像 URL を取得する', async () => {
+    const { result } = renderHook(() => useAlbumImage('BUGRIGHT'), { wrapper: createWrapper() })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data?.image_url).toBe('https://example.com/image.jpg')
+  })
+})
+
+describe('useSearchSongs', () => {
+  it('クエリを指定して楽曲を検索する', async () => {
+    server.use(
+      http.get('/api/songs', ({ request }) => {
+        const url = new URL(request.url)
+        if (url.searchParams.get('q') === 'IMP') {
+          return HttpResponse.json([mockSongs[0]])
+        }
+        return HttpResponse.json([])
+      })
+    )
+
+    const { result } = renderHook(() => useSearchSongs('IMP'), { wrapper: createWrapper() })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data).toHaveLength(1)
+    expect(result.current.data![0].title).toBe('IMPACT')
   })
 })

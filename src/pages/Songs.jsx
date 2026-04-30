@@ -2,45 +2,15 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { DISCOGRAPHY } from '../data/discography';
 import { useGlobalStats } from '../hooks/useGlobalStats';
+import { useAlbumImage } from '../hooks/queries/useSongs';
 import SEO from '../components/SEO';
-import { Music, Calendar, Search, Filter, ArrowUpDown, ChevronRight } from 'lucide-react';
+import { Calendar, Search, Filter, ArrowUpDown, ChevronRight } from 'lucide-react';
 import ImageWithFallback from '../components/common/ImageWithFallback';
-
-// Simple normalization helper (client-side version)
-const normalizeSongTitle = (title) => {
-    if (!title) return "";
-    return title
-        .toLowerCase()
-        .replace(/[!'#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/g, "")
-        .replace(/\s+/g, "");
-};
 
 // Release Item Component to handle its own image fetching if needed
 const ReleaseItem = ({ release, index, songDataMap }) => {
-    const [albumImage, setAlbumImage] = useState(null);
-    const [isFetching, setIsFetching] = useState(false);
-
-    useEffect(() => {
-        // Always fetch from the dedicated album image API (uses album_cache)
-        const fetchAlbumImage = async () => {
-            if (isFetching || albumImage) return;
-            setIsFetching(true);
-            try {
-                const res = await fetch(`/api/music/album-image/${encodeURIComponent(release.title)}`);
-                if (!res.ok) throw new Error('API response error');
-                const data = await res.json();
-                if (data.image_url) {
-                    setAlbumImage(data.image_url);
-                }
-            } catch (err) {
-                console.error(`Failed to fetch album image for ${release.title}:`, err);
-            } finally {
-                setIsFetching(false);
-            }
-        };
-
-        fetchAlbumImage();
-    }, [release.title]);
+    const { data, isLoading: isFetching } = useAlbumImage(release.title);
+    const albumImage = data?.image_url;
 
     return (
         <div

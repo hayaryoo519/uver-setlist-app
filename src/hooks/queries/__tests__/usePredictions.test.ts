@@ -9,6 +9,7 @@ import {
   usePredictableLives,
   useLikePrediction,
   useCreatePrediction,
+  usePredictionDetail,
 } from '../usePredictions'
 
 describe('usePredictableLives', () => {
@@ -98,5 +99,23 @@ describe('useCreatePrediction', () => {
     const { result } = renderHook(() => useCreatePrediction(), { wrapper: createWrapper() })
     result.current.mutate({ live_id: 1, content: 'テスト' })
     await waitFor(() => expect(result.current.isError).toBe(true))
+  })
+})
+
+describe('usePredictionDetail', () => {
+  it('特定の予想詳細を取得する', async () => {
+    const mockDetail = mockPredictions[0]
+    server.use(
+      http.get('/api/predictions/:id', () => {
+        return HttpResponse.json(mockDetail)
+      })
+    )
+
+    const { result } = renderHook(() => usePredictionDetail(mockDetail.id), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data?.id).toBe(mockDetail.id)
   })
 })
