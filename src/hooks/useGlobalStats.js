@@ -1,5 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { DISCOGRAPHY } from '../data/discography';
+import { useLives } from './queries/useLives';
+import { useSongs } from './queries/useSongs';
 
 // Helper for normalization
 const normalizeSongTitle = (title) => {
@@ -9,35 +11,11 @@ const normalizeSongTitle = (title) => {
 };
 
 export const useGlobalStats = () => {
-    const [allSongs, setAllSongs] = useState([]);
-    const [allLives, setAllLives] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const { data: allLives = [], isLoading: livesLoading, error: livesError } = useLives({ include_setlists: true });
+    const { data: allSongs = [], isLoading: songsLoading } = useSongs();
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [livesRes, songsRes] = await Promise.all([
-                    fetch('/api/lives?include_setlists=true'),
-                    fetch('/api/songs')
-                ]);
-
-                if (!livesRes.ok) throw new Error(`Lives API Error: ${livesRes.status}`);
-                if (!songsRes.ok) throw new Error(`Songs API Error: ${songsRes.status}`);
-
-                const livesData = await livesRes.json();
-                const songsData = await songsRes.json();
-                setAllLives(livesData);
-                setAllSongs(songsData);
-            } catch (e) {
-                console.error("Failed to fetch data for global stats", e);
-                setError(e.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, []);
+    const loading = livesLoading || songsLoading;
+    const error = livesError ? livesError.message : null;
 
     const stats = useMemo(() => {
         if (!allLives.length) return null;
