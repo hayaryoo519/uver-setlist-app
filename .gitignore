@@ -30,6 +30,9 @@ dist-ssr
 # Temp data exports
 User*.json
 
+# Coverage reports
+coverage/
+
 # Development/Debug Scripts (temporary)
 server/check_*.js
 server/debug_*.js
