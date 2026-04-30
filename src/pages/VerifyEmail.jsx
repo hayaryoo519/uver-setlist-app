@@ -3,6 +3,7 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/Auth/AuthLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { CheckCircle, XCircle, Loader, ArrowRight } from 'lucide-react';
+import { apiClient, ApiError } from '../lib/apiClient';
 
 const VerifyEmail = () => {
     const [searchParams] = useSearchParams();
@@ -13,54 +14,27 @@ const VerifyEmail = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const verify = async () => {
-            if (!token) {
+        if (!token) {
+            setStatus('error');
+            setMessage('無効なリンクです。');
+            return;
+        }
+
+        apiClient.post('/api/auth/verify-email', { token })
+            .then((data) => {
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                setStatus('success');
+                setTimeout(() => { window.location.href = '/mypage'; }, 3000);
+            })
+            .catch((err) => {
                 setStatus('error');
-                setMessage('無効なリンクです。');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/auth/verify-email', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-
-                    // Auto login? The backend returns a token. 
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
-
-                    setStatus('success');
-
-                    // Auto redirect after 3 seconds
-                    setTimeout(() => {
-                        window.location.href = '/mypage';
-                    }, 3000);
-
-                } else {
-                    const contentType = response.headers.get("content-type");
-                    let errorMsg = '認証に失敗しました。';
-                    if (contentType && contentType.indexOf("application/json") !== -1) {
-                        const errorData = await response.json();
-                        errorMsg = errorData.message || errorMsg;
-                    } else {
-                        errorMsg = await response.text() || errorMsg;
-                    }
-                    setStatus('error');
-                    setMessage(errorMsg);
-                }
-            } catch (err) {
-                console.error(err);
-                setStatus('error');
-                setMessage('サーバーエラーが発生しました。');
-            }
-        };
-
-        verify();
+                setMessage(
+                    err instanceof ApiError
+                        ? (err.data?.message || '認証に失敗しました。')
+                        : 'サーバーエラーが発生しました。'
+                );
+            });
     }, [token]);
 
     return (
