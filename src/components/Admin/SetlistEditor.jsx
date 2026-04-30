@@ -7,6 +7,7 @@ import { CSS } from '@dnd-kit/utilities';
 import BulkImportModal from './BulkImportModal';
 import SetlistSortableItem from './SetlistSortableItem';
 import SongSelector from './SongSelector';
+import { apiClient } from '../../lib/apiClient';
 
 
 const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => {
@@ -50,11 +51,10 @@ const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => 
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const token = localStorage.getItem('token');
-            const headers = { token };
-
-            const liveRes = await fetch(`/api/lives/${liveId}`, { headers });
-            const liveData = await liveRes.json();
+            const [liveData, songsData] = await Promise.all([
+                apiClient.get(`/api/lives/${liveId}`),
+                apiClient.get('/api/songs'),
+            ]);
 
             if (liveData.setlist) {
                 setCurrentSetlist(liveData.setlist.map(item => ({
@@ -64,10 +64,7 @@ const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => 
                 })));
             }
 
-            const songsRes = await fetch('/api/songs', { headers });
-            const songsData = await songsRes.json();
             setAllSongs(songsData);
-
         } catch (err) {
             console.error(err);
             alert("Failed to load data");
@@ -126,20 +123,10 @@ const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => 
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            const token = localStorage.getItem('token');
             const songIds = currentSetlist.map(s => s.id);
-            const res = await fetch(`/api/lives/${liveId}/setlist`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', token },
-                body: JSON.stringify({ songs: songIds })
-            });
-
-            if (res.ok) {
-                alert("Setlist saved successfully!");
-                onClose();
-            } else {
-                alert("Failed to save setlist");
-            }
+            await apiClient.put(`/api/lives/${liveId}/setlist`, { songs: songIds });
+            alert("Setlist saved successfully!");
+            onClose();
         } catch (err) {
             console.error(err);
             alert("Error saving setlist");
