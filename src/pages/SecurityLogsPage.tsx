@@ -12,11 +12,14 @@ export default function SecurityLogsPage() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const [viewMode, setViewMode] = useState(null); // 'daily' | 'weekly' | null
-    const [recentLogs, setRecentLogs] = useState([]);
-    const [analysisData, setAnalysisData] = useState(null);
+    const [viewMode, setViewMode] = useState<'daily' | 'weekly' | null>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [recentLogs, setRecentLogs] = useState<any[]>([]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [analysisData, setAnalysisData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [cleanupResult, setCleanupResult] = useState(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [cleanupResult, setCleanupResult] = useState<any>(null);
 
     // Redirect if not admin - Now handled by ProtectedRoute in App.jsx
 
@@ -25,7 +28,7 @@ export default function SecurityLogsPage() {
         setViewMode('daily');
         setCleanupResult(null);
         try {
-            const data = await apiClient.get('/api/logs/recent');
+            const data = await apiClient.get<{ logs: any[] }>('/api/logs/recent');
             setRecentLogs(data.logs);
         } catch (err) {
             console.error(err);
@@ -73,7 +76,7 @@ export default function SecurityLogsPage() {
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#0f172a', color: '#f1f5f9' }}>
-            <SEO title="セキュリティログ - Admin" />
+            <SEO title="セキュリティログ - Admin" description="" />
 
             <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
                 {/* Back to Admin Link */}

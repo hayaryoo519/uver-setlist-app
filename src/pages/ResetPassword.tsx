@@ -3,6 +3,7 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/Auth/AuthLayout';
 import { Lock, ArrowRight, Loader, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useResetPassword } from '../hooks/queries/useAuthMutations';
+import { ApiError } from '../lib/apiClient';
 
 const ResetPassword = () => {
     const [searchParams] = useSearchParams();
@@ -14,21 +15,21 @@ const ResetPassword = () => {
     const navigate = useNavigate();
     const mutation = useResetPassword();
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (password !== confirmPassword) {
             setMessage('パスワードが一致しません');
             return;
         }
         setMessage('');
-        mutation.mutate({ token, password }, {
+        mutation.mutate({ token: token!, password }, {
             onSuccess: (data) => {
                 setStatus('success');
                 setMessage(data.message);
                 setTimeout(() => navigate('/login'), 3000);
             },
             onError: (err) => {
-                setMessage(err.data?.message || 'パスワードの再設定に失敗しました。');
+                setMessage(err instanceof ApiError ? (err.data?.message ?? 'パスワードの再設定に失敗しました。') : 'パスワードの再設定に失敗しました。');
             },
         });
     };

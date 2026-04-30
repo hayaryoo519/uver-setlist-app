@@ -9,7 +9,7 @@ import SEO from '../components/SEO';
 
 function LiveDetail() {
     const { id } = useParams();
-    const liveId = parseInt(id, 10);
+    const liveId = id ? parseInt(id, 10) : 0;
     const { data: live = null, isLoading: loading } = useLiveDetail(id);
     const { isAttended, addLive, removeLive, loading: attendanceLoading } = useAttendance();
     const { currentUser } = useAuth();
@@ -59,7 +59,7 @@ function LiveDetail() {
     else if (backLink === '/mypage') backLabel = 'My Pageに戻る';
     else if (backLink.startsWith('/song/')) backLabel = '楽曲詳細に戻る';
 
-    const handleBack = (e) => {
+    const handleBack = (e: React.MouseEvent) => {
         e.preventDefault();
         // 戻るボタンがブラウザバック（POP）として機能するように navigate(-1) を使用する。
         // これにより、ScrollToTop の除外ロジックと useScrollRestoration スクリプトが正しく動作する。
@@ -208,7 +208,7 @@ function LiveDetail() {
                         const isPastLive = setlist.length > 0 || new Date(live.date) < new Date(new Date().setHours(0,0,0,0));
                         
                         // 過去のライブで、予想が1件もない場合は非表示にする
-                        if (isPastLive && parseInt(live.prediction_count || 0, 10) === 0) {
+                        if (isPastLive && (live.prediction_count ?? 0) === 0) {
                             return null;
                         }
                         

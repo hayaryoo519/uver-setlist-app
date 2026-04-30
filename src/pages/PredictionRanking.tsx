@@ -29,7 +29,7 @@ const PredictionRanking = () => {
     // --- クエリ ---
     const { data: predictableLives = [], isLoading: predictableLivesLoading } = usePredictableLives();
     const { data: predictions = [], isLoading: predictionsLoading } = usePredictions({
-        liveId,
+        liveId: liveId ?? undefined,
         sort: sortBy,
         enabled: !!liveId,
     });
@@ -38,7 +38,7 @@ const PredictionRanking = () => {
         sort: 'new',
         enabled: !liveId && portalTab === 'mine' && !!currentUser,
     });
-    const { data: liveInfo = null } = useLiveDetail(liveId);
+    const { data: liveInfo = null } = useLiveDetail(liveId ?? undefined);
     const { data: tourLives = [] } = useLives({
         tour_name: liveInfo?.tour_name,
         enabled: !!liveInfo?.tour_name,
@@ -50,7 +50,7 @@ const PredictionRanking = () => {
 
     const likeMutation = useLikePrediction();
 
-    const handleLike = (e, id) => {
+    const handleLike = (e: React.MouseEvent, id: number) => {
         e.preventDefault();
         e.stopPropagation();
 
@@ -90,6 +90,7 @@ const PredictionRanking = () => {
                 <PageHeader
                     title="セトリ予想"
                     subtitle={liveId ? "みんなのセトリ予想" : "受付中のライブ一覧"}
+                    rightElement={null}
                 />
 
                 {!liveId ? (
@@ -217,7 +218,7 @@ const PredictionRanking = () => {
                                                     <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-slate-500 font-medium">
                                                         <div className="flex items-center gap-1.5">
                                                             <Calendar size={12} />
-                                                            {new Date(prediction.live_date).toLocaleDateString('ja-JP')}
+                                                            {prediction.live_date ? new Date(prediction.live_date).toLocaleDateString('ja-JP') : ''}
                                                         </div>
                                                         <div className="flex items-center gap-1.5">
                                                             <MapPin size={12} />
