@@ -63,6 +63,53 @@ describe('useLives', () => {
     expect(result.current.isPending).toBe(true)
     expect(result.current.isFetching).toBe(false)
   })
+
+  it('songIds パラメータを URL クエリに含める', async () => {
+    let requestedUrl = ''
+    server.use(
+      http.get('/api/lives', ({ request }) => {
+        requestedUrl = request.url
+        return HttpResponse.json(mockLives)
+      })
+    )
+    const { result } = renderHook(() => useLives({ songIds: [1, 2] }), {
+      wrapper: createWrapper(),
+    })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(requestedUrl).toContain('songIds=1%2C2')
+  })
+
+  it('startDate / endDate パラメータを URL クエリに含める', async () => {
+    let requestedUrl = ''
+    server.use(
+      http.get('/api/lives', ({ request }) => {
+        requestedUrl = request.url
+        return HttpResponse.json(mockLives)
+      })
+    )
+    const { result } = renderHook(
+      () => useLives({ startDate: '2024-01-01', endDate: '2024-12-31' }),
+      { wrapper: createWrapper() }
+    )
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(requestedUrl).toContain('startDate=2024-01-01')
+    expect(requestedUrl).toContain('endDate=2024-12-31')
+  })
+
+  it('include_setlists パラメータを URL クエリに含める', async () => {
+    let requestedUrl = ''
+    server.use(
+      http.get('/api/lives', ({ request }) => {
+        requestedUrl = request.url
+        return HttpResponse.json(mockLives)
+      })
+    )
+    const { result } = renderHook(() => useLives({ include_setlists: true }), {
+      wrapper: createWrapper(),
+    })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(requestedUrl).toContain('include_setlists=true')
+  })
 })
 
 describe('useLiveDetail', () => {
