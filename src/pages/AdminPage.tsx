@@ -1,12 +1,13 @@
-// @ts-nocheck
 import React, { useState, useEffect, useMemo } from 'react';
 import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown, AlertTriangle, MessageCircle, CheckCircle, BellRing, FileText, Clock } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SetlistEditor from '../components/Admin/SetlistEditor';
 import DraftManager from '../components/Admin/DraftManager';
-import CollectorLogsView from '../components/Admin/CollectorLogsView';
+import CollectorLogsViewRaw from '../components/Admin/CollectorLogsView';
+const CollectorLogsView = CollectorLogsViewRaw as any;
 import { apiClient } from '../lib/apiClient';
+import type { Live, Song, User, Correction } from '../types/api';
 
 const AdminPage = () => {
     const { currentUser } = useAuth();
@@ -22,61 +23,61 @@ const AdminPage = () => {
 
 
     // --- IMPORT STATE ---
-    const [importFile, setImportFile] = useState(null);
-    const [importResult, setImportResult] = useState(null);
+    const [importFile, setImportFile] = useState<File | null>(null);
+    const [importResult, setImportResult] = useState<any>(null);
     const [isImporting, setIsImporting] = useState(false);
 
     // --- USERS STATE ---
-    const [users, setUsers] = useState([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [isLoadingUsers, setIsLoadingUsers] = useState(false);
     const [userSearchTerm, setUserSearchTerm] = useState('');
     const [userSortConfig, setUserSortConfig] = useState({ key: 'created_at', direction: 'desc' });
 
     // --- LIVES STATE ---
-    const [lives, setLives] = useState([]);
+    const [lives, setLives] = useState<Live[]>([]);
     const [isLoadingLives, setIsLoadingLives] = useState(false);
     const [showLiveModal, setShowLiveModal] = useState(false);
-    const [editingLive, setEditingLive] = useState(null);
+    const [editingLive, setEditingLive] = useState<Live | null>(null);
     const [liveFormData, setLiveFormData] = useState({ tour_name: '', title: '', date: '', venue: '', type: 'ONEMAN', special_note: '' });
     const [liveSearchTerm, setLiveSearchTerm] = useState('');
     const [liveSortConfig, setLiveSortConfig] = useState({ key: 'date', direction: 'desc' });
     const [liveYearFilter, setLiveYearFilter] = useState('ALL');
-    const [selectedLiveIds, setSelectedLiveIds] = useState([]);
+    const [selectedLiveIds, setSelectedLiveIds] = useState<number[]>([]);
     const [isDeletingLives, setIsDeletingLives] = useState(false);
 
     // --- IMPORT TO EXISTING LIVE STATE ---
-    const [activeLiveForImport, setActiveLiveForImport] = useState(null);
+    const [activeLiveForImport, setActiveLiveForImport] = useState<Live | null>(null);
     const [showImportModal, setShowImportModal] = useState(false);
 
     // --- SETLIST STATE ---
     const [showSetlistEditor, setShowSetlistEditor] = useState(false);
-    const [selectedLiveForSetlist, setSelectedLiveForSetlist] = useState(null);
+    const [selectedLiveForSetlist, setSelectedLiveForSetlist] = useState<Live | null>(null);
 
     // --- SONGS STATE ---
-    const [songs, setSongs] = useState([]);
+    const [songs, setSongs] = useState<Song[]>([]);
     const [isLoadingSongs, setIsLoadingSongs] = useState(false);
     const [songSearchTerm, setSongSearchTerm] = useState('');
     const [songAlbumFilter, setSongAlbumFilter] = useState('ALL');
     const [songSortConfig, setSongSortConfig] = useState({ key: 'title', direction: 'asc' });
     const [showSongModal, setShowSongModal] = useState(false);
-    const [editingSong, setEditingSong] = useState(null);
+    const [editingSong, setEditingSong] = useState<Song | null>(null);
     const [songFormData, setSongFormData] = useState({ title: '', album: '', release_year: '', mv_url: '', author: '' });
 
     // --- CORRECTIONS STATE ---
-    const [corrections, setCorrections] = useState([]);
+    const [corrections, setCorrections] = useState<any[]>([]);
     const [isLoadingCorrections, setIsLoadingCorrections] = useState(false);
     const [correctionStatusFilter, setCorrectionStatusFilter] = useState('ALL');
 
     // --- COLLECT (SETLIST.FM) STATE ---
-    const [sfmResults, setSfmResults] = useState([]);
+    const [sfmResults, setSfmResults] = useState<any[]>([]);
     const [isSearchingSFM, setIsSearchingSFM] = useState(false);
     const [sfmSearchYear, setSfmSearchYear] = useState(new Date().getFullYear());
     const [sfmSearchKeyword, setSfmSearchKeyword] = useState('');
-    const [sfmPreviewData, setSfmPreviewData] = useState(null);
+    const [sfmPreviewData, setSfmPreviewData] = useState<any>(null);
     const [isImportingSFM, setIsImportingSFM] = useState(false);
 
     // --- COLLECTOR LOGS STATE ---
-    const [collectorLogs, setCollectorLogs] = useState([]);
+    const [collectorLogs, setCollectorLogs] = useState<any[]>([]);
     const [isLoadingCollectorLogs, setIsLoadingCollectorLogs] = useState(false);
 
 
@@ -123,11 +124,11 @@ const AdminPage = () => {
             const token = localStorage.getItem('token');
             const res = await fetch('/api/import/csv', {
                 method: 'POST',
-                headers: { token },
+                headers: { token } as HeadersInit,
                 body: formData
             });
 
-            const data = await res.json();
+            const data: any = await res.json();
 
             if (res.ok) {
                 setImportResult({ success: true, ...data });
@@ -139,7 +140,7 @@ const AdminPage = () => {
             }
         } catch (err) {
             console.error(err);
-            setImportResult({ success: false, message: 'Error: ' + err.message });
+            setImportResult({ success: false, message: 'Error: ' + (err as any).message });
         } finally {
             setIsImporting(false);
         }
@@ -149,7 +150,7 @@ const AdminPage = () => {
     const fetchCorrections = async () => {
         setIsLoadingCorrections(true);
         try {
-            const data = await apiClient.get('/api/corrections');
+            const data: any = await apiClient.get('/api/corrections');
             setCorrections(data.corrections);
         } catch (err) { console.error(err); } finally { setIsLoadingCorrections(false); }
     };
@@ -158,7 +159,7 @@ const AdminPage = () => {
     const fetchCollectorLogs = async () => {
         setIsLoadingCollectorLogs(true);
         try {
-            const data = await apiClient.get('/api/logs/collector');
+            const data: any = await apiClient.get('/api/logs/collector');
             setCollectorLogs(data.logs);
         } catch (err) {
             console.error('Error fetching collector logs:', err);
@@ -168,20 +169,20 @@ const AdminPage = () => {
     };
 
     // --- MANUAL PUSH NOTIFICATION ---
-    const handleManualPush = async (live) => {
+    const handleManualPush = async (live: Live) => {
         const confirmMsg = `「${live.title || live.tour_name}」のプッシュ通知を送信しますか？\n\n日付: ${live.date}\n会場: ${live.venue}`;
         if (!window.confirm(confirmMsg)) return;
 
         try {
-            const data = await apiClient.post('/api/push/notify-live', { liveId: live.id });
+            const data: any = await apiClient.post('/api/push/notify-live', { liveId: live.id });
             alert(`Notification sent!\nSuccess: ${data.details.sent}\nFailed: ${data.details.failed}`);
         } catch (err) {
             console.error('Push functionality error:', err);
-            alert(`Failed to send notification: ${err.data?.message || err.message}`);
+            alert(`Failed to send notification: ${(err as any).data?.message || (err as any).message}`);
         }
     };
 
-    const updateCorrectionStatus = async (id, status, note) => {
+    const updateCorrectionStatus = async (id: number, status: string, note?: string) => {
         try {
             await apiClient.patch(`/api/corrections/${id}`, { status, admin_note: note });
             fetchCorrections();
@@ -191,7 +192,7 @@ const AdminPage = () => {
         }
     };
 
-    const handleQuickCreateSong = async (title) => {
+    const handleQuickCreateSong = async (title: string) => {
         if (!window.confirm(`Create new song "${title}"?`)) return;
         try {
             await apiClient.post('/api/songs', { title });
@@ -203,31 +204,31 @@ const AdminPage = () => {
         }
     };
 
-    const handleApplySetlist = async (liveId, setlistData, correctionId) => {
+    const handleApplySetlist = async (liveId: number, setlistData: any[], correctionId: number) => {
         if (!liveId) {
             alert('Cannot apply: No linked Live ID');
             return;
         }
 
         // Dynamic matching
-        const resolvedSongs = setlistData.map(s => {
+        const resolvedSongs = setlistData.map((s: any) => {
             if (s.songId) return s;
             const match = songs.find(song => song.title.toLowerCase() === (s.clean || '').toLowerCase());
             if (match) return { ...s, songId: match.id, songTitle: match.title, isUnknown: false };
             return s;
         });
-        const validSongs = resolvedSongs.filter(s => s.songId);
+        const validSongs = resolvedSongs.filter((s: any) => s.songId);
         const unknownCount = setlistData.length - validSongs.length;
 
         let confirmMsg = `Apply ${validSongs.length} songs to Live #${liveId}?`;
         if (unknownCount > 0) {
-            confirmMsg += `\n\nWARNING: ${unknownCount} songs (e.g. "${resolvedSongs.find(s => !s.songId)?.clean}") are still unknown and will be skipped.`;
+            confirmMsg += `\n\nWARNING: ${unknownCount} songs (e.g. "${resolvedSongs.find((s: any) => !s.songId)?.clean}") are still unknown and will be skipped.`;
         }
 
         if (!window.confirm(confirmMsg)) return;
 
         try {
-            const songIds = validSongs.map(s => s.songId);
+            const songIds = validSongs.map((s: any) => s.songId);
             await apiClient.put(`/api/lives/${liveId}/setlist`, { songs: songIds });
             alert('Setlist updated successfully!');
             if (window.confirm('Mark this correction request as RESOLVED?')) {
@@ -240,7 +241,7 @@ const AdminPage = () => {
     };
 
     // --- API CALLS: COLLECT (SETLIST.FM) ---
-    const handleSetlistFMSearch = async (overrideKeyword) => {
+    const handleSetlistFMSearch = async (overrideKeyword?: any) => {
         const keywordToUse = typeof overrideKeyword === 'string' ? overrideKeyword : sfmSearchKeyword;
         if (!sfmSearchYear) {
             alert('Please enter a year');
@@ -250,7 +251,7 @@ const AdminPage = () => {
         setIsSearchingSFM(true);
         setSfmResults([]);
         try {
-            let allResults = [];
+            let allResults: any[] = [];
             let page = 1;
             let totalPages = 1;
 
@@ -259,7 +260,7 @@ const AdminPage = () => {
                 if (page > 1) { await new Promise(resolve => setTimeout(resolve, 1500)); }
 
                 try {
-                    const data = await apiClient.get(`/api/external/setlistfm/search?year=${sfmSearchYear}&keyword=${encodeURIComponent(keywordToUse)}&page=${page}`);
+                    const data: any = await apiClient.get(`/api/external/setlistfm/search?year=${sfmSearchYear}&keyword=${encodeURIComponent(keywordToUse)}&page=${page}`);
                     if (data.setlist) {
                         allResults = [...allResults, ...data.setlist];
                         const itemsPerPage = data.itemsPerPage || 20;
@@ -270,10 +271,10 @@ const AdminPage = () => {
                     }
                 } catch (pageErr) {
                     if (page === 1) {
-                        if (pageErr.status === 404) {
+                        if ((pageErr as any).status === 404) {
                             setSfmResults([]);
                         } else {
-                            alert(pageErr.data?.message || 'Error occurred during search');
+                            alert((pageErr as any).data?.message || 'Error occurred during search');
                         }
                     }
                     break;
@@ -288,7 +289,7 @@ const AdminPage = () => {
                 existingMap.set(key, live);
             });
 
-            const processedResults = allResults.map(result => {
+            const processedResults = allResults.map((result: any) => {
                 const parts = result.eventDate.split('-');
                 const dateStr = `${parts[2]}-${parts[1]}-${parts[0]}`; // YYYY-MM-DD
                 const key = `${dateStr}_${result.venue.name.toLowerCase()}`;
@@ -315,7 +316,7 @@ const AdminPage = () => {
                 const day = parseInt(dateParts[0]);
                 const year = dateParts[2];
 
-                const memberBirthdays = {
+                const memberBirthdays: Record<string, string> = {
                     '12-21': 'TAKUYA∞',
                     '11-05': '真太郎',
                     '02-22': '克哉',
@@ -434,7 +435,7 @@ const AdminPage = () => {
 
     // Sync alreadyImported status when lives list updates (e.g. after import or delete)
     useEffect(() => {
-        setSfmResults(prevResults => {
+        setSfmResults((prevResults: any[]) => {
             if (prevResults.length === 0) return prevResults;
 
             // Recalculate duplicate status since 'lives' changed
@@ -445,7 +446,7 @@ const AdminPage = () => {
                 existingMap.set(key, live);
             });
 
-            const nextResults = prevResults.map(result => {
+            const nextResults = prevResults.map((result: any) => {
                 // Convert DD-MM-YYYY to YYYY-MM-DD for comparison
                 const parts = result.eventDate.split('-');
                 const dateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
@@ -471,7 +472,7 @@ const AdminPage = () => {
         });
     }, [lives]);
 
-    const handleImportFromSetlistFM = async (sfmSetlist) => {
+    const handleImportFromSetlistFM = async (sfmSetlist: any) => {
         setIsImportingSFM(true);
         try {
             let finalTourName = sfmSetlist.tour?.name;
@@ -488,14 +489,14 @@ const AdminPage = () => {
                 special_note: sfmSetlist.specialNote || null
             };
 
-            const newLive = await apiClient.post('/api/lives', liveData);
+            const newLive: any = await apiClient.post('/api/lives', liveData);
 
-            const songIds = [];
+            const songIds: number[] = [];
             if (sfmSetlist.sets && sfmSetlist.sets.set) {
-                const flatSongs = sfmSetlist.sets.set.flatMap(s => s.song);
+                const flatSongs = sfmSetlist.sets.set.flatMap((s: any) => s.song);
                 for (const sfmSong of flatSongs) {
                     try {
-                        const sData = await apiClient.post('/api/songs', { title: sfmSong.name });
+                        const sData: any = await apiClient.post('/api/songs', { title: (sfmSong as any).name });
                         songIds.push(sData.id);
                     } catch (err) { console.error('Song create error:', err); }
                 }
@@ -509,7 +510,7 @@ const AdminPage = () => {
             fetchLives();
         } catch (err) {
             console.error(err);
-            alert('Error during import: ' + err.message);
+            alert('Error during import: ' + (err as any).message);
         } finally {
             setIsImportingSFM(false);
         }
@@ -521,7 +522,7 @@ const AdminPage = () => {
     const fetchLives = async () => {
         setIsLoadingLives(true);
         try {
-            const data = await apiClient.get('/api/lives?include_setlists=true');
+            const data: any = await apiClient.get('/api/lives?include_setlists=true');
             setLives(data);
             return data;
         } catch (err) {
@@ -532,7 +533,7 @@ const AdminPage = () => {
         }
     };
 
-    const handleLiveSubmit = async (e) => {
+    const handleLiveSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const url = editingLive ? `/api/lives/${editingLive.id}` : '/api/lives';
         try {
@@ -545,11 +546,11 @@ const AdminPage = () => {
             setEditingLive(null); setLiveFormData({ tour_name: '', title: '', date: '', venue: '', type: 'ONEMAN', special_note: '' });
         } catch (err) {
             console.error(err);
-            alert(`Failed to save live: ${err.data?.message || err.message}`);
+            alert(`Failed to save live: ${(err as any).data?.message || (err as any).message}`);
         }
     };
 
-    const handleDeleteLive = async (id) => {
+    const handleDeleteLive = async (id: number) => {
         if (!window.confirm("Delete this live event?")) return;
         try {
             await apiClient.delete(`/api/lives/${id}`);
@@ -585,20 +586,20 @@ const AdminPage = () => {
         setShowDeleteConfirm(false);
         setIsDeletingLives(true);
         try {
-            const data = await apiClient.post('/api/lives/batch-delete', { ids: selectedLiveIds });
+            const data: any = await apiClient.post('/api/lives/batch-delete', { ids: selectedLiveIds });
             alert(`Successfully deleted ${data.count} lives.`);
             setSelectedLiveIds([]);
             fetchLives();
         } catch (err) {
             console.error(err);
-            alert(`Error during bulk delete: ${err.data?.message || err.message}`);
+            alert(`Error during bulk delete: ${(err as any).data?.message || (err as any).message}`);
         } finally {
             setIsDeletingLives(false);
         }
     };
 
 
-    const openEditLive = (live) => {
+    const openEditLive = (live: Live) => {
         setEditingLive(live);
         setLiveFormData({
             tour_name: live.tour_name,
@@ -614,13 +615,13 @@ const AdminPage = () => {
 
 
 
-    const openSetlistEditor = (live) => {
+    const openSetlistEditor = (live: Live) => {
         setSelectedLiveForSetlist(live);
         setShowSetlistEditor(true);
     };
 
     // --- BULK DELETE LIVES ---
-    const toggleLiveSelection = (id) => {
+    const toggleLiveSelection = (id: number) => {
         setSelectedLiveIds(prev =>
             prev.includes(id) ? prev.filter(liveId => liveId !== id) : [...prev, id]
         );
@@ -638,7 +639,7 @@ const AdminPage = () => {
 
 
     // --- API CALLS: IMPORT TO EXISTING LIVE ---
-    const openImportModal = (live) => {
+    const openImportModal = (live: Live) => {
         setActiveLiveForImport(live);
         setSfmSearchYear(new Date(live.date).getFullYear());
         // Clean tour name for search (remove extra details if needed, but try full first)
@@ -649,15 +650,15 @@ const AdminPage = () => {
         // handleSetlistFMSearch(new Date(live.date).getFullYear());
     };
 
-    const handleImportToExistingLive = async (setlistData) => {
+    const handleImportToExistingLive = async (setlistData: any) => {
         if (!activeLiveForImport) return;
         if (!confirm(`Import setlist for "${activeLiveForImport.tour_name}"? Existing setlist will be overwritten.`)) return;
 
         try {
-            let flatSongs = [];
+            let flatSongs: { title: string; order: number }[] = [];
             let orderCounter = 1;
-            setlistData.sets.set.forEach(set => {
-                set.song.forEach(song => {
+            setlistData.sets.set.forEach((set: any) => {
+                set.song.forEach((song: any) => {
                     flatSongs.push({ title: song.name, order: orderCounter++ });
                 });
             });
@@ -668,16 +669,16 @@ const AdminPage = () => {
             fetchLives();
         } catch (err) {
             console.error(err);
-            alert("Error importing setlist");
+            alert("Error importing setlist: " + (err as any).message);
         }
     };
 
-    const handleDraftImported = async (liveId) => {
+    const handleDraftImported = async (liveId: number) => {
         const updatedLives = await fetchLives();
         fetchSongs();
-        
+
         if (liveId) {
-            const live = updatedLives.find(l => l.id === liveId);
+            const live = updatedLives.find((l: any) => l.id === liveId);
             if (live) {
                 openSetlistEditor(live);
             }
@@ -688,12 +689,12 @@ const AdminPage = () => {
     const fetchSongs = async () => {
         setIsLoadingSongs(true);
         try {
-            const data = await apiClient.get('/api/songs');
+            const data: any = await apiClient.get('/api/songs');
             setSongs(Array.isArray(data) ? data : (data.songs || []));
         } catch (err) { console.error(err); } finally { setIsLoadingSongs(false); }
     };
 
-    const handleSongSubmit = async (e) => {
+    const handleSongSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const url = editingSong ? `/api/songs/${editingSong.id}` : '/api/songs';
         const method = editingSong ? 'PUT' : 'POST';
@@ -715,23 +716,23 @@ const AdminPage = () => {
             }
             fetchSongs(); setShowSongModal(false);
             setEditingSong(null); setSongFormData({ title: '', album: '', release_year: '', mv_url: '', author: '' });
-        } catch (err) { console.error(err); alert(`Failed to save song: ${err.data?.message || err.message}`); }
+        } catch (err) { console.error(err); alert(`Failed to save song: ${(err as any).data?.message || (err as any).message}`); }
     };
 
-    const handleDeleteSong = async (id) => {
+    const handleDeleteSong = async (id: number) => {
         if (!window.confirm("Delete this song? (If it's in a setlist, this might fail)")) return;
         try {
             await apiClient.delete(`/api/songs/${id}`);
             fetchSongs();
-        } catch (err) { console.error(err); alert(err.data?.message || 'Failed to delete song'); }
+        } catch (err) { console.error(err); alert((err as any).data?.message || 'Failed to delete song'); }
     };
 
-    const openEditSong = (song) => {
+    const openEditSong = (song: Song) => {
         setEditingSong(song);
         setSongFormData({
             title: song.title,
             album: song.album || '',
-            release_year: song.release_year || '',
+            release_year: song.release_year != null ? String(song.release_year) : '',
             mv_url: song.mv_url || '',
             author: song.author || ''
         });
@@ -766,13 +767,13 @@ const AdminPage = () => {
 
         // Sort
         items.sort((a, b) => {
-            let aVal = a[liveSortConfig.key] || '';
-            let bVal = b[liveSortConfig.key] || '';
+            let aVal = (a as Record<string, any>)[liveSortConfig.key] || '';
+            let bVal = (b as Record<string, any>)[liveSortConfig.key] || '';
 
             if (liveSortConfig.key === 'date') {
                 const dateA = new Date(aVal);
                 const dateB = new Date(bVal);
-                return liveSortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
+                return liveSortConfig.direction === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
             }
 
             const res = String(aVal).localeCompare(String(bVal), 'ja');
@@ -787,16 +788,16 @@ const AdminPage = () => {
     const fetchUsers = async () => {
         setIsLoadingUsers(true);
         try {
-            const data = await apiClient.get('/api/users');
+            const data: any = await apiClient.get('/api/users');
             setUsers(data);
         } catch (err) { console.error(err); } finally { setIsLoadingUsers(false); }
     };
 
     // --- DELETE USER STATE ---
     const [showDeleteUserModal, setShowDeleteUserModal] = useState(false);
-    const [userToDelete, setUserToDelete] = useState(null);
+    const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
-    const handleDeleteUser = (user) => {
+    const handleDeleteUser = (user: User) => {
         setUserToDelete(user);
         setShowDeleteUserModal(true);
     };
@@ -813,7 +814,7 @@ const AdminPage = () => {
             alert('ユーザーを削除しました。');
         } catch (err) {
             console.error(err);
-            alert(`削除に失敗しました: ${err.data?.message || err.message}`);
+            alert(`削除に失敗しました: ${(err as any).data?.message || (err as any).message}`);
         } finally {
             setIsLoadingUsers(false);
         }
@@ -821,9 +822,9 @@ const AdminPage = () => {
 
     // --- ROLE UPDATE STATE ---
     const [showRoleUpdateModal, setShowRoleUpdateModal] = useState(false);
-    const [userToUpdate, setUserToUpdate] = useState(null);
+    const [userToUpdate, setUserToUpdate] = useState<User | null>(null);
 
-    const handleRoleUpdate = (user) => {
+    const handleRoleUpdate = (user: User) => {
         setUserToUpdate(user);
         setShowRoleUpdateModal(true);
     };
@@ -841,13 +842,13 @@ const AdminPage = () => {
             alert(`ユーザー権限を「${newRole}」に変更しました。`);
         } catch (err) {
             console.error(err);
-            alert(`権限の変更に失敗しました: ${err.data?.message || err.message}`);
+            alert(`権限の変更に失敗しました: ${(err as any).data?.message || (err as any).message}`);
             setIsLoadingUsers(false);
         }
     };
 
     // --- HELPERS ---
-    const requestUserSort = (key) => {
+    const requestUserSort = (key: string) => {
         let direction = 'asc';
         if (userSortConfig.key === key && userSortConfig.direction === 'asc') direction = 'desc';
         setUserSortConfig({ key, direction });
@@ -861,8 +862,10 @@ const AdminPage = () => {
         }
         if (userSortConfig.key) {
             items.sort((a, b) => {
-                if (a[userSortConfig.key] < b[userSortConfig.key]) return userSortConfig.direction === 'asc' ? -1 : 1;
-                if (a[userSortConfig.key] > b[userSortConfig.key]) return userSortConfig.direction === 'asc' ? 1 : -1;
+                const aVal = (a as Record<string, any>)[userSortConfig.key];
+                const bVal = (b as Record<string, any>)[userSortConfig.key];
+                if (aVal < bVal) return userSortConfig.direction === 'asc' ? -1 : 1;
+                if (aVal > bVal) return userSortConfig.direction === 'asc' ? 1 : -1;
                 return 0;
             });
         }
@@ -872,7 +875,7 @@ const AdminPage = () => {
     // Get unique albums for filter
     const uniqueAlbums = useMemo(() => {
         if (!songs) return [];
-        const albums = songs.map(s => s.album).filter(Boolean);
+        const albums = songs.map(s => s.album).filter(Boolean) as string[];
         return [...new Set(albums)].sort((a, b) => a.localeCompare(b, 'ja'));
     }, [songs]);
 
@@ -914,8 +917,8 @@ const AdminPage = () => {
 
         // Sort
         items.sort((a, b) => {
-            let aVal = a[songSortConfig.key] || '';
-            let bVal = b[songSortConfig.key] || '';
+            let aVal = (a as Record<string, any>)[songSortConfig.key] || '';
+            let bVal = (b as Record<string, any>)[songSortConfig.key] || '';
 
             // Numeric sort for ID
             if (songSortConfig.key === 'id') {
@@ -925,8 +928,8 @@ const AdminPage = () => {
 
             // Release order sort (by album release year)
             if (songSortConfig.key === 'release') {
-                const aYear = albumReleaseYear[a.album] || 10000;
-                const bYear = albumReleaseYear[b.album] || 10000;
+                const aYear = (albumReleaseYear as Record<string, number>)[a.album as string] || 10000;
+                const bYear = (albumReleaseYear as Record<string, number>)[b.album as string] || 10000;
                 const result = aYear - bYear;
                 return songSortConfig.direction === 'asc' ? result : -result;
             }
@@ -941,12 +944,12 @@ const AdminPage = () => {
 
 
     // --- BULK IMPORT STATE ---
-    const [selectedSfmSetlists, setSelectedSfmSetlists] = useState([]);
+    const [selectedSfmSetlists, setSelectedSfmSetlists] = useState<any[]>([]);
 
     // Toggle single selection
-    const toggleSfmSelection = (setlistId) => {
+    const toggleSfmSelection = (setlistId: any) => {
         setSelectedSfmSetlists(prev =>
-            prev.includes(setlistId) ? prev.filter(id => id !== setlistId) : [...prev, setlistId]
+            prev.includes(setlistId) ? prev.filter((id: any) => id !== setlistId) : [...prev, setlistId]
         );
     };
 
@@ -955,12 +958,12 @@ const AdminPage = () => {
         if (selectedSfmSetlists.length === sfmResults.length) {
             setSelectedSfmSetlists([]);
         } else {
-            setSelectedSfmSetlists(sfmResults.map(r => r.id));
+            setSelectedSfmSetlists(sfmResults.map((r: any) => r.id));
         }
     };
 
     // --- IMPORT RESULT MODAL STATE ---
-    const [importResultData, setImportResultData] = useState(null); // { success: number, failed: number }
+    const [importResultData, setImportResultData] = useState<any>(null); // { success: number, failed: number }
 
     const closeImportResultModal = () => {
         setImportResultData(null);
@@ -1003,14 +1006,14 @@ const AdminPage = () => {
                         special_note: setlist.specialNote || ''
                     };
 
-                    const newLive = await apiClient.post('/api/lives', liveData);
+                    const newLive: any = await apiClient.post('/api/lives', liveData);
 
-                    const songIds = [];
+                    const songIds: number[] = [];
                     if (setlist.sets && setlist.sets.set) {
-                        const flatSongs = setlist.sets.set.flatMap(s => s.song);
+                        const flatSongs = setlist.sets.set.flatMap((s: any) => s.song);
                         for (const sfmSong of flatSongs) {
                             try {
-                                const sData = await apiClient.post('/api/songs', { title: sfmSong.name });
+                                const sData: any = await apiClient.post('/api/songs', { title: (sfmSong as any).name });
                                 songIds.push(sData.id);
                             } catch (songErr) { console.error('Song create error:', songErr); }
                         }
@@ -1151,7 +1154,7 @@ const AdminPage = () => {
                             <div className="collect-search-row" style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
                                 <select
                                     value={sfmSearchYear}
-                                    onChange={(e) => setSfmSearchYear(e.target.value)}
+                                    onChange={(e) => setSfmSearchYear(Number(e.target.value))}
                                     style={{ padding: '8px', borderRadius: '4px', border: '1px solid #334155', background: '#1e293b', color: '#fff', width: '100px', cursor: 'pointer' }}
                                 >
                                     {[...Array(new Date().getFullYear() - 2000 + 2)].map((_, i) => {
@@ -1354,7 +1357,7 @@ const AdminPage = () => {
                                                                 <ListMusic size={14} /> 解析済みデータ ({correction.suggested_data.setlist.length}曲)
                                                             </div>
                                                             <div style={{ maxHeight: '150px', overflowY: 'auto', fontSize: '0.8rem', background: 'rgba(0,0,0,0.3)', padding: '5px', marginBottom: '8px' }}>
-                                                                {correction.suggested_data.setlist.map((s, idx) => {
+                                                                {correction.suggested_data.setlist.map((s: any, idx: number) => {
                                                                     // Dynamic check
                                                                     let isRecovered = false;
                                                                     let renderTitle = s.songTitle || s.clean;
@@ -1445,7 +1448,7 @@ const AdminPage = () => {
                                             </tr>
                                         ))}
                                     {corrections.filter(c => correctionStatusFilter === 'ALL' || c.status === correctionStatusFilter).length === 0 && (
-                                        <tr><td colSpan="8" className="empty-cell">No correction requests found.</td></tr>
+                                        <tr><td colSpan={8} className="empty-cell">No correction requests found.</td></tr>
                                     )}
                                 </tbody>
                             </table>
@@ -1636,7 +1639,7 @@ const AdminPage = () => {
                                             </td>
                                         </tr>
                                     ))}
-                                    {lives.length === 0 && <tr><td colSpan="4" className="empty-cell">No lives registered yet.</td></tr>}
+                                    {lives.length === 0 && <tr><td colSpan={4} className="empty-cell">No lives registered yet.</td></tr>}
                                 </tbody>
                             </table>
                         </div>
@@ -1738,7 +1741,7 @@ const AdminPage = () => {
                                             </td>
                                         </tr>
                                     ))}
-                                    {processedSongs.length === 0 && <tr><td colSpan="4" className="empty-cell">No songs found.</td></tr>}
+                                    {processedSongs.length === 0 && <tr><td colSpan={4} className="empty-cell">No songs found.</td></tr>}
                                 </tbody>
                             </table>
                         </div>
@@ -1819,7 +1822,7 @@ const AdminPage = () => {
                             <input
                                 type="file"
                                 accept=".csv"
-                                onChange={(e) => setImportFile(e.target.files[0])}
+                                onChange={(e) => setImportFile(e.target.files ? e.target.files[0] : null)}
                                 style={{
                                     display: 'block',
                                     marginBottom: '15px',
@@ -2083,7 +2086,7 @@ const AdminPage = () => {
 
                         <div className="setlist-preview">
                             {sfmPreviewData.sets?.set?.length > 0 ? (
-                                sfmPreviewData.sets.set.map((set, setIndex) => (
+                                sfmPreviewData.sets.set.map((set: any, setIndex: number) => (
                                     <div key={setIndex} style={{ marginBottom: '15px' }}>
                                         {set.encore ? (
                                             <div style={{ fontSize: '0.9rem', color: '#94a3b8', borderBottom: '1px solid #334155', paddingBottom: '5px', marginBottom: '10px' }}>Encore {set.encore > 1 ? set.encore : ''}</div>
@@ -2091,7 +2094,7 @@ const AdminPage = () => {
                                             <div style={{ fontSize: '0.9rem', color: '#94a3b8', borderBottom: '1px solid #334155', paddingBottom: '5px', marginBottom: '10px' }}>Set {setIndex + 1}</div>
                                         )}
                                         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                                            {set.song.map((song, songIndex) => (
+                                            {set.song.map((song: any, songIndex: number) => (
                                                 <li key={songIndex} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '10px' }}>
                                                     <span style={{ color: '#64748b', width: '25px', textAlign: 'right' }}>{songIndex + 1}.</span>
                                                     <span>{song.name}</span>
@@ -2253,7 +2256,7 @@ const AdminPage = () => {
                                 <input
                                     type="number"
                                     value={sfmSearchYear}
-                                    onChange={(e) => setSfmSearchYear(e.target.value)}
+                                    onChange={(e) => setSfmSearchYear(Number(e.target.value))}
                                     placeholder="Year"
                                     style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '4px', width: '80px' }}
                                 />
@@ -2282,7 +2285,7 @@ const AdminPage = () => {
                                                 <div style={{ marginTop: '8px' }}>
                                                     {setlist.sets?.set?.length > 0 ? (
                                                         <span className="badge" style={{ background: '#059669', color: '#fff' }}>
-                                                            {setlist.sets.set.reduce((acc, s) => acc + s.song.length, 0)} songs
+                                                            {setlist.sets.set.reduce((acc: number, s: any) => acc + s.song.length, 0)} songs
                                                         </span>
                                                     ) : (
                                                         <span className="badge" style={{ background: '#f59e0b', color: '#000' }}>⚠ No Songs Listed</span>
