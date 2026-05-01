@@ -270,6 +270,11 @@ const LiveList = () => {
                                                             <span className="title-text-wrap">
                                                                 {live.title || live.tour_name}
                                                             </span>
+                                                            {live.setlist_status === 'UNKNOWN_SETLIST' && (
+                                                                <span style={{ fontSize: '0.6rem', fontWeight: 'bold', padding: '1px 5px', borderRadius: '3px', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)', whiteSpace: 'nowrap', marginLeft: '6px', verticalAlign: 'middle' }}>
+                                                                    未登録
+                                                                </span>
+                                                            )}
                                                         </h3>
                                                     </div>
                                                     <div className="card-column period-col desktop-only">
@@ -294,6 +299,11 @@ const LiveList = () => {
                                                         </div>
                                                         <h3 className="card-title-text">
                                                             {live.title || live.tour_name}
+                                                            {live.setlist_status === 'UNKNOWN_SETLIST' && (
+                                                                <span style={{ fontSize: '0.6rem', fontWeight: 'bold', padding: '1px 5px', borderRadius: '3px', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)', whiteSpace: 'nowrap', marginLeft: '6px', verticalAlign: 'middle' }}>
+                                                                    未登録
+                                                                </span>
+                                                            )}
                                                         </h3>
                                                         <div className="card-venue-row">
                                                             <MapPin size={14} />
