@@ -42,6 +42,7 @@ const AdminPage = () => {
     const [liveSearchTerm, setLiveSearchTerm] = useState('');
     const [liveSortConfig, setLiveSortConfig] = useState({ key: 'date', direction: 'desc' });
     const [liveYearFilter, setLiveYearFilter] = useState('ALL');
+    const [setlistStatusFilter, setSetlistStatusFilter] = useState<'ALL' | 'NORMAL' | 'UNKNOWN_SETLIST'>('ALL');
     const [selectedLiveIds, setSelectedLiveIds] = useState<number[]>([]);
     const [isDeletingLives, setIsDeletingLives] = useState(false);
 
@@ -75,6 +76,13 @@ const AdminPage = () => {
     const [sfmSearchKeyword, setSfmSearchKeyword] = useState('');
     const [sfmPreviewData, setSfmPreviewData] = useState<any>(null);
     const [isImportingSFM, setIsImportingSFM] = useState(false);
+
+    // --- 一括収集（年代） ---
+    const [bulkYearStart, setBulkYearStart] = useState(2000);
+    const [bulkYearEnd,   setBulkYearEnd]   = useState(2014);
+    const [bulkJobId,     setBulkJobId]     = useState<string | null>(null);
+    const [bulkJob,       setBulkJob]       = useState<any>(null);
+    const [isBulkCollecting, setIsBulkCollecting] = useState(false);
 
     // --- COLLECTOR LOGS STATE ---
     const [collectorLogs, setCollectorLogs] = useState<any[]>([]);
@@ -765,6 +773,13 @@ const AdminPage = () => {
             items = items.filter(l => new Date(l.date).getFullYear() === y);
         }
 
+        // Setlist Status Filter
+        if (setlistStatusFilter === 'NORMAL') {
+            items = items.filter(l => !l.setlist_status || l.setlist_status === 'NORMAL');
+        } else if (setlistStatusFilter === 'UNKNOWN_SETLIST') {
+            items = items.filter(l => l.setlist_status === 'UNKNOWN_SETLIST');
+        }
+
         // Sort
         items.sort((a, b) => {
             let aVal = (a as Record<string, any>)[liveSortConfig.key] || '';
@@ -781,7 +796,7 @@ const AdminPage = () => {
         });
 
         return items;
-    }, [lives, liveSearchTerm, liveYearFilter, liveSortConfig]);
+    }, [lives, liveSearchTerm, liveYearFilter, setlistStatusFilter, liveSortConfig]);
 
 
     // --- API CALLS: USERS ---
@@ -1041,6 +1056,43 @@ const AdminPage = () => {
         }
     };
 
+    // --- 一括収集ハンドラー ---
+    const handleBulkCollect = async () => {
+        if (bulkYearStart > bulkYearEnd) {
+            alert('開始年は終了年以下にしてください');
+            return;
+        }
+        setIsBulkCollecting(true);
+        setBulkJob(null);
+        try {
+            const data: any = await apiClient.post('/api/external/setlistfm/collect-years', {
+                yearStart: bulkYearStart,
+                yearEnd: bulkYearEnd,
+            });
+            const jobId = data.jobId;
+            setBulkJobId(jobId);
+
+            const interval = setInterval(async () => {
+                try {
+                    const job: any = await apiClient.get(`/api/external/setlistfm/collect-status/${jobId}`);
+                    setBulkJob(job);
+                    if (job.status === 'done' || job.status === 'error') {
+                        clearInterval(interval);
+                        setIsBulkCollecting(false);
+                        fetchLives();
+                    }
+                } catch (pollErr) {
+                    console.error('ポーリングエラー:', pollErr);
+                    clearInterval(interval);
+                    setIsBulkCollecting(false);
+                }
+            }, 3000);
+        } catch (err) {
+            console.error(err);
+            alert('一括収集の開始に失敗しました: ' + ((err as any).data?.message || (err as any).message));
+            setIsBulkCollecting(false);
+        }
+    };
 
     return (
         <div style={{ padding: '100px 20px', maxWidth: '1200px', margin: '0 auto', color: '#fff' }} className="fade-in admin-page-root">
@@ -1147,6 +1199,75 @@ const AdminPage = () => {
                 {/* COLLECT CONTENT */}
                 {activeTab === 'collect' && (
                     <div className="tab-content fade-in">
+                        {/* 過去データ一括収集 */}
+                        <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '20px', marginBottom: '24px' }}>
+                            <h3 style={{ margin: '0 0 16px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Download size={18} color="#94a3b8" /> 過去データ一括収集（Setlist.fm）
+                            </h3>
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
+                                <select
+                                    value={bulkYearStart}
+                                    onChange={e => setBulkYearStart(Number(e.target.value))}
+                                    disabled={isBulkCollecting}
+                                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #334155', background: '#0f172a', color: '#fff', width: '90px', cursor: 'pointer' }}
+                                >
+                                    {Array.from({ length: 27 }, (_, i) => 2000 + i).map(y => (
+                                        <option key={y} value={y}>{y}</option>
+                                    ))}
+                                </select>
+                                <span style={{ color: '#94a3b8' }}>年 〜</span>
+                                <select
+                                    value={bulkYearEnd}
+                                    onChange={e => setBulkYearEnd(Number(e.target.value))}
+                                    disabled={isBulkCollecting}
+                                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #334155', background: '#0f172a', color: '#fff', width: '90px', cursor: 'pointer' }}
+                                >
+                                    {Array.from({ length: 27 }, (_, i) => 2000 + i).map(y => (
+                                        <option key={y} value={y}>{y}</option>
+                                    ))}
+                                </select>
+                                <span style={{ color: '#94a3b8' }}>年</span>
+                                <button
+                                    className="btn-primary"
+                                    onClick={handleBulkCollect}
+                                    disabled={isBulkCollecting}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                >
+                                    {isBulkCollecting ? <Loader className="spin" size={16} /> : <Download size={16} />}
+                                    一括収集開始
+                                </button>
+                            </div>
+
+                            {/* 進捗表示 */}
+                            {bulkJob && (
+                                <div style={{ background: '#0f172a', borderRadius: '6px', padding: '12px', fontSize: '0.875rem' }}>
+                                    {bulkJob.status === 'running' && (
+                                        <div style={{ color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                            <Loader className="spin" size={14} />
+                                            実行中: {bulkJob.currentYear}年 / {bulkJob.currentPage}ページ目
+                                        </div>
+                                    )}
+                                    {bulkJob.status === 'done' && (
+                                        <div style={{ color: '#4ade80', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                            <CheckCircle size={14} />
+                                            完了
+                                        </div>
+                                    )}
+                                    {bulkJob.status === 'error' && (
+                                        <div style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                            <AlertTriangle size={14} />
+                                            エラー: {bulkJob.error}
+                                        </div>
+                                    )}
+                                    <div style={{ display: 'flex', gap: '20px', color: '#94a3b8' }}>
+                                        <span>作成: <strong style={{ color: '#fff' }}>{bulkJob.totalCreated ?? 0}</strong></span>
+                                        <span>スキップ: <strong style={{ color: '#fff' }}>{bulkJob.totalSkipped ?? 0}</strong></span>
+                                        <span>失敗: <strong style={{ color: '#ef4444' }}>{bulkJob.totalFailed ?? 0}</strong></span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         <div className="table-header-panel">
                             <h3>Collect from Setlist.fm</h3>
                         </div>
@@ -1502,6 +1623,22 @@ const AdminPage = () => {
                                     <option key={y} value={y}>{y}</option>
                                 ))}
                             </select>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                                {(['ALL', 'NORMAL', 'UNKNOWN_SETLIST'] as const).map(s => (
+                                    <button
+                                        key={s}
+                                        onClick={() => setSetlistStatusFilter(s)}
+                                        style={{
+                                            padding: '6px 10px', fontSize: '0.75rem', borderRadius: '6px', cursor: 'pointer', border: '1px solid',
+                                            borderColor: setlistStatusFilter === s ? (s === 'UNKNOWN_SETLIST' ? '#f59e0b' : '#22c55e') : '#334155',
+                                            background: setlistStatusFilter === s ? (s === 'UNKNOWN_SETLIST' ? 'rgba(245,158,11,0.15)' : 'rgba(34,197,94,0.15)') : '#0f172a',
+                                            color: setlistStatusFilter === s ? (s === 'UNKNOWN_SETLIST' ? '#f59e0b' : '#22c55e') : '#94a3b8',
+                                        }}
+                                    >
+                                        {s === 'ALL' ? 'すべて' : s === 'NORMAL' ? 'セトリあり' : '未登録'}
+                                    </button>
+                                ))}
+                            </div>
                             <select
                                 value={`${liveSortConfig.key}-${liveSortConfig.direction}`}
                                 onChange={(e) => {
@@ -1605,6 +1742,10 @@ const AdminPage = () => {
                                                         <Check size={16} className="text-emerald-400" />
                                                         <span className="text-xs text-slate-400">({live.setlist.length})</span>
                                                     </div>
+                                                ) : live.setlist_status === 'UNKNOWN_SETLIST' ? (
+                                                    <span style={{ fontSize: '0.65rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px', background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)', whiteSpace: 'nowrap' }}>
+                                                        未登録
+                                                    </span>
                                                 ) : (
                                                     <div className="flex items-center justify-center" title="No setlist">
                                                         <X size={16} className="text-slate-600" />
