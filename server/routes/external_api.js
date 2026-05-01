@@ -1,6 +1,8 @@
 const router = require('express').Router();
 const axios = require('axios');
 const { authorize, adminCheck } = require('../middleware/authorization');
+const { createJob, getJob } = require('../services/collectJob');
+const { collectYears } = require('../services/collectYears');
 
 const UVER_MBID = '1f534f37-d284-4866-a36c-9dddd008e31a';
 const SETLIST_FM_API_URL = 'https://api.setlist.fm/rest/1.0';
@@ -81,6 +83,31 @@ router.get('/setlistfm/setlist/:id', authorize, adminCheck, async (req, res) => 
         const status = err.response?.status || 500;
         res.status(status).json({ message: 'Error fetching setlist details' });
     }
+});
+
+// POST /api/external/setlistfm/collect-years — 年代一括収集ジョブ開始（即レスポンス）
+router.post('/setlistfm/collect-years', authorize, adminCheck, (req, res) => {
+    const { yearStart, yearEnd } = req.body;
+    const ys = parseInt(yearStart, 10);
+    const ye = parseInt(yearEnd, 10);
+
+    if (!ys || !ye || ys > ye || ys < 2000 || ye > 2026) {
+        return res.status(400).json({ message: '年範囲が不正です（2000〜2026の範囲で指定してください）' });
+    }
+
+    const apiKey = process.env.SETLIST_FM_API_KEY;
+    if (!apiKey) return res.status(500).json({ message: 'SETLIST_FM_API_KEY が設定されていません' });
+
+    const jobId = createJob(ys, ye);
+    collectYears(ys, ye, apiKey, jobId); // バックグラウンド実行（await しない）
+    res.json({ jobId });
+});
+
+// GET /api/external/setlistfm/collect-status/:jobId — ジョブ進捗確認
+router.get('/setlistfm/collect-status/:jobId', authorize, adminCheck, (req, res) => {
+    const job = getJob(req.params.jobId);
+    if (!job) return res.status(404).json({ message: 'ジョブが見つかりません' });
+    res.json(job);
 });
 
 module.exports = router;

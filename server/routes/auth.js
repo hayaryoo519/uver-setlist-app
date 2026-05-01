@@ -10,7 +10,7 @@ const { loginLimiter, resetLimiter } = require('../middleware/rateLimiter');
 // Register API
 router.post('/register', async (req, res) => {
     try {
-        const { username, email, password } = req.body;
+        const { username, email, password, is_public } = req.body;
 
         // 1. Validate input
         if (!username || username.trim().length < 2 || username.length > 30) {
@@ -32,9 +32,10 @@ router.post('/register', async (req, res) => {
         const verificationToken = crypto.randomBytes(32).toString('hex');
 
         // 4. Insert into DB (is_verified default false)
+        const isPublic = is_public !== false;
         const newUser = await db.query(
-            "INSERT INTO users (username, email, password, is_verified, verification_token) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-            [username, email, bcryptPassword, false, verificationToken]
+            "INSERT INTO users (username, email, password, is_verified, verification_token, is_public) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+            [username, email, bcryptPassword, false, verificationToken, isPublic]
         );
 
         // 5. Send Verification Email

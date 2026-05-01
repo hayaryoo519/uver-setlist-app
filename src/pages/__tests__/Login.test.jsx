@@ -12,6 +12,14 @@ vi.mock('../../contexts/AuthContext', () => ({
     AuthProvider: ({ children }) => <div>{children}</div>,
 }));
 
+// ToastContext のモック
+vi.mock('../../contexts/ToastContext', () => ({
+    useToast: () => ({
+        showToast: vi.fn(),
+    }),
+    ToastProvider: ({ children }) => <div>{children}</div>,
+}));
+
 // AuthLayout のモック (依存関係を減らすため)
 vi.mock('../../components/Auth/AuthLayout', () => ({
     default: ({ children, title }) => (
@@ -21,6 +29,7 @@ vi.mock('../../components/Auth/AuthLayout', () => ({
         </div>
     ),
 }));
+
 
 describe('Login Page', () => {
     it('メールアドレスとパスワードの入力フィールドが表示されること', () => {

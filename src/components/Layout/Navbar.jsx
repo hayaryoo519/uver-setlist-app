@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, User, Calendar, LogIn, LogOut, Shield, ListMusic, AlertTriangle } from 'lucide-react';
+import { Menu, X, User, Calendar, LogIn, LogOut, Shield, ListMusic, AlertTriangle, Sparkles } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Navbar = () => {
@@ -18,10 +18,10 @@ const Navbar = () => {
     // Handle scroll effect
     useEffect(() => {
         let lastScrollY = window.scrollY;
-        
+
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
-            
+
             // 背景色の切り替え (50px以上で背景あり)
             if (currentScrollY > 50) {
                 setIsScrolled(true);
@@ -42,7 +42,7 @@ const Navbar = () => {
                 // 上スクロールで表示
                 document.body.classList.remove('header-hidden');
             }
-            
+
             lastScrollY = currentScrollY;
         };
 
@@ -71,17 +71,17 @@ const Navbar = () => {
                             <ListMusic size={18} /> Discography
                         </Link>
                         <Link to="/lives" className="nav-link">
-                            <Calendar size={18} /> LiveArchive
+                            <Calendar size={18} /> Live Archive
                         </Link>
                         {currentUser && (
                             <Link to="/mypage" className="nav-link">
-                                <User size={18} /> My Page
+                                <User size={18} /> マイページ
                             </Link>
                         )}
 
                         {currentUser?.role === 'admin' && (
                             <Link to="/admin" className="nav-link" style={{ color: '#fbbf24' }}>
-                                <Shield size={18} /> Admin Panel
+                                <Shield size={18} /> 管理者パネル
                             </Link>
                         )}
                         {currentUser ? (
@@ -93,6 +93,8 @@ const Navbar = () => {
                                 <LogIn size={18} /> ログイン
                             </Link>
                         )}
+
+
                     </div>
 
                     {/* Mobile Menu Toggle */}
@@ -110,10 +112,10 @@ const Navbar = () => {
                 <div className="mobile-nav-links">
                     <Link to="/" className="mobile-nav-link">Home</Link>
                     <Link to="/songs" className="mobile-nav-link">Discography</Link>
-                    <Link to="/lives" className="mobile-nav-link">LiveArchive</Link>
-                    {currentUser && <Link to="/mypage" className="mobile-nav-link">My Page</Link>}
+                    <Link to="/lives" className="mobile-nav-link">Archive</Link>
+                    {currentUser && <Link to="/mypage" className="mobile-nav-link">マイページ</Link>}
                     {currentUser?.role === 'admin' && (
-                        <Link to="/admin" className="mobile-nav-link" style={{ color: '#fbbf24' }}>Admin Panel</Link>
+                        <Link to="/admin" className="mobile-nav-link" style={{ color: '#fbbf24' }}>管理者パネル</Link>
                     )}
 
                     <div className="mobile-nav-divider"></div>
@@ -122,6 +124,8 @@ const Navbar = () => {
                     ) : (
                         <Link to="/login" className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>ログイン / 新規登録</Link>
                     )}
+
+
                 </div>
             </div>
 
