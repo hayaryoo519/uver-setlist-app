@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Heart, User, Calendar, MapPin, Music, ArrowLeft, Share2, Sparkles, ChevronRight, Copy } from 'lucide-react';
+import { Heart, Calendar, MapPin, Music, ArrowLeft, Share2, Sparkles, ChevronRight, Copy, Trophy } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePredictionDetail, useLikePrediction } from '../hooks/queries/usePredictions';
 import PageHeader from '../components/Layout/PageHeader';
@@ -28,6 +28,14 @@ const SetlistPredictionDetail = () => {
         } catch (error) {
             console.error('Error toggling like:', error);
         }
+    };
+
+    const getScoreLabel = (score: number) => {
+        if (score >= 90) return { label: '神予想', color: 'text-yellow-400' };
+        if (score >= 75) return { label: '優秀', color: 'text-blue-400' };
+        if (score >= 50) return { label: '合格', color: 'text-green-400' };
+        if (score >= 25) return { label: '惜しい', color: 'text-orange-400' };
+        return { label: '次回に期待', color: 'text-slate-400' };
     };
 
     const handleShare = () => {
@@ -146,6 +154,55 @@ const SetlistPredictionDetail = () => {
                             </div>
                         )}
 
+                        {/* スコア結果パネル */}
+                        {prediction.total_score != null && (() => {
+                            const score = Number(prediction.total_score);
+                            const { label, color } = getScoreLabel(score);
+                            return (
+                                <div className="bg-gradient-to-br from-yellow-500/10 to-amber-600/5 border border-yellow-500/30 rounded-2xl p-6 mb-10">
+                                    <div className="flex items-center gap-2 text-yellow-400 mb-4">
+                                        <Trophy size={18} />
+                                        <span className="text-xs font-black tracking-widest uppercase">スコア結果</span>
+                                    </div>
+                                    <div className="flex flex-col md:flex-row md:items-center gap-6">
+                                        <div className="flex flex-col items-center md:items-start">
+                                            <div className={`text-6xl font-black tabular-nums ${color}`}>
+                                                {score.toFixed(1)}
+                                            </div>
+                                            <div className="text-slate-500 text-sm font-bold">/ 100pt</div>
+                                            <div className={`mt-1 text-sm font-black ${color}`}>{label}</div>
+                                        </div>
+                                        <div className="flex-1 space-y-3">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-xs font-bold text-slate-500 w-20">一致スコア</span>
+                                                <div className="flex-1 bg-slate-800 rounded-full h-2 overflow-hidden">
+                                                    <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${Math.min((Number(prediction.match_score ?? 0) / 70) * 100, 100)}%` }} />
+                                                </div>
+                                                <span className="text-sm font-black text-blue-400 tabular-nums w-12 text-right">{Number(prediction.match_score ?? 0).toFixed(1)}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-xs font-bold text-slate-500 w-20">順番スコア</span>
+                                                <div className="flex-1 bg-slate-800 rounded-full h-2 overflow-hidden">
+                                                    <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${Math.min((Number(prediction.position_score ?? 0) / 20) * 100, 100)}%` }} />
+                                                </div>
+                                                <span className="text-sm font-black text-purple-400 tabular-nums w-12 text-right">{Number(prediction.position_score ?? 0).toFixed(1)}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-xs font-bold text-slate-500 w-20">連続ボーナス</span>
+                                                <div className="flex-1 bg-slate-800 rounded-full h-2 overflow-hidden">
+                                                    <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${Math.min((Number(prediction.streak_bonus ?? 0) / 10) * 100, 100)}%` }} />
+                                                </div>
+                                                <span className="text-sm font-black text-green-400 tabular-nums w-12 text-right">{Number(prediction.streak_bonus ?? 0).toFixed(1)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 pt-4 border-t border-yellow-500/20 text-xs text-slate-500 font-medium">
+                                        予想 {prediction.predicted_count}曲 → 一致 <span className="text-white font-bold">{prediction.matched_count}曲</span> / 実際 {prediction.actual_count}曲
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
                         <div className="space-y-3">
                             <h2 className="text-xs font-black tracking-[0.3em] text-slate-500 uppercase mb-4 pl-1">予想セットリスト</h2>
                             {prediction.songs?.map((song, index) => (
@@ -174,10 +231,12 @@ const SetlistPredictionDetail = () => {
                 </div>
 
                 <div className="mt-12 space-y-6">
-                    {/* Share Section - Only show for owner */}
-                    {prediction.is_mine && (
+                    {/* Share Section - スコアあり時は全員、なしはオーナーのみ */}
+                    {(prediction.is_mine || prediction.total_score != null) && (
                         <div className="bg-slate-800/30 rounded-3xl p-8 border border-slate-700/50 text-center">
-                            <p className="text-slate-400 text-sm mb-6 font-medium">この予想をあなたのSNSでシェアしませんか？</p>
+                            <p className="text-slate-400 text-sm mb-6 font-medium">
+                                {prediction.total_score != null ? 'スコア結果をXでシェアしよう！' : 'この予想をあなたのSNSでシェアしませんか？'}
+                            </p>
                             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                                 <button 
                                     onClick={() => {
@@ -191,10 +250,13 @@ const SetlistPredictionDetail = () => {
                                         const url = window.location.href;
                                         const tourTag = prediction.tour_name ? prediction.tour_name.replace(/\s+/g, '') : '';
                                         
-                                        const headerText = `セットリストを予想しました！`;
-                                        
-                                        // 本文にURLとハッシュタグを詰め込んで改行を制御
-                                        const text = `${headerText}\n${prediction.tour_name}\n${dateStr} @ ${prediction.venue}\n\n${songsText}\n\nセトリ予想はこちらから👇\n${url}\n\n#UVERworld #セトリ予想 ${tourTag ? '#' + tourTag : ''}`;
+                                        const hasScore = prediction.total_score != null;
+                                        const scoreText = hasScore
+                                            ? `\nスコア: ${Number(prediction.total_score).toFixed(1)}pt (${getScoreLabel(Number(prediction.total_score)).label}) | 一致: ${prediction.matched_count}/${prediction.actual_count}曲\n`
+                                            : '';
+                                        const headerText = hasScore ? `セトリ予想の結果が出ました！` : `セットリストを予想しました！`;
+
+                                        const text = `${headerText}\n${prediction.tour_name}\n${dateStr} @ ${prediction.venue}${scoreText}\n${songsText}\n\nセトリ予想はこちらから👇\n${url}\n\n#UVERworld #セトリ予想 ${tourTag ? '#' + tourTag : ''}`;
                                         
                                         const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
                                         window.open(xUrl, '_blank');
