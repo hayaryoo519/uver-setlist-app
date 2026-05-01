@@ -1,5 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import type { Live } from '../types/api';
+import React, { useState, useMemo } from 'react';
 import PageHeader from '../components/Layout/PageHeader';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, MapPin, Calendar, Tag, Check, Plus, ArrowRight, Loader } from 'lucide-react';
@@ -39,12 +38,12 @@ const LiveList = () => {
         return fetchedLives.filter(live => new Date(live.date) < today);
     }, [fetchedLives]);
 
-    const handleFilterChange = (newFilters: any) => {
+    const handleFilterChange = (newFilters) => {
         setFilters(newFilters);
         navigate(location.pathname, { replace: true, state: { filters: newFilters } });
     };
 
-    const handleToggleAttendance = async (e: React.MouseEvent, liveId: number | string) => {
+    const handleToggleAttendance = async (e, liveId) => {
         // Stop both default Link navigation and event bubbling
         if (e) {
             e.preventDefault();
@@ -86,9 +85,8 @@ const LiveList = () => {
     };
 
     // Calculate Annual Summaries for grouped List view
-    type YearSummary = { year: number; performanceCount: number; lives: Live[] }
     const annualSummaries = useMemo(() => {
-        const summaries: Record<number, YearSummary> = {};
+        const summaries = {};
 
         lives.forEach(live => {
             if (!live.date) return;
@@ -111,7 +109,7 @@ const LiveList = () => {
 
         return Object.values(summaries).map(s => ({
             ...s,
-            lives: s.lives.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            lives: s.lives.sort((a, b) => new Date(b.date) - new Date(a.date))
         })).sort((a, b) => b.year - a.year);
     }, [lives]);
 
@@ -182,7 +180,7 @@ const LiveList = () => {
                                 <div
                                     key={summary.year}
                                     className={`sidebar-item ${selectedYear === summary.year.toString() ? 'active' : ''}`}
-                                    onClick={() => setSearchParams({ year: summary.year.toString() })}
+                                    onClick={() => setSearchParams({ year: summary.year })}
                                 >
                                     <Calendar size={18} className="sidebar-icon" />
                                     <span className="sidebar-text">{summary.year}</span>
@@ -192,6 +190,13 @@ const LiveList = () => {
                         </div>
                     </div>
 
+                    <div className="sidebar-info-box">
+                        <div className="info-icon">i</div>
+                        <div className="info-title">アーカイブについて</div>
+                        <div className="info-content">
+                            現在2015年以降のデータを公開中。2005年のデビューから現在までのライブデータを網羅できるよう、順次アップデートを行っています。
+                        </div>
+                    </div>
                 </aside>
 
                 {/* Main Content */}
@@ -203,7 +208,7 @@ const LiveList = () => {
                                     <ArrowRight size={20} className="rotate-180" />
                                 </Link>
                                 <h1 className="archive-title">
-                                    LIVE TOUR ARCHIVE
+                                    ライブアーカイブ
                                 </h1>
                             </div>
                         </header>
@@ -221,7 +226,7 @@ const LiveList = () => {
                                     <button
                                         key={summary.year}
                                         className={`mobile-tab-btn ${selectedYear === summary.year.toString() ? 'active' : ''}`}
-                                        onClick={() => setSearchParams({ year: summary.year.toString() })}
+                                        onClick={() => setSearchParams({ year: summary.year })}
                                     >
                                         {summary.year}
                                     </button>
@@ -262,11 +267,6 @@ const LiveList = () => {
                                                             <span className="title-text-wrap">
                                                                 {live.title || live.tour_name}
                                                             </span>
-                                                            {live.setlist_status === 'UNKNOWN_SETLIST' && (
-                                                                <span style={{ fontSize: '0.6rem', fontWeight: 'bold', padding: '1px 5px', borderRadius: '3px', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)', whiteSpace: 'nowrap', marginLeft: '6px', verticalAlign: 'middle' }}>
-                                                                    未登録
-                                                                </span>
-                                                            )}
                                                         </h3>
                                                     </div>
                                                     <div className="card-column period-col desktop-only">
@@ -290,11 +290,6 @@ const LiveList = () => {
                                                         </div>
                                                         <h3 className="card-title-text">
                                                             {live.title || live.tour_name}
-                                                            {live.setlist_status === 'UNKNOWN_SETLIST' && (
-                                                                <span style={{ fontSize: '0.6rem', fontWeight: 'bold', padding: '1px 5px', borderRadius: '3px', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)', whiteSpace: 'nowrap', marginLeft: '6px', verticalAlign: 'middle' }}>
-                                                                    未登録
-                                                                </span>
-                                                            )}
                                                         </h3>
                                                         <div className="card-venue-row">
                                                             <MapPin size={14} />
