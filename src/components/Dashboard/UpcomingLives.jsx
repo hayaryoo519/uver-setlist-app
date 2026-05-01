@@ -10,15 +10,13 @@ export const UpcomingLives = ({ lives }) => {
 
     return (
         <div style={{ marginBottom: '50px' }}>
-            <h2 className="section-title next-live-header" style={{ marginBottom: '20px' }}>
-                <div className="next-live-label">
-                    <Sparkles size={20} color="#fbbf24" style={{ animation: 'pulse 2s infinite' }} />
-                    Next Live
-                </div>
-                <span className="next-live-sub">
-                    （セットリスト予想 - Coming Soon）
+            <h2 className="section-title next-live-header" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                Next Live
+                <span className="prediction-badge">
+                    セトリ予想受付中 🔥
                 </span>
             </h2>
+
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
                 {nextLives.map((live, index) => (
@@ -65,7 +63,16 @@ export const UpcomingLives = ({ lives }) => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#cbd5e1', fontSize: '0.95rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <Calendar size={16} color="var(--primary-color)" />
-                                    <span style={{ fontWeight: '500', color: '#fff' }}>{live.date}</span>
+                                    <span style={{ fontWeight: 'bold', color: '#fff' }}>
+                                        {(() => {
+                                            const d = new Date(live.date);
+                                            return isNaN(d.getTime()) ? live.date : d.toLocaleDateString('ja-JP', {
+                                                year: 'numeric',
+                                                month: '2-digit',
+                                                day: '2-digit'
+                                            }).replace(/\//g, '.');
+                                        })()}
+                                    </span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <MapPin size={16} color="var(--primary-color)" />
@@ -74,7 +81,6 @@ export const UpcomingLives = ({ lives }) => {
                             </div>
                         </div>
 
-                        {/* Future Actions Area */}
                         <div style={{
                             marginTop: '20px',
                             paddingTop: '15px',
@@ -82,31 +88,60 @@ export const UpcomingLives = ({ lives }) => {
                             position: 'relative',
                             zIndex: 1
                         }}>
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                <button
-                                    disabled
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <Link
+                                    to={`/predictions/new?live_id=${live.id}`}
+                                    state={{ from: '/dashboard' }}
                                     style={{
-                                        flex: 1,
                                         padding: '10px',
                                         borderRadius: '8px',
-                                        background: 'rgba(255,255,255,0.05)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        color: '#64748b',
-                                        fontSize: '0.8rem',
-                                        cursor: 'not-allowed',
+                                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                                        border: 'none',
+                                        color: '#fff',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 'bold',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        gap: '6px'
+                                        gap: '6px',
+                                        textDecoration: 'none',
+                                        boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)'
                                     }}
+                                    className="hover:scale-105 transition-all"
                                 >
-                                    <Sparkles size={14} /> 予想する (準備中)
-                                </button>
+                                    <Sparkles size={14} /> 予想する
+
+                                </Link>
+                                <Link
+                                    to={`/predictions?live_id=${live.id}`}
+                                    state={{ from: '/dashboard' }}
+                                    style={{
+                                        padding: '10px',
+                                        borderRadius: '8px',
+                                        background: 'rgba(255, 255, 255, 0.3)', /* さらに明るく */
+                                        border: '1px solid rgba(255, 255, 255, 0.6)', /* 枠線をくっきり */
+                                        color: '#fff',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 'bold',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '6px',
+                                        textDecoration: 'none',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    className="hover:bg-white/40 hover:scale-105 transition-all"
+                                >
+                                    みんなの予想を見る
+
+                                </Link>
                             </div>
                         </div>
+
                     </div>
                 ))}
             </div>
+
 
             <style>{`
                 @keyframes pulse {
@@ -120,36 +155,35 @@ export const UpcomingLives = ({ lives }) => {
                     transition: all 0.3s ease;
                 }
 
-                /* Responsive Header for Next Live */
                 .next-live-header {
                     display: flex;
                     align-items: center;
-                    gap: 10px;
+                    gap: 12px;
                     flex-wrap: wrap;
                 }
-                .next-live-label {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
+                .prediction-badge {
+                    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+                    color: #000;
+                    padding: 4px 12px;
+                    border-radius: 50px;
+                    font-size: 0.85rem;
+                    font-weight: 800;
+                    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+                    animation: pulse 2s infinite;
                     white-space: nowrap;
-                }
-                .next-live-sub {
-                    font-size: 0.8rem;
-                    color: #888;
-                    font-weight: normal;
                 }
 
                 @media (max-width: 480px) {
                     .next-live-header {
-                        flex-direction: column;
-                        align-items: flex-start;
-                        gap: 2px;
+                        flex-direction: row;
+                        align-items: center;
                     }
-                    .next-live-sub {
+                    .prediction-badge {
                         font-size: 0.75rem;
-                        margin-left: 30px;
+                        padding: 3px 10px;
                     }
                 }
+
             `}</style>
         </div>
     );
