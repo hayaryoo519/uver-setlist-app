@@ -18,7 +18,7 @@ export const UpcomingLives = ({ lives }) => {
             </h2>
 
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: '20px' }}>
                 {nextLives.map((live, index) => (
                     <div
                         key={index}
