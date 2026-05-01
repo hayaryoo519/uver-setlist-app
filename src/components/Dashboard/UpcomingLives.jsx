@@ -2,11 +2,17 @@ import React from 'react';
 import { Calendar, MapPin, ArrowRight, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+const PREDICTION_START_DATE = new Date('2026-05-01');
+
 export const UpcomingLives = ({ lives }) => {
     if (!lives || lives.length === 0) return null;
 
-    // Show only next 4
-    const nextLives = lives.slice(0, 4);
+    // Show only next 4 that are on or after prediction start date
+    const nextLives = lives
+        .filter(live => new Date(live.date) >= PREDICTION_START_DATE)
+        .slice(0, 4);
+
+    if (nextLives.length === 0) return null;
 
     return (
         <div style={{ marginBottom: '50px' }}>
