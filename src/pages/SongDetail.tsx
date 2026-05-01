@@ -32,7 +32,7 @@ const SongDetail = () => {
         let result = [...song.performances];
 
         // Filter by Year
-        if (filterYear !== '全期間') {
+        if (filterYear !== 'All') {
             result = result.filter(live => new Date(live.date).getFullYear().toString() === filterYear.toString());
         }
 
