@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import PageHeader from '../components/Layout/PageHeader';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, MapPin, Calendar, Tag, Check, Plus, ArrowRight, Loader } from 'lucide-react';
@@ -125,10 +125,10 @@ const LiveList = () => {
             if (filters.text) {
                 const lowerText = filters.text.toLowerCase();
                 const matchText =
-                    live.tour_name.toLowerCase().includes(lowerText) ||
-                    (live.title && live.title.toLowerCase().includes(lowerText)) ||
-                    live.venue.toLowerCase().includes(lowerText) ||
-                    new Date(live.date).toISOString().includes(lowerText);
+                    (live.tour_name?.toLowerCase() || '').includes(lowerText) ||
+                    (live.title?.toLowerCase() || '').includes(lowerText) ||
+                    (live.venue?.toLowerCase() || '').includes(lowerText) ||
+                    (live.date ? new Date(live.date).toISOString().includes(lowerText) : false);
 
                 if (!matchText) return false;
             }
