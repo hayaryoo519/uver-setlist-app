@@ -98,7 +98,10 @@ const SetlistPredictionDetail = () => {
                                     <span className="text-xs font-black tracking-widest uppercase">セトリ予想</span>
                                 </div>
                                 <h1 className="text-3xl md:text-4xl font-black text-white mb-4">
-                                    {prediction.username} <span className="text-slate-500 font-normal">の予想</span>
+                                    <Link to={`/users/${prediction.user_id}`} className="hover:text-yellow-400 transition-colors">
+                                        {prediction.username}
+                                    </Link>
+                                    <span className="text-slate-500 font-normal"> の予想</span>
                                 </h1>
                                 <div className="flex flex-wrap items-center gap-4 text-slate-400 text-sm">
                                     <div className="flex items-center gap-1.5">
