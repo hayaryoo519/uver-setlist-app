@@ -192,13 +192,6 @@ const LiveList = () => {
                         </div>
                     </div>
 
-                    <div className="sidebar-info-box">
-                        <div className="info-icon">i</div>
-                        <div className="info-title">アーカイブについて</div>
-                        <div className="info-content">
-                            現在2015年以降のデータを公開中。2005年のデビューから現在までのライブデータを網羅できるよう、順次アップデートを行っています。
-                        </div>
-                    </div>
                 </aside>
 
                 {/* Main Content */}
@@ -210,7 +203,7 @@ const LiveList = () => {
                                     <ArrowRight size={20} className="rotate-180" />
                                 </Link>
                                 <h1 className="archive-title">
-                                    ライブアーカイブ
+                                    LIVE TOUR ARCHIVE
                                 </h1>
                             </div>
                         </header>
