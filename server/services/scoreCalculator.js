@@ -54,10 +54,10 @@ async function calculateScore(predictionId) {
     const liveRes = await db.query(
         `SELECT l.id, l.setlist_status,
                 COALESCE(
-                    (SELECT array_agg(s.normalized_title ORDER BY ls.position)
-                     FROM live_songs ls
-                     JOIN songs s ON s.id = ls.song_id
-                     WHERE ls.live_id = l.id),
+                    (SELECT array_agg(s.normalized_title ORDER BY sl.position)
+                     FROM setlists sl
+                     JOIN songs s ON s.id = sl.song_id
+                     WHERE sl.live_id = l.id),
                     '{}'::text[]
                 ) AS actual_songs
          FROM lives l
