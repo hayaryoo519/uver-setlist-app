@@ -123,15 +123,23 @@ const PredictionRanking = () => {
                         </div>
 
                         {portalTab === 'upcoming' ? (
-                            predictableLives.length === 0 ? (
-                            <div className="text-center py-20 bg-slate-800/30 border border-dashed border-slate-700 rounded-3xl">
-                                <Calendar size={48} className="mx-auto text-slate-700 mb-4" />
-                                <p className="text-slate-500">現在、予想受付中のライブはありません</p>
-                                <p className="text-slate-600 text-sm mt-1">次のツアー発表を待とう！</p>
-                            </div>
-                        ) : (
-                            <div className="grid gap-4">
-                                {predictableLives.map((live, idx) => (
+                            (() => {
+                                const PREDICTION_START_DATE = new Date('2026-05-01');
+                                const filteredLives = predictableLives.filter(live => new Date(live.date) >= PREDICTION_START_DATE);
+
+                                if (filteredLives.length === 0) {
+                                    return (
+                                        <div className="text-center py-20 bg-slate-800/30 border border-dashed border-slate-700 rounded-3xl">
+                                            <Calendar size={48} className="mx-auto text-slate-700 mb-4" />
+                                            <p className="text-slate-500">現在、予想受付中のライブはありません</p>
+                                            <p className="text-slate-600 text-sm mt-1">次のツアー発表を待とう！</p>
+                                        </div>
+                                    );
+                                }
+
+                                return (
+                                    <div className="grid gap-4">
+                                        {filteredLives.map((live, idx) => (
                                     <div 
                                         key={live.id}
                                         className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-700 rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all duration-300 group"
@@ -180,9 +188,10 @@ const PredictionRanking = () => {
                                             </div>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                            )
+                                        ))}
+                                    </div>
+                                );
+                            })()
                         ) : (
                             <div className="grid gap-4">
                                 {myPredictions.length === 0 ? (
