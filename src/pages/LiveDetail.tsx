@@ -83,7 +83,7 @@ function LiveDetail() {
                 title={`${mainTitle} (${new Date(live.date).toLocaleDateString()})`}
                 description={`UVERworld ${mainTitle} @ ${live.venue} Setlist and Live Report.`}
             />
-            
+
             <div className="max-w-3xl mx-auto px-6">
                 <div className="flex justify-between items-center mb-10">
                     <button
@@ -95,7 +95,7 @@ function LiveDetail() {
                         </div>
                         <span className="text-sm font-medium">{backLabel}</span>
                     </button>
-                    
+
                     <button
                         onClick={handleToggleAttendance}
                         disabled={attendanceLoading}
@@ -215,14 +215,22 @@ function LiveDetail() {
                 {/* セトリ予想セクション */}
                 <div className="mt-12">
                     {(() => {
-                        // 過去のライブかどうか判定（セトリがあるか、日付が過去か）
-                        const isPastLive = setlist.length > 0 || new Date(live.date) < new Date(new Date().setHours(0,0,0,0));
+                        const liveDate = new Date(live.date);
+                        const PREDICTION_START_DATE = new Date('2026-05-01');
                         
+                        // 予想機能リリース（2026/05/01）より前のライブは非表示
+                        if (liveDate < PREDICTION_START_DATE) {
+                            return null;
+                        }
+
+                        // 過去のライブかどうか判定（セトリがあるか、日付が過去か）
+                        const isPastLive = setlist.length > 0 || liveDate < new Date(new Date().setHours(0, 0, 0, 0));
+
                         // 過去のライブで、予想が1件もない場合は非表示にする
                         if (isPastLive && (live.prediction_count ?? 0) === 0) {
                             return null;
                         }
-                        
+
                         return (
                             <Link
                                 to={`/predictions?live_id=${liveId}`}
@@ -232,7 +240,7 @@ function LiveDetail() {
                                 <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
                                     <Sparkles size={120} className="text-blue-400" />
                                 </div>
-                                
+
                                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                                     <div>
                                         <div className="flex items-center gap-2 mb-3">
@@ -243,22 +251,12 @@ function LiveDetail() {
                                         </div>
                                         <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">
                                             {isPastLive ? "みんなのセトリ予想ランキング" : "このライブのセトリを予想しよう！"}
-                                         </h3>
+                                        </h3>
                                         <p className="text-slate-400 text-sm max-w-md">
-                                            {isPastLive 
+                                            {isPastLive
                                                 ? "ライブ開催前に投稿された、みんなのセトリ予想結果を見てみましょう！"
                                                 : "みんなの予想ランキングをチェックしたり、自分だけの最強のセットリストを投稿してシェアしましょう。"}
                                         </p>
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-right hidden md:block">
-                                            <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-tighter">ランキングを見る</div>
-                                            <div className="text-white font-black text-xl">みんなの予想 &rarr;</div>
-                                        </div>
-                                        <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-900/40 group-hover:scale-110 transition-transform">
-                                            <Plus size={24} />
-                                        </div>
                                     </div>
                                 </div>
                             </Link>
@@ -266,15 +264,14 @@ function LiveDetail() {
                     })()}
                 </div>
 
-
                 <div className="mt-16 text-center">
                     <p className="text-slate-500 text-sm mb-6 max-w-sm mx-auto leading-relaxed">
                         セットリストやライブ情報に誤りがある場合は、こちらからお知らせください。
                     </p>
                     <button
                         className={`inline-flex items-center gap-3 px-8 py-4 rounded-full text-sm font-black tracking-widest transition-all duration-300
-                            ${!currentUser 
-                                ? 'bg-slate-800 text-slate-500 border border-slate-700' 
+                            ${!currentUser
+                                ? 'bg-slate-800 text-slate-500 border border-slate-700'
                                 : 'bg-white text-black hover:bg-blue-500 hover:text-white shadow-xl shadow-white/5'}`}
                         onClick={handleCorrectionClick}
                     >
