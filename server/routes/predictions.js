@@ -94,6 +94,8 @@ router.get('/', async (req, res) => {
 
         if (sort === 'new') {
             query += ` ORDER BY p.created_at DESC `;
+        } else if (sort === 'score') {
+            query += ` ORDER BY ps.total_score DESC NULLS LAST, like_count DESC `;
         } else {
             // Default: popular (like_count)
             query += ` ORDER BY like_count DESC, p.created_at DESC `;
