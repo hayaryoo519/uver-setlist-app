@@ -173,5 +173,14 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
     exclude: ['**/node_modules/**', '**/dist/**', '**/server/tests/**'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      include: ['src/lib/**', 'src/hooks/queries/**'],
+      thresholds: {
+        functions: 70,
+        statements: 70,
+      },
+    },
   },
 })

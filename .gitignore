@@ -27,6 +27,12 @@ dist-ssr
 .env
 .env.production
 
+# Temp data exports
+User*.json
+
+# Coverage reports
+coverage/
+
 # Development/Debug Scripts (temporary)
 server/check_*.js
 server/debug_*.js
@@ -54,3 +60,4 @@ DEVELOPMENT.md
 OPERATIONS.md
 GEMINI.md
 
+.claude/

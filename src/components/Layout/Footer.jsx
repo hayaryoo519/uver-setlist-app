@@ -17,7 +17,7 @@ const Footer = () => {
                     )}
                 </div>
                 <div className="footer-copyright">
-                    &copy; {new Date().getFullYear()} UVERworld Setlist Archive. Unofficial fan project.
+                    &copy; {new Date().getFullYear()} UVERworld Setlist Archive. 非公式ファンプロジェクト
                 </div>
             </div>
 
