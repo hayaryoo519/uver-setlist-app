@@ -224,16 +224,16 @@ function MyPage() {
 
             {/* フォロー統計カード */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '30px' }}>
-                <div className="stat-card">
+                <Link to="/mypage/follows?tab=following" className="stat-card" style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}>
                     <div className="stat-icon"><Users size={20} /></div>
                     <div className="stat-label">フォロー中</div>
                     <div className="stat-value">{followStats?.following_count ?? '-'}</div>
-                </div>
-                <div className="stat-card">
+                </Link>
+                <Link to="/mypage/follows?tab=followers" className="stat-card" style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}>
                     <div className="stat-icon"><Users size={20} /></div>
                     <div className="stat-label">フォロワー</div>
                     <div className="stat-value">{followStats?.follower_count ?? '-'}</div>
-                </div>
+                </Link>
             </div>
 
             {stats.totalLives > 0 ? (
