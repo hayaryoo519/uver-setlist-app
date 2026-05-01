@@ -71,6 +71,25 @@ const SetlistPredictionCreate = () => {
         if (liveId) setSelectedLiveId(liveId);
     }, [liveId]);
 
+    // 過去のライブや、予想開始日以前のライブへの投稿を制限
+    useEffect(() => {
+        if (liveInfo) {
+            const liveDate = new Date(liveInfo.date);
+            const PREDICTION_START_DATE = new Date('2026-05-01');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const isPastLive = liveDate < today;
+
+            if (liveDate < PREDICTION_START_DATE) {
+                alert("このライブはセトリ予想の対象外（2026-05-01以前）です。");
+                navigate('/predictions');
+            } else if (isPastLive) {
+                alert("このライブは既に開催済みのため、新しく予想を投稿することはできません。\nみんなの予想ランキングを見て楽しみましょう。");
+                navigate(`/predictions?live_id=${liveInfo.id}`);
+            }
+        }
+    }, [liveInfo, navigate]);
+
     const handleAddSong = (song: Song) => {
         if (selectedSongs.length >= 30) {
             alert("予想曲は最大30曲までです。");
