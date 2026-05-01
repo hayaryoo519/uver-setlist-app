@@ -78,6 +78,42 @@ router.delete('/:userId', authorize, async (req, res) => {
     }
 });
 
+// GET /api/follows/my/followers — 自分のフォロワー一覧（認証必須）
+router.get('/my/followers', authorize, async (req, res) => {
+    const userId = req.user.user_id;
+    try {
+        const result = await db.query(`
+            SELECT u.id, u.username
+            FROM user_follows f
+            JOIN users u ON u.id = f.follower_id
+            WHERE f.following_id = $1
+            ORDER BY f.created_at DESC
+        `, [userId]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('My followers error:', err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// GET /api/follows/my/following — 自分がフォロー中のユーザー一覧（認証必須）
+router.get('/my/following', authorize, async (req, res) => {
+    const userId = req.user.user_id;
+    try {
+        const result = await db.query(`
+            SELECT u.id, u.username
+            FROM user_follows f
+            JOIN users u ON u.id = f.following_id
+            WHERE f.follower_id = $1
+            ORDER BY f.created_at DESC
+        `, [userId]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('My following error:', err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 // GET /api/follows/my/stats — 自分のフォロー統計（認証必須）
 // ※ /stats/:userId より前に定義すること（userId='my' で NaN になる防止）
 router.get('/my/stats', authorize, async (req, res) => {
