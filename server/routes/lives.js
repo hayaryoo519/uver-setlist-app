@@ -229,7 +229,6 @@ router.put('/:id/setlist', authorize, adminCheck, async (req, res) => {
         const { id } = req.params;
         const { songs } = req.body; // Expect array of song_ids
 
-        // Transaction mostly
         await db.query("BEGIN");
 
         // 1. Delete existing setlist
@@ -247,7 +246,19 @@ router.put('/:id/setlist', authorize, adminCheck, async (req, res) => {
             }
         }
 
+        // 3. setlist_status を NORMAL に更新
+        const newStatus = songs && songs.length > 0 ? 'NORMAL' : 'UNKNOWN_SETLIST';
+        await db.query("UPDATE lives SET setlist_status = $1 WHERE id = $2", [newStatus, id]);
+
         await db.query("COMMIT");
+
+        // 4. NORMAL になった場合はスコアを非同期で再計算（レスポンスは待たない）
+        if (newStatus === 'NORMAL') {
+            recalculateScoresForLive(Number(id)).catch(err =>
+                console.error(`auto recalculate scores for live ${id}:`, err.message)
+            );
+        }
+
         res.json({ message: "Setlist updated" });
     } catch (err) {
         await db.query("ROLLBACK");
@@ -292,7 +303,16 @@ router.post('/:id/import-setlist', authorize, adminCheck, async (req, res) => {
             );
         }
 
+        // setlist_status を NORMAL に更新
+        await db.query("UPDATE lives SET setlist_status = 'NORMAL' WHERE id = $1", [id]);
+
         await db.query("COMMIT");
+
+        // スコアを非同期で再計算
+        recalculateScoresForLive(Number(id)).catch(err =>
+            console.error(`auto recalculate scores for live ${id}:`, err.message)
+        );
+
         res.json({ message: "Setlist imported successfully", count: songs.length });
 
     } catch (err) {
