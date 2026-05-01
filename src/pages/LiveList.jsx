@@ -213,7 +213,7 @@ const LiveList = () => {
                                     <ArrowRight size={20} className="rotate-180" />
                                 </Link>
                                 <h1 className="archive-title">
-                                    ライブアーカイブ
+                                    LIVE TOUR ARCHIVE
                                 </h1>
                             </div>
                         </header>
@@ -264,7 +264,7 @@ const LiveList = () => {
                                                         <label>ツアー / ライブ名</label>
                                                         <h3 className="tour-name-text">
                                                             <span className={`mobile-type-badge ${live.type === 'FESTIVAL' ? 'badge-fes-m' :
-                                                                    live.type === 'EVENT' ? 'badge-event-m' : 'badge-oneman-m'
+                                                                live.type === 'EVENT' ? 'badge-event-m' : 'badge-oneman-m'
                                                                 }`}>
                                                                 {live.type === 'FESTIVAL' ? 'FES' :
                                                                     live.type === 'EVENT' ? 'EVENT' : 'ワンマン'}
@@ -287,7 +287,7 @@ const LiveList = () => {
                                                                 {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.')}
                                                             </span>
                                                             <span className={`mobile-type-badge ${live.type === 'FESTIVAL' ? 'badge-fes-m' :
-                                                                    live.type === 'EVENT' ? 'badge-event-m' : 'badge-oneman-m'
+                                                                live.type === 'EVENT' ? 'badge-event-m' : 'badge-oneman-m'
                                                                 }`}>
                                                                 {live.type === 'FESTIVAL' ? 'FES' :
                                                                     live.type === 'EVENT' ? 'EVENT' : 'ワンマン'}
@@ -350,7 +350,7 @@ const LiveList = () => {
                                                 <label>ツアー / ライブ名</label>
                                                 <h3 className="tour-name-text">
                                                     <span className={`mobile-type-badge ${live.type === 'FESTIVAL' ? 'badge-fes-m' :
-                                                            live.type === 'EVENT' ? 'badge-event-m' : 'badge-oneman-m'
+                                                        live.type === 'EVENT' ? 'badge-event-m' : 'badge-oneman-m'
                                                         }`}>
                                                         {live.type === 'FESTIVAL' ? 'FES' :
                                                             live.type === 'EVENT' ? 'EVENT' : 'ワンマン'}
@@ -378,7 +378,7 @@ const LiveList = () => {
                                                         {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.')}
                                                     </span>
                                                     <span className={`mobile-type-badge ${live.type === 'FESTIVAL' ? 'badge-fes-m' :
-                                                            live.type === 'EVENT' ? 'badge-event-m' : 'badge-oneman-m'
+                                                        live.type === 'EVENT' ? 'badge-event-m' : 'badge-oneman-m'
                                                         }`}>
                                                         {live.type === 'FESTIVAL' ? 'FES' :
                                                             live.type === 'EVENT' ? 'EVENT' : 'ワンマン'}
