@@ -68,6 +68,7 @@ export interface User {
   role: UserRole
   email_verified: boolean
   created_at: string
+  is_public?: boolean
 }
 
 // 認証済みユーザー（AuthContext）
@@ -152,4 +153,48 @@ export interface PredictionsParams {
 // 楽曲画像レスポンス
 export interface SongImageResponse {
   image_url: string | null
+}
+
+// フォロー統計
+export interface FollowStats {
+  following_count: number
+  follower_count: number
+  is_following?: boolean
+}
+
+export interface FollowToggleResponse {
+  following: boolean
+}
+
+// フィードアイテム（フォロー中ユーザーの予想）
+export interface FeedItem {
+  id: number
+  user_id: number
+  live_id: number
+  title: string
+  created_at: string
+  username: string
+  tour_name: string
+  venue: string
+  live_date: string
+  like_count: number
+  is_liked: boolean
+  is_mine: false
+}
+
+export interface FeedParams {
+  limit?: number
+  offset?: number
+  enabled?: boolean
+}
+
+// 公開ユーザープロフィール
+export interface PublicUserProfile {
+  id: number
+  username: string
+  created_at: string
+  following_count: number
+  follower_count: number
+  is_following: boolean
+  is_public: boolean
 }

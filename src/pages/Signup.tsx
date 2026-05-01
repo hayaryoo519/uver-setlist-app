@@ -3,13 +3,14 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import AuthLayout from '../components/Auth/AuthLayout';
-import { Mail, Lock, User, ArrowRight, Loader, CheckCircle } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader, CheckCircle, Eye, EyeOff } from 'lucide-react';
 
 const Signup = () => {
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [isPublic, setIsPublic] = useState(true);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const { register } = useAuth();
@@ -31,7 +32,7 @@ const Signup = () => {
         setIsLoading(true);
 
         try {
-            const result = await register(username, email, password);
+            const result = await register(username, email, password, isPublic);
             if (result.success) {
                 if (result.requireVerification) {
                     showToast('登録完了！認証メールを送信しました。', 'info');
@@ -127,7 +128,7 @@ const Signup = () => {
                     </div>
                 </div>
 
-                <div className="auth-input-group" style={{ marginBottom: '32px' }}>
+                <div className="auth-input-group">
                     <label className="auth-label">パスワード（確認）</label>
                     <div className="auth-input-wrapper">
                         <input
@@ -140,6 +141,60 @@ const Signup = () => {
                             tabIndex={4}
                         />
                         <Lock size={18} className="auth-input-icon" />
+                    </div>
+                </div>
+
+                {/* プライバシー設定 */}
+                <div className="auth-input-group" style={{ marginBottom: '32px' }}>
+                    <label className="auth-label">参戦記録の公開設定</label>
+                    <div
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '14px',
+                            padding: '14px 16px',
+                            background: 'rgba(255,255,255,0.03)',
+                            borderRadius: '12px',
+                            border: '1px solid rgba(255,255,255,0.07)',
+                            cursor: 'pointer',
+                        }}
+                        onClick={() => setIsPublic(p => !p)}
+                    >
+                        <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setIsPublic(p => !p); }}
+                            style={{
+                                flexShrink: 0,
+                                width: '44px',
+                                height: '26px',
+                                borderRadius: '13px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: '3px',
+                                background: isPublic ? '#eab308' : 'rgba(255,255,255,0.1)',
+                                transition: 'background 0.2s',
+                                position: 'relative',
+                            }}
+                        >
+                            <span style={{
+                                display: 'block',
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                background: '#fff',
+                                transition: 'transform 0.2s',
+                                transform: isPublic ? 'translateX(18px)' : 'translateX(0)',
+                            }} />
+                        </button>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.85rem', color: isPublic ? '#fde68a' : '#94a3b8', marginBottom: '2px' }}>
+                                {isPublic ? <Eye size={13} /> : <EyeOff size={13} />}
+                                {isPublic ? '参戦記録を公開する' : '参戦記録を非公開にする'}
+                            </div>
+                            <p style={{ margin: 0, fontSize: '0.75rem', color: '#475569', lineHeight: 1.4 }}>
+                                セトリ予想は公開設定に関わらず常に公開されます
+                            </p>
+                        </div>
                     </div>
                 </div>
 
