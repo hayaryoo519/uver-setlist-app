@@ -14,26 +14,26 @@
 ## 2. タグ・リリース作成手順
 GitHub CLI (`gh`) を使用して、PRマージ後に以下の手順でリリースを作成します。
 
-### ① ブランチの同期
+### ① ブランチの同期とPR作成
+1.  開発用ブランチから `dev` へのマージ（AIが実施可）。
+2.  `dev` から `main` へのプルリクエストを作成。
+    ```powershell
+    gh pr create --base main --head dev --title "vX.X.X - リリースタイトル"
+    ```
+3.  **人間（ユーザー）** が GitHub 上で PR をマージし、`main` に反映させる。
+
+### ② 最新リリースの作成（AIが実施）
+`main` ブランチが更新された後、AIは `main` に切り替えて最新をプルし、以下の安全スクリプトを実行してリリースを作成します。
+
+**注意: AIは絶対に `git push origin main` を実行してはいけません。**
+
 ```powershell
 git checkout main
 git pull origin main
+node .agent/scripts/release-tag.js
 ```
 
-### ② 最新バージョンの確認
-リリース前に必ず以下のスクリプトを実行し、現在のバージョンと次に設定すべきバージョンを確認してください。
-
-```powershell
-node .agent/scripts/suggest-version.js
-```
-
-### ③ リリースの作成
-上記スクリプトの提案に従い、適切なバージョン（PATCH / MINOR / MAJOR）を選択してリリースを作成します。
-
-```powershell
-# 例: パッチバージョンの更新
-& "C:\Program Files\GitHub CLI\gh.exe" release create v1.6.2 --title "v1.6.2 - [簡潔なタイトル]" --notes "[変更内容の要約]"
-```
+スクリプトが提案する `gh release create` コマンドを確認し、実行します。
 
 ## 3. リリース前チェックリスト（ミス防止）
 タグを打つ前に、必ず以下の項目を確認してください。
