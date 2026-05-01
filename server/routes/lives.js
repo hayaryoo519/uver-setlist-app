@@ -3,6 +3,7 @@ const db = require('../db');
 const { authorize, adminCheck } = require('../middleware/authorization');
 const { normalizeVenueName } = require('../utils/songTranslations');
 const { notifyNewLive } = require('../utils/pushNotification');
+const { recalculateScoresForLive } = require('../services/scoreCalculator');
 
 // GET All Lives with Advanced Filters
 router.get('/', async (req, res) => {
@@ -316,6 +317,18 @@ router.post('/batch-delete', authorize, adminCheck, async (req, res) => {
     } catch (err) {
         console.error("Batch delete error:", err.message);
         res.status(500).send("Server Error");
+    }
+});
+
+// セトリ予想スコアを一括再計算 (Admin only)
+router.post('/:id/recalculate-scores', authorize, adminCheck, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await recalculateScoresForLive(Number(id));
+        res.json(result);
+    } catch (err) {
+        console.error('recalculate-scores error:', err.message);
+        res.status(500).json({ message: err.message });
     }
 });
 
