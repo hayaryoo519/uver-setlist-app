@@ -19,4 +19,16 @@ export const queryKeys = {
   stats: {
     global: ['stats', 'global'] as const,
   },
+  follows: {
+    myStats: ['follows', 'my', 'stats'] as const,
+    stats:   (userId: number | string) => ['follows', 'stats', userId] as const,
+  },
+  feed: {
+    all: (params: Record<string, unknown>) => ['feed', params] as const,
+  },
+  userProfile: {
+    detail:        (userId: number | string) => ['user', 'profile', userId] as const,
+    attendedLives: (userId: number | string) => ['user', 'attended', userId] as const,
+    predictions:   (userId: number | string) => ['user', 'predictions', userId] as const,
+  },
 }

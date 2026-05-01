@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { User, Globe, ArrowLeft, Trash2, Save } from 'lucide-react';
+import { User, Globe, ArrowLeft, Trash2, Save, Eye, EyeOff } from 'lucide-react';
 import SEO from '../components/SEO';
 
 function Settings() {
@@ -9,7 +9,8 @@ function Settings() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         username: currentUser?.username || '',
-        email: currentUser?.email || ''
+        email: currentUser?.email || '',
+        is_public: currentUser?.is_public !== false,
     });
     const [passwordData, setPasswordData] = useState({
         currentPassword: '',
@@ -30,7 +31,10 @@ function Settings() {
         e.preventDefault();
         setMessage({ text: '', type: '' });
 
-        const isProfileChanged = formData.username !== currentUser?.username || formData.email !== currentUser?.email;
+        const isProfileChanged =
+            formData.username !== currentUser?.username ||
+            formData.email !== currentUser?.email ||
+            formData.is_public !== (currentUser?.is_public !== false);
         const isPasswordChanged = passwordData.newPassword.length > 0;
 
         if (!isProfileChanged && !isPasswordChanged) {
@@ -38,7 +42,7 @@ function Settings() {
             return;
         }
 
-        const payload: Record<string, string> = { ...formData };
+        const payload: Record<string, string | boolean> = { ...formData };
 
         if (isPasswordChanged) {
             if (!passwordData.currentPassword) {
@@ -164,6 +168,49 @@ function Settings() {
                                 onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
                                 placeholder="もう一度入力してください"
                             />
+                        </div>
+                    </div>
+
+                    <div style={{ marginBottom: '40px' }}>
+                        <h2 style={{ fontSize: '1.2rem', marginBottom: '20px', color: '#cbd5e1', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>プライバシー設定</h2>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.07)' }}>
+                            <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, is_public: !prev.is_public }))}
+                                style={{
+                                    flexShrink: 0,
+                                    width: '48px',
+                                    height: '28px',
+                                    borderRadius: '14px',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '3px',
+                                    transition: 'background 0.2s',
+                                    background: formData.is_public ? '#eab308' : 'rgba(255,255,255,0.1)',
+                                    position: 'relative',
+                                }}
+                                aria-label="参戦記録公開設定"
+                            >
+                                <span style={{
+                                    display: 'block',
+                                    width: '22px',
+                                    height: '22px',
+                                    borderRadius: '50%',
+                                    background: '#fff',
+                                    transition: 'transform 0.2s',
+                                    transform: formData.is_public ? 'translateX(20px)' : 'translateX(0)',
+                                }} />
+                            </button>
+                            <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: formData.is_public ? '#fde68a' : '#94a3b8', fontWeight: 700, fontSize: '0.9rem', marginBottom: '4px' }}>
+                                    {formData.is_public ? <Eye size={14} /> : <EyeOff size={14} />}
+                                    {formData.is_public ? '参戦記録を公開中' : '参戦記録を非公開'}
+                                </div>
+                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.8rem', lineHeight: 1.5 }}>
+                                    参戦記録（参戦ライブ・楽曲ランキング）を他のユーザーに公開します。<br />
+                                    <span style={{ color: '#94a3b8' }}>※ セトリ予想は公開設定に関わらず常に公開されます。</span>
+                                </p>
+                            </div>
                         </div>
                     </div>
 
