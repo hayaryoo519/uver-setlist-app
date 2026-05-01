@@ -40,6 +40,8 @@ app.use('/api/logs', require('./routes/logs'));
 app.use('/api/push', require('./routes/push'));
 app.use('/api/drafts', require('./routes/drafts'));
 app.use('/api/predictions', require('./routes/predictions'));
+app.use('/api/follows', require('./routes/follows'));
+app.use('/api/feed',    require('./routes/feed'));
 app.use('/api/music', require('./routes/music'));
 
 // Serve static files from the React app

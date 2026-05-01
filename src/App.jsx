@@ -26,6 +26,7 @@ import CorrectionForm from './pages/CorrectionForm';
 import PredictionRanking from './pages/PredictionRanking';
 import SetlistPredictionCreate from './pages/SetlistPredictionCreate';
 import SetlistPredictionDetail from './pages/SetlistPredictionDetail';
+import UserProfile from './pages/UserProfile';
 import ScrollToTop from './components/ScrollToTop';
 
 import ProtectedRoute from './components/ProtectedRoute';
@@ -87,6 +88,7 @@ function App() {
                 <Route path="/song/:id" element={<SongDetail />} />
                 <Route path="/predictions" element={<PredictionRanking />} />
                 <Route path="/predictions/:id" element={<SetlistPredictionDetail />} />
+                <Route path="/users/:id" element={<UserProfile />} />
               </Route>
 
             </Routes>
