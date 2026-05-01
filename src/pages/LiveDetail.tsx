@@ -215,23 +215,19 @@ function LiveDetail() {
                 {/* セトリ予想セクション */}
                 <div className="mt-12">
                     {(() => {
-                        const PREDICTION_START_DATE = new Date('2026-05-01');
                         const liveDate = new Date(live.date);
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-
-                        // 過去のライブかどうか判定（セトリがあるか、日付が過去か）
-                        const isPastLive = setlist.length > 0 || liveDate < today;
-
-                        // 2026-05-01以前のライブで、予想が1件もない場合は非表示にする
-                        // (ユーザー要望：5/1より前は機能がなかったのでボタンを出さない)
-                        const predictionCount = Number(live.prediction_count || 0);
-                        if (liveDate < PREDICTION_START_DATE && predictionCount === 0) {
+                        const PREDICTION_START_DATE = new Date('2026-05-01');
+                        
+                        // 予想機能リリース（2026/05/01）より前のライブは非表示
+                        if (liveDate < PREDICTION_START_DATE) {
                             return null;
                         }
 
-                        // 過去のライブで、予想が1件もない場合も非表示にする（クリーンアップ用）
-                        if (isPastLive && predictionCount === 0) {
+                        // 過去のライブかどうか判定（セトリがあるか、日付が過去か）
+                        const isPastLive = setlist.length > 0 || liveDate < new Date(new Date().setHours(0, 0, 0, 0));
+
+                        // 過去のライブで、予想が1件もない場合は非表示にする
+                        if (isPastLive && (live.prediction_count ?? 0) === 0) {
                             return null;
                         }
 
@@ -258,8 +254,8 @@ function LiveDetail() {
                                         </h3>
                                         <p className="text-slate-400 text-sm max-w-md">
                                             {isPastLive
-                                                ? "ライブ開催前に投稿された、みんなのセトリ予想結果を見てみよう！"
-                                                : "みんなの予想ランキングをチェックしたり、自分だけの最強のセットリストを投稿してシェアしよう。"}
+                                                ? "ライブ開催前に投稿された、みんなのセトリ予想結果を見てみましょう！"
+                                                : "みんなの予想ランキングをチェックしたり、自分だけの最強のセットリストを投稿してシェアしましょう。"}
                                         </p>
                                     </div>
                                 </div>
@@ -267,7 +263,6 @@ function LiveDetail() {
                         );
                     })()}
                 </div>
-
 
                 <div className="mt-16 text-center">
                     <p className="text-slate-500 text-sm mb-6 max-w-sm mx-auto leading-relaxed">
