@@ -7,6 +7,7 @@ import SEO from '../components/SEO';
 import { usePredictableLives, usePredictions, useLikePrediction } from '../hooks/queries/usePredictions';
 import { useLiveDetail } from '../hooks/queries/useLives';
 import { useLives } from '../hooks/queries/useLives';
+import FollowButton from '../components/common/FollowButton';
 
 const PredictionRanking = () => {
     const [portalTab, setPortalTab] = useState('upcoming'); // 'upcoming' | 'mine'
@@ -370,7 +371,14 @@ const PredictionRanking = () => {
                                             <div className="flex-1 min-w-0 pr-4">
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <h2 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors truncate">
-                                                        {prediction.username}さんの予想
+                                                        <Link
+                                                            to={`/users/${prediction.user_id}`}
+                                                            onClick={e => e.stopPropagation()}
+                                                            className="hover:text-yellow-400 transition-colors"
+                                                        >
+                                                            {prediction.username}
+                                                        </Link>
+                                                        さんの予想
                                                     </h2>
                                                 </div>
                                                 <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-slate-500 font-medium">
@@ -378,7 +386,13 @@ const PredictionRanking = () => {
                                                         <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
                                                             <User size={12} className="text-blue-400" />
                                                         </div>
-                                                        {prediction.username}
+                                                        <Link
+                                                            to={`/users/${prediction.user_id}`}
+                                                            onClick={e => e.stopPropagation()}
+                                                            className="hover:text-yellow-400 transition-colors"
+                                                        >
+                                                            {prediction.username}
+                                                        </Link>
                                                     </div>
                                                     <div className="flex items-center gap-1.5">
                                                         <Calendar size={12} />
@@ -387,15 +401,18 @@ const PredictionRanking = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="flex flex-col items-center gap-1 border-l border-slate-700/50 pl-6">
+                                            <div className="flex flex-col items-center gap-2 border-l border-slate-700/50 pl-6">
+                                                {!prediction.is_mine && (
+                                                    <FollowButton targetUserId={prediction.user_id} size="sm" />
+                                                )}
                                                 <button
                                                     onClick={(e) => handleLike(e, prediction.id)}
                                                     className={`group/like flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${prediction.is_liked ? 'text-pink-500' : 'text-slate-500 hover:bg-pink-500/10 hover:text-pink-400'}`}
                                                 >
-                                                    <Heart 
-                                                        size={24} 
-                                                        fill={prediction.is_liked ? "currentColor" : "none"} 
-                                                        className={`transition-transform duration-300 ${prediction.is_liked ? 'scale-110' : 'group-hover/like:scale-110'}`} 
+                                                    <Heart
+                                                        size={24}
+                                                        fill={prediction.is_liked ? "currentColor" : "none"}
+                                                        className={`transition-transform duration-300 ${prediction.is_liked ? 'scale-110' : 'group-hover/like:scale-110'}`}
                                                     />
                                                     <span className="text-xs font-black tracking-tighter">{prediction.like_count}</span>
                                                 </button>

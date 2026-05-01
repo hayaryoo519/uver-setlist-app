@@ -1,6 +1,18 @@
 const router = require('express').Router();
 const db = require('../db');
 const { authorize, adminCheck } = require('../middleware/authorization');
+const jwt = require('jsonwebtoken');
+
+const getOptionalUserId = (req) => {
+    const token = req.header('token');
+    if (!token) return null;
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        return decoded.user_id;
+    } catch {
+        return null;
+    }
+};
 
 // GET all users (Protected: Admin Only)
 router.get('/', authorize, adminCheck, async (req, res) => {
@@ -252,13 +264,17 @@ router.put('/me', authorize, async (req, res) => {
             updates.push(`password = $${idx++}`);
             values.push(newPasswordHash);
         }
+        if (req.body.is_public !== undefined) {
+            updates.push(`is_public = $${idx++}`);
+            values.push(req.body.is_public);
+        }
 
         if (updates.length === 0) {
             return res.json({ message: "No changes requested" });
         }
 
         values.push(currentUserId);
-        const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} RETURNING id, username, email, role`;
+        const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} RETURNING id, username, email, role, is_public`;
 
         const updateResult = await db.query(sql, values);
 
@@ -266,6 +282,140 @@ router.put('/me', authorize, async (req, res) => {
     } catch (err) {
         console.error(err.message);
         res.status(500).send("Server Error");
+    }
+});
+
+// GET /api/users/:id/profile — 公開プロフィール（認証任意）
+router.get('/:id/profile', async (req, res) => {
+    const userId        = parseInt(req.params.id, 10);
+    const currentUserId = getOptionalUserId(req);
+
+    if (isNaN(userId)) {
+        return res.status(400).json({ message: '無効なユーザーIDです' });
+    }
+
+    try {
+        const result = await db.query(`
+            SELECT
+                u.id,
+                u.username,
+                u.created_at,
+                u.is_public,
+                (SELECT COUNT(*) FROM user_follows WHERE follower_id  = u.id)::int AS following_count,
+                (SELECT COUNT(*) FROM user_follows WHERE following_id = u.id)::int AS follower_count,
+                CASE
+                    WHEN $2::int IS NULL THEN false
+                    ELSE EXISTS(
+                        SELECT 1 FROM user_follows
+                        WHERE follower_id = $2 AND following_id = u.id
+                    )
+                END AS is_following
+            FROM users u
+            WHERE u.id = $1
+        `, [userId, currentUserId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'ユーザーが見つかりません' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('User profile error:', err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// GET /api/users/:id/attended_lives — 公開参戦ライブ一覧
+// is_public = false の場合は 403
+router.get('/:id/attended_lives', async (req, res) => {
+    const userId = parseInt(req.params.id, 10);
+
+    if (isNaN(userId)) {
+        return res.status(400).json({ message: '無効なユーザーIDです' });
+    }
+
+    try {
+        const userCheck = await db.query(
+            'SELECT is_public FROM users WHERE id = $1', [userId]
+        );
+        if (userCheck.rows.length === 0) {
+            return res.status(404).json({ message: 'ユーザーが見つかりません' });
+        }
+        if (!userCheck.rows[0].is_public) {
+            return res.status(403).json({ message: 'このユーザーの参戦記録は非公開です' });
+        }
+
+        const livesResult = await db.query(`
+            SELECT
+                l.id, l.tour_name, l.title, l.date, l.venue, l.type,
+                a.created_at AS attended_at
+            FROM attendance a
+            JOIN lives l ON a.live_id = l.id
+            WHERE a.user_id = $1
+            ORDER BY l.date DESC
+        `, [userId]);
+
+        const livesWithSetlists = await Promise.all(
+            livesResult.rows.map(async (live) => {
+                const setlistResult = await db.query(`
+                    SELECT s.id, s.title, sl.id AS setlist_id
+                    FROM setlists sl
+                    JOIN songs s ON sl.song_id = s.id
+                    WHERE sl.live_id = $1
+                `, [live.id]);
+                return { ...live, setlist: setlistResult.rows };
+            })
+        );
+
+        res.json(livesWithSetlists);
+    } catch (err) {
+        console.error('Public attended lives error:', err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// GET /api/users/:id/predictions — ユーザーの予想一覧（常に公開）
+router.get('/:id/predictions', async (req, res) => {
+    const userId = parseInt(req.params.id, 10);
+    const currentUserId = getOptionalUserId(req);
+
+    if (isNaN(userId)) {
+        return res.status(400).json({ message: '無効なユーザーIDです' });
+    }
+
+    try {
+        const result = await db.query(`
+            SELECT
+                p.id,
+                p.user_id,
+                p.live_id,
+                p.title,
+                p.created_at,
+                u.username,
+                li.tour_name,
+                li.venue,
+                li.date AS live_date,
+                COUNT(DISTINCT pl.user_id)::int                          AS like_count,
+                CASE
+                    WHEN $2::int IS NULL THEN false
+                    ELSE EXISTS(
+                        SELECT 1 FROM prediction_likes
+                        WHERE prediction_id = p.id AND user_id = $2
+                    )
+                END                                                       AS is_liked,
+                (p.user_id = $2)                                         AS is_mine
+            FROM predictions          p
+            JOIN users                u   ON u.id  = p.user_id
+            LEFT JOIN lives           li  ON li.id = p.live_id
+            LEFT JOIN prediction_likes pl ON pl.prediction_id = p.id
+            WHERE p.user_id = $1
+            GROUP BY p.id, u.username, li.id
+            ORDER BY p.created_at DESC
+        `, [userId, currentUserId]);
+
+        res.json(result.rows);
+    } catch (err) {
+        console.error('User predictions error:', err.message);
+        res.status(500).send('Server Error');
     }
 });
 
