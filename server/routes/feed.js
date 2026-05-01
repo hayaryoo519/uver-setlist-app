@@ -2,7 +2,7 @@ const router = require('express').Router();
 const db = require('../db');
 const { authorize } = require('../middleware/authorization');
 
-// GET /api/feed — フォロー中ユーザーの予想フィード（認証必須）
+// GET /api/feed — フォロワーの予想フィード（認証必須）
 router.get('/', authorize, async (req, res) => {
     const userId = req.user.user_id;
     const limit  = Math.min(parseInt(req.query.limit  || '20', 10), 50);
@@ -27,11 +27,11 @@ router.get('/', authorize, async (req, res) => {
                 )                                                            AS is_liked,
                 false                                                        AS is_mine
             FROM user_follows         f
-            JOIN predictions          p   ON p.user_id  = f.following_id
+            JOIN predictions          p   ON p.user_id  = f.follower_id
             JOIN users                u   ON u.id       = p.user_id
             JOIN lives                li  ON li.id      = p.live_id
             LEFT JOIN prediction_likes pl ON pl.prediction_id = p.id
-            WHERE f.follower_id = $1
+            WHERE f.following_id = $1
             GROUP BY p.id, u.username, li.id
             ORDER BY p.created_at DESC
             LIMIT $2 OFFSET $3
