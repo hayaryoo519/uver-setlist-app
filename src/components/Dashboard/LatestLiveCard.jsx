@@ -15,8 +15,6 @@ export const LatestLiveCard = ({ live }) => {
             position: 'relative',
             overflow: 'hidden'
         }}>
-
-
             <div style={{ position: 'relative', zIndex: 1 }}>
                 <div style={{
                     textTransform: 'uppercase',
@@ -33,8 +31,7 @@ export const LatestLiveCard = ({ live }) => {
                     LATEST LIVE
                 </div>
 
-                <h3 style={{
-                    fontSize: '1.8rem',
+                <h3 className="latest-live-title" style={{
                     margin: '0 0 10px 0',
                     lineHeight: '1.2',
                     fontWeight: '800'
@@ -60,13 +57,14 @@ export const LatestLiveCard = ({ live }) => {
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                <div className="latest-live-buttons">
                     <Link
                         to={`/live/${live.id}`}
                         state={{ from: location.pathname }}
                         style={{
                             display: 'inline-flex',
                             alignItems: 'center',
+                            justifyContent: 'center',
                             gap: '8px',
                             background: '#fbbf24',
                             color: '#000',
@@ -87,9 +85,10 @@ export const LatestLiveCard = ({ live }) => {
                         style={{
                             display: 'inline-flex',
                             alignItems: 'center',
+                            justifyContent: 'center',
                             gap: '8px',
-                            background: 'rgba(255, 255, 255, 0.3)', /* さらに明るく */
-                            border: '1px solid rgba(255, 255, 255, 0.6)', /* 枠線を強調 */
+                            background: 'rgba(255, 255, 255, 0.3)',
+                            border: '1px solid rgba(255, 255, 255, 0.6)',
                             color: '#fff',
                             padding: '12px 24px',
                             borderRadius: '50px',
@@ -102,9 +101,28 @@ export const LatestLiveCard = ({ live }) => {
                     >
                         みんなのセトリ予想を見る
                     </Link>
-
                 </div>
             </div>
+
+            <style>{`
+                .latest-live-title {
+                    font-size: clamp(1.3rem, 4vw, 1.8rem);
+                }
+                .latest-live-buttons {
+                    display: flex;
+                    gap: 12px;
+                    flex-wrap: wrap;
+                }
+                @media (max-width: 480px) {
+                    .latest-live-buttons {
+                        flex-direction: column;
+                    }
+                    .latest-live-buttons a {
+                        width: 100%;
+                        box-sizing: border-box;
+                    }
+                }
+            `}</style>
         </div>
     );
 };
