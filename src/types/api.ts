@@ -97,6 +97,15 @@ export interface Prediction {
   live_date?: string
   venue?: string
   songs?: Array<{ id: number; title: string }>
+  // スコアフィールド（ライブ終了後に算出）
+  total_score?: number | null
+  match_score?: number | null
+  position_score?: number | null
+  streak_bonus?: number | null
+  matched_count?: number | null
+  predicted_count?: number | null
+  actual_count?: number | null
+  rank?: number | null
 }
 
 // セトリ予想作成リクエスト

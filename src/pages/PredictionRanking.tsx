@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { Heart, Plus, Calendar, User, Sparkles, Eye, PenTool, MapPin } from 'lucide-react';
+import { Heart, Plus, Calendar, User, Sparkles, Eye, PenTool, MapPin, Trophy } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/Layout/PageHeader';
 import SEO from '../components/SEO';
@@ -64,6 +64,9 @@ const PredictionRanking = () => {
 
         likeMutation.mutate(id);
     };
+
+    // スコアが算出済みかどうか（1件でも total_score があれば true）
+    const hasScores = predictions.some(p => p.total_score != null);
 
     // 自分の投稿をトップに持ってくるためのソート済み配列
     const sortedPredictions = [...predictions].sort((a, b) => {
@@ -323,6 +326,15 @@ const PredictionRanking = () => {
                                 >
                                     新着順
                                 </button>
+                                {hasScores && (
+                                    <button
+                                        onClick={() => setSortBy('score')}
+                                        className={`px-6 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 ${sortBy === 'score' ? 'bg-yellow-500 text-black shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                                    >
+                                        <Trophy size={14} />
+                                        スコア順
+                                    </button>
+                                )}
                             </div>
 
                             <Link
@@ -357,8 +369,8 @@ const PredictionRanking = () => {
                                         
                                         <div className={`bg-slate-800/50 hover:bg-slate-800 border border-slate-700 group-hover:border-blue-500/50 rounded-2xl p-5 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-900/20 flex items-center`}>
                                             <div className="w-10 text-center mr-4">
-                                                {sortBy === 'popular' ? (
-                                                    <span className={`text-2xl font-black ${index === 0 && !prediction.is_mine ? 'text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]' : index === 1 ? 'text-slate-300' : index === 2 ? 'text-amber-600' : 'text-slate-600'}`}>
+                                                {sortBy === 'popular' || sortBy === 'score' ? (
+                                                    <span className={`text-2xl font-black ${index === 0 ? 'text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]' : index === 1 ? 'text-slate-300' : index === 2 ? 'text-amber-600' : 'text-slate-600'}`}>
                                                         {index + 1}
                                                     </span>
                                                 ) : (
@@ -402,20 +414,45 @@ const PredictionRanking = () => {
                                             </div>
 
                                             <div className="flex flex-col items-center gap-2 border-l border-slate-700/50 pl-6">
-                                                {!prediction.is_mine && (
-                                                    <FollowButton targetUserId={prediction.user_id} size="sm" />
+                                                {prediction.total_score != null ? (
+                                                    <div className="flex flex-col items-center gap-0.5">
+                                                        <div className="flex items-center gap-1 text-yellow-400">
+                                                            <Trophy size={14} />
+                                                            <span className="text-xl font-black tabular-nums">
+                                                                {Number(prediction.total_score).toFixed(1)}
+                                                            </span>
+                                                        </div>
+                                                        <span className="text-[10px] text-slate-500 font-bold">/ 100pt</span>
+                                                        <div className="flex gap-1 mt-1">
+                                                            <span className="text-[9px] bg-blue-900/50 text-blue-300 px-1.5 py-0.5 rounded font-bold" title="一致スコア">
+                                                                M {Number(prediction.match_score ?? 0).toFixed(0)}
+                                                            </span>
+                                                            <span className="text-[9px] bg-purple-900/50 text-purple-300 px-1.5 py-0.5 rounded font-bold" title="順番スコア">
+                                                                P {Number(prediction.position_score ?? 0).toFixed(0)}
+                                                            </span>
+                                                            <span className="text-[9px] bg-green-900/50 text-green-300 px-1.5 py-0.5 rounded font-bold" title="連続ボーナス">
+                                                                S {Number(prediction.streak_bonus ?? 0).toFixed(0)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        {!prediction.is_mine && (
+                                                            <FollowButton targetUserId={prediction.user_id} size="sm" />
+                                                        )}
+                                                        <button
+                                                            onClick={(e) => handleLike(e, prediction.id)}
+                                                            className={`group/like flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${prediction.is_liked ? 'text-pink-500' : 'text-slate-500 hover:bg-pink-500/10 hover:text-pink-400'}`}
+                                                        >
+                                                            <Heart
+                                                                size={24}
+                                                                fill={prediction.is_liked ? "currentColor" : "none"}
+                                                                className={`transition-transform duration-300 ${prediction.is_liked ? 'scale-110' : 'group-hover/like:scale-110'}`}
+                                                            />
+                                                            <span className="text-xs font-black tracking-tighter">{prediction.like_count}</span>
+                                                        </button>
+                                                    </>
                                                 )}
-                                                <button
-                                                    onClick={(e) => handleLike(e, prediction.id)}
-                                                    className={`group/like flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${prediction.is_liked ? 'text-pink-500' : 'text-slate-500 hover:bg-pink-500/10 hover:text-pink-400'}`}
-                                                >
-                                                    <Heart
-                                                        size={24}
-                                                        fill={prediction.is_liked ? "currentColor" : "none"}
-                                                        className={`transition-transform duration-300 ${prediction.is_liked ? 'scale-110' : 'group-hover/like:scale-110'}`}
-                                                    />
-                                                    <span className="text-xs font-black tracking-tighter">{prediction.like_count}</span>
-                                                </button>
                                             </div>
                                         </div>
                                     </Link>
