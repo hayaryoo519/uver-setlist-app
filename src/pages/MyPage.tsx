@@ -7,9 +7,11 @@ import VenueTypePie from '../components/Dashboard/VenueTypePie';
 import AlbumDistribution from '../components/Dashboard/AlbumDistribution';
 import SongRanking from '../components/Dashboard/SongRanking';
 import MyPageOnboarding from '../components/Dashboard/MyPageOnboarding';
-import { Music, Calendar, MapPin, Filter, Building2, User, Settings as SettingsIcon, ArrowRight } from 'lucide-react';
+import { Music, Calendar, MapPin, Filter, Building2, User, Settings as SettingsIcon, ArrowRight, Users, Heart } from 'lucide-react';
 import SEO from '../components/SEO';
 import { useAuth } from '../contexts/AuthContext';
+import { useMyFollowStats } from '../hooks/queries/useFollow';
+import { useFeed } from '../hooks/queries/useFeed';
 
 import AttendedLiveList from '../components/Dashboard/AttendedLiveList';
 import VenueRanking from '../components/Dashboard/VenueRanking';
@@ -26,6 +28,8 @@ function MyPage() {
 
     const { loading, ...stats } = useLiveStats();
     const { currentUser } = useAuth();
+    const { data: followStats } = useMyFollowStats(!!currentUser);
+    const { data: feedItems = [], isLoading: feedLoading } = useFeed({ enabled: !!currentUser, limit: 20 });
 
     const [yearFilterMode, setYearFilterMode] = useState('ALL'); // 'ALL', '5', '10'
 
@@ -218,6 +222,20 @@ function MyPage() {
                 </div>
             </div>
 
+            {/* フォロー統計カード */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '30px' }}>
+                <div className="stat-card">
+                    <div className="stat-icon"><Users size={20} /></div>
+                    <div className="stat-label">フォロー中</div>
+                    <div className="stat-value">{followStats?.following_count ?? '-'}</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-icon"><Users size={20} /></div>
+                    <div className="stat-label">フォロワー</div>
+                    <div className="stat-value">{followStats?.follower_count ?? '-'}</div>
+                </div>
+            </div>
+
             {stats.totalLives > 0 ? (
                 <>
                     {/* Summary Cards */}
@@ -304,6 +322,70 @@ function MyPage() {
                 <MyPageOnboarding />
             )
             }
+
+            {/* フォローフィード */}
+            <div className="dashboard-panel" style={{ marginTop: '30px', marginBottom: '30px' }}>
+                <h3 style={{ marginBottom: '20px' }}>フォロー中のセトリ予想</h3>
+                {feedLoading ? (
+                    <p style={{ color: '#64748b', textAlign: 'center', padding: '20px' }}>読み込み中...</p>
+                ) : feedItems.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '30px 20px', color: '#475569' }}>
+                        <Users size={32} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                        <p style={{ marginBottom: '8px', fontWeight: 700 }}>フォロー中のユーザーがいません</p>
+                        <p style={{ fontSize: '0.85rem', color: '#334155' }}>
+                            <Link to="/predictions" style={{ color: '#eab308', textDecoration: 'none' }}>セトリ予想ランキング</Link>のユーザー名をクリックしてフォローできます
+                        </p>
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {feedItems.map(item => (
+                            <Link
+                                key={item.id}
+                                to={`/predictions/${item.id}`}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '14px',
+                                    padding: '14px',
+                                    background: 'rgba(255,255,255,0.03)',
+                                    borderRadius: '12px',
+                                    border: '1px solid rgba(255,255,255,0.05)',
+                                    textDecoration: 'none',
+                                    color: 'inherit',
+                                    transition: 'border-color 0.2s, background 0.2s',
+                                }}
+                                className="feed-card"
+                            >
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'white', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {item.title || 'セットリスト予想'}
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px', fontSize: '0.78rem', color: '#64748b' }}>
+                                        <Link
+                                            to={`/users/${item.user_id}`}
+                                            onClick={e => e.stopPropagation()}
+                                            style={{ color: '#eab308', fontWeight: 700, textDecoration: 'none' }}
+                                        >
+                                            {item.username}
+                                        </Link>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                            <Calendar size={10} />{item.tour_name}
+                                        </span>
+                                        {item.venue && (
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                                <MapPin size={10} />{item.venue}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: '#64748b', flexShrink: 0 }}>
+                                    <Heart size={12} /> {item.like_count}
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                )}
+            </div>
 
             {/* Filter Modal */}
             {
@@ -553,6 +635,11 @@ function MyPage() {
                     grid-template-columns: repeat(2, 1fr);
                     gap: 30px;
                     margin-bottom: 40px;
+                }
+
+                .feed-card:hover {
+                    background: rgba(255,255,255,0.06) !important;
+                    border-color: rgba(234,179,8,0.2) !important;
                 }
 
                 @media (max-width: 640px) {
