@@ -104,16 +104,16 @@ const PredictionRanking = () => {
                             </h2>
                         </div>
 
-                        <div className="flex bg-slate-800/50 p-1 rounded-xl border border-slate-700 w-fit mb-6">
+                        <div className="flex bg-slate-800/50 p-1 rounded-xl border border-slate-700 w-full sm:w-fit mb-6">
                             <button
                                 onClick={() => setPortalTab('upcoming')}
-                                className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${portalTab === 'upcoming' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                                className={`flex-1 sm:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-all ${portalTab === 'upcoming' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
                             >
                                 受付中のライブ
                             </button>
                             <button
                                 onClick={() => setPortalTab('mine')}
-                                className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${portalTab === 'mine' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                                className={`flex-1 sm:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-all ${portalTab === 'mine' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
                             >
                                 自分の予想一覧
                             </button>
@@ -121,10 +121,7 @@ const PredictionRanking = () => {
 
                         {portalTab === 'upcoming' ? (
                             (() => {
-                                const PREDICTION_START_DATE = new Date('2026-05-01');
-                                const filteredLives = predictableLives.filter(live => new Date(live.date) >= PREDICTION_START_DATE);
-
-                                if (filteredLives.length === 0) {
+                                if (predictableLives.length === 0) {
                                     return (
                                         <div className="text-center py-20 bg-slate-800/30 border border-dashed border-slate-700 rounded-3xl">
                                             <Calendar size={48} className="mx-auto text-slate-700 mb-4" />
@@ -136,7 +133,7 @@ const PredictionRanking = () => {
 
                                 return (
                                     <div className="grid gap-4">
-                                        {filteredLives.map((live, idx) => (
+                                        {predictableLives.map((live, idx) => (
                                     <div 
                                         key={live.id}
                                         className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-700 rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all duration-300 group"
@@ -167,17 +164,17 @@ const PredictionRanking = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="flex flex-col sm:flex-row gap-3">
+                                            <div className="flex gap-2">
                                                 <Link
                                                     to={`/predictions/new?live_id=${live.id}`}
-                                                    className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition-all hover:shadow-lg hover:shadow-blue-900/40"
+                                                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-all hover:shadow-lg hover:shadow-blue-900/40"
                                                 >
                                                     <Plus size={18} />
                                                     予想する
                                                 </Link>
                                                 <Link
                                                     to={`/predictions?live_id=${live.id}`}
-                                                    className="bg-slate-800 hover:bg-slate-700 text-white font-bold px-6 py-3 rounded-xl border border-slate-700 flex items-center justify-center gap-2 transition-all"
+                                                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-3 rounded-xl border border-slate-700 flex items-center justify-center gap-2 transition-all"
                                                 >
                                                     <Eye size={18} />
                                                     みんなの予想
@@ -318,43 +315,39 @@ const PredictionRanking = () => {
                         </div>
 
                         {/* 投稿ボタン & ソートタブ */}
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                            <div className="flex bg-slate-800/50 p-1 rounded-xl border border-slate-700 w-fit">
-                                <button
-                                    onClick={() => setSortBy('popular')}
-                                    className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${sortBy === 'popular' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                        <div className="flex flex-col gap-3 mb-8">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <div className="flex bg-slate-800/50 p-1 rounded-xl border border-slate-700 w-full sm:w-fit">
+                                    <button
+                                        onClick={() => setSortBy('popular')}
+                                        className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-lg text-sm font-bold transition-all ${sortBy === 'popular' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                                    >
+                                        人気順
+                                    </button>
+                                    <button
+                                        onClick={() => setSortBy('new')}
+                                        className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-lg text-sm font-bold transition-all ${sortBy === 'new' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                                    >
+                                        新着順
+                                    </button>
+                                </div>
+
+                                <Link
+                                    to={`/predictions/new?live_id=${liveId}`}
+                                    className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 transition-all"
                                 >
-                                    人気順
-                                </button>
-                                <button
-                                    onClick={() => setSortBy('new')}
-                                    className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${sortBy === 'new' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
-                                >
-                                    新着順
-                                </button>
+                                    <Plus size={18} />
+                                    予想を投稿する
+                                </Link>
                             </div>
 
-                            {(() => {
-                                const PREDICTION_START_DATE = new Date('2026-05-01');
-                                const liveDate = liveInfo ? new Date(liveInfo.date) : null;
-                                const today = new Date();
-                                today.setHours(0, 0, 0, 0);
-
-                                const isPastLive = liveDate && liveDate < today;
-                                const isBeforeFeature = liveDate && liveDate < PREDICTION_START_DATE;
-                                
-                                if (isPastLive || isBeforeFeature) return null;
-
-                                return (
-                                    <Link
-                                        to={`/predictions/new?live_id=${liveId}`}
-                                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5 active:translate-y-0"
-                                    >
-                                        <Plus size={20} />
-                                        予想を投稿する
-                                    </Link>
-                                );
-                            })()}
+                            <Link
+                                to="/predictions"
+                                className="text-xs text-slate-400 hover:text-blue-400 flex items-center gap-1.5 transition-colors bg-slate-800/40 hover:bg-slate-800/70 border border-slate-700/50 hover:border-blue-500/30 px-3 py-2 rounded-lg w-fit"
+                            >
+                                <Calendar size={12} />
+                                他のライブを見る
+                            </Link>
                         </div>
 
                         {/* 予想リスト */}
