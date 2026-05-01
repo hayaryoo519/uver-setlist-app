@@ -52,6 +52,13 @@ export const TourTrends = ({ tour }) => {
                     <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fff', marginLeft: '2px' }}>
                         {tour.name} <span style={{ fontSize: '0.9rem', color: 'var(--primary-color)', fontWeight: 'normal', whiteSpace: 'nowrap' }}>({tour.liveCount} Shows)</span>
                     </div>
+                    {tour.startDate && tour.endDate && (
+                        <div style={{ fontSize: '0.8rem', color: '#64748b', marginLeft: '2px', marginTop: '4px' }}>
+                            {tour.startDate === tour.endDate
+                                ? tour.startDate
+                                : `${tour.startDate} 〜 ${tour.endDate}`}
+                        </div>
+                    )}
                 </div>
             </div>
 
