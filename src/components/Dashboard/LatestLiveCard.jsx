@@ -82,26 +82,37 @@ export const LatestLiveCard = ({ live }) => {
                     >
                         セットリストを見る <ArrowRight size={16} />
                     </Link>
-                    <Link
-                        to={`/predictions?live_id=${live.id}`}
-                        style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            background: 'rgba(255, 255, 255, 0.3)', /* さらに明るく */
-                            border: '1px solid rgba(255, 255, 255, 0.6)', /* 枠線を強調 */
-                            color: '#fff',
-                            padding: '12px 24px',
-                            borderRadius: '50px',
-                            textDecoration: 'none',
-                            fontWeight: 'bold',
-                            fontSize: '0.9rem',
-                            transition: 'all 0.2s',
-                        }}
-                        className="hover:bg-white/40 hover:scale-105"
-                    >
-                        みんなのセトリ予想を見る
-                    </Link>
+                    {(() => {
+                        const PREDICTION_START_DATE = new Date('2026-05-01');
+                        const liveDate = new Date(live.date);
+                        const predictionCount = Number(live.prediction_count || 0);
+                        if (liveDate < PREDICTION_START_DATE && predictionCount === 0) {
+                            return null;
+                        }
+
+                        return (
+                            <Link
+                                to={`/predictions?live_id=${live.id}`}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    background: 'rgba(255, 255, 255, 0.3)', /* さらに明るく */
+                                    border: '1px solid rgba(255, 255, 255, 0.6)', /* 枠線を強調 */
+                                    color: '#fff',
+                                    padding: '12px 24px',
+                                    borderRadius: '50px',
+                                    textDecoration: 'none',
+                                    fontWeight: 'bold',
+                                    fontSize: '0.9rem',
+                                    transition: 'all 0.2s',
+                                }}
+                                className="hover:bg-white/40 hover:scale-105"
+                            >
+                                みんなのセトリ予想を見る
+                            </Link>
+                        );
+                    })()}
 
                 </div>
             </div>
