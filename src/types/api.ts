@@ -1,6 +1,9 @@
 // ライブ種別
 export type LiveType = 'ONEMAN' | 'HALL' | 'ARENA' | 'LIVEHOUSE' | 'FESTIVAL' | 'EVENT'
 
+// セトリ状態
+export type SetlistStatus = 'NORMAL' | 'UNKNOWN_SETLIST' | 'PARTIAL_SETLIST'
+
 // セットリスト1曲
 export interface SetlistEntry {
   id: number
@@ -26,6 +29,8 @@ export interface Live {
   created_at?: string
   prediction_count?: number
   live_date?: string
+  setlist_status?: SetlistStatus | null
+  setlistfm_id?: string | null
 }
 
 // 楽曲

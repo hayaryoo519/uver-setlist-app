@@ -194,6 +194,17 @@ function LiveDetail() {
                                 );
                             })}
                         </div>
+                    ) : live.setlist_status === 'UNKNOWN_SETLIST' ? (
+                        <div className="text-center py-20 bg-amber-500/5 rounded-2xl border border-dashed border-amber-500/20">
+                            <div className="inline-flex items-center gap-2 text-amber-400/80 mb-3">
+                                <Music size={20} />
+                                <span className="text-xs font-black tracking-[0.3em] uppercase">Setlist Unknown</span>
+                            </div>
+                            <p className="text-slate-400 text-sm max-w-xs mx-auto leading-relaxed">
+                                このライブのセットリストは未登録です。<br />
+                                情報をお持ちの方は「不備を報告する」からお知らせください。
+                            </p>
+                        </div>
                     ) : (
                         <div className="text-center py-20 text-slate-600 bg-slate-900/40 rounded-2xl border border-dashed border-slate-800">
                             <p className="font-medium">SETLIST DATA NOT FOUND</p>
