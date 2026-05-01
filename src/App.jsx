@@ -27,6 +27,7 @@ import PredictionRanking from './pages/PredictionRanking';
 import SetlistPredictionCreate from './pages/SetlistPredictionCreate';
 import SetlistPredictionDetail from './pages/SetlistPredictionDetail';
 import UserProfile from './pages/UserProfile';
+import FollowListPage from './pages/FollowListPage';
 import ScrollToTop from './components/ScrollToTop';
 
 import ProtectedRoute from './components/ProtectedRoute';
@@ -70,6 +71,7 @@ function App() {
               <Route element={<ProtectedRoute />}>
                 <Route element={<LayoutRoute />}>
                   <Route path="/mypage" element={<MyPage />} />
+                  <Route path="/mypage/follows" element={<FollowListPage />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/corrections/new" element={<CorrectionForm />} />
                   <Route path="/predictions/new" element={<SetlistPredictionCreate />} />

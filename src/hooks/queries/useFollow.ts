@@ -20,6 +20,22 @@ export const useFollowStats = (userId: number | string | undefined) =>
         enabled: !!userId,
     })
 
+export const useMyFollowers = (enabled = true) =>
+    useQuery({
+        queryKey: ['follows', 'my', 'followers'],
+        queryFn: () => apiClient.get<Array<{ id: number; username: string }>>('/api/follows/my/followers'),
+        staleTime: STALE_TIMES.follows,
+        enabled,
+    })
+
+export const useMyFollowing = (enabled = true) =>
+    useQuery({
+        queryKey: ['follows', 'my', 'following'],
+        queryFn: () => apiClient.get<Array<{ id: number; username: string }>>('/api/follows/my/following'),
+        staleTime: STALE_TIMES.follows,
+        enabled,
+    })
+
 export const useToggleFollow = () =>
     useMutation({
         mutationFn: (userId: number | string) =>
