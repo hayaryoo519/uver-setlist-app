@@ -124,16 +124,21 @@ const LiveList = () => {
 
             if (filters.text) {
                 const lowerText = filters.text.toLowerCase();
+                const venueStr = typeof live.venue === 'object' ? (live.venue?.name || '') : (live.venue || '');
+                const tourStr = typeof live.tour_name === 'object' ? (live.tour_name?.name || '') : (live.tour_name || '');
+                const titleStr = live.title || '';
+
                 const matchText =
-                    (live.tour_name?.toLowerCase() || '').includes(lowerText) ||
-                    (live.title?.toLowerCase() || '').includes(lowerText) ||
-                    (live.venue?.toLowerCase() || '').includes(lowerText) ||
-                    (live.date ? new Date(live.date).toISOString().includes(lowerText) : false);
+                    tourStr.toLowerCase().includes(lowerText) ||
+                    titleStr.toLowerCase().includes(lowerText) ||
+                    venueStr.toLowerCase().includes(lowerText) ||
+                    (live.special_note?.toLowerCase() || '').includes(lowerText);
 
                 if (!matchText) return false;
             }
 
-            if (filters.venue && live.venue !== filters.venue) {
+            const currentVenueName = typeof live.venue === 'object' ? live.venue?.name : live.venue;
+            if (filters.venue && currentVenueName !== filters.venue) {
                 return false;
             }
 
@@ -265,7 +270,7 @@ const LiveList = () => {
                                                                     live.type === 'EVENT' ? 'EVENT' : 'ワンマン'}
                                                             </span>
                                                             <span className="title-text-wrap">
-                                                                {live.title || live.tour_name}
+                                                                {live.title || (typeof live.tour_name === 'object' ? live.tour_name?.name : live.tour_name)}
                                                             </span>
                                                         </h3>
                                                     </div>
@@ -289,11 +294,11 @@ const LiveList = () => {
                                                             </span>
                                                         </div>
                                                         <h3 className="card-title-text">
-                                                            {live.title || live.tour_name}
+                                                            {live.title || (typeof live.tour_name === 'object' ? live.tour_name?.name : live.tour_name)}
                                                         </h3>
                                                         <div className="card-venue-row">
                                                             <MapPin size={14} />
-                                                            <span>{live.venue}</span>
+                                                            <span>{typeof live.venue === 'object' ? live.venue?.name : live.venue}</span>
                                                         </div>
                                                     </div>
 
@@ -351,7 +356,7 @@ const LiveList = () => {
                                                             live.type === 'EVENT' ? 'EVENT' : 'ワンマン'}
                                                     </span>
                                                     <span className="title-text-wrap">
-                                                        {live.title || live.tour_name}
+                                                        {live.title || (typeof live.tour_name === 'object' ? live.tour_name?.name : live.tour_name)}
                                                     </span>
                                                 </h3>
                                             </div>
@@ -363,7 +368,7 @@ const LiveList = () => {
                                             </div>
                                             <div className="card-column shows-col desktop-only">
                                                 <label>会場</label>
-                                                <div className="shows-text">{live.venue}</div>
+                                                <div className="shows-text">{typeof live.venue === 'object' ? live.venue?.name : live.venue}</div>
                                             </div>
 
                                             {/* Mobile View: Integrated Info Area */}
@@ -380,11 +385,11 @@ const LiveList = () => {
                                                     </span>
                                                 </div>
                                                 <h3 className="card-title-text">
-                                                    {live.title || live.tour_name}
+                                                    {live.title || (typeof live.tour_name === 'object' ? live.tour_name?.name : live.tour_name)}
                                                 </h3>
                                                 <div className="card-venue-row">
                                                     <MapPin size={14} />
-                                                    <span>{live.venue}</span>
+                                                    <span>{typeof live.venue === 'object' ? live.venue?.name : live.venue}</span>
                                                 </div>
                                             </div>
 
