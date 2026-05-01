@@ -126,16 +126,20 @@ const LiveList = () => {
 
             if (filters.text) {
                 const lowerText = filters.text.toLowerCase();
+                const venueStr = typeof live.venue === 'object' ? (live.venue?.name || '') : (live.venue || '');
+                const tourStr = typeof live.tour_name === 'object' ? (live.tour_name?.name || '') : (live.tour_name || '');
+                const titleStr = live.title || '';
+
                 const matchText =
-                    live.tour_name.toLowerCase().includes(lowerText) ||
-                    (live.title && live.title.toLowerCase().includes(lowerText)) ||
-                    live.venue.toLowerCase().includes(lowerText) ||
-                    new Date(live.date).toISOString().includes(lowerText);
+                    tourStr.toLowerCase().includes(lowerText) ||
+                    titleStr.toLowerCase().includes(lowerText) ||
+                    venueStr.toLowerCase().includes(lowerText) ||
+                    (live.special_note?.toLowerCase() || '').includes(lowerText);
 
                 if (!matchText) return false;
             }
 
-            if (filters.venue && live.venue !== filters.venue) {
+            if (filters.venue && (typeof live.venue === 'object' ? live.venue?.name : live.venue) !== filters.venue) {
                 return false;
             }
 
@@ -260,7 +264,7 @@ const LiveList = () => {
                                                                     live.type === 'EVENT' ? 'EVENT' : 'ワンマン'}
                                                             </span>
                                                             <span className="title-text-wrap">
-                                                                {live.title || live.tour_name}
+                                                                {live.title || (typeof live.tour_name === 'object' ? live.tour_name?.name : live.tour_name)}
                                                             </span>
                                                             {live.setlist_status === 'UNKNOWN_SETLIST' && (
                                                                 <span style={{ fontSize: '0.6rem', fontWeight: 'bold', padding: '1px 5px', borderRadius: '3px', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)', whiteSpace: 'nowrap', marginLeft: '6px', verticalAlign: 'middle' }}>
@@ -289,7 +293,7 @@ const LiveList = () => {
                                                             </span>
                                                         </div>
                                                         <h3 className="card-title-text">
-                                                            {live.title || live.tour_name}
+                                                            {live.title || (typeof live.tour_name === 'object' ? live.tour_name?.name : live.tour_name)}
                                                             {live.setlist_status === 'UNKNOWN_SETLIST' && (
                                                                 <span style={{ fontSize: '0.6rem', fontWeight: 'bold', padding: '1px 5px', borderRadius: '3px', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)', whiteSpace: 'nowrap', marginLeft: '6px', verticalAlign: 'middle' }}>
                                                                     未登録
@@ -298,7 +302,7 @@ const LiveList = () => {
                                                         </h3>
                                                         <div className="card-venue-row">
                                                             <MapPin size={14} />
-                                                            <span>{live.venue}</span>
+                                                            <span>{typeof live.venue === 'object' ? live.venue?.name : live.venue}</span>
                                                         </div>
                                                     </div>
 
@@ -356,7 +360,7 @@ const LiveList = () => {
                                                             live.type === 'EVENT' ? 'EVENT' : 'ワンマン'}
                                                     </span>
                                                     <span className="title-text-wrap">
-                                                        {live.title || live.tour_name}
+                                                        {live.title || (typeof live.tour_name === 'object' ? live.tour_name?.name : live.tour_name)}
                                                     </span>
                                                 </h3>
                                             </div>
@@ -368,7 +372,7 @@ const LiveList = () => {
                                             </div>
                                             <div className="card-column shows-col desktop-only">
                                                 <label>会場</label>
-                                                <div className="shows-text">{live.venue}</div>
+                                                <div className="shows-text">{typeof live.venue === 'object' ? live.venue?.name : live.venue}</div>
                                             </div>
 
                                             {/* Mobile View: Integrated Info Area */}
@@ -385,11 +389,11 @@ const LiveList = () => {
                                                     </span>
                                                 </div>
                                                 <h3 className="card-title-text">
-                                                    {live.title || live.tour_name}
+                                                    {live.title || (typeof live.tour_name === 'object' ? live.tour_name?.name : live.tour_name)}
                                                 </h3>
                                                 <div className="card-venue-row">
                                                     <MapPin size={14} />
-                                                    <span>{live.venue}</span>
+                                                    <span>{typeof live.venue === 'object' ? live.venue?.name : live.venue}</span>
                                                 </div>
                                             </div>
 
