@@ -75,22 +75,22 @@ const Navbar = () => {
                         </Link>
                         {currentUser && (
                             <Link to="/mypage" className="nav-link">
-                                <User size={18} /> マイページ
+                                <User size={18} /> My Page
                             </Link>
                         )}
 
                         {currentUser?.role === 'admin' && (
                             <Link to="/admin" className="nav-link" style={{ color: '#fbbf24' }}>
-                                <Shield size={18} /> 管理者パネル
+                                <Shield size={18} /> Admin Panel
                             </Link>
                         )}
                         {currentUser ? (
                             <button onClick={handleLogout} className="nav-btn-primary" style={{ textDecoration: 'none' }}>
-                                <LogOut size={18} /> ログアウト
+                                <LogOut size={18} /> Logout
                             </button>
                         ) : (
                             <Link to="/login" className="nav-btn-primary" style={{ textDecoration: 'none' }}>
-                                <LogIn size={18} /> ログイン
+                                <LogIn size={18} /> Login
                             </Link>
                         )}
 
@@ -113,16 +113,16 @@ const Navbar = () => {
                     <Link to="/" className="mobile-nav-link">Home</Link>
                     <Link to="/songs" className="mobile-nav-link">Discography</Link>
                     <Link to="/lives" className="mobile-nav-link">Archive</Link>
-                    {currentUser && <Link to="/mypage" className="mobile-nav-link">マイページ</Link>}
+                    {currentUser && <Link to="/mypage" className="mobile-nav-link">My Page</Link>}
                     {currentUser?.role === 'admin' && (
-                        <Link to="/admin" className="mobile-nav-link" style={{ color: '#fbbf24' }}>管理者パネル</Link>
+                        <Link to="/admin" className="mobile-nav-link" style={{ color: '#fbbf24' }}>Admin Panel</Link>
                     )}
 
                     <div className="mobile-nav-divider"></div>
                     {currentUser ? (
-                        <button onClick={handleLogout} className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>ログアウト</button>
+                        <button onClick={handleLogout} className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>Logout</button>
                     ) : (
-                        <Link to="/login" className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>ログイン / 新規登録</Link>
+                        <Link to="/login" className="mobile-nav-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>Login / Register</Link>
                     )}
 
 
