@@ -21,15 +21,26 @@ git pull origin main
 ```
 
 ### ② 最新バージョンの確認
+リリース前に必ず以下のスクリプトを実行し、現在のバージョンと次に設定すべきバージョンを確認してください。
+
 ```powershell
-git tag --sort=-v:refname | Select-Object -First 5
+node .agent/scripts/suggest-version.js
 ```
 
 ### ③ リリースの作成
+上記スクリプトの提案に従い、適切なバージョン（PATCH / MINOR / MAJOR）を選択してリリースを作成します。
+
 ```powershell
 # 例: パッチバージョンの更新
-& "C:\Program Files\GitHub CLI\gh.exe" release create v1.5.3 --title "v1.5.3 - [簡潔なタイトル]" --notes "[変更内容の要約]"
+& "C:\Program Files\GitHub CLI\gh.exe" release create v1.6.2 --title "v1.6.2 - [簡潔なタイトル]" --notes "[変更内容の要約]"
 ```
+
+## 3. リリース前チェックリスト（ミス防止）
+タグを打つ前に、必ず以下の項目を確認してください。
+- [ ] `main` ブランチに切り替えているか？
+- [ ] `git pull origin main` で最新状態になっているか？
+- [ ] `node .agent/scripts/suggest-version.js` で最新タグとの重複・逆転がないか確認したか？
+- [ ] バージョン番号のプレフィックスに `v` が付いているか？（例: `v1.6.2`）
 
 ## 3. 運用ルール
 - **タグの打機**: タグは必ず `main` ブランチの最新コミットに対して作成します。
