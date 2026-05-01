@@ -8,7 +8,7 @@ type AuthResult = { success: boolean; message?: string }
 interface AuthContextType {
     currentUser: AuthUser | null;
     login: (email: string, password: string) => Promise<AuthResult>;
-    register: (username: string, email: string, password: string) => Promise<AuthResult & Record<string, unknown>>;
+    register: (username: string, email: string, password: string, is_public?: boolean) => Promise<AuthResult & Record<string, unknown>>;
     logout: () => void;
     updateUser: (updatedData: Record<string, unknown>) => Promise<AuthResult>;
     deleteAccount: () => Promise<AuthResult>;
@@ -129,10 +129,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
-    const register = async (username: string, email: string, password: string) => {
+    const register = async (username: string, email: string, password: string, is_public?: boolean) => {
         try {
             const data = await apiClient.post<{ token?: string; user?: AuthUser; requireVerification?: boolean } & Record<string, unknown>>(
-                '/api/auth/register', { username, email, password }
+                '/api/auth/register', { username, email, password, is_public }
             );
             if (!data.requireVerification) {
                 localStorage.setItem('token', data.token as string);
