@@ -219,26 +219,6 @@ const SetlistPredictionCreate = () => {
                                             </optgroup>
                                         );
                                     })}
-
-                                    {/* "Other" category for songs not in DISCOGRAPHY */}
-                                    {(() => {
-                                        // Collect all song titles mentioned in DISCOGRAPHY
-                                        const discoSongs = new Set();
-                                        DISCOGRAPHY.forEach(r => r.songs.forEach(s => discoSongs.add(s)));
-
-                                        // Find songs in allSongs that are not in the discography
-                                        const otherSongs = allSongs.filter(s => !discoSongs.has(s.title));
-
-                                        if (otherSongs.length === 0) return null;
-
-                                        return (
-                                            <optgroup label="その他">
-                                                {otherSongs.map(song => (
-                                                    <option key={`opt-other-${song.id}`} value={song.id}>{song.title}</option>
-                                                ))}
-                                            </optgroup>
-                                        );
-                                    })()}
                                 </select>
                                 <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-500">
                                     <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
@@ -246,20 +226,32 @@ const SetlistPredictionCreate = () => {
                             </div>
 
                             {/* Search Results Dropdown */}
-                            {searchResults.length > 0 && searchQuery.length > 0 && (
-                                <div className="absolute z-10 w-full mt-2 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto">
-                                    {searchResults.map(song => (
-                                        <button
-                                            key={song.id}
-                                            onClick={() => handleAddSong(song)}
-                                            className="w-full text-left px-4 py-3 hover:bg-slate-700/50 border-b border-slate-700/50 last:border-0 flex items-center justify-between group transition-colors"
-                                        >
-                                            <span className="text-white font-medium">{song.title}</span>
-                                            <Plus size={16} className="text-slate-500 group-hover:text-blue-400" />
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                            {(() => {
+                                // Collect all song titles mentioned in DISCOGRAPHY
+                                const discoSongs = new Set();
+                                DISCOGRAPHY.forEach(r => r.songs.forEach(s => discoSongs.add(s)));
+
+                                // Filter search results to only show songs in the discography
+                                const filteredSearchResults = searchResults.filter(song => discoSongs.has(song.title));
+
+                                if (filteredSearchResults.length > 0 && searchQuery.length > 0) {
+                                    return (
+                                        <div className="absolute z-10 w-full mt-2 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                                            {filteredSearchResults.map(song => (
+                                                <button
+                                                    key={song.id}
+                                                    onClick={() => handleAddSong(song)}
+                                                    className="w-full text-left px-4 py-3 hover:bg-slate-700/50 border-b border-slate-700/50 last:border-0 flex items-center justify-between group transition-colors"
+                                                >
+                                                    <span className="text-white font-medium">{song.title}</span>
+                                                    <Plus size={16} className="text-slate-500 group-hover:text-blue-400" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
                         </div>
 
                         <button
