@@ -6,6 +6,9 @@ import { useLiveDetail } from '../hooks/queries/useLives';
 import CorrectionModal from '../components/CorrectionModal';
 import { AlertTriangle, Tag, MapPin, Check, Plus, Star, Music, Sparkles } from 'lucide-react';
 import SEO from '../components/SEO';
+import SpotifyPlaylistButton from '../components/Spotify/SpotifyPlaylistButton';
+import YoutubePlaylistButton from '../components/Youtube/YoutubePlaylistButton';
+import { Youtube as YoutubeIcon } from 'lucide-react';
 
 function LiveDetail() {
     const { id } = useParams();
@@ -14,6 +17,7 @@ function LiveDetail() {
     const { isAttended, addLive, removeLive, loading: attendanceLoading } = useAttendance();
     const { currentUser } = useAuth();
     const [isCorrectionModalOpen, setIsCorrectionModalOpen] = useState(false);
+    const [activePlatform, setActivePlatform] = useState<'spotify' | 'youtube'>('spotify');
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -211,6 +215,50 @@ function LiveDetail() {
                         </div>
                     )}
                 </div>
+
+                {/* プレイリスト作成セクション */}
+                {setlist.length > 0 && (
+                    <div className="mt-8 border-t border-slate-800 pt-8">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-xs font-black tracking-[0.3em] text-slate-500 uppercase">Streaming Integration</h2>
+                            
+                            <div className="flex bg-slate-900/80 p-1 rounded-xl border border-slate-800">
+                                <button 
+                                    onClick={() => setActivePlatform('spotify')}
+                                    className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-2
+                                        ${activePlatform === 'spotify' 
+                                            ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/20' 
+                                            : 'text-slate-500 hover:text-slate-300'}`}
+                                >
+                                    <Music size={12} /> SPOTIFY
+                                </button>
+                                <button 
+                                    onClick={() => setActivePlatform('youtube')}
+                                    className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-2
+                                        ${activePlatform === 'youtube' 
+                                            ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' 
+                                            : 'text-slate-500 hover:text-slate-300'}`}
+                                >
+                                    <YoutubeIcon size={12} /> YOUTUBE
+                                </button>
+                            </div>
+                        </div>
+
+                        {activePlatform === 'spotify' ? (
+                            <SpotifyPlaylistButton liveId={liveId} />
+                        ) : (
+                            <YoutubePlaylistButton liveId={liveId} />
+                        )}
+
+                        <div className="mt-4 p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl">
+                            <p className="text-[10px] text-slate-500 leading-relaxed">
+                                {activePlatform === 'spotify' 
+                                    ? "Spotifyで楽曲が見つからない場合は、YouTube Musicタブをお試しください。YouTube版は公式Topic音源を優先して作成されます。"
+                                    : "YouTube版は動画の仕様上、Spotify版よりも作成に時間がかかる場合があります。公式音源（Topic）を優先して追加します。"}
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 {/* セトリ予想セクション */}
                 <div className="mt-12">

@@ -178,7 +178,7 @@ router.get('/:id/stats', async (req, res) => {
 // CREATE a Song (Admin only)
 router.post('/', authorize, adminCheck, async (req, res) => {
     try {
-        const { title: rawTitle, album, release_year, mv_url, author } = req.body;
+        const { title: rawTitle, album, release_year, mv_url, author, spotify_track_id, yt_video_id } = req.body;
 
         // Normalize title (translate Romaji/English to Japanese if applicable)
         const title = normalizeSongTitle(rawTitle);
@@ -189,14 +189,25 @@ router.post('/', authorize, adminCheck, async (req, res) => {
         // Check duplicate using the normalized title
         const check = await db.query("SELECT * FROM songs WHERE title = $1", [title]);
         if (check.rows.length > 0) {
-            // If exists, update it? Or just return?
-            // Let's just return for now as title is main identifier
-            return res.json(check.rows[0]);
+            // If exists, update it to include new IDs if they were provided
+            const existing = check.rows[0];
+            const updated = await db.query(
+                `UPDATE songs SET 
+                    album = COALESCE($1, album), 
+                    release_year = COALESCE($2, release_year), 
+                    mv_url = COALESCE($3, mv_url), 
+                    author = COALESCE($4, author),
+                    spotify_track_id = COALESCE($5, spotify_track_id),
+                    yt_video_id = COALESCE($6, yt_video_id)
+                 WHERE id = $7 RETURNING *`,
+                [album, release_year, mv_url, author, spotify_track_id, yt_video_id, existing.id]
+            );
+            return res.json(updated.rows[0]);
         }
 
         const newSong = await db.query(
-            "INSERT INTO songs (title, album, release_year, mv_url, author) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-            [title, album, release_year, mv_url, author]
+            "INSERT INTO songs (title, album, release_year, mv_url, author, spotify_track_id, yt_video_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
+            [title, album, release_year, mv_url, author, spotify_track_id, yt_video_id]
         );
 
         res.json(newSong.rows[0]);
@@ -210,11 +221,11 @@ router.post('/', authorize, adminCheck, async (req, res) => {
 router.put('/:id', authorize, adminCheck, async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, album, release_year, mv_url, author } = req.body;
+        const { title, album, release_year, mv_url, author, spotify_track_id, yt_video_id } = req.body;
 
         const updateSong = await db.query(
-            "UPDATE songs SET title = $1, album = $2, release_year = $3, mv_url = $4, author = $5 WHERE id = $6 RETURNING *",
-            [title, album, release_year, mv_url, author, id]
+            "UPDATE songs SET title = $1, album = $2, release_year = $3, mv_url = $4, author = $5, spotify_track_id = $6, yt_video_id = $7 WHERE id = $8 RETURNING *",
+            [title, album, release_year, mv_url, author, spotify_track_id, yt_video_id, id]
         );
 
         if (updateSong.rows.length === 0) {
@@ -244,6 +255,28 @@ router.delete('/:id', authorize, adminCheck, async (req, res) => {
         // If FK constraint fails (e.g. used in setlist), 500 will be returned.
         // Ideally handle code '23503' for foreign_key_violation
         res.status(500).json({ message: "Server Error (Song might be used in a setlist)" });
+    }
+});
+
+// UPDATE Spotify Track ID (Admin only)
+router.patch('/:id/spotify', authorize, adminCheck, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { spotify_track_id } = req.body;
+
+        const updateSong = await db.query(
+            "UPDATE songs SET spotify_track_id = $1 WHERE id = $2 RETURNING *",
+            [spotify_track_id, id]
+        );
+
+        if (updateSong.rows.length === 0) {
+            return res.status(404).json("Song not found");
+        }
+
+        res.json(updateSong.rows[0]);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
     }
 });
 
