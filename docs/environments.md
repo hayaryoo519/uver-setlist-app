@@ -50,26 +50,42 @@ UVERworld Setlist Archive の稼働環境と、それぞれのデータベース
 | ホスト名 | `server01` |
 | 実行ユーザー | `haya-ryoo` |
 | アプリディレクトリ | `/home/haya-ryoo/apps/uver-setlist-app/server` |
-| 起動コマンド | `node index.js` |
-| プロセス管理 | **PM2 不使用** (systemd または手動起動) |
-| ログ出力先 | **journald** (stdout/stderrがパイプ経由でsystemdに渡る) |
+| プロセス管理 | **systemd** (`uver-setlist.service`) |
+| ログ出力先 | **journald** (`journalctl -u uver-setlist`) |
 
-> **注意**: `pm2 list` は空。PM2 では管理されていないため `pm2 restart` は効かない。
+### 初回セットアップ（systemd サービス登録）
+
+リポジトリに `server/uver-setlist.service` があります。初回のみ以下を実行：
+
+```bash
+# サービスファイルをコピー
+sudo cp /home/haya-ryoo/apps/uver-setlist-app/server/uver-setlist.service \
+        /etc/systemd/system/uver-setlist.service
+
+# systemd に読み込ませる
+sudo systemctl daemon-reload
+
+# OS 起動時の自動起動を有効化
+sudo systemctl enable uver-setlist
+
+# 今すぐ起動
+sudo systemctl start uver-setlist
+
+# 状態確認
+sudo systemctl status uver-setlist
+```
 
 ### ログの確認方法
 
 ```bash
-# 現在のプロセスIDを確認
-pgrep -u haya-ryoo node
-
-# 直近50行のログを見る
-sudo journalctl _PID=<PID> -n 50
+# 直近50行
+sudo journalctl -u uver-setlist -n 50
 
 # エラーだけ絞り込む
-sudo journalctl _PID=<PID> --since "1 hour ago" | grep -E "Error|error|500"
+sudo journalctl -u uver-setlist --since "1 hour ago" | grep -E "Error|error|500"
 
-# リアルタイムでログを流す
-sudo journalctl _PID=<PID> -f
+# リアルタイムで流す
+sudo journalctl -u uver-setlist -f
 ```
 
 ### デプロイ手順（本番）
@@ -82,30 +98,29 @@ cd /home/haya-ryoo/apps/uver-setlist-app
 git pull origin main
 
 # 2. 依存パッケージの更新（package.json変更時のみ）
-cd server && npm install
+cd server && npm install && cd ..
 
 # 3. マイグレーションの実行
-node migrate.js
+cd server && node migrate.js && cd ..
 
 # 4. フロントエンドのビルド（UIに変更がある場合）
-cd .. && npm install && npm run build
+npm install && npm run build
 
-# 5. サーバープロセスを再起動
-pkill -u haya-ryoo node
-cd server && node index.js &
-# またはsystemdサービスがある場合: sudo systemctl restart uver-setlist
+# 5. サーバーを再起動
+sudo systemctl restart uver-setlist
+
+# 6. 起動確認
+sudo systemctl status uver-setlist
 ```
-
-> **ヒント**: サービスの起動スクリプトが `/etc/systemd/system/` にある場合は `sudo systemctl restart <サービス名>` が使える。確認は `sudo systemctl list-units | grep uver`
 
 ### よくあるトラブル
 
 | 症状 | 原因 | 対処 |
 |:---|:---|:---|
-| API が 500 を返す | DBカラム名の不一致、未適用マイグレーション | `node migrate.js` を実行後に再起動 |
-| `rate-limit` の ValidationError | `trust proxy` 未設定 (リバースプロキシ環境) | `app.set('trust proxy', 1)` が `index.js` に設定されていることを確認 |
-| ログが見つからない | PM2 で探している | journalctl を使う（上記参照） |
-| プロセスが起動していない | 手動起動が必要 | `pgrep node` で確認し、なければ手動で `node index.js &` |
+| API が 500 を返す | DBカラム名の不一致、未適用マイグレーション | `node migrate.js` を実行後に `sudo systemctl restart uver-setlist` |
+| `rate-limit` の ValidationError | `trust proxy` 未設定 (リバースプロキシ環境) | `app.set('trust proxy', 1)` が `index.js` にあるか確認 |
+| サービスが起動しない | `.env` が読めない等 | `sudo journalctl -u uver-setlist -n 30` でエラー内容を確認 |
+| サービスファイルを変更した | 設定反映されない | `sudo systemctl daemon-reload` 後に `restart` |
 
 ---
 
