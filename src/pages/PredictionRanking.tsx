@@ -146,7 +146,7 @@ const PredictionRanking = () => {
                                                         開催予定
                                                     </span>
                                                     <span className="text-slate-500 text-xs font-bold">
-                                                        {new Date(live.date).toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit', weekday: 'short' }).replace(/\//g, '.')}
+                                                        {new Date(live.date.split('T')[0].replace(/-/g, '/')).toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit', weekday: 'short' }).replace(/\//g, '.')}
                                                     </span>
                                                 </div>
                                                 <h3 className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors">
@@ -225,7 +225,7 @@ const PredictionRanking = () => {
                                                     <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-slate-500 font-medium">
                                                         <div className="flex items-center gap-1.5">
                                                             <Calendar size={12} />
-                                                            {prediction.live_date ? new Date(prediction.live_date).toLocaleDateString('ja-JP') : ''}
+                                                            {prediction.live_date ? new Date(prediction.live_date.replace(/-/g, '/')).toLocaleDateString('ja-JP') : ''}
                                                         </div>
                                                         <div className="flex items-center gap-1.5">
                                                             <MapPin size={12} />
@@ -264,7 +264,7 @@ const PredictionRanking = () => {
                                                         {liveInfo.tour_name || 'Special Live'}
                                                     </h3>
                                                     <p className="text-slate-400 text-sm mt-1">
-                                                        {liveInfo.date ? new Date(liveInfo.live_date || liveInfo.date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' }) : ''}
+                                                        {liveInfo.date ? new Date((liveInfo.live_date || liveInfo.date).split('T')[0].replace(/-/g, '/')).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' }) : ''}
                                                         <span className="mx-2">/</span>
                                                         {liveInfo.venue}
                                                     </p>
@@ -296,7 +296,7 @@ const PredictionRanking = () => {
                                                 >
                                                     {tourLives.map(l => (
                                                         <option key={l.id} value={l.id}>
-                                                            {new Date(l.date).toLocaleDateString('ja-JP')} @ {l.venue}
+                                                            {new Date(l.date.split('T')[0].replace(/-/g, '/')).toLocaleDateString('ja-JP')} @ {l.venue}
                                                         </option>
                                                     ))}
                                                 </select>
@@ -412,7 +412,7 @@ const PredictionRanking = () => {
                                                     </div>
                                                     <div className="flex items-center gap-1.5">
                                                         <Calendar size={12} />
-                                                        {new Date(prediction.created_at).toLocaleDateString('ja-JP')}
+                                                        {new Date(prediction.created_at.split('T')[0].replace(/-/g, '/')).toLocaleDateString('ja-JP')}
                                                     </div>
                                                 </div>
                                             </div>
