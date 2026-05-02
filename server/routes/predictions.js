@@ -133,11 +133,11 @@ router.get('/:id', async (req, res) => {
 
         // Get songs
         const songsResult = await db.query(`
-            SELECT ps.order_index as position, s.id, s.title
+            SELECT ps.position, s.id, s.title
             FROM prediction_songs ps
             JOIN songs s ON ps.song_id = s.id
             WHERE ps.prediction_id = $1
-            ORDER BY ps.order_index ASC
+            ORDER BY ps.position ASC
         `, [id]);
 
         res.json({
@@ -175,7 +175,7 @@ router.post('/', authorize, async (req, res) => {
         // Insert songs
         for (let i = 0; i < songs.length; i++) {
             await client.query(`
-                INSERT INTO prediction_songs (prediction_id, song_id, order_index)
+                INSERT INTO prediction_songs (prediction_id, song_id, position)
                 VALUES ($1, $2, $3)
             `, [predictionId, songs[i], i + 1]);
         }
