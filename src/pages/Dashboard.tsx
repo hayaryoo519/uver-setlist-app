@@ -38,7 +38,7 @@ function Dashboard() {
 
     const formatDate = (dateStr: string | null | undefined) => {
         if (!dateStr) return '';
-        const d = new Date(dateStr);
+        const d = new Date(dateStr.split('T')[0].replace(/-/g, '/'));
         return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.');
     };
 

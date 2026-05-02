@@ -121,7 +121,7 @@ function LiveDetail() {
                         </span>
                         <div className="h-px flex-1 bg-slate-800"></div>
                         <span className="text-base font-bold font-mono text-slate-400">
-                            {new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.')}
+                            {new Date(live.date.split('T')[0].replace(/-/g, '/')).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.')}
                         </span>
                     </div>
 
@@ -263,8 +263,8 @@ function LiveDetail() {
                 {/* セトリ予想セクション */}
                 <div className="mt-12">
                     {(() => {
-                        const PREDICTION_START_DATE = new Date('2026-05-01');
-                        const liveDate = new Date(live.date);
+                        const PREDICTION_START_DATE = new Date('2026/05/01');
+                        const liveDate = new Date(live.date.split('T')[0].replace(/-/g, '/'));
                         const today = new Date();
                         today.setHours(0, 0, 0, 0);
 
