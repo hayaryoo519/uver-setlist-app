@@ -26,7 +26,7 @@ jobs:
           npm install
 
           # 5. DBマイグレーション
-          node migrate.js
+          node scripts/migrate.js
 
           # 6. フロントエンドビルド
           cd ~/apps/uver-setlist-app
