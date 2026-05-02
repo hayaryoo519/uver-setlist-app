@@ -74,8 +74,8 @@ const SetlistPredictionCreate = () => {
     // 過去のライブや、予想開始日以前のライブへの投稿を制限
     useEffect(() => {
         if (liveInfo) {
-            const liveDate = new Date(liveInfo.date);
-            const PREDICTION_START_DATE = new Date('2026-05-01');
+            const liveDate = new Date(liveInfo.date.split('T')[0].replace(/-/g, '/'));
+            const PREDICTION_START_DATE = new Date('2026/05/01');
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const isPastLive = liveDate < today;
@@ -167,7 +167,7 @@ const SetlistPredictionCreate = () => {
                             <div>
                                 <div className="text-white font-bold leading-tight mb-1">{liveInfo.tour_name || 'スペシャルライブ'}</div>
                                 <div className="text-sm text-slate-400">
-                                    {liveInfo.date ? new Date(liveInfo.date).toISOString().split('T')[0] : ''} @ {liveInfo.venue}
+                                    {liveInfo.date ? liveInfo.date.split('T')[0] : ''} @ {liveInfo.venue}
                                 </div>
                             </div>
                         </div>
@@ -185,7 +185,7 @@ const SetlistPredictionCreate = () => {
                                 >
                                     {tourLives.map(l => (
                                         <option key={l.id} value={l.id}>
-                                            {l.date ? new Date(l.date).toISOString().split('T')[0] : ''} @ {l.venue}
+                                            {l.date ? l.date.split('T')[0] : ''} @ {l.venue}
                                         </option>
                                     ))}
                                 </select>

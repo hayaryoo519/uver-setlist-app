@@ -64,7 +64,7 @@ export const UpcomingLives = ({ lives }) => {
                                     <Calendar size={16} color="var(--primary-color)" />
                                     <span style={{ fontWeight: 'bold', color: '#fff' }}>
                                         {(() => {
-                                            const d = new Date(live.date);
+                                            const d = new Date(live.date.split('T')[0].replace(/-/g, '/'));
                                             return isNaN(d.getTime()) ? live.date : d.toLocaleDateString('ja-JP', {
                                                 year: 'numeric',
                                                 month: '2-digit',
