@@ -7,7 +7,7 @@ router.get('/lives', async (req, res) => {
     try {
         const result = await db.query(`
             SELECT 
-                l.id, l.tour_name, l.title, l.date, l.venue, l.type,
+                l.id, l.tour_name, l.title, l.date::text as date, l.venue, l.type,
                 COUNT(p.id) as prediction_count
             FROM lives l
             LEFT JOIN predictions p ON l.id = p.live_id
@@ -56,7 +56,7 @@ router.get('/', async (req, res) => {
             SELECT 
                 p.*, 
                 u.username,
-                li.tour_name, li.venue, li.date as live_date,
+                li.tour_name, li.venue, li.date::text as live_date,
                 COUNT(DISTINCT pl.user_id) as like_count,
                 EXISTS(SELECT 1 FROM prediction_likes WHERE prediction_id = p.id AND user_id = $1) as is_liked,
                 (p.user_id = $1) as is_mine
@@ -118,7 +118,7 @@ router.get('/:id', async (req, res) => {
                 COUNT(DISTINCT l.user_id) as like_count,
                 EXISTS(SELECT 1 FROM prediction_likes WHERE prediction_id = p.id AND user_id = $1) as is_liked,
                 (p.user_id = $1) as is_mine,
-                li.tour_name, li.venue, li.date as live_date
+                li.tour_name, li.venue, li.date::text as live_date
             FROM predictions p
             JOIN users u ON p.user_id = u.id
             LEFT JOIN prediction_likes l ON p.id = l.prediction_id
