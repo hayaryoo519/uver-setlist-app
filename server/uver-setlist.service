@@ -1,0 +1,23 @@
+[Unit]
+Description=UVERworld Setlist Archive - Node.js App
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=haya-ryoo
+WorkingDirectory=/home/haya-ryoo/apps/uver-setlist-app/server
+ExecStart=/usr/bin/node index.js
+Restart=always
+RestartSec=5
+
+# 環境変数ファイル (server/.env)
+EnvironmentFile=/home/haya-ryoo/apps/uver-setlist-app/server/.env
+
+# ログはjournaldに出力される (journalctl -u uver-setlist で確認)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=uver-setlist
+
+[Install]
+WantedBy=multi-user.target
