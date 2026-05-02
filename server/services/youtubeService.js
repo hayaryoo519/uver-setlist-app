@@ -1,6 +1,6 @@
 const { google } = require('googleapis');
 const db = require('../db');
-const { decrypt } = require('../utils/encryption');
+const { decrypt, encrypt } = require('../utils/encryption');
 
 /**
  * YouTube Data API v3を使用したプレイリスト操作および楽曲検索サービス
@@ -30,20 +30,21 @@ class YoutubeService {
 
         const { access_token, refresh_token_encrypted, expires_at } = res.rows[0];
         const refreshToken = decrypt(refresh_token_encrypted);
+        const decryptedAccessToken = decrypt(access_token);
 
         this.oauth2Client.setCredentials({
-            access_token,
+            access_token: decryptedAccessToken,
             refresh_token: refreshToken,
             expiry_date: new Date(expires_at).getTime()
         });
 
-        // トークンがリフレッシュされた際の自動更新
+        // トークンがリフレッシュされた際の自動更新（新トークンも暗号化して保存）
         this.oauth2Client.on('tokens', async (tokens) => {
             if (tokens.access_token) {
                 const newExpiresAt = new Date(tokens.expiry_date || (Date.now() + 3600 * 1000));
                 await db.query(
                     'UPDATE user_google_tokens SET access_token = $1, expires_at = $2, updated_at = CURRENT_TIMESTAMP WHERE user_id = $3',
-                    [tokens.access_token, newExpiresAt, this.userId]
+                    [encrypt(tokens.access_token), newExpiresAt, this.userId]
                 );
             }
         });
