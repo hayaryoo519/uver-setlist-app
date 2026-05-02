@@ -2,17 +2,11 @@ import React from 'react';
 import { Calendar, MapPin, ArrowRight, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const PREDICTION_START_DATE = new Date('2026-05-01');
-
 export const UpcomingLives = ({ lives }) => {
     if (!lives || lives.length === 0) return null;
 
-    // Show only next 4 that are on or after prediction start date
-    const nextLives = lives
-        .filter(live => new Date(live.date) >= PREDICTION_START_DATE)
-        .slice(0, 4);
-
-    if (nextLives.length === 0) return null;
+    // Show only next 4
+    const nextLives = lives.slice(0, 4);
 
     return (
         <div style={{ marginBottom: '50px' }}>
@@ -23,8 +17,7 @@ export const UpcomingLives = ({ lives }) => {
                 </span>
             </h2>
 
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: '20px' }}>
                 {nextLives.map((live, index) => (
                     <div
                         key={index}
@@ -124,8 +117,8 @@ export const UpcomingLives = ({ lives }) => {
                                     style={{
                                         padding: '10px',
                                         borderRadius: '8px',
-                                        background: 'rgba(255, 255, 255, 0.3)', /* さらに明るく */
-                                        border: '1px solid rgba(255, 255, 255, 0.6)', /* 枠線をくっきり */
+                                        background: 'rgba(255, 255, 255, 0.3)',
+                                        border: '1px solid rgba(255, 255, 255, 0.6)',
                                         color: '#fff',
                                         fontSize: '0.75rem',
                                         fontWeight: 'bold',
