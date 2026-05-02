@@ -1048,7 +1048,7 @@ const AdminPage = () => {
         });
 
         return items;
-    }, [songs, songSearchTerm, songAlbumFilter, songSortConfig]);
+    }, [songs, songSearchTerm, songAlbumFilter, songSortConfig, songSpotifyFilter, songYoutubeFilter]);
 
 
     // --- BULK IMPORT STATE ---
