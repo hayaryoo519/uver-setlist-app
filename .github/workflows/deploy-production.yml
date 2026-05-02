@@ -11,25 +11,27 @@ jobs:
       - name: Deploy to Production Server
         run: |
           cd ~/apps/uver-setlist-app/server
-          
+
           # 1. 現在の.envをバックアップ（サーバー固有の設定を守るため）
           cp .env .env.backup
-          
-          # 2. 最新コードを強制的に取得（ローカルの変更を破棄）
+
+          # 2. 最新コードを強制的に取得
           git fetch origin main
           git reset --hard origin/main
-          
+
           # 3. バックアップから.envを復元
-          # （もしリポジトリ内の.envと競合しても、サーバーの設定を優先）
           cp .env.backup .env
-          
-          # 4. 依存関係のインストール
-          npm install --legacy-peer-deps
-          
-          # 本番用ビルド（ルートディレクトリ）
+
+          # 4. バックエンド依存関係のインストール
+          npm install
+
+          # 5. DBマイグレーション
+          node migrate.js
+
+          # 6. フロントエンドビルド
           cd ~/apps/uver-setlist-app
-          npm install --legacy-peer-deps
+          npm install
           npm run build
-          
-          # 5. サーバー再起動
-          echo "${{ secrets.SUDO_PASSWORD }}" | sudo -S systemctl restart uver-app-prod
+
+          # 7. サービス再起動
+          echo "${{ secrets.SUDO_PASSWORD }}" | sudo -S systemctl restart uver-setlist
