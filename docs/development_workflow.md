@@ -104,32 +104,34 @@ GitHub 上でレビュー → Merge pull request。
 
 ## Step 4 : 本番デプロイ
 
-`main` へのマージで **本番環境へ自動デプロイ**されます。
+**GitHub Release を publish すると自動デプロイ**されます（main へのマージだけでは動きません）。
+
+### 自動デプロイの流れ
+1. `gh release create vX.Y.Z` でリリース publish
+2. GitHub Actions (`deploy-production.yml`) が self-hosted ランナーで起動
+3. `git reset --hard origin/main` → `npm install` → `node scripts/migrate.js` → `npm run build` → `systemctl restart uver-setlist`
 
 ### 手動デプロイが必要な場合
 ```bash
-# サーバーへ SSH ログイン
 ssh haya-ryoo@server01
+cd ~/apps/uver-setlist-app/server
+
+git fetch origin main && git reset --hard origin/main
+npm install
+node scripts/migrate.js
 
 cd ~/apps/uver-setlist-app
-
-# 最新化
-git pull origin main
 npm install --legacy-peer-deps
-
-# マイグレーション
-cd server && npm run migrate && cd ..
-
-# ビルドと再起動
 npm run build
-sudo systemctl restart uver-app-prod
+sudo systemctl restart uver-setlist
 ```
 
 ### ログ確認
 ```bash
-systemctl status uver-app-prod         # 稼働状況
-journalctl -u uver-app-prod -f         # リアルタイムログ
-node server/analyze_security.js        # セキュリティログ分析
+sudo systemctl status uver-setlist          # 稼働状況
+sudo journalctl -u uver-setlist -f          # リアルタイムログ
+sudo journalctl -u uver-setlist -n 50       # 直近50行
+sudo journalctl -u uver-setlist --since "1 hour ago" | grep -E "Error|500"  # エラー絞り込み
 ```
 
 ---
@@ -197,4 +199,50 @@ feature/xxx (ローカル開発)
 
 ---
 
-最終更新日: 2026-05-01
+## CI/CD 構成
+
+### ワークフロー一覧
+
+| ファイル | トリガー | ランナー | 内容 |
+|:---|:---|:---|:---|
+| `test.yml` | push/PR → `main`, `dev` | GitHub hosted | バックエンド・フロントエンドのテスト実行 |
+| `deploy-staging.yml` | push → `dev` | self-hosted | `docker compose up -d --build` |
+| `deploy-production.yml` | Release published | self-hosted | git pull → migrate → build → systemctl restart |
+
+### self-hosted ランナー
+
+| 項目 | 内容 |
+|:---|:---|
+| サーバー | `server01` (`haya-ryoo` ユーザー) |
+| インストール先 | `/home/haya-ryoo/actions-runner` |
+| systemd サービス名 | `actions.runner.hayaryoo519-uver-setlist-app.server01` |
+| 自動起動 | enabled（OS 再起動後も自動起動） |
+
+```bash
+# ランナーの状態確認
+sudo systemctl status actions.runner.hayaryoo519-uver-setlist-app.server01
+
+# 再起動
+sudo systemctl restart actions.runner.hayaryoo519-uver-setlist-app.server01
+
+# ログ確認
+sudo journalctl -u actions.runner.hayaryoo519-uver-setlist-app.server01 -f
+```
+
+### GitHub Secrets
+
+| Secret 名 | 用途 |
+|:---|:---|
+| `SUDO_PASSWORD` | 本番デプロイ時の `sudo systemctl restart uver-setlist` に使用 |
+
+### よくあるトラブル
+
+| 症状 | 原因 | 対処 |
+|:---|:---|:---|
+| ジョブが "Waiting for runner..." のまま | ランナーが停止中 | `sudo systemctl start actions.runner.*` |
+| "A session for this runner already exists" | 旧プロセスのセッションが残存 | 数分待って `sudo systemctl restart actions.runner.*` |
+| `npm error ERESOLVE` (フロントエンド) | `react-helmet-async` の React 19 非対応 | `npm install --legacy-peer-deps` を使用（ワークフロー設定済み） |
+
+---
+
+最終更新日: 2026-05-03
