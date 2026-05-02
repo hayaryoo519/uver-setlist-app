@@ -28,7 +28,7 @@ class SpotifyService {
 
         // 期限切れチェック（60秒のバッファ）
         if (new Date(expires_at).getTime() > Date.now() + 60000) {
-            return access_token;
+            return decrypt(access_token);
         }
 
         // リフレッシュ実行
@@ -65,12 +65,12 @@ class SpotifyService {
         const { access_token, expires_in } = res.data;
         const expiresAt = new Date(Date.now() + expires_in * 1000);
 
-        // 新しいアクセストークンを保存
+        // 新しいアクセストークンを暗号化して保存
         await db.query(
-            `UPDATE user_spotify_tokens 
+            `UPDATE user_spotify_tokens
              SET access_token = $1, expires_at = $2, updated_at = CURRENT_TIMESTAMP
              WHERE user_id = $3`,
-            [access_token, expiresAt, this.userId]
+            [encrypt(access_token), expiresAt, this.userId]
         );
 
         return access_token;

@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { authorize } = require('../middleware/authorization');
 const YoutubeService = require('../services/youtubeService');
 const db = require('../db');
-const { encrypt } = require('../utils/encryption');
+const { encrypt, signState, verifyState } = require('../utils/encryption');
 const { google } = require('googleapis');
 
 /**
@@ -16,10 +16,10 @@ router.get('/auth-url', authorize, (req, res) => {
     );
 
     const url = oauth2Client.generateAuthUrl({
-        access_type: 'offline', // リフレッシュトークンを取得するために必須
+        access_type: 'offline',
         scope: ['https://www.googleapis.com/auth/youtube'],
-        state: String(req.user.id),
-        prompt: 'consent' // 常にリフレッシュトークンを返すように強制
+        state: signState(req.user.id),
+        prompt: 'consent'
     });
 
     res.json({ url });
@@ -29,10 +29,17 @@ router.get('/auth-url', authorize, (req, res) => {
  * YouTube OAuth コールバック
  */
 router.get('/callback', async (req, res) => {
-    const { code, state } = req.query; // state に userId を渡している
-    
+    const { code, state } = req.query;
+
     if (!code) {
         return res.status(400).send('Authorization code is missing');
+    }
+
+    let userId;
+    try {
+        userId = verifyState(state);
+    } catch (e) {
+        return res.status(400).send('Invalid state parameter');
     }
 
     const oauth2Client = new google.auth.OAuth2(
@@ -49,6 +56,7 @@ router.get('/callback', async (req, res) => {
         // トークンを暗号化してDBに保存
         // Googleは初回認証時のみ refresh_token を返すため、
         // もし2回目以降で取得できなかった場合は既存のものを維持するようにする
+        // access_token・refresh_token ともに暗号化して保存
         if (refresh_token) {
             await db.query(
                 `INSERT INTO user_google_tokens (user_id, access_token, refresh_token_encrypted, expires_at)
@@ -58,7 +66,7 @@ router.get('/callback', async (req, res) => {
                     refresh_token_encrypted = EXCLUDED.refresh_token_encrypted,
                     expires_at = EXCLUDED.expires_at,
                     updated_at = CURRENT_TIMESTAMP`,
-                [state, access_token, encrypt(refresh_token), expiresAt]
+                [userId, encrypt(access_token), encrypt(refresh_token), expiresAt]
             );
         } else {
             await db.query(
@@ -67,7 +75,7 @@ router.get('/callback', async (req, res) => {
                     expires_at = $2,
                     updated_at = CURRENT_TIMESTAMP
                  WHERE user_id = $3`,
-                [access_token, expiresAt, state]
+                [encrypt(access_token), expiresAt, userId]
             );
         }
 
@@ -141,6 +149,7 @@ router.post('/create-playlist', authorize, async (req, res) => {
 
         const youtube = new YoutubeService(userId);
         const videoIds = [];
+        const videoIdToTitle = {}; // 動画追加失敗時にタイトルを特定するため
         const missingSongs = [];
 
         // 3. 動画IDの解決 (DB優先 -> YouTube検索)
@@ -161,6 +170,7 @@ router.post('/create-playlist', authorize, async (req, res) => {
 
             if (videoId) {
                 videoIds.push(videoId);
+                videoIdToTitle[videoId] = song.title;
             } else {
                 missingSongs.push(song.title);
             }
@@ -181,14 +191,15 @@ router.post('/create-playlist', authorize, async (req, res) => {
         const playlist = await youtube.createPlaylist(playlistName, description);
         
         // 5. 動画追加 (YouTube APIは1件ずつ追加する必要がある)
-        // クォータ節約とタイムアウト防止のため、エラーが発生しても続行する
         const addedIds = [];
+        const failedToAddSongs = [];
         for (const vid of videoIds) {
             try {
                 await youtube.addVideoToPlaylist(playlist.id, vid);
                 addedIds.push(vid);
             } catch (addErr) {
                 console.error(`[YouTube] Failed to add video ${vid} to playlist:`, addErr.message);
+                failedToAddSongs.push(videoIdToTitle[vid] || vid);
             }
         }
 
@@ -203,11 +214,81 @@ router.post('/create-playlist', authorize, async (req, res) => {
             playlistUrl: `https://www.youtube.com/playlist?list=${playlist.id}`,
             total: setlist.length,
             added: addedIds.length,
-            missing: missingSongs
+            missing: [...missingSongs, ...failedToAddSongs]
         });
 
     } catch (err) {
         console.error('[YouTube] Create Playlist Error:', err.message);
+        res.status(500).json({ message: err.message });
+    }
+});
+
+/**
+ * 楽曲のオートマッピング (単一)
+ */
+router.post('/auto-map-song', authorize, async (req, res) => {
+    const { songId } = req.body;
+    const userId = req.user.id;
+
+    try {
+        const songRes = await db.query('SELECT title FROM songs WHERE id = $1', [songId]);
+        if (songRes.rows.length === 0) return res.status(404).json({ message: 'Song not found' });
+        const songTitle = songRes.rows[0].title;
+
+        const youtube = new YoutubeService(userId);
+        const track = await youtube.searchTrack(songTitle);
+
+        if (track) {
+            await db.query('UPDATE songs SET yt_video_id = $1 WHERE id = $2', [track.id, songId]);
+            return res.json({ success: true, video: track });
+        }
+        res.json({ success: false, message: 'No match found' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+/**
+ * 楽曲のオートマッピング (一括)
+ */
+router.post('/auto-map-batch', authorize, async (req, res) => {
+    const { songIds } = req.body; // Array of IDs
+    const userId = req.user.id;
+
+    if (!Array.isArray(songIds)) return res.status(400).json({ message: 'songIds must be an array' });
+
+    try {
+        const youtube = new YoutubeService(userId);
+        const results = { success: 0, failed: 0, skipped: 0 };
+
+        for (const id of songIds) {
+            const songRes = await db.query('SELECT title, yt_video_id FROM songs WHERE id = $1', [id]);
+            if (songRes.rows.length === 0) {
+                results.failed++;
+                continue;
+            }
+            if (songRes.rows[0].yt_video_id) {
+                results.skipped++;
+                continue;
+            }
+
+            try {
+                const track = await youtube.searchTrack(songRes.rows[0].title);
+                if (track) {
+                    await db.query('UPDATE songs SET yt_video_id = $1 WHERE id = $2', [track.id, id]);
+                    results.success++;
+                } else {
+                    results.failed++;
+                }
+            } catch (err) {
+                results.failed++;
+            }
+            // Rate limiting (Search API is expensive, but for admin it's fine with small delay)
+            await new Promise(r => setTimeout(r, 200));
+        }
+
+        res.json({ success: true, results });
+    } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });

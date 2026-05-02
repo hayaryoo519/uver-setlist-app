@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { authorize } = require('../middleware/authorization');
 const SpotifyService = require('../services/spotifyService');
 const db = require('../db');
-const { encrypt } = require('../utils/encryption');
+const { encrypt, signState, verifyState } = require('../utils/encryption');
 const axios = require('axios');
 
 /**
@@ -17,7 +17,7 @@ router.get('/auth-url', authorize, (req, res) => {
         return res.status(500).json({ message: 'Spotify API configuration missing' });
     }
 
-    const url = `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${req.user.id}`;
+    const url = `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(signState(req.user.id))}`;
     res.json({ url });
 });
 
@@ -25,10 +25,17 @@ router.get('/auth-url', authorize, (req, res) => {
  * Spotify OAuth コールバック
  */
 router.get('/callback', async (req, res) => {
-    const { code, state } = req.query; // state に userId を渡している
-    
+    const { code, state } = req.query;
+
     if (!code) {
         return res.status(400).send('Authorization code is missing');
+    }
+
+    let userId;
+    try {
+        userId = verifyState(state);
+    } catch (e) {
+        return res.status(400).send('Invalid state parameter');
     }
 
     const authHeader = Buffer.from(
@@ -51,7 +58,7 @@ router.get('/callback', async (req, res) => {
         const { access_token, refresh_token, expires_in } = response.data;
         const expiresAt = new Date(Date.now() + expires_in * 1000);
 
-        // トークンを暗号化してDBに保存
+        // access_token・refresh_token ともに暗号化して保存
         await db.query(
             `INSERT INTO user_spotify_tokens (user_id, access_token, refresh_token_encrypted, expires_at)
              VALUES ($1, $2, $3, $4)
@@ -60,7 +67,7 @@ router.get('/callback', async (req, res) => {
                 refresh_token_encrypted = EXCLUDED.refresh_token_encrypted,
                 expires_at = EXCLUDED.expires_at,
                 updated_at = CURRENT_TIMESTAMP`,
-            [state, access_token, encrypt(refresh_token), expiresAt]
+            [userId, encrypt(access_token), encrypt(refresh_token), expiresAt]
         );
 
         // 完了画面を表示して閉じる
@@ -195,6 +202,75 @@ router.post('/create-playlist', authorize, async (req, res) => {
 
     } catch (err) {
         console.error('[Spotify] Create Playlist Error:', err.message);
+        res.status(500).json({ message: err.message });
+    }
+});
+
+/**
+ * 楽曲のオートマッピング (単一)
+ */
+router.post('/auto-map-song', authorize, async (req, res) => {
+    const { songId } = req.body;
+    const userId = req.user.id;
+
+    try {
+        const songRes = await db.query('SELECT title FROM songs WHERE id = $1', [songId]);
+        if (songRes.rows.length === 0) return res.status(404).json({ message: 'Song not found' });
+        const songTitle = songRes.rows[0].title;
+
+        const spotify = new SpotifyService(userId);
+        const track = await spotify.searchTrack(songTitle);
+
+        if (track) {
+            await db.query('UPDATE songs SET spotify_track_id = $1 WHERE id = $2', [track.id, songId]);
+            return res.json({ success: true, track });
+        }
+        res.json({ success: false, message: 'No match found' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+/**
+ * 楽曲のオートマッピング (一括)
+ */
+router.post('/auto-map-batch', authorize, async (req, res) => {
+    const { songIds } = req.body;
+    const userId = req.user.id;
+
+    if (!Array.isArray(songIds)) return res.status(400).json({ message: 'songIds must be an array' });
+
+    try {
+        const spotify = new SpotifyService(userId);
+        const results = { success: 0, failed: 0, skipped: 0 };
+
+        for (const id of songIds) {
+            const songRes = await db.query('SELECT title, spotify_track_id FROM songs WHERE id = $1', [id]);
+            if (songRes.rows.length === 0) {
+                results.failed++;
+                continue;
+            }
+            if (songRes.rows[0].spotify_track_id) {
+                results.skipped++;
+                continue;
+            }
+
+            try {
+                const track = await spotify.searchTrack(songRes.rows[0].title);
+                if (track) {
+                    await db.query('UPDATE songs SET spotify_track_id = $1 WHERE id = $2', [track.id, id]);
+                    results.success++;
+                } else {
+                    results.failed++;
+                }
+            } catch (err) {
+                results.failed++;
+            }
+            await new Promise(r => setTimeout(r, 100));
+        }
+
+        res.json({ success: true, results });
+    } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
