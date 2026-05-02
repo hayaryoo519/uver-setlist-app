@@ -153,17 +153,17 @@ export default defineConfig({
   define: {
     // 環境変数をクライアント側に公開
     'import.meta.env.VITE_APP_ENV': JSON.stringify(process.env.NODE_ENV || process.env.VITE_APP_ENV || 'development'),
-    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'http://localhost:8000')
+    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'http://localhost:3001')
   },
   server: {
     host: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: 'http://127.0.0.1:3001',
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'http://127.0.0.1:8000',
+        target: 'http://127.0.0.1:3001',
         changeOrigin: true,
       },
     },

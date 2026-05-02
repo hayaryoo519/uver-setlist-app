@@ -715,7 +715,9 @@ const AdminPage = () => {
             release_year: songFormData.release_year === '' ? null : parseInt(songFormData.release_year),
             album: songFormData.album === '' ? null : songFormData.album,
             mv_url: songFormData.mv_url === '' ? null : songFormData.mv_url,
-            author: songFormData.author === '' ? null : songFormData.author
+            author: songFormData.author === '' ? null : songFormData.author,
+            spotify_track_id: songFormData.spotify_track_id === '' ? null : songFormData.spotify_track_id,
+            yt_video_id: songFormData.yt_video_id === '' ? null : songFormData.yt_video_id
         };
 
         try {
@@ -751,9 +753,6 @@ const AdminPage = () => {
         setShowSongModal(true);
     };
 
-        }
-    };
-    
     const handleSpotifyAutoSearch = async (song: Song) => {
         try {
             const res: any = await apiClient.post(`/api/spotify/auto-map-song`, { songId: song.id });
@@ -781,6 +780,49 @@ const AdminPage = () => {
         } catch (err) {
             console.error(err);
             alert("Error during YouTube auto-search");
+        }
+    };
+
+    const [isBulkMapping, setIsBulkMapping] = useState(false);
+    const handleYoutubeBulkAutoMap = async () => {
+        const unlinked = processedSongs.filter(s => !s.yt_video_id);
+        if (unlinked.length === 0) {
+            alert("All visible songs are already linked to YouTube.");
+            return;
+        }
+        if (!window.confirm(`Attempt to auto-map ${unlinked.length} songs on YouTube? This may take a while.`)) return;
+
+        setIsBulkMapping(true);
+        try {
+            const res: any = await apiClient.post('/api/youtube/auto-map-batch', { songIds: unlinked.map(s => s.id) });
+            alert(`Bulk Auto-Map Complete!\nSuccess: ${res.results.success}\nFailed: ${res.results.failed}\nSkipped: ${res.results.skipped}`);
+            fetchSongs();
+        } catch (err) {
+            console.error(err);
+            alert("Bulk mapping failed");
+        } finally {
+            setIsBulkMapping(false);
+        }
+    };
+
+    const handleSpotifyBulkAutoMap = async () => {
+        const unlinked = processedSongs.filter(s => !s.spotify_track_id);
+        if (unlinked.length === 0) {
+            alert("All visible songs are already linked to Spotify.");
+            return;
+        }
+        if (!window.confirm(`Attempt to auto-map ${unlinked.length} songs on Spotify?`)) return;
+
+        setIsBulkMapping(true);
+        try {
+            const res: any = await apiClient.post('/api/spotify/auto-map-batch', { songIds: unlinked.map(s => s.id) });
+            alert(`Bulk Auto-Map Complete!\nSuccess: ${res.results.success}\nFailed: ${res.results.failed}\nSkipped: ${res.results.skipped}`);
+            fetchSongs();
+        } catch (err) {
+            console.error(err);
+            alert("Bulk mapping failed");
+        } finally {
+            setIsBulkMapping(false);
         }
     };
 
@@ -1916,6 +1958,22 @@ const AdminPage = () => {
                                     setShowSongModal(true);
                                 }}>
                                     <Plus size={18} /> Add Song
+                                </button>
+                                <button
+                                    className="btn-secondary"
+                                    style={{ width: 'auto', borderColor: '#FF0000', color: '#FF0000', background: 'rgba(255,0,0,0.05)' }}
+                                    onClick={handleYoutubeBulkAutoMap}
+                                    disabled={isBulkMapping}
+                                >
+                                    {isBulkMapping ? <Loader className="spin" size={18} /> : <YoutubeIcon size={18} />} Bulk YT
+                                </button>
+                                <button
+                                    className="btn-secondary"
+                                    style={{ width: 'auto', borderColor: '#1DB954', color: '#1DB954', background: 'rgba(29,185,84,0.05)' }}
+                                    onClick={handleSpotifyBulkAutoMap}
+                                    disabled={isBulkMapping}
+                                >
+                                    {isBulkMapping ? <Loader className="spin" size={18} /> : <Search size={18} />} Bulk Spotify
                                 </button>
                             </div>
                         </div>
