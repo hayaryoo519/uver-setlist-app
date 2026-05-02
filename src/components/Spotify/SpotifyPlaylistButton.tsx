@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Music, Check, Loader2, ExternalLink, AlertCircle } from 'lucide-react';
+import { Music, Check, Loader2, ExternalLink, AlertCircle, History } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface SpotifyPlaylistButtonProps {
     liveId: number;
+}
+
+interface HistoryEntry {
+    playlistUrl: string;
+    createdAt: string;
 }
 
 const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId }) => {
@@ -18,10 +23,12 @@ const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId })
         missing: string[];
     } | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [history, setHistory] = useState<HistoryEntry[]>([]);
 
     useEffect(() => {
         if (currentUser) {
             checkStatus();
+            fetchHistory();
         }
     }, [currentUser]);
 
@@ -34,6 +41,15 @@ const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId })
         }
     };
 
+    const fetchHistory = async () => {
+        try {
+            const res = await axios.get(`/api/spotify/history/${liveId}`);
+            setHistory(res.data);
+        } catch (err) {
+            // 履歴取得失敗は無視
+        }
+    };
+
     const handleLink = async () => {
         try {
             const res = await axios.get('/api/spotify/auth-url');
@@ -41,13 +57,13 @@ const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId })
             const height = 700;
             const left = window.screen.width / 2 - width / 2;
             const top = window.screen.height / 2 - height / 2;
-            
+
             const popup = window.open(
-                res.data.url, 
-                'Spotify Login', 
+                res.data.url,
+                'Spotify Login',
                 `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
             );
-            
+
             const timer = setInterval(() => {
                 if (!popup || popup.closed) {
                     clearInterval(timer);
@@ -61,13 +77,14 @@ const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId })
 
     const handleCreate = async () => {
         if (status === 'CREATING') return;
-        
+
         setStatus('CREATING');
         setError(null);
         try {
             const res = await axios.post('/api/spotify/create-playlist', { liveId });
             setResult(res.data);
             setStatus('SUCCESS');
+            fetchHistory();
         } catch (err: any) {
             setStatus('ERROR');
             setError(err.response?.data?.message || 'プレイリストの作成に失敗しました。');
@@ -88,7 +105,7 @@ const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId })
                         <div className="text-[10px] font-mono opacity-60 uppercase tracking-widest">SPOTIFY PLAYLIST CREATED</div>
                     </div>
                 </div>
-                
+
                 <div className="space-y-4 mb-6">
                     <div className="bg-slate-900/50 rounded-2xl p-4 border border-slate-800">
                         <div className="flex justify-between text-sm mb-1">
@@ -96,7 +113,7 @@ const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId })
                             <span className="text-white font-bold">{result.added} / {result.total}</span>
                         </div>
                         <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                            <div 
+                            <div
                                 className="bg-emerald-500 h-full transition-all duration-1000 ease-out"
                                 style={{ width: `${(result.added / result.total) * 100}%` }}
                             />
@@ -115,13 +132,13 @@ const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId })
                     )}
                 </div>
 
-                <a 
-                    href={result.playlistUrl} 
-                    target="_blank" 
+                <a
+                    href={result.playlistUrl}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-3 py-4 rounded-2xl bg-[#1DB954] text-black font-black hover:bg-[#1ed760] transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-[#1DB954]/10 group"
                 >
-                    Spotifyで開く 
+                    Spotifyで開く
                     <ExternalLink size={18} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                 </a>
             </div>
@@ -146,7 +163,7 @@ const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId })
             </div>
 
             {!isLinked ? (
-                <button 
+                <button
                     onClick={handleLink}
                     className="w-full py-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold border border-slate-700 hover:border-slate-600 flex items-center justify-center gap-3 transition-all group"
                 >
@@ -157,7 +174,7 @@ const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId })
                 </button>
             ) : (
                 <div className="space-y-4">
-                    <button 
+                    <button
                         onClick={handleCreate}
                         disabled={status === 'CREATING'}
                         className={`w-full py-5 rounded-3xl bg-gradient-to-r from-[#1DB954] to-[#1ed760] text-black font-black flex items-center justify-center gap-3 transition-all relative overflow-hidden group shadow-lg shadow-[#1DB954]/20
@@ -184,6 +201,31 @@ const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId })
                     <p className="text-center text-[10px] text-slate-500 font-medium">
                         ※ ライブラリに「非公開プレイリスト」として保存されます。
                     </p>
+                </div>
+            )}
+
+            {history.length > 0 && (
+                <div className="mt-5 pt-4 border-t border-slate-800">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+                        <History size={10} />
+                        過去に作成したプレイリスト
+                    </div>
+                    <div className="space-y-1.5">
+                        {history.map((entry, i) => (
+                            <a
+                                key={i}
+                                href={entry.playlistUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-[#1DB954]/30 transition-all group"
+                            >
+                                <span className="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">
+                                    {new Date(entry.createdAt).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 作成
+                                </span>
+                                <ExternalLink size={11} className="text-slate-600 group-hover:text-[#1DB954] transition-colors shrink-0" />
+                            </a>
+                        ))}
+                    </div>
                 </div>
             )}
         </div>

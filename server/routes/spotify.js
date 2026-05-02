@@ -207,6 +207,27 @@ router.post('/create-playlist', authorize, async (req, res) => {
 });
 
 /**
+ * プレイリスト作成履歴の取得（ログインユーザー × ライブ）
+ */
+router.get('/history/:liveId', authorize, async (req, res) => {
+    const { liveId } = req.params;
+    try {
+        const result = await db.query(
+            `SELECT playlist_id, created_at FROM playlist_history
+             WHERE user_id = $1 AND live_id = $2 AND (platform = 'spotify' OR platform IS NULL)
+             ORDER BY created_at DESC LIMIT 5`,
+            [req.user.id, liveId]
+        );
+        res.json(result.rows.map(r => ({
+            playlistUrl: `https://open.spotify.com/playlist/${r.playlist_id}`,
+            createdAt: r.created_at
+        })));
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+/**
  * 楽曲のオートマッピング (単一)
  */
 router.post('/auto-map-song', authorize, async (req, res) => {
