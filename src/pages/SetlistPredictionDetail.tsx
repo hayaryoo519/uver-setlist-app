@@ -106,7 +106,7 @@ const SetlistPredictionDetail = () => {
                                 <div className="flex flex-wrap items-center gap-4 text-slate-400 text-sm">
                                     <div className="flex items-center gap-1.5">
                                         <Calendar size={14} />
-                                        {new Date(prediction.created_at).toLocaleDateString('ja-JP')}
+                                        {new Date(prediction.created_at.split('T')[0].replace(/-/g, '/')).toLocaleDateString('ja-JP')}
                                     </div>
                                     <div className="w-1 h-1 bg-slate-700 rounded-full"></div>
                                     <div className="flex items-center gap-1.5">
@@ -140,7 +140,7 @@ const SetlistPredictionDetail = () => {
                                     <div className="text-lg font-bold text-white mb-1">{prediction.tour_name}</div>
                                     <div className="flex items-center gap-3 text-sm text-slate-400">
                                         <span className="flex items-center gap-1"><MapPin size={14} /> {prediction.venue}</span>
-                                        <span className="flex items-center gap-1"><Calendar size={14} /> {prediction.live_date ? new Date(prediction.live_date).toLocaleDateString('ja-JP') : ''}</span>
+                                        <span className="flex items-center gap-1"><Calendar size={14} /> {prediction.live_date ? new Date(prediction.live_date.split('T')[0].replace(/-/g, '/')).toLocaleDateString('ja-JP') : ''}</span>
                                     </div>
                                 </div>
                             </div>
@@ -181,7 +181,7 @@ const SetlistPredictionDetail = () => {
                             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                                 <button 
                                     onClick={() => {
-                                        const dateStr = prediction.live_date ? new Date(prediction.live_date).toLocaleDateString('ja-JP', {
+                                        const dateStr = prediction.live_date ? new Date(prediction.live_date.split('T')[0].replace(/-/g, '/')).toLocaleDateString('ja-JP', {
                                             year: 'numeric',
                                             month: '2-digit',
                                             day: '2-digit'
