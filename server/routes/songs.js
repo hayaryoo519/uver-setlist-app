@@ -247,4 +247,26 @@ router.delete('/:id', authorize, adminCheck, async (req, res) => {
     }
 });
 
+// UPDATE Spotify Track ID (Admin only)
+router.patch('/:id/spotify', authorize, adminCheck, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { spotify_track_id } = req.body;
+
+        const updateSong = await db.query(
+            "UPDATE songs SET spotify_track_id = $1 WHERE id = $2 RETURNING *",
+            [spotify_track_id, id]
+        );
+
+        if (updateSong.rows.length === 0) {
+            return res.status(404).json("Song not found");
+        }
+
+        res.json(updateSong.rows[0]);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
+    }
+});
+
 module.exports = router;

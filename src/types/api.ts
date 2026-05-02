@@ -42,6 +42,8 @@ export interface Song {
   mv_url: string | null
   author: string | null
   image_url: string | null
+  spotify_track_id?: string | null
+  yt_video_id?: string | null
   created_at?: string
 }
 
