@@ -53,20 +53,17 @@ router.get('/', async (req, res) => {
         }
 
         let query = `
-            SELECT
-                p.*,
+            SELECT 
+                p.*, 
                 u.username,
                 li.tour_name, li.venue, li.date as live_date,
                 COUNT(DISTINCT pl.user_id) as like_count,
                 EXISTS(SELECT 1 FROM prediction_likes WHERE prediction_id = p.id AND user_id = $1) as is_liked,
-                (p.user_id = $1) as is_mine,
-                ps.total_score, ps.match_score, ps.position_score, ps.streak_bonus,
-                ps.matched_count, ps.predicted_count, ps.actual_count, ps.rank
+                (p.user_id = $1) as is_mine
             FROM predictions p
             JOIN users u ON p.user_id = u.id
             JOIN lives li ON p.live_id = li.id
             LEFT JOIN prediction_likes pl ON p.id = pl.prediction_id
-            LEFT JOIN prediction_scores ps ON ps.prediction_id = p.id
         `;
 
         const params = [currentUserId];
@@ -90,12 +87,10 @@ router.get('/', async (req, res) => {
             query += ` WHERE ` + conditions.join(' AND ');
         }
 
-        query += ` GROUP BY p.id, u.username, li.id, ps.total_score, ps.match_score, ps.position_score, ps.streak_bonus, ps.matched_count, ps.predicted_count, ps.actual_count, ps.rank `;
+        query += ` GROUP BY p.id, u.username, li.id `;
 
         if (sort === 'new') {
             query += ` ORDER BY p.created_at DESC `;
-        } else if (sort === 'score') {
-            query += ` ORDER BY ps.total_score DESC NULLS LAST, like_count DESC `;
         } else {
             // Default: popular (like_count)
             query += ` ORDER BY like_count DESC, p.created_at DESC `;
@@ -117,22 +112,19 @@ router.get('/:id', async (req, res) => {
 
         // Get basic info
         const predResult = await db.query(`
-            SELECT
-                p.*,
+            SELECT 
+                p.*, 
                 u.username,
-                COUNT(DISTINCT pl.user_id) as like_count,
+                COUNT(DISTINCT l.user_id) as like_count,
                 EXISTS(SELECT 1 FROM prediction_likes WHERE prediction_id = p.id AND user_id = $1) as is_liked,
                 (p.user_id = $1) as is_mine,
-                li.tour_name, li.venue, li.date as live_date,
-                ps.total_score, ps.match_score, ps.position_score, ps.streak_bonus,
-                ps.matched_count, ps.predicted_count, ps.actual_count, ps.rank
+                li.tour_name, li.venue, li.date as live_date
             FROM predictions p
             JOIN users u ON p.user_id = u.id
-            LEFT JOIN prediction_likes pl ON p.id = pl.prediction_id
+            LEFT JOIN prediction_likes l ON p.id = l.prediction_id
             LEFT JOIN lives li ON p.live_id = li.id
-            LEFT JOIN prediction_scores ps ON ps.prediction_id = p.id
             WHERE p.id = $2
-            GROUP BY p.id, u.username, li.id, ps.total_score, ps.match_score, ps.position_score, ps.streak_bonus, ps.matched_count, ps.predicted_count, ps.actual_count, ps.rank
+            GROUP BY p.id, u.username, li.id
         `, [currentUserId, id]);
 
         if (predResult.rows.length === 0) {
@@ -167,18 +159,6 @@ router.post('/', authorize, async (req, res) => {
 
         if (!songs || !Array.isArray(songs) || songs.length === 0) {
             return res.status(400).json({ message: 'At least one song is required' });
-        }
-
-        // ライブ日程を取得して締め切りチェック（ライブ当日 JST 0:00 以降は投稿不可）
-        const liveCheck = await db.query('SELECT date FROM lives WHERE id = $1', [live_id]);
-        if (liveCheck.rows.length === 0) {
-            return res.status(404).json({ message: 'Live not found' });
-        }
-        const liveDate = liveCheck.rows[0].date; // YYYY-MM-DD
-        const nowJST = new Date(Date.now() + 9 * 60 * 60 * 1000);
-        const todayJST = nowJST.toISOString().slice(0, 10);
-        if (todayJST >= liveDate) {
-            return res.status(403).json({ message: '予想の受付は終了しました（ライブ当日の 0:00 JST をもって締め切り）' });
         }
 
         await client.query('BEGIN');
