@@ -3,7 +3,6 @@ const db = require('../db');
 const { authorize, adminCheck } = require('../middleware/authorization');
 const { normalizeVenueName } = require('../utils/songTranslations');
 const { notifyNewLive } = require('../utils/pushNotification');
-const { recalculateScoresForLive } = require('../services/scoreCalculator');
 
 // GET All Lives with Advanced Filters
 router.get('/', async (req, res) => {
@@ -229,6 +228,7 @@ router.put('/:id/setlist', authorize, adminCheck, async (req, res) => {
         const { id } = req.params;
         const { songs } = req.body; // Expect array of song_ids
 
+        // Transaction mostly
         await db.query("BEGIN");
 
         // 1. Delete existing setlist
@@ -246,19 +246,7 @@ router.put('/:id/setlist', authorize, adminCheck, async (req, res) => {
             }
         }
 
-        // 3. setlist_status を NORMAL に更新
-        const newStatus = songs && songs.length > 0 ? 'NORMAL' : 'UNKNOWN_SETLIST';
-        await db.query("UPDATE lives SET setlist_status = $1 WHERE id = $2", [newStatus, id]);
-
         await db.query("COMMIT");
-
-        // 4. NORMAL になった場合はスコアを非同期で再計算（レスポンスは待たない）
-        if (newStatus === 'NORMAL') {
-            recalculateScoresForLive(Number(id)).catch(err =>
-                console.error(`auto recalculate scores for live ${id}:`, err.message)
-            );
-        }
-
         res.json({ message: "Setlist updated" });
     } catch (err) {
         await db.query("ROLLBACK");
@@ -303,16 +291,7 @@ router.post('/:id/import-setlist', authorize, adminCheck, async (req, res) => {
             );
         }
 
-        // setlist_status を NORMAL に更新
-        await db.query("UPDATE lives SET setlist_status = 'NORMAL' WHERE id = $1", [id]);
-
         await db.query("COMMIT");
-
-        // スコアを非同期で再計算
-        recalculateScoresForLive(Number(id)).catch(err =>
-            console.error(`auto recalculate scores for live ${id}:`, err.message)
-        );
-
         res.json({ message: "Setlist imported successfully", count: songs.length });
 
     } catch (err) {
@@ -337,18 +316,6 @@ router.post('/batch-delete', authorize, adminCheck, async (req, res) => {
     } catch (err) {
         console.error("Batch delete error:", err.message);
         res.status(500).send("Server Error");
-    }
-});
-
-// セトリ予想スコアを一括再計算 (Admin only)
-router.post('/:id/recalculate-scores', authorize, adminCheck, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const result = await recalculateScoresForLive(Number(id));
-        res.json(result);
-    } catch (err) {
-        console.error('recalculate-scores error:', err.message);
-        res.status(500).json({ message: err.message });
     }
 });
 
