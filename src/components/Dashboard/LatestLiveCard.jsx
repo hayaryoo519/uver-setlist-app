@@ -15,6 +15,8 @@ export const LatestLiveCard = ({ live }) => {
             position: 'relative',
             overflow: 'hidden'
         }}>
+
+
             <div style={{ position: 'relative', zIndex: 1 }}>
                 <div style={{
                     textTransform: 'uppercase',
@@ -31,7 +33,8 @@ export const LatestLiveCard = ({ live }) => {
                     LATEST LIVE
                 </div>
 
-                <h3 className="latest-live-title" style={{
+                <h3 style={{
+                    fontSize: '1.8rem',
                     margin: '0 0 10px 0',
                     lineHeight: '1.2',
                     fontWeight: '800'
@@ -57,14 +60,13 @@ export const LatestLiveCard = ({ live }) => {
                     </div>
                 </div>
 
-                <div className="latest-live-buttons">
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                     <Link
                         to={`/live/${live.id}`}
                         state={{ from: location.pathname }}
                         style={{
                             display: 'inline-flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
                             gap: '8px',
                             background: '#fbbf24',
                             color: '#000',
@@ -80,49 +82,40 @@ export const LatestLiveCard = ({ live }) => {
                     >
                         セットリストを見る <ArrowRight size={16} />
                     </Link>
-                    <Link
-                        to={`/predictions?live_id=${live.id}`}
-                        style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '8px',
-                            background: 'rgba(255, 255, 255, 0.3)',
-                            border: '1px solid rgba(255, 255, 255, 0.6)',
-                            color: '#fff',
-                            padding: '12px 24px',
-                            borderRadius: '50px',
-                            textDecoration: 'none',
-                            fontWeight: 'bold',
-                            fontSize: '0.9rem',
-                            transition: 'all 0.2s',
-                        }}
-                        className="hover:bg-white/40 hover:scale-105"
-                    >
-                        みんなのセトリ予想を見る
-                    </Link>
+                    {(() => {
+                        const PREDICTION_START_DATE = new Date('2026-05-01');
+                        const liveDate = new Date(live.date);
+                        const predictionCount = Number(live.prediction_count || 0);
+                        if (liveDate < PREDICTION_START_DATE && predictionCount === 0) {
+                            return null;
+                        }
+
+                        return (
+                            <Link
+                                to={`/predictions?live_id=${live.id}`}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    background: 'rgba(255, 255, 255, 0.3)', /* さらに明るく */
+                                    border: '1px solid rgba(255, 255, 255, 0.6)', /* 枠線を強調 */
+                                    color: '#fff',
+                                    padding: '12px 24px',
+                                    borderRadius: '50px',
+                                    textDecoration: 'none',
+                                    fontWeight: 'bold',
+                                    fontSize: '0.9rem',
+                                    transition: 'all 0.2s',
+                                }}
+                                className="hover:bg-white/40 hover:scale-105"
+                            >
+                                みんなのセトリ予想を見る
+                            </Link>
+                        );
+                    })()}
+
                 </div>
             </div>
-
-            <style>{`
-                .latest-live-title {
-                    font-size: clamp(1.3rem, 4vw, 1.8rem);
-                }
-                .latest-live-buttons {
-                    display: flex;
-                    gap: 12px;
-                    flex-wrap: wrap;
-                }
-                @media (max-width: 480px) {
-                    .latest-live-buttons {
-                        flex-direction: column;
-                    }
-                    .latest-live-buttons a {
-                        width: 100%;
-                        box-sizing: border-box;
-                    }
-                }
-            `}</style>
         </div>
     );
 };
