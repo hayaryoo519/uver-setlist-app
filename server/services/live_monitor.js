@@ -19,10 +19,9 @@ async function monitor() {
     }
 
     try {
-        // 今日と前日のライブを取得
-        const targetDate = new Date();
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
+        // 今日と前日のライブを取得（JST 基準）
+        const targetDate = now;
+        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
         const livesResult = await db.query(
             'SELECT * FROM lives WHERE date IN ($1, $2)',
