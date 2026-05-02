@@ -43,6 +43,8 @@ app.use('/api/predictions', require('./routes/predictions'));
 app.use('/api/follows', require('./routes/follows'));
 app.use('/api/feed',    require('./routes/feed'));
 app.use('/api/music', require('./routes/music'));
+app.use('/api/spotify', require('./routes/spotify'));
+app.use('/api/youtube', require('./routes/youtube'));
 
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, '../dist')));

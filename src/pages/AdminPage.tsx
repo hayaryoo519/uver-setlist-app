@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Shield, Users, Music, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown, AlertTriangle, MessageCircle, CheckCircle, BellRing, FileText, Clock } from 'lucide-react';
+import { Shield, Users, Music, Youtube as YoutubeIcon, Calendar, Plus, Loader, ArrowUpDown, Trash2, Search, Edit2, ShieldAlert, X, Check, ListMusic, Upload, Globe, ExternalLink, Download, ChevronUp, ChevronDown, AlertTriangle, MessageCircle, CheckCircle, BellRing, FileText, Clock } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SetlistEditor from '../components/Admin/SetlistEditor';
@@ -60,9 +60,11 @@ const AdminPage = () => {
     const [songSearchTerm, setSongSearchTerm] = useState('');
     const [songAlbumFilter, setSongAlbumFilter] = useState('ALL');
     const [songSortConfig, setSongSortConfig] = useState({ key: 'title', direction: 'asc' });
+    const [songSpotifyFilter, setSongSpotifyFilter] = useState<'ALL' | 'LINKED' | 'UNLINKED'>('ALL');
+    const [songYoutubeFilter, setSongYoutubeFilter] = useState<'ALL' | 'LINKED' | 'UNLINKED'>('ALL');
     const [showSongModal, setShowSongModal] = useState(false);
     const [editingSong, setEditingSong] = useState<Song | null>(null);
-    const [songFormData, setSongFormData] = useState({ title: '', album: '', release_year: '', mv_url: '', author: '' });
+    const [songFormData, setSongFormData] = useState({ title: '', album: '', release_year: '', mv_url: '', author: '', spotify_track_id: '', yt_video_id: '' });
 
     // --- CORRECTIONS STATE ---
     const [corrections, setCorrections] = useState<any[]>([]);
@@ -713,7 +715,9 @@ const AdminPage = () => {
             release_year: songFormData.release_year === '' ? null : parseInt(songFormData.release_year),
             album: songFormData.album === '' ? null : songFormData.album,
             mv_url: songFormData.mv_url === '' ? null : songFormData.mv_url,
-            author: songFormData.author === '' ? null : songFormData.author
+            author: songFormData.author === '' ? null : songFormData.author,
+            spotify_track_id: songFormData.spotify_track_id === '' ? null : songFormData.spotify_track_id,
+            yt_video_id: songFormData.yt_video_id === '' ? null : songFormData.yt_video_id
         };
 
         try {
@@ -723,7 +727,7 @@ const AdminPage = () => {
                 await apiClient.post(url, payload);
             }
             fetchSongs(); setShowSongModal(false);
-            setEditingSong(null); setSongFormData({ title: '', album: '', release_year: '', mv_url: '', author: '' });
+            setEditingSong(null); setSongFormData({ title: '', album: '', release_year: '', mv_url: '', author: '', spotify_track_id: '', yt_video_id: '' });
         } catch (err) { console.error(err); alert(`Failed to save song: ${(err as any).data?.message || (err as any).message}`); }
     };
 
@@ -742,9 +746,84 @@ const AdminPage = () => {
             album: song.album || '',
             release_year: song.release_year != null ? String(song.release_year) : '',
             mv_url: song.mv_url || '',
-            author: song.author || ''
+            author: song.author || '',
+            spotify_track_id: song.spotify_track_id || '',
+            yt_video_id: song.yt_video_id || ''
         });
         setShowSongModal(true);
+    };
+
+    const handleSpotifyAutoSearch = async (song: Song) => {
+        try {
+            const res: any = await apiClient.post(`/api/spotify/auto-map-song`, { songId: song.id });
+            if (res.success) {
+                alert(`Successfully mapped to: ${res.track.name}`);
+                fetchSongs();
+            } else {
+                alert("No match found on Spotify.");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error during Spotify auto-search");
+        }
+    };
+    
+    const handleYoutubeAutoSearch = async (song: Song) => {
+        try {
+            const res: any = await apiClient.post(`/api/youtube/auto-map-song`, { songId: song.id });
+            if (res.success) {
+                alert(`Successfully mapped to: ${res.video.title}`);
+                fetchSongs();
+            } else {
+                alert("No match found on YouTube.");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error during YouTube auto-search");
+        }
+    };
+
+    const [isBulkMapping, setIsBulkMapping] = useState(false);
+    const handleYoutubeBulkAutoMap = async () => {
+        const unlinked = processedSongs.filter(s => !s.yt_video_id);
+        if (unlinked.length === 0) {
+            alert("All visible songs are already linked to YouTube.");
+            return;
+        }
+        if (!window.confirm(`Attempt to auto-map ${unlinked.length} songs on YouTube? This may take a while.`)) return;
+
+        setIsBulkMapping(true);
+        try {
+            const res: any = await apiClient.post('/api/youtube/auto-map-batch', { songIds: unlinked.map(s => s.id) });
+            alert(`Bulk Auto-Map Complete!\nSuccess: ${res.results.success}\nFailed: ${res.results.failed}\nSkipped: ${res.results.skipped}`);
+            fetchSongs();
+        } catch (err) {
+            console.error(err);
+            alert("Bulk mapping failed");
+        } finally {
+            setIsBulkMapping(false);
+        }
+    };
+
+    const handleSpotifyBulkAutoMap = async () => {
+        const unlinked = processedSongs.filter(s => !s.spotify_track_id);
+        if (unlinked.length === 0) {
+            alert("All visible songs are already linked to Spotify.");
+            return;
+        }
+        if (!window.confirm(`Attempt to auto-map ${unlinked.length} songs on Spotify?`)) return;
+
+        setIsBulkMapping(true);
+        try {
+            const res: any = await apiClient.post('/api/spotify/auto-map-batch', { songIds: unlinked.map(s => s.id) });
+            alert(`Bulk Auto-Map Complete!\nSuccess: ${res.results.success}\nFailed: ${res.results.failed}\nSkipped: ${res.results.skipped}`);
+            fetchSongs();
+        } catch (err) {
+            console.error(err);
+            alert("Bulk mapping failed");
+        } finally {
+            setIsBulkMapping(false);
+        }
     };
 
     // --- PROCESSED LIVES (FILTER & SORT) ---
@@ -928,6 +1007,20 @@ const AdminPage = () => {
         // Album filter
         if (songAlbumFilter !== 'ALL') {
             items = items.filter(s => s.album === songAlbumFilter);
+        }
+
+        // Spotify filter
+        if (songSpotifyFilter === 'LINKED') {
+            items = items.filter(s => !!s.spotify_track_id);
+        } else if (songSpotifyFilter === 'UNLINKED') {
+            items = items.filter(s => !s.spotify_track_id);
+        }
+
+        // YouTube filter
+        if (songYoutubeFilter === 'LINKED') {
+            items = items.filter(s => !!s.yt_video_id);
+        } else if (songYoutubeFilter === 'UNLINKED') {
+            items = items.filter(s => !s.yt_video_id);
         }
 
         // Sort
@@ -1811,6 +1904,38 @@ const AdminPage = () => {
                                         <option key={album} value={album}>{album}</option>
                                     ))}
                                 </select>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                    {(['ALL', 'LINKED', 'UNLINKED'] as const).map(s => (
+                                        <button
+                                            key={s}
+                                            onClick={() => setSongSpotifyFilter(s)}
+                                            style={{
+                                                padding: '6px 10px', fontSize: '0.75rem', borderRadius: '6px', cursor: 'pointer', border: '1px solid',
+                                                borderColor: songSpotifyFilter === s ? '#1DB954' : '#334155',
+                                                background: songSpotifyFilter === s ? 'rgba(29,185,84,0.15)' : '#0f172a',
+                                                color: songSpotifyFilter === s ? '#1DB954' : '#94a3b8',
+                                            }}
+                                        >
+                                            {s === 'ALL' ? 'すべて' : s === 'LINKED' ? 'Spotify連携済' : '未連携'}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                    {(['ALL', 'LINKED', 'UNLINKED'] as const).map(s => (
+                                        <button
+                                            key={s}
+                                            onClick={() => setSongYoutubeFilter(s)}
+                                            style={{
+                                                padding: '6px 10px', fontSize: '0.75rem', borderRadius: '6px', cursor: 'pointer', border: '1px solid',
+                                                borderColor: songYoutubeFilter === s ? '#FF0000' : '#334155',
+                                                background: songYoutubeFilter === s ? 'rgba(255,0,0,0.15)' : '#0f172a',
+                                                color: songYoutubeFilter === s ? '#FF0000' : '#94a3b8',
+                                            }}
+                                        >
+                                            {s === 'ALL' ? 'YTすべて' : s === 'LINKED' ? 'YT連携済' : 'YT未連携'}
+                                        </button>
+                                    ))}
+                                </div>
                                 <select
                                     value={`${songSortConfig.key}-${songSortConfig.direction}`}
                                     onChange={(e) => {
@@ -1829,10 +1954,26 @@ const AdminPage = () => {
                                     <option value="id-desc">ID 降順</option>
                                 </select>
                                 <button className="btn-primary" style={{ width: 'auto' }} onClick={() => {
-                                    setEditingSong(null); setSongFormData({ title: '', album: '', release_year: '', mv_url: '', author: '' });
+                                    setEditingSong(null); setSongFormData({ title: '', album: '', release_year: '', mv_url: '', author: '', spotify_track_id: '', yt_video_id: '' });
                                     setShowSongModal(true);
                                 }}>
                                     <Plus size={18} /> Add Song
+                                </button>
+                                <button
+                                    className="btn-secondary"
+                                    style={{ width: 'auto', borderColor: '#FF0000', color: '#FF0000', background: 'rgba(255,0,0,0.05)' }}
+                                    onClick={handleYoutubeBulkAutoMap}
+                                    disabled={isBulkMapping}
+                                >
+                                    {isBulkMapping ? <Loader className="spin" size={18} /> : <YoutubeIcon size={18} />} Bulk YT
+                                </button>
+                                <button
+                                    className="btn-secondary"
+                                    style={{ width: 'auto', borderColor: '#1DB954', color: '#1DB954', background: 'rgba(29,185,84,0.05)' }}
+                                    onClick={handleSpotifyBulkAutoMap}
+                                    disabled={isBulkMapping}
+                                >
+                                    {isBulkMapping ? <Loader className="spin" size={18} /> : <Search size={18} />} Bulk Spotify
                                 </button>
                             </div>
                         </div>
@@ -1861,7 +2002,9 @@ const AdminPage = () => {
                                         >
                                             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>Album<ArrowUpDown size={14} style={{ opacity: songSortConfig.key === 'album' ? 1 : 0.3 }} /></span>
                                         </th>
-                                        <th style={{ width: '100px' }}>Actions</th>
+                                        <th style={{ width: '120px' }}>Spotify ID</th>
+                                        <th style={{ width: '120px' }}>YouTube ID</th>
+                                        <th style={{ width: '140px' }}>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1874,8 +2017,32 @@ const AdminPage = () => {
                                                 </Link>
                                             </td>
                                             <td style={{ color: '#64748b', fontSize: '0.9rem' }}>{song.album || '-'}</td>
+                                            <td style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>
+                                                {song.spotify_track_id ? (
+                                                    <a href={`https://open.spotify.com/track/${song.spotify_track_id}`} target="_blank" rel="noreferrer" style={{ color: '#1DB954' }}>
+                                                        {song.spotify_track_id.slice(0, 8)}...
+                                                    </a>
+                                                ) : (
+                                                    <span style={{ color: '#475569' }}>-</span>
+                                                )}
+                                            </td>
+                                            <td style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>
+                                                {song.yt_video_id ? (
+                                                    <a href={`https://www.youtube.com/watch?v=${song.yt_video_id}`} target="_blank" rel="noreferrer" style={{ color: '#FF0000' }}>
+                                                        {song.yt_video_id.slice(0, 8)}...
+                                                    </a>
+                                                ) : (
+                                                    <span style={{ color: '#475569' }}>-</span>
+                                                )}
+                                            </td>
                                             <td>
                                                 <div className="actions-wrapper">
+                                                    <button onClick={() => handleSpotifyAutoSearch(song)} className="action-btn" title="Spotify Auto Search" style={{ color: '#1DB954' }}>
+                                                        <Search size={18} />
+                                                    </button>
+                                                    <button onClick={() => handleYoutubeAutoSearch(song)} className="action-btn" title="YouTube Auto Search" style={{ color: '#FF0000' }}>
+                                                        <YoutubeIcon size={18} />
+                                                    </button>
                                                     <button onClick={() => openEditSong(song)} className="action-btn edit" title="Edit"><Edit2 size={18} /></button>
                                                     <button onClick={() => handleDeleteSong(song.id)} className="action-btn delete" title="Delete"><Trash2 size={18} /></button>
                                                 </div>
@@ -2190,6 +2357,8 @@ const AdminPage = () => {
                             <div className="form-group"><label>Release Year</label><input type="number" value={songFormData.release_year} onChange={e => setSongFormData({ ...songFormData, release_year: e.target.value })} /></div>
                             <div className="form-group"><label>Author (Lyrics/Music)</label><input type="text" value={songFormData.author} onChange={e => setSongFormData({ ...songFormData, author: e.target.value })} /></div>
                             <div className="form-group"><label>MV URL</label><input type="text" placeholder="https://youtube.com/..." value={songFormData.mv_url} onChange={e => setSongFormData({ ...songFormData, mv_url: e.target.value })} /></div>
+                            <div className="form-group"><label>Spotify Track ID</label><input type="text" placeholder="e.g. 4YmSTfA7m6P9N6YnN5n3pB" value={songFormData.spotify_track_id} onChange={e => setSongFormData({ ...songFormData, spotify_track_id: e.target.value })} /></div>
+                            <div className="form-group"><label>YouTube Video ID</label><input type="text" placeholder="e.g. j_6S9Lia9Q0" value={songFormData.yt_video_id} onChange={e => setSongFormData({ ...songFormData, yt_video_id: e.target.value })} /></div>
 
                             <div className="modal-actions"><button type="button" onClick={() => setShowSongModal(false)} className="btn-cancel">Cancel</button><button type="submit" className="btn-primary">Save Song</button></div>
                         </form>
