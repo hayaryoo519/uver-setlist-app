@@ -88,7 +88,7 @@ router.get('/', async (req, res) => {
                 GROUP BY l.id
                 ${havingClause}
             )
-            SELECT l.*
+            SELECT l.id, l.tour_name, l.title, l.date::text as date, l.venue, l.type, l.prefecture, l.special_note, l.setlistfm_id, l.setlist_status
         `;
 
         if (include_setlists === 'true') {
@@ -141,7 +141,7 @@ router.get('/:id', async (req, res) => {
 
         // 1. Get Live Details with prediction count
         const liveRes = await db.query(
-            `SELECT l.*, 
+            `SELECT id, tour_name, title, date::text as date, venue, type, prefecture, special_note, setlistfm_id, setlist_status, 
                     (SELECT COUNT(*) FROM predictions p WHERE p.live_id = l.id) as prediction_count
              FROM lives l WHERE id = $1`, 
             [id]
