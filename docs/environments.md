@@ -41,6 +41,89 @@ UVERworld Setlist Archive の稼働環境と、それぞれのデータベース
 
 ---
 
+## 🖥️ 本番サーバー運用メモ
+
+### プロセス構成
+
+| 項目 | 内容 |
+|:---|:---|
+| ホスト名 | `server01` |
+| 実行ユーザー | `haya-ryoo` |
+| アプリディレクトリ | `/home/haya-ryoo/apps/uver-setlist-app/server` |
+| プロセス管理 | **systemd** (`uver-setlist.service`) |
+| ログ出力先 | **journald** (`journalctl -u uver-setlist`) |
+
+### 初回セットアップ（systemd サービス登録）
+
+リポジトリに `server/uver-setlist.service` があります。初回のみ以下を実行：
+
+```bash
+# サービスファイルをコピー
+sudo cp /home/haya-ryoo/apps/uver-setlist-app/server/uver-setlist.service \
+        /etc/systemd/system/uver-setlist.service
+
+# systemd に読み込ませる
+sudo systemctl daemon-reload
+
+# OS 起動時の自動起動を有効化
+sudo systemctl enable uver-setlist
+
+# 今すぐ起動
+sudo systemctl start uver-setlist
+
+# 状態確認
+sudo systemctl status uver-setlist
+```
+
+### ログの確認方法
+
+```bash
+# 直近50行
+sudo journalctl -u uver-setlist -n 50
+
+# エラーだけ絞り込む
+sudo journalctl -u uver-setlist --since "1 hour ago" | grep -E "Error|error|500"
+
+# リアルタイムで流す
+sudo journalctl -u uver-setlist -f
+```
+
+### デプロイ手順（本番）
+
+```bash
+# 本番サーバーにSSHしてから
+cd /home/haya-ryoo/apps/uver-setlist-app
+
+# 1. 最新コードを取得
+git pull origin main
+
+# 2. 依存パッケージの更新（package.json変更時のみ）
+cd server && npm install && cd ..
+
+# 3. マイグレーションの実行
+cd server && node migrate.js && cd ..
+
+# 4. フロントエンドのビルド（UIに変更がある場合）
+npm install && npm run build
+
+# 5. サーバーを再起動
+sudo systemctl restart uver-setlist
+
+# 6. 起動確認
+sudo systemctl status uver-setlist
+```
+
+### よくあるトラブル
+
+| 症状 | 原因 | 対処 |
+|:---|:---|:---|
+| API が 500 を返す | DBカラム名の不一致、未適用マイグレーション | `node migrate.js` を実行後に `sudo systemctl restart uver-setlist` |
+| `rate-limit` の ValidationError | `trust proxy` 未設定 (リバースプロキシ環境) | `app.set('trust proxy', 1)` が `index.js` にあるか確認 |
+| サービスが起動しない | `.env` が読めない等 | `sudo journalctl -u uver-setlist -n 30` でエラー内容を確認 |
+| サービスファイルを変更した | 設定反映されない | `sudo systemctl daemon-reload` 後に `restart` |
+
+---
+
 ## 🔐 3. セキュリティ・暗号化
 
 ### 暗号化キー (`ENCRYPTION_KEY`)
