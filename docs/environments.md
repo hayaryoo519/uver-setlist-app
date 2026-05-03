@@ -151,7 +151,7 @@ git pull origin main
 cd server && npm install && cd ..
 
 # 3. マイグレーションの実行
-cd server && node migrate.js && cd ..
+cd server && npm run migrate && cd ..
 
 # 4. フロントエンドのビルド（UIに変更がある場合）
 npm install && npm run build
