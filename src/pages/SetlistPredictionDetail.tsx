@@ -1,8 +1,9 @@
 import React from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Heart, User, Calendar, MapPin, Music, ArrowLeft, Share2, Sparkles, ChevronRight, Copy } from 'lucide-react';
+import { Heart, User, Calendar, MapPin, Music, ArrowLeft, Share2, Sparkles, ChevronRight, Copy, Edit2, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { usePredictionDetail, useLikePrediction } from '../hooks/queries/usePredictions';
+import { usePredictionDetail, useLikePrediction, useDeletePrediction } from '../hooks/queries/usePredictions';
+import { useToast } from '../contexts/ToastContext';
 import PageHeader from '../components/Layout/PageHeader';
 import SEO from '../components/SEO';
 
@@ -10,9 +11,11 @@ const SetlistPredictionDetail = () => {
     const { id } = useParams();
     const { currentUser } = useAuth();
     const navigate = useNavigate();
+    const { showToast } = useToast();
 
     const { data: prediction, isLoading } = usePredictionDetail(id);
     const likeMutation = useLikePrediction();
+    const deleteMutation = useDeletePrediction();
 
     const handleLike = async () => {
         if (!currentUser) {
@@ -28,6 +31,24 @@ const SetlistPredictionDetail = () => {
         } catch (error) {
             console.error('Error toggling like:', error);
         }
+    };
+
+    const handleDelete = async () => {
+        if (!window.confirm("この予想を削除してもよろしいですか？\n削除した予想は元に戻せません。")) return;
+
+        try {
+            if (!id) return;
+            await deleteMutation.mutateAsync(id);
+            showToast("予想を削除しました", "success");
+            navigate('/predictions');
+        } catch (error) {
+            console.error('Error deleting prediction:', error);
+            showToast("削除に失敗しました", "error");
+        }
+    };
+
+    const handleEdit = () => {
+        navigate(`/predictions/edit/${id}`);
     };
 
     const handleShare = () => {
@@ -106,27 +127,55 @@ const SetlistPredictionDetail = () => {
                                 <div className="flex flex-wrap items-center gap-4 text-slate-400 text-sm">
                                     <div className="flex items-center gap-1.5">
                                         <Calendar size={14} />
-                                        {new Date(prediction.created_at.split('T')[0].replace(/-/g, '/')).toLocaleDateString('ja-JP')}
+                                        {prediction.created_at ? new Date(prediction.created_at.split('T')[0].replace(/-/g, '/')).toLocaleDateString('ja-JP') : ''}
                                     </div>
                                     <div className="w-1 h-1 bg-slate-700 rounded-full"></div>
                                     <div className="flex items-center gap-1.5">
                                         <Heart size={14} className={prediction.is_liked ? "text-pink-500" : ""} fill={prediction.is_liked ? "currentColor" : "none"} />
                                         {prediction.like_count} いいね
                                     </div>
+                                    {prediction.is_closed && (
+                                        <>
+                                            <div className="w-1 h-1 bg-slate-700 rounded-full"></div>
+                                            <div className="flex items-center gap-1.5 text-yellow-500 font-bold">
+                                                締切済み
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
-                            <button
-                                onClick={handleLike}
-                                className={`flex items-center gap-2 px-6 py-3 rounded-full font-bold transition-all ${
-                                    prediction.is_liked 
-                                    ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/20' 
-                                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                                }`}
-                            >
-                                <Heart size={18} fill={prediction.is_liked ? "currentColor" : "none"} />
-                                {prediction.is_liked ? 'いいね済' : 'いいね！'}
-                            </button>
+                            <div className="flex flex-wrap items-center gap-3">
+                                {prediction.is_mine && !prediction.is_closed && (
+                                    <>
+                                        <button
+                                            onClick={handleEdit}
+                                            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-full font-bold hover:bg-blue-600 hover:text-white transition-all text-sm"
+                                        >
+                                            <Edit2 size={16} />
+                                            編集
+                                        </button>
+                                        <button
+                                            onClick={handleDelete}
+                                            className="flex items-center gap-2 px-5 py-2.5 bg-red-600/10 text-red-400 border border-red-500/20 rounded-full font-bold hover:bg-red-600 hover:text-white transition-all text-sm"
+                                        >
+                                            <Trash2 size={16} />
+                                            削除
+                                        </button>
+                                    </>
+                                )}
+                                <button
+                                    onClick={handleLike}
+                                    className={`flex items-center gap-2 px-6 py-3 rounded-full font-bold transition-all ${
+                                        prediction.is_liked 
+                                        ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/20' 
+                                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                                    }`}
+                                >
+                                    <Heart size={18} fill={prediction.is_liked ? "currentColor" : "none"} />
+                                    {prediction.is_liked ? 'いいね済' : 'いいね！'}
+                                </button>
+                            </div>
                         </div>
 
                         {/* Live Info Banner */}

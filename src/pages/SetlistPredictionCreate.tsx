@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import type { Song } from '../types/api';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams, useParams } from 'react-router-dom';
 import { useSongs, useSearchSongs } from '../hooks/queries/useSongs';
 import { useLiveDetail, useLives } from '../hooks/queries/useLives';
-import { useCreatePrediction } from '../hooks/queries/usePredictions';
+import { useCreatePrediction, useUpdatePrediction, usePredictionDetail } from '../hooks/queries/usePredictions';
+import { useToast } from '../contexts/ToastContext';
 import {
     DndContext,
     closestCenter,
@@ -19,7 +20,7 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Search, Plus, Save } from 'lucide-react';
+import { Search, Plus, Save, AlertCircle } from 'lucide-react';
 import PageHeader from '../components/Layout/PageHeader';
 import SEO from '../components/SEO';
 import { useAuth } from '../contexts/AuthContext';
@@ -27,17 +28,43 @@ import { SortableSongItem } from '../components/SortableSongItem';
 import { DISCOGRAPHY } from '../data/discography';
 
 const SetlistPredictionCreate = () => {
+    const { id: editId } = useParams();
+    const isEdit = !!editId;
     const [selectedSongs, setSelectedSongs] = useState<{ uniqueId: string; song: Song }[]>([]);
+    const [title, setTitle] = useState('セットリスト予想');
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedQuery, setDebouncedQuery] = useState('');
     const [selectedLiveId, setSelectedLiveId] = useState<string | null>(null);
     const { currentUser } = useAuth();
     const navigate = useNavigate();
+    const { showToast } = useToast();
     const [searchParams] = useSearchParams();
-    const liveId = searchParams.get('live_id');
+    const liveIdFromQuery = searchParams.get('live_id');
 
     const { data: allSongs = [] } = useSongs();
     
+    // 編集モード：既存データの取得
+    const { data: existingPrediction, isLoading: isLoadingPrediction } = usePredictionDetail(editId);
+
+    // 編集モード：初期データのセット
+    useEffect(() => {
+        if (isEdit && existingPrediction && allSongs.length > 0) {
+            setSelectedLiveId(String(existingPrediction.live_id));
+            setTitle(existingPrediction.title || 'セットリスト予想');
+            
+            if (existingPrediction.songs) {
+                const songsWithUniqueIds = existingPrediction.songs.map(ps => {
+                    const songData = allSongs.find(s => s.id === ps.id);
+                    return {
+                        uniqueId: `list-item-${ps.id}-${Math.random().toString(36).substr(2, 9)}`,
+                        song: songData || { id: ps.id, title: ps.title } as Song
+                    };
+                });
+                setSelectedSongs(songsWithUniqueIds);
+            }
+        }
+    }, [isEdit, existingPrediction, allSongs]);
+
     // Debounce searchQuery
     useEffect(() => {
         const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300);
@@ -47,12 +74,14 @@ const SetlistPredictionCreate = () => {
     const { data: searchResults = [] } = useSearchSongs(debouncedQuery);
 
     // selectedLiveId が変更された場合はそちらの詳細を表示する
-    const { data: liveInfo = null } = useLiveDetail(selectedLiveId ?? liveId ?? undefined);
+    const { data: liveInfo = null } = useLiveDetail(selectedLiveId ?? liveIdFromQuery ?? undefined);
     const { data: tourLives = [] } = useLives({
         tour_name: liveInfo?.tour_name,
         enabled: !!liveInfo?.tour_name,
     });
+    
     const createPrediction = useCreatePrediction();
+    const updatePrediction = useUpdatePrediction(editId || '');
 
     // Dnd-kit sensors
     const sensors = useSensors(
@@ -66,14 +95,14 @@ const SetlistPredictionCreate = () => {
         })
     );
 
-    // liveId が変わったら selectedLiveId も同期
+    // liveIdFromQuery が変わったら selectedLiveId も同期（新規作成時のみ）
     useEffect(() => {
-        if (liveId) setSelectedLiveId(liveId);
-    }, [liveId]);
+        if (liveIdFromQuery && !isEdit) setSelectedLiveId(liveIdFromQuery);
+    }, [liveIdFromQuery, isEdit]);
 
     // 過去のライブや、予想開始日以前のライブへの投稿を制限
     useEffect(() => {
-        if (liveInfo) {
+        if (liveInfo && !isEdit) {
             const liveDate = new Date(liveInfo.date.split('T')[0].replace(/-/g, '/'));
             const PREDICTION_START_DATE = new Date('2026/05/01');
             const today = new Date();
@@ -81,21 +110,34 @@ const SetlistPredictionCreate = () => {
             const isPastLive = liveDate < today;
 
             if (liveDate < PREDICTION_START_DATE) {
-                alert("このライブはセトリ予想の対象外（2026-05-01以前）です。");
+                showToast("このライブは予想対象外です", "warning");
                 navigate('/predictions');
             } else if (isPastLive) {
-                alert("このライブは既に開催済みのため、新しく予想を投稿することはできません。\nみんなの予想ランキングを見て楽しみましょう。");
+                showToast("開催済みのライブには投稿できません", "info");
                 navigate(`/predictions?live_id=${liveInfo.id}`);
             }
         }
-    }, [liveInfo, navigate]);
+    }, [liveInfo, isEdit, navigate, showToast]);
+
+    // 編集モードでの締切チェック
+    useEffect(() => {
+        if (isEdit && existingPrediction?.is_closed) {
+            showToast("締切済みの予想は編集できません", "warning");
+            navigate(`/predictions/${editId}`);
+        }
+    }, [isEdit, existingPrediction, editId, navigate, showToast]);
 
     const handleAddSong = (song: Song) => {
         if (selectedSongs.length >= 30) {
-            alert("予想曲は最大30曲までです。");
+            showToast("予想曲は最大30曲までです", "warning");
             return;
         }
-        // Create a unique ID for the list item because same song can be added twice
+        // 重複チェック（フロントエンドでも実施）
+        if (selectedSongs.some(s => s.song.id === song.id)) {
+            showToast("同じ曲がすでに含まれています", "warning");
+            return;
+        }
+
         const newEntry = {
             uniqueId: `list-item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             song: song
@@ -133,31 +175,93 @@ const SetlistPredictionCreate = () => {
 
     const handleSubmit = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
-        if (selectedSongs.length === 0) {
-            alert("1曲以上の楽曲を選択してください。");
+        
+        if (!selectedLiveId) {
+            showToast("対象のライブを選択してください", "warning");
             return;
         }
 
-        createPrediction.mutate(
-            {
-                title: 'セットリスト予想',
-                songs: selectedSongs.map(s => s.song.id),
-                live_id: selectedLiveId ? parseInt(selectedLiveId) : null,
-            },
-            {
-                onSuccess: (data) => navigate(`/predictions/${data.id}`),
-                onError: () => alert("予想の保存に失敗しました。"),
-            }
-        );
+        if (selectedSongs.length === 0) {
+            showToast("1曲以上の楽曲を選択してください", "warning");
+            return;
+        }
+
+        if (!title.trim()) {
+            showToast("タイトルを入力してください", "warning");
+            return;
+        }
+
+        const payload = {
+            title: title.trim(),
+            songs: selectedSongs.map(s => s.song.id),
+            live_id: parseInt(selectedLiveId),
+        };
+
+        if (isEdit) {
+            updatePrediction.mutate(payload, {
+                onSuccess: (data) => {
+                    showToast("予想を更新しました", "success");
+                    navigate(`/predictions/${data.id}`);
+                },
+                onError: (error: any) => {
+                    console.error('Update error:', error);
+                    showToast("更新に失敗しました", "error");
+                }
+            });
+        } else {
+            createPrediction.mutate(payload, {
+                onSuccess: (data) => {
+                    showToast("予想を公開しました！", "success");
+                    navigate(`/predictions/${data.id}`);
+                },
+                onError: (error: any) => {
+                    if (error.status === 409) {
+                        const existingId = error.data?.prediction_id;
+                        if (window.confirm("このライブにはすでに予想を投稿済みです。\n既存の予想を編集しますか？")) {
+                            navigate(existingId ? `/predictions/edit/${existingId}` : '/predictions');
+                        }
+                    } else {
+                        showToast("保存に失敗しました", "error");
+                    }
+                },
+            });
+        }
     };
 
     if (!currentUser) return null;
 
+    if (isEdit && isLoadingPrediction) {
+        return (
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+                <div className="text-blue-400 font-bold animate-pulse">読み込み中...</div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-slate-900 text-white fade-in" style={{ paddingTop: '100px', paddingBottom: '80px' }}>
-            <SEO title="セトリ予想を作成" description="UVERworldのライブのセトリを予想して公開しましょう。" />
+            <SEO title={isEdit ? "予想を編集" : "セトリ予想を作成"} description="UVERworldのライブのセトリを予想して公開しましょう。" />
             <div className="max-w-4xl mx-auto px-4">
-                <PageHeader title="予想を作成" subtitle="新しいセトリ予想を作成" rightElement={null} />
+                <PageHeader 
+                    title={isEdit ? "予想を編集" : "予想を作成"} 
+                    subtitle={isEdit ? "投稿済みの予想をブラッシュアップ" : "新しいセトリ予想を作成"} 
+                    rightElement={null} 
+                />
+
+                {/* 予想タイトル入力 */}
+                <div className="mt-6 mb-4">
+                    <label className="block text-xs font-bold text-blue-400 uppercase tracking-wider mb-2 ml-1">
+                        予想のタイトル
+                    </label>
+                    <input
+                        type="text"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        placeholder="例: 横アリ2日目の理想のセトリ"
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-5 py-4 text-white text-lg font-bold focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-lg placeholder:text-slate-600"
+                        maxLength={50}
+                    />
+                </div>
 
                 {/* ライブ情報表示 */}
                 {liveInfo && (
@@ -275,10 +379,12 @@ const SetlistPredictionCreate = () => {
 
                         <button
                             onClick={handleSubmit}
-                            disabled={createPrediction.isPending || selectedSongs.length === 0}
+                            disabled={createPrediction.isPending || updatePrediction.isPending || selectedSongs.length === 0}
                             className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all mt-4"
                         >
-                            {createPrediction.isPending ? '保存中...' : <><Save size={20} /> 予想を保存して公開する</>}
+                            {(createPrediction.isPending || updatePrediction.isPending) ? '保存中...' : (
+                                <><Save size={20} /> {isEdit ? '予想を更新する' : '予想を保存して公開する'}</>
+                            )}
                         </button>
                     </div>
 
