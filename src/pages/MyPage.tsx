@@ -7,11 +7,12 @@ import VenueTypePie from '../components/Dashboard/VenueTypePie';
 import AlbumDistribution from '../components/Dashboard/AlbumDistribution';
 import SongRanking from '../components/Dashboard/SongRanking';
 import MyPageOnboarding from '../components/Dashboard/MyPageOnboarding';
-import { Music, Calendar, MapPin, Filter, Building2, User, Settings as SettingsIcon, ArrowRight, Users, Heart } from 'lucide-react';
+import { Music, Calendar, MapPin, Filter, Building2, User, Settings as SettingsIcon, ArrowRight, Users, Heart, Edit2, Plus, PenTool } from 'lucide-react';
 import SEO from '../components/SEO';
 import { useAuth } from '../contexts/AuthContext';
 import { useMyFollowStats } from '../hooks/queries/useFollow';
 import { useFeed } from '../hooks/queries/useFeed';
+import { usePredictions } from '../hooks/queries/usePredictions';
 
 import AttendedLiveList from '../components/Dashboard/AttendedLiveList';
 import VenueRanking from '../components/Dashboard/VenueRanking';
@@ -30,6 +31,7 @@ function MyPage() {
     const { currentUser } = useAuth();
     const { data: followStats } = useMyFollowStats(!!currentUser);
     const { data: feedItems = [], isLoading: feedLoading } = useFeed({ enabled: !!currentUser, limit: 20 });
+    const { data: myPredictions = [], isLoading: myPredictionsLoading } = usePredictions({ mine: true, enabled: !!currentUser });
 
     const [yearFilterMode, setYearFilterMode] = useState('ALL'); // 'ALL', '5', '10'
 
@@ -322,6 +324,100 @@ function MyPage() {
                 <MyPageOnboarding />
             )
             }
+
+            {/* 自分のセトリ予想 */}
+            <div className="dashboard-panel" style={{ marginTop: '30px', marginBottom: '30px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ margin: 0 }}>自分のセトリ予想</h3>
+                    <Link 
+                        to="/predictions" 
+                        state={{ portalTab: 'mine' }}
+                        className="text-gold" 
+                        style={{ fontSize: '0.85rem', textDecoration: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}
+                    >
+                        すべて見る <ArrowRight size={14} />
+                    </Link>
+                </div>
+                {myPredictionsLoading ? (
+                    <p style={{ color: '#64748b', textAlign: 'center', padding: '20px' }}>読み込み中...</p>
+                ) : myPredictions.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '30px 20px', color: '#475569' }}>
+                        <PenTool size={32} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                        <p style={{ marginBottom: '8px', fontWeight: 700 }}>予想がまだありません</p>
+                        <p style={{ fontSize: '0.85rem', color: '#334155' }}>
+                            開催予定のライブを予想してみましょう！
+                        </p>
+                        <Link 
+                            to="/predictions"
+                            className="edit-btn"
+                            style={{ marginTop: '15px', display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
+                        >
+                            <Plus size={16} /> 予想を投稿する
+                        </Link>
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {myPredictions.slice(0, 5).map(item => (
+                            <div key={item.id} style={{ position: 'relative' }}>
+                                <Link
+                                    to={`/predictions/${item.id}`}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '14px',
+                                        padding: '14px',
+                                        background: 'rgba(255,255,255,0.03)',
+                                        borderRadius: '12px',
+                                        border: '1px solid rgba(255,255,255,0.05)',
+                                        textDecoration: 'none',
+                                        color: 'inherit',
+                                        transition: 'border-color 0.2s, background 0.2s',
+                                    }}
+                                    className="feed-card"
+                                >
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                            <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {item.title || 'セットリスト予想'}
+                                            </div>
+                                            {item.is_closed ? (
+                                                <span style={{ fontSize: '0.7rem', color: '#64748b', background: 'rgba(100, 116, 139, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>終了</span>
+                                            ) : (
+                                                <span style={{ fontSize: '0.7rem', color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>受付中</span>
+                                            )}
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px', fontSize: '0.78rem', color: '#64748b' }}>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                                <Calendar size={10} />{item.live_date ? new Date(item.live_date.replace(/-/g, '/')).toLocaleDateString('ja-JP') : item.tour_name}
+                                            </span>
+                                            {item.venue && (
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                                    <MapPin size={10} />{item.venue}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                                        {!item.is_closed && (
+                                            <Link
+                                                to={`/predictions/edit/${item.id}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                                style={{ color: '#94a3b8', hover: { color: '#3b82f6' } }}
+                                                className="edit-icon-btn"
+                                            >
+                                                <Edit2 size={16} />
+                                            </Link>
+                                        )}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: '#64748b' }}>
+                                            <Heart size={12} /> {item.like_count}
+                                        </div>
+                                    </div>
+                                </Link>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
 
             {/* フォローフィード */}
             <div className="dashboard-panel" style={{ marginTop: '30px', marginBottom: '30px' }}>

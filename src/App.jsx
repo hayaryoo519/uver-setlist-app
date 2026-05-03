@@ -75,6 +75,7 @@ function App() {
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/corrections/new" element={<CorrectionForm />} />
                   <Route path="/predictions/new" element={<SetlistPredictionCreate />} />
+                  <Route path="/predictions/edit/:id" element={<SetlistPredictionCreate />} />
                 </Route>
 
               </Route>
