@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { Heart, Plus, Calendar, User, Sparkles, Eye, PenTool, MapPin } from 'lucide-react';
+import { Heart, Plus, Calendar, User, Sparkles, Eye, PenTool, MapPin, Edit2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/Layout/PageHeader';
 import SEO from '../components/SEO';
@@ -10,11 +10,11 @@ import { useLives } from '../hooks/queries/useLives';
 import FollowButton from '../components/common/FollowButton';
 
 const PredictionRanking = () => {
-    const [portalTab, setPortalTab] = useState('upcoming'); // 'upcoming' | 'mine'
+    const location = useLocation();
+    const [portalTab, setPortalTab] = useState(location.state?.portalTab || 'upcoming'); // 'upcoming' | 'mine'
     const [sortBy, setSortBy] = useState('popular');
     const { currentUser } = useAuth();
     const navigate = useNavigate();
-    const location = useLocation();
     const [searchParams] = useSearchParams();
     const liveId = searchParams.get('live_id');
     const fromPath = location.state?.from;
@@ -136,17 +136,17 @@ const PredictionRanking = () => {
                                         {predictableLives.map((live, idx) => (
                                     <div 
                                         key={live.id}
-                                        className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-700 rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all duration-300 group"
+                                        className={`bg-gradient-to-br from-slate-800/80 to-slate-900/80 border ${live.has_predicted ? 'border-amber-500/50 shadow-lg shadow-amber-900/10' : 'border-slate-700'} rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all duration-300 group`}
                                         style={{ animationDelay: `${idx * 0.1}s` }}
                                     >
                                         <div className="p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-2 mb-2">
-                                                    <span className="bg-blue-600/20 text-blue-400 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider border border-blue-500/20">
-                                                        開催予定
+                                                    <span className={`${live.has_predicted ? 'bg-amber-500/20 text-amber-400 border-amber-500/20' : 'bg-blue-600/20 text-blue-400 border-blue-500/20'} text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider border`}>
+                                                        {live.has_predicted ? '予想投稿済み' : '予想受付中'}
                                                     </span>
                                                     <span className="text-slate-500 text-xs font-bold">
-                                                        {new Date(live.date.split('T')[0].replace(/-/g, '/')).toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit', weekday: 'short' }).replace(/\//g, '.')}
+                                                        {live.date ? new Date(live.date.split('T')[0].replace(/-/g, '/')).toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit', weekday: 'short' }).replace(/\//g, '.') : ''}
                                                     </span>
                                                 </div>
                                                 <h3 className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors">
@@ -165,16 +165,26 @@ const PredictionRanking = () => {
                                             </div>
 
                                             <div className="flex gap-2">
-                                                <Link
-                                                    to={`/predictions/new?live_id=${live.id}`}
-                                                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-all hover:shadow-lg hover:shadow-blue-900/40"
-                                                >
-                                                    <Plus size={18} />
-                                                    予想する
-                                                </Link>
+                                                {live.has_predicted ? (
+                                                    <Link
+                                                        to={`/predictions/edit/${live.my_prediction_id}`}
+                                                        className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-all hover:shadow-lg hover:shadow-amber-900/40 min-w-[140px]"
+                                                    >
+                                                        <Edit2 size={18} />
+                                                        予想を編集
+                                                    </Link>
+                                                ) : (
+                                                    <Link
+                                                        to={`/predictions/new?live_id=${live.id}`}
+                                                        className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-all hover:shadow-lg hover:shadow-blue-900/40 min-w-[140px]"
+                                                    >
+                                                        <Plus size={18} />
+                                                        予想する
+                                                    </Link>
+                                                )}
                                                 <Link
                                                     to={`/predictions?live_id=${live.id}`}
-                                                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-3 rounded-xl border border-slate-700 flex items-center justify-center gap-2 transition-all"
+                                                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-3 rounded-xl border border-slate-700 flex items-center justify-center gap-2 transition-all min-w-[140px]"
                                                 >
                                                     <Eye size={18} />
                                                     みんなの予想
@@ -210,37 +220,50 @@ const PredictionRanking = () => {
                                     </div>
                                 ) : (
                                     myPredictions.map((prediction) => (
-                                        <Link 
-                                            to={`/predictions/${prediction.id}`} 
-                                            key={prediction.id} 
-                                            className={`block group relative ring-2 ring-blue-500/50 rounded-2xl`}
-                                        >
-                                           <div className={`bg-slate-800/50 hover:bg-slate-800 border border-slate-700 group-hover:border-blue-500/50 rounded-2xl p-5 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-900/20 flex items-center`}>
-                                                <div className="flex-1 min-w-0 pr-4">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <h2 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors truncate">
-                                                            {prediction.tour_name || 'Special Live'}
-                                                        </h2>
-                                                    </div>
-                                                    <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-slate-500 font-medium">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <Calendar size={12} />
-                                                            {prediction.live_date ? new Date(prediction.live_date.replace(/-/g, '/')).toLocaleDateString('ja-JP') : ''}
+                                        <div key={prediction.id} className="relative group">
+                                            <Link 
+                                                to={`/predictions/${prediction.id}`} 
+                                                className={`block ring-2 ring-blue-500/50 rounded-2xl`}
+                                            >
+                                                <div className={`bg-slate-800/50 hover:bg-slate-800 border border-slate-700 group-hover:border-blue-500/50 rounded-2xl p-5 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-900/20 flex items-center`}>
+                                                        <div className="flex-1 min-w-0 pr-4">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <h2 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors truncate">
+                                                                    {prediction.tour_name || 'Special Live'}
+                                                                </h2>
+                                                                {prediction.is_closed && (
+                                                                    <span className="bg-slate-700 text-slate-400 text-[10px] px-2 py-0.5 rounded">締切済み</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-slate-500 font-medium">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <Calendar size={12} />
+                                                                    {prediction.live_date ? new Date(prediction.live_date.replace(/-/g, '/')).toLocaleDateString('ja-JP') : ''}
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <MapPin size={12} />
+                                                                    {prediction.venue}
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                        <div className="flex items-center gap-1.5">
-                                                            <MapPin size={12} />
-                                                            {prediction.venue}
+                                                        <div className="flex items-center gap-4 border-l border-slate-700/50 pl-6">
+                                                            {!prediction.is_closed && (
+                                                                <Link
+                                                                    to={`/predictions/edit/${prediction.id}`}
+                                                                    className="p-2 text-slate-400 hover:text-blue-400 transition-colors"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    <Edit2 size={18} />
+                                                                </Link>
+                                                            )}
+                                                            <div className={`group/like flex flex-col items-center gap-1 p-2 rounded-xl ${prediction.is_liked ? 'text-pink-500' : 'text-slate-500'}`}>
+                                                                <Heart size={24} fill={prediction.is_liked ? "currentColor" : "none"} />
+                                                                <span className="text-xs font-black tracking-tighter">{prediction.like_count}</span>
+                                                            </div>
                                                         </div>
-                                                    </div>
                                                 </div>
-                                                <div className="flex flex-col items-center gap-1 border-l border-slate-700/50 pl-6">
-                                                    <div className={`group/like flex flex-col items-center gap-1 p-2 rounded-xl ${prediction.is_liked ? 'text-pink-500' : 'text-slate-500'}`}>
-                                                        <Heart size={24} fill={prediction.is_liked ? "currentColor" : "none"} />
-                                                        <span className="text-xs font-black tracking-tighter">{prediction.like_count}</span>
-                                                    </div>
-                                                </div>
-                                           </div>
-                                        </Link>
+                                            </Link>
+                                        </div>
                                     ))
                                 )}
                             </div>
@@ -332,13 +355,25 @@ const PredictionRanking = () => {
                                     </button>
                                 </div>
 
-                                <Link
-                                    to={`/predictions/new?live_id=${liveId}`}
-                                    className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 transition-all"
-                                >
-                                    <Plus size={18} />
-                                    予想を投稿する
-                                </Link>
+                                {liveInfo && !liveInfo.is_closed && (
+                                    liveInfo.has_predicted ? (
+                                        <Link
+                                            to={`/predictions/edit/${liveInfo.my_prediction_id}`}
+                                            className="w-full sm:w-auto bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-amber-900/20 flex items-center justify-center gap-2 transition-all"
+                                        >
+                                            <Edit2 size={18} />
+                                            自分の予想を編集
+                                        </Link>
+                                    ) : (
+                                        <Link
+                                            to={`/predictions/new?live_id=${liveId}`}
+                                            className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 transition-all"
+                                        >
+                                            <Plus size={18} />
+                                            予想を投稿する
+                                        </Link>
+                                    )
+                                )}
                             </div>
 
                             <Link
