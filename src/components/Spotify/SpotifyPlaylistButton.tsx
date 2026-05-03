@@ -12,6 +12,10 @@ interface HistoryEntry {
     createdAt: string;
 }
 
+const authHeaders = () => ({
+    headers: { token: localStorage.getItem('token') || '' },
+});
+
 const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId }) => {
     const { currentUser } = useAuth();
     const [status, setStatus] = useState<'IDLE' | 'LINKING' | 'CREATING' | 'SUCCESS' | 'ERROR'>('IDLE');
@@ -34,7 +38,7 @@ const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId })
 
     const checkStatus = async () => {
         try {
-            const res = await axios.get('/api/spotify/status');
+            const res = await axios.get('/api/spotify/status', authHeaders());
             setIsLinked(res.data.linked);
         } catch (err) {
             console.error('Failed to check Spotify status');
@@ -43,7 +47,7 @@ const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId })
 
     const fetchHistory = async () => {
         try {
-            const res = await axios.get(`/api/spotify/history/${liveId}`);
+            const res = await axios.get(`/api/spotify/history/${liveId}`, authHeaders());
             setHistory(res.data);
         } catch (err) {
             // 履歴取得失敗は無視
@@ -51,8 +55,9 @@ const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId })
     };
 
     const handleLink = async () => {
+        setError(null);
         try {
-            const res = await axios.get('/api/spotify/auth-url');
+            const res = await axios.get('/api/spotify/auth-url', authHeaders());
             const width = 600;
             const height = 700;
             const left = window.screen.width / 2 - width / 2;
@@ -81,7 +86,7 @@ const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId })
         setStatus('CREATING');
         setError(null);
         try {
-            const res = await axios.post('/api/spotify/create-playlist', { liveId });
+            const res = await axios.post('/api/spotify/create-playlist', { liveId }, authHeaders());
             setResult(res.data);
             setStatus('SUCCESS');
             fetchHistory();
@@ -162,6 +167,13 @@ const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId })
                 )}
             </div>
 
+            {error && (
+                <div className="flex items-center gap-2 text-red-400 text-xs justify-center bg-red-400/5 py-2 rounded-lg border border-red-400/10 mb-3">
+                    <AlertCircle size={14} />
+                    {error}
+                </div>
+            )}
+
             {!isLinked ? (
                 <button
                     onClick={handleLink}
@@ -192,12 +204,6 @@ const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId })
                             </>
                         )}
                     </button>
-                    {error && (
-                        <div className="flex items-center gap-2 text-red-400 text-xs justify-center bg-red-400/5 py-2 rounded-lg border border-red-400/10">
-                            <AlertCircle size={14} />
-                            {error}
-                        </div>
-                    )}
                     <p className="text-center text-[10px] text-slate-500 font-medium">
                         ※ ライブラリに「非公開プレイリスト」として保存されます。
                     </p>

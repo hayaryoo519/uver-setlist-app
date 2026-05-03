@@ -12,6 +12,10 @@ interface HistoryEntry {
     createdAt: string;
 }
 
+const authHeaders = () => ({
+    headers: { token: localStorage.getItem('token') || '' },
+});
+
 const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId }) => {
     const { currentUser } = useAuth();
     const [status, setStatus] = useState<'IDLE' | 'LINKING' | 'CREATING' | 'SUCCESS' | 'ERROR'>('IDLE');
@@ -34,16 +38,16 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
 
     const checkStatus = async () => {
         try {
-            const res = await axios.get('/api/youtube/status');
+            const res = await axios.get('/api/youtube/status', authHeaders());
             setIsLinked(res.data.linked);
         } catch (err) {
-            console.error('Failed to check YouTube status');
+            console.error('Failed to check YouTube Music status');
         }
     };
 
     const fetchHistory = async () => {
         try {
-            const res = await axios.get(`/api/youtube/history/${liveId}`);
+            const res = await axios.get(`/api/youtube/history/${liveId}`, authHeaders());
             setHistory(res.data);
         } catch (err) {
             // 履歴取得失敗は無視
@@ -51,8 +55,9 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
     };
 
     const handleLink = async () => {
+        setError(null);
         try {
-            const res = await axios.get('/api/youtube/auth-url');
+            const res = await axios.get('/api/youtube/auth-url', authHeaders());
             const width = 600;
             const height = 700;
             const left = window.screen.width / 2 - width / 2;
@@ -81,7 +86,7 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
         setStatus('CREATING');
         setError(null);
         try {
-            const res = await axios.post('/api/youtube/create-playlist', { liveId });
+            const res = await axios.post('/api/youtube/create-playlist', { liveId }, authHeaders());
             setResult(res.data);
             setStatus('SUCCESS');
             fetchHistory();
@@ -123,7 +128,7 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
                     {result.missing.length > 0 && (
                         <div className="px-4 py-3 bg-amber-500/5 border border-amber-500/10 rounded-xl">
                             <div className="text-[10px] font-bold text-amber-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                                <AlertCircle size={10} /> Not Found on YouTube
+                                <AlertCircle size={10} /> Not Found on YouTube Music
                             </div>
                             <p className="text-[11px] text-slate-400 leading-relaxed">
                                 {result.missing.join(', ')} は見つかりませんでした。
@@ -138,7 +143,7 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-3 py-4 rounded-2xl bg-[#FF0000] text-white font-black hover:bg-[#cc0000] transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-[#FF0000]/10 group"
                 >
-                    YouTubeで開く
+                    YouTube Musicで開く
                     <ExternalLink size={18} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                 </a>
             </div>
@@ -151,7 +156,7 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
                 <div>
                     <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
                         <Youtube size={12} className="text-[#FF0000]" />
-                        YouTube Connection
+                        YouTube Music Connection
                     </h3>
                 </div>
                 {isLinked && (
@@ -162,6 +167,13 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
                 )}
             </div>
 
+            {error && (
+                <div className="flex items-center gap-2 text-red-400 text-xs justify-center bg-red-400/5 py-2 rounded-lg border border-red-400/10 mb-3">
+                    <AlertCircle size={14} />
+                    {error}
+                </div>
+            )}
+
             {!isLinked ? (
                 <button
                     onClick={handleLink}
@@ -170,7 +182,7 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
                     <div className="w-8 h-8 rounded-full bg-[#FF0000] flex items-center justify-center text-white">
                         <Youtube size={16} fill="currentColor" />
                     </div>
-                    YouTubeと連携してプレイリスト作成
+                    YouTube Musicと連携してプレイリスト作成
                 </button>
             ) : (
                 <div className="space-y-4">
@@ -188,16 +200,10 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
                         ) : (
                             <>
                                 <Youtube size={20} fill="currentColor" className="group-hover:rotate-12 transition-transform" />
-                                <span className="tracking-wide">YouTubeプレイリストを作成</span>
+                                <span className="tracking-wide">YouTube Musicプレイリストを作成</span>
                             </>
                         )}
                     </button>
-                    {error && (
-                        <div className="flex items-center gap-2 text-red-400 text-xs justify-center bg-red-400/5 py-2 rounded-lg border border-red-400/10">
-                            <AlertCircle size={14} />
-                            {error}
-                        </div>
-                    )}
                     <p className="text-center text-[10px] text-slate-500 font-medium">
                         ※ ライブラリに「非公開プレイリスト」として保存されます。
                     </p>
