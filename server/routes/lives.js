@@ -138,19 +138,23 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
+        const currentUserId = req.header('token') ? require('jsonwebtoken').decode(req.header('token'))?.user_id : null;
+        const { isLiveClosed } = require('../utils/date');
 
-        // 1. Get Live Details with prediction count
+        // 1. Get Live Details with prediction count (excluding soft deleted)
         const liveRes = await db.query(
             `SELECT id, tour_name, title, date::text as date, venue, type, prefecture, special_note, setlistfm_id, setlist_status, 
-                    (SELECT COUNT(*) FROM predictions p WHERE p.live_id = l.id) as prediction_count
+                    (SELECT COUNT(*) FROM predictions p WHERE p.live_id = l.id AND p.deleted_at IS NULL) as prediction_count,
+                    (SELECT id FROM predictions p WHERE p.live_id = l.id AND p.user_id = $2 AND p.deleted_at IS NULL LIMIT 1) as my_prediction_id
              FROM lives l WHERE id = $1`, 
-            [id]
+            [id, currentUserId]
         );
         if (liveRes.rows.length === 0) return res.status(404).json("Live not found");
+        
         const live = liveRes.rows[0];
+        const is_closed = isLiveClosed(live.date);
 
         // 2. Get Setlist with Song Details
-        // Join setlists -> songs
         const setlistRes = await db.query(
             `SELECT s.id as song_id, s.title, s.image_url, sl.position 
              FROM setlists sl
@@ -160,7 +164,13 @@ router.get('/:id', async (req, res) => {
             [id]
         );
 
-        res.json({ ...live, venue: normalizeVenueName(live.venue), setlist: setlistRes.rows });
+        res.json({ 
+            ...live, 
+            venue: normalizeVenueName(live.venue), 
+            setlist: setlistRes.rows,
+            is_closed,
+            has_predicted: !!live.my_prediction_id
+        });
     } catch (err) {
         console.error(err.message);
         res.status(500).json({ message: "Server Error" });

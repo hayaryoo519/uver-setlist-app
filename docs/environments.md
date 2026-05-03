@@ -21,6 +21,56 @@ UVERworld Setlist Archive の稼働環境と、それぞれのデータベース
 - **特徴**: 手軽に起動・リセットが可能。開発者ごとに独立したデータを持ちます。
 - **管理**: `server/.env` の `DB_HOST=localhost`, `DB_PORT=54332` で接続。
 
+#### 🚀 開発サーバー起動
+
+```powershell
+# フロントエンド（プロジェクトルートで）
+npm run dev
+
+# バックエンド（別ターミナルで）
+cd server
+npm run dev
+```
+
+#### 🔑 テストアカウント
+
+> パスワードは全アカウント共通: **`password123`**  
+> シードスクリプト: `server/scripts/seed_local.js`
+
+| ユーザー名 | メールアドレス | 権限 | 備考 |
+|---|---|---|---|
+| `admin_test` | admin@test.local | **管理者** | 管理者パネルにアクセス可能 |
+| `uver_fan1` | fan1@test.local | 一般 | 予想データあり |
+| `uver_fan2` | fan2@test.local | 一般 | 非公開プロフィール設定 |
+
+#### 📦 テストデータ概要
+
+`server/scripts/seed_local.js` を実行すると以下が投入されます:
+
+| データ種別 | 件数 | 内容 |
+|---|---|---|
+| ユーザー | 3名 | 上記3アカウント |
+| 曲 | 30曲 | UVERworld代表曲 |
+| ライブ（過去） | 3件 | セトリ確定済み（NORMAL） |
+| ライブ（近日） | 2件 | 予想受付中 |
+| 予想 | 3件 | fan1×2件、fan2×1件 |
+
+```powershell
+# テストデータを初期化して再投入する場合
+$env:PGPASSWORD="postgres"; psql -U postgres -h localhost -p 54332 -d uver_app_db `
+  -c "TRUNCATE users, songs, lives, setlists, predictions, prediction_songs, prediction_likes RESTART IDENTITY CASCADE;"
+cd server
+node scripts/seed_local.js
+```
+
+#### 🐳 DBコンテナ確認
+
+```powershell
+docker ps | findstr supabase
+# 起動していない場合
+docker restart supabase_db_marumie
+```
+
 ### 🧪 検証環境 (Staging)
 - **構成**: サーバー (`192.168.0.13`) 上の Docker コンテナとして動作。
 - **特徴**: 本番に近い構成で動作確認。定期的に本番データが同期されます。

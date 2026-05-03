@@ -31,6 +31,9 @@ export interface Live {
   live_date?: string
   setlist_status?: SetlistStatus | null
   setlistfm_id?: string | null
+  is_closed?: boolean
+  has_predicted?: boolean
+  my_prediction_id?: number | string | null
 }
 
 // 楽曲
@@ -89,6 +92,7 @@ export interface Prediction {
   user_id: number
   live_id: number
   content: string
+  title?: string
   like_count: number
   created_at: string
   username?: string
@@ -98,7 +102,9 @@ export interface Prediction {
   tour_name?: string
   live_date?: string
   venue?: string
-  songs?: Array<{ id: number; title: string }>
+  songs?: Array<{ id: number; title: string; position?: number }>
+  has_setlist?: boolean
+  is_closed?: boolean
 }
 
 // セトリ予想作成リクエスト
@@ -108,6 +114,12 @@ export interface CreatePredictionInput {
   title?: string
   songs?: number[]
   song_ids?: number[]
+}
+
+// セトリ予想更新リクエスト
+export interface UpdatePredictionInput {
+  songs: number[]
+  title?: string
 }
 
 // 修正依頼ステータス

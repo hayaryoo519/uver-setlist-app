@@ -2,7 +2,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { apiClient } from '../../lib/apiClient'
 import { queryKeys } from '../../lib/queryKeys'
 import { STALE_TIMES, queryClient } from '../../lib/queryClient'
-import type { Live, Prediction, CreatePredictionInput, PredictionsParams } from '../../types/api'
+import type { Live, Prediction, CreatePredictionInput, UpdatePredictionInput, PredictionsParams } from '../../types/api'
 
 export const usePredictableLives = () =>
   useQuery({
@@ -47,6 +47,23 @@ export const usePredictionDetail = (id: number | string | undefined) =>
 export const useCreatePrediction = () =>
   useMutation({
     mutationFn: (body: CreatePredictionInput) => apiClient.post<Prediction>('/api/predictions', body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['predictions'] })
+    },
+  })
+
+export const useUpdatePrediction = (id: number | string) =>
+  useMutation({
+    mutationFn: (body: UpdatePredictionInput) => apiClient.put<Prediction>(`/api/predictions/${id}`, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['predictions'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.predictions.detail(id) })
+    },
+  })
+
+export const useDeletePrediction = () =>
+  useMutation({
+    mutationFn: (id: number | string) => apiClient.delete(`/api/predictions/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['predictions'] })
     },
