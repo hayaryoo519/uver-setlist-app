@@ -27,10 +27,10 @@ router.get('/', async (req, res) => {
             db.query(`
                 SELECT
                     (SELECT COUNT(*)::int FROM lives
-                     WHERE date::date < $1 OR (date::date = $1 AND setlist_status = 'NORMAL')) as total_lives,
+                     WHERE setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists sl_sub WHERE sl_sub.live_id = lives.id)) as total_lives,
                     (SELECT COUNT(*)::int FROM setlists sl JOIN lives l ON sl.live_id = l.id
-                     WHERE l.date::date < $1 OR (l.date::date = $1 AND l.setlist_status = 'NORMAL')) as total_songs_performed
-            `, [today]),
+                     WHERE l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists sl_sub WHERE sl_sub.live_id = l.id)) as total_songs_performed
+            `),
 
             // 年別統計
             db.query(`
@@ -41,10 +41,10 @@ router.get('/', async (req, res) => {
                     COUNT(DISTINCT sl.song_id)::int as unique_songs
                 FROM lives l
                 LEFT JOIN setlists sl ON l.id = sl.live_id
-                WHERE l.date::date < $1 OR (l.date::date = $1 AND l.setlist_status = 'NORMAL')
+                WHERE l.setlist_status = 'NORMAL' OR sl.id IS NOT NULL
                 GROUP BY EXTRACT(YEAR FROM l.date)
                 ORDER BY year ASC
-            `, [today]),
+            `),
 
             // 直近10件（LatestLive候補）
             // 過去日付 OR 当日でsetlist_status = 'NORMAL' の場合に表示
@@ -73,10 +73,10 @@ router.get('/', async (req, res) => {
                 FROM songs s
                 JOIN setlists sl ON s.id = sl.song_id
                 JOIN lives l ON sl.live_id = l.id
-                WHERE l.date::date < $1 OR (l.date::date = $1 AND l.setlist_status = 'NORMAL')
+                WHERE l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists sl_sub WHERE sl_sub.live_id = l.id)
                 GROUP BY s.id, s.title, s.image_url
                 ORDER BY count DESC
-            `, [today]),
+            `),
 
             // ツアー別基本統計
             db.query(`
@@ -87,7 +87,7 @@ router.get('/', async (req, res) => {
                     MAX(date)::text as end_date,
                     MAX(date)::text as latest_date
                 FROM lives
-                WHERE (date::date < $1 OR (date::date = $1 AND setlist_status = 'NORMAL'))
+                WHERE (setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists sl_sub WHERE sl_sub.live_id = lives.id))
                     AND type NOT IN ('FESTIVAL', 'EVENT')
                     AND (
                         tour_name IS NULL
@@ -95,7 +95,7 @@ router.get('/', async (req, res) => {
                     )
                 GROUP BY COALESCE(tour_name, title)
                 ORDER BY MAX(date) DESC
-            `, [today]),
+            `),
 
             // ツアー内楽曲ランキング
             db.query(`
@@ -111,7 +111,7 @@ router.get('/', async (req, res) => {
                 FROM lives l
                 JOIN setlists sl ON l.id = sl.live_id
                 JOIN songs s ON sl.song_id = s.id
-                WHERE (l.date::date < $1 OR (l.date::date = $1 AND l.setlist_status = 'NORMAL'))
+                WHERE l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists sl_sub WHERE sl_sub.live_id = l.id)
                     AND l.type NOT IN ('FESTIVAL', 'EVENT')
                     AND (
                         l.tour_name IS NULL
