@@ -1,11 +1,11 @@
 import { QueryClient } from '@tanstack/react-query'
 
 export const STALE_TIMES = {
-  lives: 60_000,       // 1分
-  songs: 600_000,      // 10分
-  stats: 30_000,       // 30秒
-  predictions: 30_000, // 30秒
-  attendance: 60_000,  // 1分
+  lives: 10 * 60_000,  // 10分（静的データ）
+  songs: 10 * 60_000,  // 10分（静的データ）
+  stats: 10 * 60_000,  // 10分（静的データ）
+  predictions: 60_000, // 1分（ユーザー依存）
+  attendance: 60_000,  // 1分（ユーザー依存）
   follows: 30_000,    // 30秒
   feed: 30_000,       // 30秒
 } as const
