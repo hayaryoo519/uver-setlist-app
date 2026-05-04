@@ -15,4 +15,12 @@ jobs:
           git fetch origin dev
           git checkout dev
           git reset --hard origin/dev
-          docker compose up -d --build
+
+          # イメージをビルド
+          docker compose build
+
+          # DBマイグレーション（db-staging の healthcheck 完了後に実行）
+          docker compose run --rm app-staging node server/scripts/migrate.js
+
+          # サービス起動
+          docker compose up -d

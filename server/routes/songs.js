@@ -14,9 +14,10 @@ router.get('/', async (req, res) => {
         if (q) {
             query += " WHERE title ILIKE $1";
             params.push(`%${q}%`);
+            query += " ORDER BY title ASC LIMIT 20";
+        } else {
+            query += " ORDER BY title ASC";
         }
-
-        query += " ORDER BY title ASC";
 
         const result = await db.query(query, params);
         res.json(result.rows);
