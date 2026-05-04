@@ -254,6 +254,11 @@ router.put('/:id/setlist', authorize, adminCheck, async (req, res) => {
                     [id, songId, position]
                 );
             }
+            // 曲が1曲以上登録されたらNORMALに自動更新
+            await db.query(
+                "UPDATE lives SET setlist_status = 'NORMAL' WHERE id = $1",
+                [id]
+            );
         }
 
         await db.query("COMMIT");
@@ -300,6 +305,12 @@ router.post('/:id/import-setlist', authorize, adminCheck, async (req, res) => {
                 [id, songId, song.order || 1] // Fallback order if missing, but usually provided
             );
         }
+
+        // インポートしたらNORMALに自動更新
+        await db.query(
+            "UPDATE lives SET setlist_status = 'NORMAL' WHERE id = $1",
+            [id]
+        );
 
         await db.query("COMMIT");
         res.json({ message: "Setlist imported successfully", count: songs.length });
