@@ -111,14 +111,14 @@ router.get('/', async (req, res) => {
                 FROM lives l
                 JOIN setlists sl ON l.id = sl.live_id
                 JOIN songs s ON sl.song_id = s.id
-                WHERE l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists sl_sub WHERE sl_sub.live_id = l.id)
+                WHERE (l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists sl_sub WHERE sl_sub.live_id = l.id))
                     AND l.type NOT IN ('FESTIVAL', 'EVENT')
                     AND (
                         l.tour_name IS NULL
                         OR (UPPER(l.tour_name) NOT LIKE '%FES.%' AND UPPER(l.tour_name) NOT LIKE '%FESTIVAL%')
                     )
                 GROUP BY COALESCE(l.tour_name, l.title), s.title, s.id
-            `, [today])
+            `)
         ]);
 
         const basic = basicRes.rows[0];
