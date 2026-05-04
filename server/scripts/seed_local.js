@@ -29,34 +29,40 @@ const pool = new Pool({
 // テストデータ定義
 // ----------------------------
 
+const bcrypt = require('bcrypt');
+
 /** テストユーザー (パスワードは全員 "password123" のbcryptハッシュ) */
-const USERS = [
-    {
-        username: 'admin_test',
-        email: 'admin@test.local',
-        // bcrypt hash of "password123" (cost=10)
-        password: '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
-        role: 'admin',
-        is_verified: true,
-        is_public: true,
-    },
-    {
-        username: 'uver_fan1',
-        email: 'fan1@test.local',
-        password: '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
-        role: 'user',
-        is_verified: true,
-        is_public: true,
-    },
-    {
-        username: 'uver_fan2',
-        email: 'fan2@test.local',
-        password: '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
-        role: 'user',
-        is_verified: true,
-        is_public: false,
-    },
-];
+const SEED_PASSWORD = 'password123';
+
+async function getUsersWithHashedPasswords() {
+    const hashedPassword = await bcrypt.hash(SEED_PASSWORD, 10);
+    return [
+        {
+            username: 'admin_test',
+            email: 'admin@test.local',
+            password: hashedPassword,
+            role: 'admin',
+            is_verified: true,
+            is_public: true,
+        },
+        {
+            username: 'uver_fan1',
+            email: 'fan1@test.local',
+            password: hashedPassword,
+            role: 'user',
+            is_verified: true,
+            is_public: true,
+        },
+        {
+            username: 'uver_fan2',
+            email: 'fan2@test.local',
+            password: hashedPassword,
+            role: 'user',
+            is_verified: true,
+            is_public: false,
+        },
+    ];
+}
 
 /** UVERworldの代表曲 */
 const SONGS = [
@@ -166,12 +172,13 @@ async function seed() {
 
         // 1. ユーザー投入
         console.log('[1/5] ユーザーを投入中...');
+        const users = await getUsersWithHashedPasswords();
         const userIds = [];
-        for (const u of USERS) {
+        for (const u of users) {
             const res = await client.query(
                 `INSERT INTO users (username, email, password, role, is_verified, is_public)
                  VALUES ($1, $2, $3, $4, $5, $6)
-                 ON CONFLICT (email) DO UPDATE SET username = EXCLUDED.username
+                 ON CONFLICT (email) DO UPDATE SET password = EXCLUDED.password, username = EXCLUDED.username
                  RETURNING id`,
                 [u.username, u.email, u.password, u.role, u.is_verified, u.is_public]
             );
