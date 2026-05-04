@@ -4,8 +4,10 @@ const { normalizeVenueName } = require('../utils/songTranslations');
 
 const formatDate = (dateStr) => {
     if (!dateStr) return '';
-    const d = new Date(dateStr.split('T')[0].replace(/-/g, '/'));
-    return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.');
+    // node:20-slim は ICU データが限定的なため toLocaleDateString は使わない
+    const [year, month, day] = dateStr.split('T')[0].split(' ')[0].split('-');
+    if (!year || !month || !day) return dateStr;
+    return `${year}.${month}.${day}`;
 };
 
 router.get('/', async (req, res) => {
@@ -181,7 +183,8 @@ router.get('/', async (req, res) => {
             songFrequencyMap
         });
     } catch (err) {
-        console.error('Stats API error:', err);
+        console.error('[/api/stats] Error:', err.message);
+        console.error(err.stack);
         res.status(500).json({ message: 'Server Error', error: err.message });
     }
 });
