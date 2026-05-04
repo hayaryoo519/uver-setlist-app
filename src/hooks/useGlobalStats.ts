@@ -5,7 +5,8 @@ import { DISCOGRAPHY } from '../data/discography';
 import { useLives } from './queries/useLives';
 import { useSongs } from './queries/useSongs';
 import { STALE_TIMES } from '../lib/queryClient';
-import type { Song } from '../types/api';
+import type { Song, Live } from '../types/api';
+import { normalizeLive, normalizeSong } from '../lib/normalizers/dataNormalizer';
 
 const normalizeSongTitle = (title: string | null | undefined): string => {
     if (!title) return "";
@@ -38,7 +39,7 @@ interface StatsResponse {
 }
 
 export const useGlobalStats = () => {
-    const { data: statsData, isLoading: statsLoading, error: statsError } = useQuery<StatsResponse>({
+    const { data: rawStatsData, isLoading: statsLoading, error: statsError, refetch } = useQuery<StatsResponse>({
         queryKey: ['stats'],
         queryFn: async () => {
             const res = await axios.get('/api/stats');
@@ -47,16 +48,44 @@ export const useGlobalStats = () => {
         staleTime: STALE_TIMES.stats,
     });
 
-    // allLives はダッシュボードのモーダル（年別・アルバム別詳細）で使用
+    // データ正規化レイヤー
+    const statsData = useMemo(() => {
+        if (!rawStatsData) return null;
+        
+        return {
+            ...rawStatsData,
+            recentLives: (rawStatsData.recentLives || []).map(l => normalizeLive(l)),
+            upcomingLives: (rawStatsData.upcomingLives || []).map(l => normalizeLive(l)),
+            globalSongRanking: (rawStatsData.globalSongRanking || []).map(s => ({
+                ...s,
+                ...normalizeSong(s)
+            })),
+            tourRanking: (rawStatsData.tourRanking || []).map(t => ({
+                ...t,
+                songRanking: (t.songRanking || []).map((s: any) => ({
+                    ...s,
+                    lives: (s.lives || []).map((l: any) => normalizeLive(l))
+                }))
+            })),
+            currentTour: rawStatsData.currentTour ? {
+                ...rawStatsData.currentTour,
+                songRanking: (rawStatsData.currentTour.songRanking || []).map((s: any) => ({
+                    ...s,
+                    lives: (s.lives || []).map((l: any) => normalizeLive(l))
+                }))
+            } : null
+        };
+    }, [rawStatsData]);
+
     const { data: allLives = [] } = useLives({ include_setlists: true });
-    // songIdMap / songDataMap の完全なカバレッジのために全楽曲を取得
-    const { data: allSongs = [] } = useSongs();
+    const { data: rawAllSongs = [] } = useSongs();
+
+    const normalizedAllSongs = useMemo(() => (rawAllSongs as any[]).map(s => normalizeSong(s)), [rawAllSongs]);
 
     const loading = statsLoading;
     const error = statsError ? (statsError as Error).message : null;
 
     const derived = useMemo(() => {
-        // アルバム→楽曲マッピング（DISCOGRAPHY使用）
         const songAlbumMap = new Map<string, string>();
         DISCOGRAPHY.forEach((release: any) => {
             if (release.type === 'ALBUM') {
@@ -75,10 +104,9 @@ export const useGlobalStats = () => {
             }
         });
 
-        // 全楽曲の id / image_url マップ
         const songDataMap = new Map<string, { id: number; image_url: string | null }>();
         const songIdMap = new Map<string, number>();
-        (allSongs as Song[]).forEach(s => {
+        normalizedAllSongs.forEach(s => {
             songDataMap.set(s.title, { id: s.id, image_url: s.image_url });
             songIdMap.set(s.title, s.id);
         });
@@ -87,9 +115,8 @@ export const useGlobalStats = () => {
             return { songAlbumMap, songIdMap, songDataMap, albumStats: [] as Array<{ name: string; value: number }> };
         }
 
-        // アルバム別演奏数（サーバーの songFrequencyMap を使用）
         const albumMap = new Map<string, number>();
-        Object.entries(statsData.songFrequencyMap).forEach(([title, count]) => {
+        Object.entries(statsData.songFrequencyMap || {}).forEach(([title, count]) => {
             const norm = normalizeSongTitle(title);
             const album = songAlbumMap.get(norm);
             if (album) albumMap.set(album, (albumMap.get(album) || 0) + count);
@@ -104,12 +131,13 @@ export const useGlobalStats = () => {
         });
 
         return { albumStats, songAlbumMap, songIdMap, songDataMap };
-    }, [statsData, allSongs]);
+    }, [statsData, normalizedAllSongs]);
 
     return {
         loading,
         error,
-        allLives,
+        refetch,
+        allLives: (allLives as any[]).map(l => normalizeLive(l)),
         totalLives: statsData?.totalLives ?? 0,
         totalSongsPerformed: statsData?.totalSongsPerformed ?? 0,
         yearlyDetailedStats: statsData?.yearlyDetailedStats ?? [],
@@ -122,3 +150,4 @@ export const useGlobalStats = () => {
         ...derived,
     };
 };
+

@@ -18,8 +18,18 @@ export const TourTrends = ({ tour }) => {
         }));
     };
 
-    // Pre-calculate rank to persist across sorts
-    const rankedData = tour.songRanking.map((s, i) => ({ ...s, rank: i + 1 }));
+    // Pre-calculate rank to persist across sorts with data validation
+    const rankedData = React.useMemo(() => {
+        if (!tour.songRanking || !Array.isArray(tour.songRanking)) return [];
+        return tour.songRanking
+            .filter(s => s && typeof s.count === 'number' && !isNaN(s.count))
+            .map((s, i) => ({ 
+                ...s, 
+                rank: i + 1,
+                title: s.title || 'Unknown Song',
+                percentage: s.percentage || '0.0'
+            }));
+    }, [tour.songRanking]);
 
     // Sort Data
     const sortedRanking = [...rankedData].sort((a, b) => {

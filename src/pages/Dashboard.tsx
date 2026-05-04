@@ -11,6 +11,7 @@ import { TourTrends } from '../components/Dashboard/TourTrends';
 import { UpcomingLives } from '../components/Dashboard/UpcomingLives';
 
 import SEO from '../components/SEO';
+import ErrorBoundary from '../components/common/ErrorBoundary';
 
 type DashboardFilter = { type: string; value: any } | null
 type SongMapEntry = { title: string; id: any; count: number; lives: Array<{ id: any; date: string; venue: string; title?: string }> }
@@ -229,14 +230,18 @@ function Dashboard() {
 
                 {/* Latest Live Highlight with Trends */}
                 {stats.recentLives && stats.recentLives.length > 0 && (
-                    <LatestLiveCard
-                        live={stats.recentLives[0]}
-                    />
+                    <ErrorBoundary onReset={stats.refetch}>
+                        <LatestLiveCard
+                            live={stats.recentLives[0]}
+                        />
+                    </ErrorBoundary>
                 )}
 
                 {/* Upcoming Lives (Next Live) */}
                 {stats.upcomingLives && stats.upcomingLives.length > 0 && (
-                    <UpcomingLives lives={stats.upcomingLives} />
+                    <ErrorBoundary onReset={stats.refetch}>
+                        <UpcomingLives lives={stats.upcomingLives} />
+                    </ErrorBoundary>
                 )}
 
                 {/* Current Tour Trends (Compact) */}
@@ -247,9 +252,12 @@ function Dashboard() {
                             TOUR HIGHLIGHTS
                         </h2>
 
-                        <TourTrends tour={stats.currentTour} />
+                        <ErrorBoundary onReset={stats.refetch}>
+                            <TourTrends tour={stats.currentTour} />
+                        </ErrorBoundary>
                     </div>
                 )}
+
 
                 {/* Stats Cards */}
                 <h2 className="section-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -328,12 +336,14 @@ function Dashboard() {
                                 Period: {yearRange[0]} - {yearRange[1]}
                             </div>
                         </div>
-                        <LiveGraph
-                            data={filteredGraphData}
-                            onBarClick={handleYearClick}
-                            dataKey={graphMetric}
-                            label="公演"
-                        />
+                        <ErrorBoundary onReset={stats.refetch}>
+                            <LiveGraph
+                                data={filteredGraphData}
+                                onBarClick={handleYearClick}
+                                dataKey={graphMetric}
+                                label="公演"
+                            />
+                        </ErrorBoundary>
                     </div>
                 </div>
 
@@ -477,56 +487,58 @@ function Dashboard() {
                             Songs by Album ({yearRange[0]} - {yearRange[1]})
                         </h3>
                         <div style={{ minHeight: '400px' }}>
-                            <AlbumDistribution data={(() => {
-                                if (!stats.allLives || !stats.songAlbumMap) return [];
+                        <ErrorBoundary onReset={stats.refetch}>
+                                <AlbumDistribution data={(() => {
+                                    if (!stats.allLives || !stats.songAlbumMap) return [];
 
-                                const targetLives = stats.allLives.filter(live => {
-                                    if (!live.date) return false;
-                                    const y = new Date(live.date).getFullYear();
-                                    return y >= yearRange[0] && y <= yearRange[1];
-                                });
+                                    const targetLives = stats.allLives.filter(live => {
+                                        if (!live.date) return false;
+                                        const y = new Date(live.date).getFullYear();
+                                        return y >= yearRange[0] && y <= yearRange[1];
+                                    });
 
-                                // Local normalization helper for consistency
-                                const normTitle = (t: string | null | undefined) => {
-                                    if (!t) return "";
-                                    if (t === "=") return "=";
-                                    return t.toLowerCase().replace(/[!'#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/g, "").replace(/\s+/g, "");
-                                };
+                                    // Local normalization helper for consistency
+                                    const normTitle = (t: string | null | undefined) => {
+                                        if (!t) return "";
+                                        if (t === "=") return "=";
+                                        return t.toLowerCase().replace(/[!'#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/g, "").replace(/\s+/g, "");
+                                    };
 
-                                const map = new Map();
-                                targetLives.forEach((live: any) => {
-                                    if (!live.setlist) return;
-                                    live.setlist.forEach((song: any) => {
-                                        if (!song || !song.title) return;
+                                    const map = new Map();
+                                    targetLives.forEach((live: any) => {
+                                        if (!live.setlist) return;
+                                        live.setlist.forEach((song: any) => {
+                                            if (!song || !song.title) return;
 
-                                        // Use Normalized Title to lookup in the map (which is also built with normalized keys now)
-                                        const nTitle = normTitle(song.title);
-                                        const album = stats.songAlbumMap?.get(nTitle);
+                                            // Use Normalized Title to lookup in the map (which is also built with normalized keys now)
+                                            const nTitle = normTitle(song.title);
+                                            const album = stats.songAlbumMap?.get(nTitle);
 
-                                        // Only count if mapped (Strict Album Only)
-                                        if (album) {
-                                            map.set(album, (map.get(album) || 0) + 1);
+                                            // Only count if mapped (Strict Album Only)
+                                            if (album) {
+                                                map.set(album, (map.get(album) || 0) + 1);
+                                            }
+                                        });
+                                    });
+
+                                    const result = [];
+
+                                    // Add "Singles" category FIRST
+                                    const singlesCount = map.get("Singles") || 0;
+                                    result.push({ name: "Singles", value: singlesCount });
+
+                                    // Add Albums in Chronological Order
+                                    DISCOGRAPHY.forEach(release => {
+                                        if (release.type === 'ALBUM') {
+                                            const count = map.get(release.title) || 0;
+                                            // Include all albums even if 0, for consistency with discography list
+                                            result.push({ name: release.title, value: count });
                                         }
                                     });
-                                });
 
-                                const result = [];
-
-                                // Add "Singles" category FIRST
-                                const singlesCount = map.get("Singles") || 0;
-                                result.push({ name: "Singles", value: singlesCount });
-
-                                // Add Albums in Chronological Order
-                                DISCOGRAPHY.forEach(release => {
-                                    if (release.type === 'ALBUM') {
-                                        const count = map.get(release.title) || 0;
-                                        // Include all albums even if 0, for consistency with discography list
-                                        result.push({ name: release.title, value: count });
-                                    }
-                                });
-
-                                return result;
-                            })()} onBarClick={handleAlbumClick} />
+                                    return result;
+                                })()} onBarClick={handleAlbumClick} />
+                            </ErrorBoundary>
                         </div>
                     </div>
                 </div>
@@ -589,7 +601,9 @@ function Dashboard() {
                         </div>
 
                         {selectedAnalysisTour ? (
-                            <TourTrends tour={selectedAnalysisTour} />
+                            <ErrorBoundary>
+                                <TourTrends tour={selectedAnalysisTour} />
+                            </ErrorBoundary>
                         ) : (
                             <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
                                 Select a tour to view analysis
