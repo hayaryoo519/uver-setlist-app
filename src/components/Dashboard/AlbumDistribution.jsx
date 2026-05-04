@@ -22,18 +22,38 @@ const CustomYAxisTick = ({ x, y, payload, fontSize }) => {
 };
 
 const AlbumDistribution = ({ data, onBarClick }) => {
-    if (!data || data.length === 0) return <div className="no-data">No Album Data</div>;
+    // データバリデーション: 数値かつ有効なデータのみを抽出
+    const safeData = React.useMemo(() => {
+        if (!data || !Array.isArray(data)) return [];
+        return data.filter(d => 
+            d && 
+            typeof d.value === 'number' && 
+            !isNaN(d.value)
+        );
+    }, [data]);
 
-    // Filter out "Unknown" if desired, or keep it.
-    // For now, let's keep it but maybe sort it last or color it differently.
+    if (safeData.length === 0) {
+        return (
+            <div style={{ 
+                height: 400, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                color: '#64748b',
+                fontSize: '0.9rem',
+                border: '1px dashed rgba(255,255,255,0.1)',
+                borderRadius: '12px'
+            }}>
+                データがありません
+            </div>
+        );
+    }
 
     // Calculate height based on data length to ensure all bars are visible
-    // Allow approx 30-40px per bar + padding
-    const calculatedHeight = Math.max(400, data.length * 35 + 50);
+    const calculatedHeight = Math.max(400, safeData.length * 35 + 50);
 
     // Calculate dynamic ticks for XAxis (every 100 units)
-    // User request: Set max to at least 700, but allow growth (variable)
-    const maxValue = Math.max(...data.map(d => d.value), 0);
+    const maxValue = Math.max(...safeData.map(d => d.value), 0);
     const maxTick = Math.max(700, Math.ceil(maxValue / 100) * 100);
     const ticks = [];
     for (let i = 0; i <= maxTick; i += 100) {
@@ -60,7 +80,7 @@ const AlbumDistribution = ({ data, onBarClick }) => {
     return (
         <div style={{ width: '100%', height: calculatedHeight, minHeight: 0 }}>
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                <BarChart data={safeData} layout="vertical" margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#444" />
                     <XAxis
                         type="number"
@@ -85,7 +105,7 @@ const AlbumDistribution = ({ data, onBarClick }) => {
                         cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                     />
                     <Bar dataKey="value" radius={[0, 4, 4, 0]} onClick={onBarClick} style={{ cursor: 'pointer' }}>
-                        {data.map((entry, index) => (
+                        {safeData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} cursor="pointer" />
                         ))}
                         <LabelList dataKey="value" position="right" fill="#fbbf24" fontSize={12} />

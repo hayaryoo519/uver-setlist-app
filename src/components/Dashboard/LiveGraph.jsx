@@ -21,7 +21,32 @@ const CustomTooltip = ({ active, payload, label, dataKey, unitLabel }) => {
 };
 
 const LiveGraph = ({ data, onBarClick, dataKey = "count", label }) => {
-    if (!data || data.length === 0) return <div className="no-data">No Data</div>;
+    // データバリデーション: 数値かつ有効なデータのみを抽出
+    const safeData = React.useMemo(() => {
+        if (!data || !Array.isArray(data)) return [];
+        return data.filter(d => 
+            d && 
+            typeof d[dataKey] === 'number' && 
+            !isNaN(d[dataKey])
+        );
+    }, [data, dataKey]);
+
+    if (safeData.length === 0) {
+        return (
+            <div style={{ 
+                height: 300, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                color: '#64748b',
+                fontSize: '0.9rem',
+                border: '1px dashed rgba(255,255,255,0.1)',
+                borderRadius: '12px'
+            }}>
+                データがありません
+            </div>
+        );
+    }
 
     const handleClick = (data) => {
         if (onBarClick && data && data.year) {
@@ -59,7 +84,7 @@ const LiveGraph = ({ data, onBarClick, dataKey = "count", label }) => {
     return (
         <div style={{ width: '100%', height: 300 }}>
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                <BarChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                <BarChart data={safeData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                     <XAxis dataKey="year" stroke="#888" tick={{ fontSize: 11 }} />
                     <YAxis
                         stroke="#888"
