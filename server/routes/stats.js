@@ -26,8 +26,10 @@ router.get('/', async (req, res) => {
             // 基本集計
             db.query(`
                 SELECT
-                    (SELECT COUNT(*)::int FROM lives WHERE date::date <= $1) as total_lives,
-                    (SELECT COUNT(*)::int FROM setlists sl JOIN lives l ON sl.live_id = l.id WHERE l.date::date <= $1) as total_songs_performed
+                    (SELECT COUNT(*)::int FROM lives
+                     WHERE date::date < $1 OR (date::date = $1 AND setlist_status = 'NORMAL')) as total_lives,
+                    (SELECT COUNT(*)::int FROM setlists sl JOIN lives l ON sl.live_id = l.id
+                     WHERE l.date::date < $1 OR (l.date::date = $1 AND l.setlist_status = 'NORMAL')) as total_songs_performed
             `, [today]),
 
             // 年別統計
@@ -39,25 +41,29 @@ router.get('/', async (req, res) => {
                     COUNT(DISTINCT sl.song_id)::int as unique_songs
                 FROM lives l
                 LEFT JOIN setlists sl ON l.id = sl.live_id
-                WHERE l.date::date <= $1
+                WHERE l.date::date < $1 OR (l.date::date = $1 AND l.setlist_status = 'NORMAL')
                 GROUP BY EXTRACT(YEAR FROM l.date)
                 ORDER BY year ASC
             `, [today]),
 
-            // 直近10件
+            // 直近10件（LatestLive候補）
+            // 過去日付 OR 当日でsetlist_status = 'NORMAL' の場合に表示
             db.query(`
-                SELECT id, tour_name, title, date::text, venue, type, prefecture, special_note
+                SELECT id, tour_name, title, date::text, venue, type, prefecture, special_note, setlist_status
                 FROM lives
-                WHERE date::date <= $1
+                WHERE date::date < $1
+                   OR (date::date = $1 AND setlist_status = 'NORMAL')
                 ORDER BY date DESC
                 LIMIT 10
             `, [today]),
 
-            // 今後のライブ
+            // 今後のライブ（NextLive候補）
+            // 未来日付 OR 当日でNORMAL未確定の場合に表示
             db.query(`
-                SELECT id, tour_name, title, date::text, venue, type, prefecture, special_note
+                SELECT id, tour_name, title, date::text, venue, type, prefecture, special_note, setlist_status
                 FROM lives
                 WHERE date::date > $1
+                   OR (date::date = $1 AND (setlist_status IS NULL OR setlist_status != 'NORMAL'))
                 ORDER BY date ASC
             `, [today]),
 
@@ -67,7 +73,7 @@ router.get('/', async (req, res) => {
                 FROM songs s
                 JOIN setlists sl ON s.id = sl.song_id
                 JOIN lives l ON sl.live_id = l.id
-                WHERE l.date::date <= $1
+                WHERE l.date::date < $1 OR (l.date::date = $1 AND l.setlist_status = 'NORMAL')
                 GROUP BY s.id, s.title, s.image_url
                 ORDER BY count DESC
             `, [today]),
@@ -81,7 +87,7 @@ router.get('/', async (req, res) => {
                     MAX(date)::text as end_date,
                     MAX(date)::text as latest_date
                 FROM lives
-                WHERE date::date <= $1
+                WHERE (date::date < $1 OR (date::date = $1 AND setlist_status = 'NORMAL'))
                     AND type NOT IN ('FESTIVAL', 'EVENT')
                     AND (
                         tour_name IS NULL
@@ -105,7 +111,7 @@ router.get('/', async (req, res) => {
                 FROM lives l
                 JOIN setlists sl ON l.id = sl.live_id
                 JOIN songs s ON sl.song_id = s.id
-                WHERE l.date::date <= $1
+                WHERE (l.date::date < $1 OR (l.date::date = $1 AND l.setlist_status = 'NORMAL'))
                     AND l.type NOT IN ('FESTIVAL', 'EVENT')
                     AND (
                         l.tour_name IS NULL
