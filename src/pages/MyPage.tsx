@@ -9,6 +9,7 @@ import SongRanking from '../components/Dashboard/SongRanking';
 import MyPageOnboarding from '../components/Dashboard/MyPageOnboarding';
 import { Music, Calendar, MapPin, Filter, Building2, User, Settings as SettingsIcon, ArrowRight, Users, Heart, Edit2, Plus, PenTool } from 'lucide-react';
 import SEO from '../components/SEO';
+import ErrorBoundary from '../components/common/ErrorBoundary';
 import { useAuth } from '../contexts/AuthContext';
 import { useMyFollowStats } from '../hooks/queries/useFollow';
 import { useFeed } from '../hooks/queries/useFeed';
@@ -262,7 +263,12 @@ function MyPage() {
                                 </div>
                                 <div style={{ marginTop: '15px' }}>
                                     <div style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '5px' }}>
-                                        {new Date(stats.firstLive.date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}
+                                        {(() => {
+                                            const d = new Date(stats.firstLive.date);
+                                            return isNaN(d.getTime()) 
+                                                ? stats.firstLive.date 
+                                                : d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+                                        })()}
                                     </div>
                                     <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', lineHeight: 1.3 }}>
                                         {stats.firstLive.tour_name}
@@ -272,6 +278,7 @@ function MyPage() {
                                         <span>{stats.firstLive.venue}</span>
                                     </div>
                                 </div>
+
                             </Link>
                         )}
                     </div>
@@ -299,21 +306,29 @@ function MyPage() {
                                 <option value="10" style={{ backgroundColor: '#1e293b', color: 'white' }}>直近10年</option>
                             </select>
                         </div>
-                        <LiveGraph data={filteredYearlyStats} onBarClick={handleYearClick} label="公演" />
+                        <ErrorBoundary onReset={stats.refetch}>
+                            <LiveGraph data={filteredYearlyStats} onBarClick={handleYearClick} label="公演" />
+                        </ErrorBoundary>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginBottom: '50px' }}>
                         <div className="dashboard-panel chart-panel">
                             <h3>参戦会場ランキング</h3>
+                        <ErrorBoundary onReset={stats.refetch}>
                             <VenueRanking venues={stats.venueRanking} onVenueClick={handleVenueClick} />
+                        </ErrorBoundary>
                         </div>
                         <div className="dashboard-panel chart-panel">
                             <h3>よく聴いた曲</h3>
+                        <ErrorBoundary onReset={stats.refetch}>
                             <SongRanking songs={stats.songRanking} />
+                        </ErrorBoundary>
                         </div>
                         <div className="dashboard-panel chart-panel" style={{ gridColumn: '1 / -1' }}>
                             <h3>アルバム別</h3>
+                        <ErrorBoundary onReset={stats.refetch}>
                             <AlbumDistribution data={stats.albumStats} onBarClick={handleAlbumClick} />
+                        </ErrorBoundary>
                         </div>
                         <div style={{ gridColumn: '1 / -1' }}>
                             <AttendedLiveList lives={stats.myLives} />

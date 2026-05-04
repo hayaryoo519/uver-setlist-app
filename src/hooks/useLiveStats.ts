@@ -5,14 +5,15 @@ import { DISCOGRAPHY } from '../data/discography';
 import { useAttendedLives } from './queries/useUser';
 import { useSongs } from './queries/useSongs';
 import type { Live, Song } from '../types/api';
+import { normalizeLive, normalizeSong } from '../lib/normalizers/dataNormalizer';
 
 interface SongStat {
     count: number;
     lives: Live[];
 }
 
-export const useLiveStatsLogic = (myLives: Live[], allSongs: Song[] = []) => {
-    if (!myLives || myLives.length === 0) {
+export const useLiveStatsLogic = (myLives: any[], allSongs: any[] = []) => {
+    if (!myLives || !Array.isArray(myLives) || myLives.length === 0) {
         return {
             totalLives: 0,
             uniqueSongs: 0,
@@ -26,10 +27,18 @@ export const useLiveStatsLogic = (myLives: Live[], allSongs: Song[] = []) => {
         };
     }
 
-    const sortedLives = [...myLives].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    // 正規化レイヤーの適用
+    const normalizedLives = myLives.map(live => normalizeLive(live));
+    const normalizedSongs = allSongs.map(song => normalizeSong(song));
+
+    const sortedLives = [...normalizedLives].sort((a, b) => {
+        const timeA = new Date(a.date).getTime();
+        const timeB = new Date(b.date).getTime();
+        return (isNaN(timeA) ? 0 : timeA) - (isNaN(timeB) ? 0 : timeB);
+    });
 
     const songMetaMap = new Map<string, Song>();
-    allSongs.forEach(song => {
+    normalizedSongs.forEach(song => {
         if (song.title) songMetaMap.set(song.title, song);
     });
 
@@ -52,11 +61,13 @@ export const useLiveStatsLogic = (myLives: Live[], allSongs: Song[] = []) => {
 
         if (list.length === 0 && live.date) {
             const d = new Date(live.date);
-            const yyyy = d.getFullYear();
-            const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const dd = String(d.getDate()).padStart(2, '0');
-            const key = `live_${yyyy}${mm}${dd}_01`;
-            list = (setlists as Record<string, Array<{ title: string }>>)[key] || [];
+            if (!isNaN(d.getTime())) {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const key = `live_${yyyy}${mm}${dd}_01`;
+                list = (setlists as Record<string, Array<{ title: string }>>)[key] || [];
+            }
         }
 
         if (list.length === 0 && (setlists as Record<string | number, unknown>)[live.id]) {
@@ -64,6 +75,7 @@ export const useLiveStatsLogic = (myLives: Live[], allSongs: Song[] = []) => {
         }
 
         list.forEach(song => {
+            if (!song.title) return;
             if (!songStatsMap.has(song.title)) {
                 songStatsMap.set(song.title, { count: 0, lives: [] });
             }
@@ -99,10 +111,13 @@ export const useLiveStatsLogic = (myLives: Live[], allSongs: Song[] = []) => {
 
     const yearlyMap = new Map<string, number>();
     sortedLives.forEach(live => {
-        const dateStr = live.date || live.attended_at;
+        const dateStr = live.date;
         if (dateStr) {
-            const year = new Date(dateStr).getFullYear().toString();
-            yearlyMap.set(year, (yearlyMap.get(year) || 0) + 1);
+            const d = new Date(dateStr);
+            if (!isNaN(d.getTime())) {
+                const year = d.getFullYear().toString();
+                yearlyMap.set(year, (yearlyMap.get(year) || 0) + 1);
+            }
         }
     });
 
@@ -148,12 +163,18 @@ export const useLiveStatsLogic = (myLives: Live[], allSongs: Song[] = []) => {
 export const useLiveStats = () => {
     const { currentUser } = useAuth();
 
-    const { data: attendedLives = [], isLoading: livesLoading } = useAttendedLives(!!currentUser);
-    const { data: allSongs = [], isLoading: songsLoading } = useSongs();
+    const { data: attendedLives = [], isLoading: livesLoading, refetch: refetchLives } = useAttendedLives(!!currentUser);
+    const { data: allSongs = [], isLoading: songsLoading, refetch: refetchSongs } = useSongs();
 
     const loading = livesLoading || songsLoading;
 
-    const stats = useMemo(() => useLiveStatsLogic(attendedLives as Live[], allSongs as Song[]), [attendedLives, allSongs]);
+    const refetch = async () => {
+        await Promise.all([refetchLives(), refetchSongs()]);
+    };
 
-    return { ...stats, loading };
+    const stats = useMemo(() => useLiveStatsLogic(attendedLives as any[], allSongs as any[]), [attendedLives, allSongs]);
+
+    return { ...stats, loading, refetch };
 };
+
+
