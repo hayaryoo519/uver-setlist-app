@@ -4,7 +4,7 @@ import { useAttendance } from '../hooks/useAttendance';
 import { useAuth } from '../contexts/AuthContext';
 import { useLiveDetail } from '../hooks/queries/useLives';
 import CorrectionModal from '../components/CorrectionModal';
-import { AlertTriangle, Tag, MapPin, Check, Plus, Star, Music, Sparkles } from 'lucide-react';
+import { AlertTriangle, Tag, MapPin, Check, Plus, Star, Music, Sparkles, LogIn } from 'lucide-react';
 import SEO from '../components/SEO';
 import SpotifyPlaylistButton from '../components/Spotify/SpotifyPlaylistButton';
 import YoutubePlaylistButton from '../components/Youtube/YoutubePlaylistButton';
@@ -230,7 +230,7 @@ function LiveDetail() {
                                             ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/20' 
                                             : 'text-slate-500 hover:text-slate-300'}`}
                                 >
-                                    <Music size={12} /> SPOTIFY
+                                    <Music size={12} /> Spotify
                                 </button>
                                 <button 
                                     onClick={() => setActivePlatform('youtube')}
@@ -239,15 +239,31 @@ function LiveDetail() {
                                             ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' 
                                             : 'text-slate-500 hover:text-slate-300'}`}
                                 >
-                                    <YoutubeIcon size={12} /> YOUTUBE
+                                    <YoutubeIcon size={12} /> YouTube Music
                                 </button>
                             </div>
                         </div>
 
-                        {activePlatform === 'spotify' ? (
-                            <SpotifyPlaylistButton liveId={liveId} />
+                        {currentUser ? (
+                            activePlatform === 'spotify' ? (
+                                <SpotifyPlaylistButton liveId={liveId} />
+                            ) : (
+                                <YoutubePlaylistButton liveId={liveId} />
+                            )
                         ) : (
-                            <YoutubePlaylistButton liveId={liveId} />
+                            <div className="mt-4 p-6 bg-slate-900/50 rounded-2xl border border-dashed border-slate-800 text-center">
+                                <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+                                    プレイリスト作成機能を利用するにはログインが必要です。<br />
+                                    Crewアカウントを作成して、ワンクリックでセトリを持ち帰りましょう。
+                                </p>
+                                <Link 
+                                    to="/login" 
+                                    state={{ from: location }}
+                                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-white text-black text-[10px] font-black rounded-full hover:bg-slate-200 transition-all active:scale-95 shadow-lg shadow-white/10"
+                                >
+                                    <LogIn size={14} /> ログインして機能を開放
+                                </Link>
+                            </div>
                         )}
 
                         <div className="mt-4 p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl">
