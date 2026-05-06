@@ -9,7 +9,7 @@ UVERworld Setlist Archive の稼働環境と、それぞれのデータベース
 | 環境名 | 用途 | アクセスURL | データベース | DBポート | DB名 | ブランチ |
 |:---|:---|:---|:---|:---|:---|:---|
 | **ローカル (Local)** | 個人開発・機能実装 | `http://localhost:8000` | Docker Supabase | `54332` | `uver_app_db` | `feature/*` |
-| **検証 (Staging)** | 統合テスト・検証 | `http://192.168.0.13:9001` | Docker PostgreSQL | `54325` | `uver_setlist_staging` | `dev` |
+| **検証 (Staging)** | 統合テスト・検証 | `http://<staging-server>:9001` | Docker PostgreSQL | `54325` | `uver_setlist_staging` | `dev` |
 | **本番 (Production)** | ユーザー向け公開 | `https://uver-setlist-archive.org` | Host PostgreSQL | `5432` | `uver_setlist_prod` | `main` |
 
 ---
@@ -72,7 +72,7 @@ docker restart supabase_db_marumie
 ```
 
 ### 🧪 検証環境 (Staging)
-- **構成**: サーバー (`192.168.0.13`) 上の Docker コンテナとして動作。
+- **構成**: サーバー (`<staging-server>`) 上の Docker コンテナとして動作。
 - **特徴**: 本番に近い構成で動作確認。定期的に本番データが同期されます。
 - **接続先設定 (接続元による違いに注意)**:
   | 接続元 | `DB_HOST` | `DB_PORT` | 用途 |
@@ -98,8 +98,8 @@ docker restart supabase_db_marumie
 | 項目 | 内容 |
 |:---|:---|
 | ホスト名 | `server01` |
-| 実行ユーザー | `haya-ryoo` |
-| アプリディレクトリ | `/home/haya-ryoo/apps/uver-setlist-app/server` |
+| 実行ユーザー | `<server-user>` |
+| アプリディレクトリ | `/home/<server-user>/apps/uver-setlist-app/server` |
 | プロセス管理 | **systemd** (`uver-setlist.service`) |
 | ログ出力先 | **journald** (`journalctl -u uver-setlist`) |
 
@@ -109,7 +109,7 @@ docker restart supabase_db_marumie
 
 ```bash
 # サービスファイルをコピー
-sudo cp /home/haya-ryoo/apps/uver-setlist-app/server/uver-setlist.service \
+sudo cp /home/<server-user>/apps/uver-setlist-app/server/uver-setlist.service \
         /etc/systemd/system/uver-setlist.service
 
 # systemd に読み込ませる
@@ -142,7 +142,7 @@ sudo journalctl -u uver-setlist -f
 
 ```bash
 # 本番サーバーにSSHしてから
-cd /home/haya-ryoo/apps/uver-setlist-app
+cd /home/<server-user>/apps/uver-setlist-app
 
 # 1. 最新コードを取得
 git pull origin main
@@ -163,11 +163,22 @@ sudo systemctl restart uver-setlist
 sudo systemctl status uver-setlist
 ```
 
+### デプロイの仕組み（自動）
+
+**GitHub Release を publish すると自動デプロイ**されます（`main` へのマージだけでは動きません）。
+
+1. `gh release create vX.Y.Z` でリリース publish
+2. GitHub Actions (`deploy-production.yml`) が self-hosted ランナーで起動
+3. `git reset --hard origin/main` → `npm install` → `node scripts/migrate.js` → `npm run build` → `systemctl restart uver-setlist`
+
+> 詳細な手順・バージョン規則は `docs/development_workflow.md` を参照。
+
 ### よくあるトラブル
 
 | 症状 | 原因 | 対処 |
 |:---|:---|:---|
 | API が 500 を返す | DBカラム名の不一致、未適用マイグレーション | `node migrate.js` を実行後に `sudo systemctl restart uver-setlist` |
+| **API が JSON を返さず HTML を返す** | `systemctl restart` で旧プロセスが残存（ゾンビ化）し、ポート 8000 を占有 | `ExecStartPre` (`fuser -k 8000/tcp`) が `.service` に設定されているか確認。手動復旧: `fuser -k 8000/tcp && sudo systemctl restart uver-setlist` |
 | `rate-limit` の ValidationError | `trust proxy` 未設定 (リバースプロキシ環境) | `app.set('trust proxy', 1)` が `index.js` にあるか確認 |
 | サービスが起動しない | `.env` が読めない等 | `sudo journalctl -u uver-setlist -n 30` でエラー内容を確認 |
 | サービスファイルを変更した | 設定反映されない | `sudo systemctl daemon-reload` 後に `restart` |

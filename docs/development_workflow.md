@@ -9,7 +9,7 @@
 | 環境 | ブランチ | URL | DB |
 |:---|:---|:---|:---|
 | **ローカル (Local)** | `feature/*` | `http://localhost:8000` | Docker Supabase (port: 54332) |
-| **検証 (Staging)** | `dev` | `http://192.168.0.13:9001` | Docker PostgreSQL (port: 54325) |
+| **検証 (Staging)** | `dev` | `http://<staging-server>:9001` | Docker PostgreSQL (port: 54325) |
 | **本番 (Production)** | `main` | `https://uver-setlist-archive.org` | Host PostgreSQL (port: 5432) |
 
 詳細は [`docs/environments.md`](./environments.md) を参照。
@@ -81,7 +81,7 @@ node scripts/migrate.js             # 実際に適用
 ```
 
 ### 動作確認する
-- `http://192.168.0.13:9001` でブラウザ確認
+- `http://<staging-server>:9001` でブラウザ確認
 - 追加・修正した機能を中心に検証
 
 ---
@@ -113,7 +113,7 @@ GitHub 上でレビュー → Merge pull request。
 
 ### 手動デプロイが必要な場合
 ```bash
-ssh haya-ryoo@server01
+ssh <server-user>@server01
 cd ~/apps/uver-setlist-app/server
 
 git fetch origin main && git reset --hard origin/main
@@ -185,7 +185,7 @@ feature/xxx (ローカル開発)
     │
     │ git merge / PR
     ▼
-  dev ブランチ ──→ 自動デプロイ ──→ Staging (192.168.0.13:9001)
+  dev ブランチ ──→ 自動デプロイ ──→ Staging (<staging-server>:9001)
     │                                   │
     │  動作確認 OK                       │ node scripts/migrate.js
     │ PR --base main                    │（スキーマ変更がある場合）
@@ -213,8 +213,8 @@ feature/xxx (ローカル開発)
 
 | 項目 | 内容 |
 |:---|:---|
-| サーバー | `server01` (`haya-ryoo` ユーザー) |
-| インストール先 | `/home/haya-ryoo/actions-runner` |
+| サーバー | `server01` (`<server-user>` ユーザー) |
+| インストール先 | `/home/<server-user>/actions-runner` |
 | systemd サービス名 | `actions.runner.hayaryoo519-uver-setlist-app.server01` |
 | 自動起動 | enabled（OS 再起動後も自動起動） |
 
