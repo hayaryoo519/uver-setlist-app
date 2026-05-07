@@ -9,20 +9,33 @@ const { google } = require('googleapis');
  * YouTube (Google) 認証URL取得
  */
 router.get('/auth-url', authorize, (req, res) => {
-    const oauth2Client = new google.auth.OAuth2(
-        process.env.GOOGLE_CLIENT_ID,
-        process.env.GOOGLE_CLIENT_SECRET,
-        process.env.GOOGLE_REDIRECT_URI
-    );
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
 
-    const url = oauth2Client.generateAuthUrl({
-        access_type: 'offline',
-        scope: ['https://www.googleapis.com/auth/youtube'],
-        state: signState(req.user.id),
-        prompt: 'consent'
-    });
+    if (!clientId || !clientSecret || !redirectUri) {
+        console.error('[YouTube] GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, or GOOGLE_REDIRECT_URI is not set');
+        return res.status(500).json({ message: 'YouTube API configuration missing' });
+    }
 
-    res.json({ url });
+    if (!process.env.ENCRYPTION_KEY) {
+        console.error('[YouTube] ENCRYPTION_KEY is not set');
+        return res.status(500).json({ message: 'Server configuration error' });
+    }
+
+    try {
+        const oauth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+        const url = oauth2Client.generateAuthUrl({
+            access_type: 'offline',
+            scope: ['https://www.googleapis.com/auth/youtube'],
+            state: signState(req.user.id),
+            prompt: 'consent'
+        });
+        res.json({ url });
+    } catch (err) {
+        console.error('[YouTube] auth-url error:', err.message);
+        res.status(500).json({ message: 'Failed to generate auth URL' });
+    }
 });
 
 /**
