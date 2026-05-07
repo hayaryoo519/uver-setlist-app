@@ -77,6 +77,10 @@ function decrypt(encryptedText) {
  */
 function signState(userId) {
     if (!ENCRYPTION_KEY) throw new Error('ENCRYPTION_KEY is not set in environment variables');
+    if (!userId) {
+        console.error('[AUTH] signState called with missing userId');
+        throw new Error('userId is required for signing state');
+    }
     const nonce = crypto.randomBytes(8).toString('hex');
     const payload = Buffer.from(JSON.stringify({ userId, nonce })).toString('base64url');
     const sig = crypto.createHmac('sha256', Buffer.from(ENCRYPTION_KEY, 'hex'))
@@ -99,9 +103,14 @@ function verifyState(state) {
         .update(payload).digest('hex').slice(0, 16);
     if (sig !== expectedSig) throw new Error('Invalid state signature');
     try {
-        return String(JSON.parse(Buffer.from(payload, 'base64url').toString()).userId);
-    } catch {
-        throw new Error('Failed to parse state payload');
+        const data = JSON.parse(Buffer.from(payload, 'base64url').toString());
+        const userId = data.userId || data.id;
+        if (!userId) {
+            throw new Error('userId is missing in state payload');
+        }
+        return String(userId);
+    } catch (e) {
+        throw new Error(e.message || 'Failed to parse state payload');
     }
 }
 
