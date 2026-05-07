@@ -24,7 +24,12 @@ router.get('/auth-url', authorize, (req, res) => {
     }
 
     try {
-        const url = `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(signState(req.user.user_id))}`;
+        const userId = req.user.user_id || req.user.id;
+        if (!userId) {
+            console.error('[Spotify] User ID missing in req.user:', req.user);
+            return res.status(401).json({ message: 'User identification failed' });
+        }
+        const url = `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(signState(userId))}`;
         res.json({ url });
     } catch (err) {
         console.error('[Spotify] auth-url error:', err.message);
@@ -103,9 +108,10 @@ router.get('/callback', async (req, res) => {
  */
 router.get('/status', authorize, async (req, res) => {
     try {
+        const userId = req.user.user_id || req.user.id;
         const result = await db.query(
             'SELECT updated_at FROM user_spotify_tokens WHERE user_id = $1',
-            [req.user.user_id]
+            [userId]
         );
         res.json({ linked: result.rows.length > 0 });
     } catch (err) {
@@ -118,7 +124,7 @@ router.get('/status', authorize, async (req, res) => {
  */
 router.post('/create-playlist', authorize, async (req, res) => {
     const { liveId } = req.body;
-    const userId = req.user.user_id;
+    const userId = req.user.user_id || req.user.id;
 
     if (!liveId) return res.status(400).json({ message: 'liveId is required' });
 
@@ -223,11 +229,12 @@ router.post('/create-playlist', authorize, async (req, res) => {
 router.get('/history/:liveId', authorize, async (req, res) => {
     const { liveId } = req.params;
     try {
+        const userId = req.user.user_id || req.user.id;
         const result = await db.query(
             `SELECT playlist_id, created_at FROM playlist_history
              WHERE user_id = $1 AND live_id = $2 AND (platform = 'spotify' OR platform IS NULL)
              ORDER BY created_at DESC LIMIT 5`,
-            [req.user.user_id, liveId]
+            [userId, liveId]
         );
         res.json(result.rows.map(r => ({
             playlistUrl: `https://open.spotify.com/playlist/${r.playlist_id}`,
@@ -243,7 +250,7 @@ router.get('/history/:liveId', authorize, async (req, res) => {
  */
 router.post('/auto-map-song', authorize, async (req, res) => {
     const { songId } = req.body;
-    const userId = req.user.user_id;
+    const userId = req.user.user_id || req.user.id;
 
     try {
         const songRes = await db.query('SELECT title FROM songs WHERE id = $1', [songId]);
@@ -268,7 +275,7 @@ router.post('/auto-map-song', authorize, async (req, res) => {
  */
 router.post('/auto-map-batch', authorize, async (req, res) => {
     const { songIds } = req.body;
-    const userId = req.user.user_id;
+    const userId = req.user.user_id || req.user.id;
 
     if (!Array.isArray(songIds)) return res.status(400).json({ message: 'songIds must be an array' });
 
