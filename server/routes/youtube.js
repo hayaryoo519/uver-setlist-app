@@ -28,7 +28,7 @@ router.get('/auth-url', authorize, (req, res) => {
         const url = oauth2Client.generateAuthUrl({
             access_type: 'offline',
             scope: ['https://www.googleapis.com/auth/youtube'],
-            state: signState(req.user.id),
+            state: signState(req.user.user_id),
             prompt: 'consent'
         });
         res.json({ url });
@@ -115,7 +115,7 @@ router.get('/status', authorize, async (req, res) => {
     try {
         const result = await db.query(
             'SELECT updated_at FROM user_google_tokens WHERE user_id = $1',
-            [req.user.id]
+            [req.user.user_id]
         );
         res.json({ linked: result.rows.length > 0 });
     } catch (err) {
@@ -128,7 +128,7 @@ router.get('/status', authorize, async (req, res) => {
  */
 router.post('/create-playlist', authorize, async (req, res) => {
     const { liveId } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.user_id;
 
     if (!liveId) return res.status(400).json({ message: 'liveId is required' });
 
@@ -246,7 +246,7 @@ router.get('/history/:liveId', authorize, async (req, res) => {
             `SELECT playlist_id, created_at FROM playlist_history
              WHERE user_id = $1 AND live_id = $2 AND platform = 'youtube'
              ORDER BY created_at DESC LIMIT 5`,
-            [req.user.id, liveId]
+            [req.user.user_id, liveId]
         );
         res.json(result.rows.map(r => ({
             playlistUrl: `https://www.youtube.com/playlist?list=${r.playlist_id}`,
@@ -262,7 +262,7 @@ router.get('/history/:liveId', authorize, async (req, res) => {
  */
 router.post('/auto-map-song', authorize, async (req, res) => {
     const { songId } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.user_id;
 
     try {
         const songRes = await db.query('SELECT title FROM songs WHERE id = $1', [songId]);
@@ -287,7 +287,7 @@ router.post('/auto-map-song', authorize, async (req, res) => {
  */
 router.post('/auto-map-batch', authorize, async (req, res) => {
     const { songIds } = req.body; // Array of IDs
-    const userId = req.user.id;
+    const userId = req.user.user_id;
 
     if (!Array.isArray(songIds)) return res.status(400).json({ message: 'songIds must be an array' });
 
