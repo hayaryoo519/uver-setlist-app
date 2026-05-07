@@ -12,13 +12,24 @@ router.get('/auth-url', authorize, (req, res) => {
     const scopes = 'playlist-modify-public playlist-modify-private';
     const redirectUri = process.env.SPOTIFY_REDIRECT_URI;
     const clientId = process.env.SPOTIFY_CLIENT_ID;
-    
+
     if (!clientId || !redirectUri) {
+        console.error('[Spotify] SPOTIFY_CLIENT_ID or SPOTIFY_REDIRECT_URI is not set');
         return res.status(500).json({ message: 'Spotify API configuration missing' });
     }
 
-    const url = `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(signState(req.user.id))}`;
-    res.json({ url });
+    if (!process.env.ENCRYPTION_KEY) {
+        console.error('[Spotify] ENCRYPTION_KEY is not set');
+        return res.status(500).json({ message: 'Server configuration error' });
+    }
+
+    try {
+        const url = `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(signState(req.user.id))}`;
+        res.json({ url });
+    } catch (err) {
+        console.error('[Spotify] auth-url error:', err.message);
+        res.status(500).json({ message: 'Failed to generate auth URL' });
+    }
 });
 
 /**
