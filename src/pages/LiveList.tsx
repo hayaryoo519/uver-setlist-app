@@ -175,7 +175,8 @@ const LiveList = () => {
                         {live.type === 'FESTIVAL' ? 'FES' : live.type === 'EVENT' ? 'EVENT' : 'ワンマン'}
                     </span>
                     <span className="title-text-wrap">
-                        {live.title || (typeof live.tour_name === 'object' ? (live.tour_name as any)?.name : live.tour_name)}
+                        {typeof live.tour_name === 'object' ? (live.tour_name as any)?.name : live.tour_name}
+                        {live.title && <span className="card-subtitle">{live.title}</span>}
                     </span>
                     {live.setlist_status === 'UNKNOWN_SETLIST' && (
                         <span style={{ fontSize: '0.6rem', fontWeight: 'bold', padding: '1px 5px', borderRadius: '3px', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)', whiteSpace: 'nowrap', marginLeft: '6px', verticalAlign: 'middle' }}>
@@ -205,7 +206,8 @@ const LiveList = () => {
                     </span>
                 </div>
                 <h3 className="card-title-text">
-                    {live.title || (typeof live.tour_name === 'object' ? (live.tour_name as any)?.name : live.tour_name)}
+                    {typeof live.tour_name === 'object' ? (live.tour_name as any)?.name : live.tour_name}
+                    {live.title && <span className="card-subtitle">{live.title}</span>}
                     {live.setlist_status === 'UNKNOWN_SETLIST' && (
                         <span style={{ fontSize: '0.6rem', fontWeight: 'bold', padding: '1px 5px', borderRadius: '3px', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)', whiteSpace: 'nowrap', marginLeft: '6px', verticalAlign: 'middle' }}>
                             未登録
