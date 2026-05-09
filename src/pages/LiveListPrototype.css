@@ -872,7 +872,7 @@
         gap: 20px;
         scrollbar-width: none;
         -ms-overflow-style: none;
-        width: 100%;
+        flex: 1;
     }
 
     .mobile-tab-btn {
@@ -884,9 +884,96 @@
         font-size: 14px;
         font-weight: 600;
         letter-spacing: 1px;
-        padding: 4px 2px;
+        padding: 4px 2px 8px;
         position: relative;
         white-space: nowrap; /* 改行防止 */
+    }
+
+    .mobile-tab-btn.active {
+        color: var(--gold);
+    }
+
+    .mobile-tab-btn.active::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: var(--gold);
+        border-radius: 1px;
+    }
+
+    /* モバイル絞込ボタン */
+    .mobile-filter-btn {
+        flex-shrink: 0;
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
+        color: rgba(255, 255, 255, 0.6);
+        padding: 6px 10px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+        position: relative;
+        margin-right: 10px;
+        align-self: center;
+        transition: all 0.2s;
+    }
+
+    .mobile-filter-btn.active {
+        border-color: var(--gold-dim);
+        color: var(--gold);
+        background: rgba(212, 175, 55, 0.06);
+    }
+
+    .filter-count-badge {
+        background: var(--gold);
+        color: #000;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        font-size: 9px;
+        font-weight: 900;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        line-height: 1;
+    }
+
+    /* モバイル絞込パネル */
+    .mobile-filter-panel {
+        background: rgba(14, 17, 28, 0.98);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 14px 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .mobile-filter-panel .song-filter-wrap {
+        margin-left: 0;
+    }
+
+    .mobile-filter-panel .song-filter-select {
+        min-width: 0;
+        width: 100%;
+        flex: 1;
+    }
+
+    /* 検索バー (モバイル) */
+    .archive-search-row {
+        padding: 10px 0 6px;
+    }
+
+    .archive-search-input {
+        font-size: 14px;
+        padding: 10px 38px 10px 40px;
+        border-radius: 10px;
     }
 }
 
@@ -899,6 +986,273 @@
     .archive-subtitle {
         font-size: 14px;
     }
+}
+
+/* ===========================
+   Card Subtitle (title フィールド)
+   =========================== */
+.card-subtitle {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-dim);
+    margin-top: 4px;
+    letter-spacing: 0.02em;
+    font-family: 'Inter', sans-serif;
+}
+
+/* ===========================
+   Archive Search Bar
+   =========================== */
+.archive-search-row {
+    padding: 0 0 16px;
+}
+
+.archive-search-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.archive-search-icon {
+    position: absolute;
+    left: 14px;
+    color: var(--text-dim);
+    pointer-events: none;
+    flex-shrink: 0;
+}
+
+.archive-search-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-dim);
+    border-radius: 12px;
+    color: var(--text-main);
+    font-size: 15px;
+    padding: 12px 40px 12px 42px;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.archive-search-input::placeholder {
+    color: var(--text-dim);
+    opacity: 0.6;
+}
+
+.archive-search-input:focus {
+    border-color: var(--gold-dim);
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.archive-search-clear {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+    transition: color 0.2s;
+}
+
+.archive-search-clear:hover {
+    color: var(--text-main);
+}
+
+/* ===========================
+   Desktop Filter Row
+   =========================== */
+.archive-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+/* ===========================
+   Type Filter Pills
+   =========================== */
+.type-filter-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.type-pill {
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: 'Oswald', sans-serif;
+    letter-spacing: 0.8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-dim);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.type-pill:hover {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.type-pill-oneman { border-color: rgba(212, 175, 55, 0.3); }
+.type-pill-festival { border-color: rgba(16, 185, 129, 0.3); }
+.type-pill-event { border-color: rgba(139, 92, 246, 0.3); }
+
+.type-pill-oneman.active {
+    background: var(--gold);
+    color: #000;
+    border-color: var(--gold);
+}
+
+.type-pill-festival.active {
+    background: #10b981;
+    color: #000;
+    border-color: #10b981;
+}
+
+.type-pill-event.active {
+    background: #8b5cf6;
+    color: #fff;
+    border-color: #8b5cf6;
+}
+
+/* ===========================
+   Song Filter Select
+   =========================== */
+.song-filter-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.song-filter-icon {
+    color: var(--gold);
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.song-filter-select {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-dim);
+    border-radius: 8px;
+    color: var(--text-main);
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    cursor: pointer;
+    min-width: 180px;
+    transition: border-color 0.2s;
+}
+
+.song-filter-select:focus {
+    border-color: var(--gold-dim);
+}
+
+.song-filter-select option,
+.song-filter-select optgroup {
+    background: #1e2535;
+    color: var(--text-main);
+}
+
+/* ===========================
+   Active Filter Chips
+   =========================== */
+.active-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: 'Oswald', sans-serif;
+    letter-spacing: 0.5px;
+}
+
+.filter-chip button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    opacity: 0.6;
+    color: inherit;
+    transition: opacity 0.2s;
+}
+
+.filter-chip button:hover {
+    opacity: 1;
+}
+
+.filter-chip-oneman {
+    background: rgba(212, 175, 55, 0.12);
+    color: var(--gold);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.filter-chip-festival {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.filter-chip-event {
+    background: rgba(139, 92, 246, 0.12);
+    color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.filter-chip-song {
+    background: rgba(99, 102, 241, 0.12);
+    color: #818cf8;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+/* ===========================
+   No Results
+   =========================== */
+.no-results {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+}
+
+.no-results p {
+    font-size: 16px;
+    margin-bottom: 16px;
+}
+
+.no-results button {
+    background: transparent;
+    border: 1px solid var(--border-dim);
+    color: var(--text-dim);
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.no-results button:hover {
+    border-color: var(--gold-dim);
+    color: var(--text-main);
 }
 
 /* Utilities for Mobile Slider */

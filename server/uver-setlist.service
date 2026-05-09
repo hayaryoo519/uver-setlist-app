@@ -5,15 +5,15 @@ Wants=postgresql.service
 
 [Service]
 Type=simple
-User=haya-ryoo
-WorkingDirectory=/home/haya-ryoo/apps/uver-setlist-app/server
+User=<server-user>
+WorkingDirectory=/home/<server-user>/apps/uver-setlist-app/server
 ExecStartPre=/bin/bash -c 'fuser -k 8000/tcp || true'
 ExecStart=/usr/bin/node index.js
 Restart=always
 RestartSec=5
 
 # 環境変数ファイル (server/.env)
-EnvironmentFile=/home/haya-ryoo/apps/uver-setlist-app/server/.env
+EnvironmentFile=/home/<server-user>/apps/uver-setlist-app/server/.env
 
 # ログはjournaldに出力される (journalctl -u uver-setlist で確認)
 StandardOutput=journal

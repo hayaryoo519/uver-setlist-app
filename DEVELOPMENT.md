@@ -11,7 +11,7 @@
 | 環境 | 用途 | URL | データベース | ポート |
 |:---|:---|:---|:---|:---|
 | **ローカル (Local)** | 日常の開発 | http://localhost:8000 | Docker Supabase | 54332 |
-| **検証 (Staging)** | 本番反映前のテスト | http://192.168.0.13:9001 | Docker PostgreSQL | 54325 |
+| **検証 (Staging)** | 本番反映前のテスト | http://<staging-server>:9001 | Docker PostgreSQL | 54325 |
 | **本番 (Production)** | ユーザー向け稼働 | https://uver-setlist-archive.org | Host PostgreSQL | 5432 |
 
 > [!CAUTION]

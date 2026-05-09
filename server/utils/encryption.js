@@ -77,9 +77,9 @@ function decrypt(encryptedText) {
  */
 function signState(userId) {
     if (!ENCRYPTION_KEY) throw new Error('ENCRYPTION_KEY is not set in environment variables');
-    if (!userId) {
-        console.error('[AUTH] signState called with missing userId');
-        throw new Error('userId is required for signing state');
+    if (!userId || userId === 'undefined') {
+        console.error('[AUTH] signState called with missing or invalid userId:', userId);
+        throw new Error('Valid userId is required for signing state');
     }
     const nonce = crypto.randomBytes(8).toString('hex');
     const payload = Buffer.from(JSON.stringify({ userId, nonce })).toString('base64url');
@@ -105,8 +105,8 @@ function verifyState(state) {
     try {
         const data = JSON.parse(Buffer.from(payload, 'base64url').toString());
         const userId = data.userId || data.id;
-        if (!userId) {
-            throw new Error('userId is missing in state payload');
+        if (!userId || userId === 'undefined') {
+            throw new Error('userId is missing or invalid in state payload');
         }
         return String(userId);
     } catch (e) {
