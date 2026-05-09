@@ -1,4 +1,6 @@
 const { Client } = require('pg');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../server/.env') });
 const { normalizeTitle, normalizeVenue, normalizeTourName, generateExternalSourceId, VERSION } = require('./normalize.cjs');
 
 function toJSTDateString(date) {
@@ -10,11 +12,11 @@ function toJSTDateString(date) {
 
 async function init() {
     const client = new Client({
-        host: 'localhost',
-        port: 54332,
-        user: 'postgres',
-        password: 'postgres',
-        database: 'uver_app_db'
+        host: process.env.DB_HOST || 'localhost',
+        port: process.env.DB_PORT || 5432,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME
     });
 
     await client.connect();
