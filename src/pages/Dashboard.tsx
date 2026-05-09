@@ -431,9 +431,9 @@ function Dashboard() {
                             ) : (
                                 <div style={{ flex: 1 }}>
                                     {(stats.recentLives || []).map((live, index) => {
-                                        const dateParts = live.date ? live.date.split('.') : ['Unknown', 'Unknown', 'Unknown'];
-                                        const year = dateParts[0];
-                                        const monthDay = `${dateParts[1]}.${dateParts[2]}`;
+                                        const dateObj = live.date ? new Date(live.date) : null;
+                                        const year = dateObj ? dateObj.getFullYear().toString() : 'Unknown';
+                                        const monthDay = dateObj ? `${String(dateObj.getMonth() + 1).padStart(2, '0')}.${String(dateObj.getDate()).padStart(2, '0')}` : '--.-­-';
                                         return (
                                             <Link key={live.id} to={`/live/${live.id}`} state={{ from: location.pathname }} className="recent-live-item">
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -812,7 +812,7 @@ function Dashboard() {
                                                                 }}
                                                             >
                                                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                                    <span>{live.date}</span>
+                                                                    <span>{new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.')}</span>
                                                                     <span style={{ color: '#64748b' }}>@ {live.venue}</span>
                                                                 </div>
                                                                 {live.title && live.title !== modalFilter.value.name && (

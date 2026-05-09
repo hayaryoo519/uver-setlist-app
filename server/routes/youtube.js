@@ -25,8 +25,8 @@ router.get('/auth-url', authorize, (req, res) => {
 
     try {
         const userId = req.user.user_id || req.user.id;
-        if (!userId) {
-            console.error('[YouTube] User ID missing in req.user:', req.user);
+        if (!userId || userId === 'undefined') {
+            console.error('[AUTH] signState called with missing or invalid userId:', userId);
             return res.status(401).json({ message: 'User identification failed' });
         }
 
