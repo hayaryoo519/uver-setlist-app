@@ -812,7 +812,7 @@ function Dashboard() {
                                                                 }}
                                                             >
                                                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                                    <span>{live.date}</span>
+                                                                    <span>{new Date(live.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.')}</span>
                                                                     <span style={{ color: '#64748b' }}>@ {live.venue}</span>
                                                                 </div>
                                                                 {live.title && live.title !== modalFilter.value.name && (
