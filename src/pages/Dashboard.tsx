@@ -729,7 +729,6 @@ function Dashboard() {
                                 <>
                                     <div style={{ color: '#888', marginBottom: '20px', display: 'flex', justifyContent: 'space-between' }}>
                                         <span>{modalFilter.value.liveCount} Shows / {modalFilter.value.totalSongs} Songs</span>
-                                        <span>{modalFilter.value.startDate} 〜 {modalFilter.value.endDate}</span>
                                     </div>
 
                                     <div>
