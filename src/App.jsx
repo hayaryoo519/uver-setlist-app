@@ -8,7 +8,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import MainLayout from './components/Layout/MainLayout';
 import LandingPage from './pages/LandingPage';
-import LiveList from './pages/LiveList';
+import LiveList from './pages/LiveList.tsx';
 import LiveDetail from './pages/LiveDetail';
 import SongDetail from './pages/SongDetail';
 import Songs from './pages/Songs';
