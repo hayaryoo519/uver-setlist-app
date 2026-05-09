@@ -148,7 +148,7 @@ router.get('/', async (req, res) => {
             tourSongMap[tourName].push({
                 title: row.song_title,
                 count: row.count,
-                lives: row.lives.map(l => ({ ...l, date: formatDate(l.date) })),
+                lives: row.lives,
                 percentage: ((row.count / liveCount) * 100).toFixed(1)
             });
         });

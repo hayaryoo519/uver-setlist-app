@@ -92,7 +92,11 @@ export function normalizeSong(raw: any): Song {
  */
 export function safeDate(dateStr: any): string {
     if (!dateStr) return new Date().toISOString();
-    const d = new Date(dateStr);
+    // Safari は YYYY.MM.DD や "YYYY-MM-DD HH:MM:SS" を拒否する。ISO 8601 に正規化する
+    const normalized = typeof dateStr === 'string'
+        ? dateStr.replace(/\./g, '-').replace(' ', 'T')
+        : dateStr;
+    const d = new Date(normalized);
     if (isNaN(d.getTime())) {
         console.warn(`[Normalization] Invalid date string: ${dateStr}`);
         return new Date().toISOString();
