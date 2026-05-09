@@ -22,7 +22,7 @@ async function init() {
     await client.connect();
 
     try {
-        const res = await client.query('SELECT id, date, title, venue, tour_name, is_manually_edited, source FROM lives');
+        const res = await client.query('SELECT id, date, title, venue, tour_name FROM lives');
         console.log(`Processing ${res.rows.length} existing records...`);
 
         for (const row of res.rows) {
