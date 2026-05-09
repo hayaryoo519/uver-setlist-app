@@ -8,6 +8,7 @@ import SEO from '../components/SEO';
 import { useLives } from '../hooks/queries/useLives';
 import { useSongs } from '../hooks/queries/useSongs';
 import { DISCOGRAPHY } from '../data/discography';
+import { getDisplaySubtitle } from '../utils/liveText';
 import './LiveListPrototype.css';
 
 const LiveList = () => {
@@ -161,7 +162,11 @@ const LiveList = () => {
 
     const getVenueName = (venue: any) => typeof venue === 'object' ? (venue?.name || '') : (venue || '');
 
-    const renderLiveCard = (live: Live, idx: number) => (
+    const renderLiveCard = (live: Live, idx: number) => {
+        const tourName = typeof live.tour_name === 'object' ? (live.tour_name as any)?.name : (live.tour_name || '');
+        const subtitle = getDisplaySubtitle(tourName, live.title);
+
+        return (
         <Link
             key={live.id}
             to={`/live/${live.id}`}
@@ -175,8 +180,8 @@ const LiveList = () => {
                         {live.type === 'FESTIVAL' ? 'FES' : live.type === 'EVENT' ? 'EVENT' : 'ワンマン'}
                     </span>
                     <span className="title-text-wrap">
-                        {typeof live.tour_name === 'object' ? (live.tour_name as any)?.name : live.tour_name}
-                        {live.title && <span className="card-subtitle">{live.title}</span>}
+                        {tourName}
+                        {subtitle && <span className="card-subtitle">{subtitle}</span>}
                     </span>
                     {live.setlist_status === 'UNKNOWN_SETLIST' && (
                         <span style={{ fontSize: '0.6rem', fontWeight: 'bold', padding: '1px 5px', borderRadius: '3px', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)', whiteSpace: 'nowrap', marginLeft: '6px', verticalAlign: 'middle' }}>
@@ -206,8 +211,8 @@ const LiveList = () => {
                     </span>
                 </div>
                 <h3 className="card-title-text">
-                    {typeof live.tour_name === 'object' ? (live.tour_name as any)?.name : live.tour_name}
-                    {live.title && <span className="card-subtitle">{live.title}</span>}
+                    {tourName}
+                    {subtitle && <span className="card-subtitle">{subtitle}</span>}
                     {live.setlist_status === 'UNKNOWN_SETLIST' && (
                         <span style={{ fontSize: '0.6rem', fontWeight: 'bold', padding: '1px 5px', borderRadius: '3px', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)', whiteSpace: 'nowrap', marginLeft: '6px', verticalAlign: 'middle' }}>
                             未登録
@@ -234,6 +239,7 @@ const LiveList = () => {
             </div>
         </Link>
     );
+};
 
     return (
         <div className="min-h-screen bg-slate-900 text-white fade-in">
