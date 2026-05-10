@@ -1,29 +1,50 @@
 const router = require('express').Router();
 const db = require('../db');
+const jwt = require('jsonwebtoken');
 const { authorize, adminCheck } = require('../middleware/authorization');
 const { normalizeSongTitle } = require('../utils/songTranslations');
 
 // GET All Songs (for search/autocomplete)
+// ?include_deleted=true は管理者トークンが必要
 router.get('/', async (req, res) => {
     try {
-        // Optional search query
-        const { q } = req.query;
-        let query = "SELECT * FROM songs";
-        let params = [];
+        const { q, include_deleted } = req.query;
+
+        let isAdmin = false;
+        if (include_deleted === 'true') {
+            try {
+                const token = req.header('token');
+                if (token) {
+                    const payload = jwt.verify(token, process.env.JWT_SECRET);
+                    isAdmin = payload.role === 'admin';
+                }
+            } catch (_) { /* 無効なトークンは非管理者として扱う */ }
+            if (!isAdmin) {
+                return res.status(403).json({ message: 'アクセス拒否：管理者権限が必要です' });
+            }
+        }
+
+        const conditions = [];
+        const params = [];
+
+        if (!isAdmin) {
+            conditions.push('deleted_at IS NULL');
+        }
 
         if (q) {
-            query += " WHERE title ILIKE $1";
             params.push(`%${q}%`);
-            query += " ORDER BY title ASC LIMIT 20";
-        } else {
-            query += " ORDER BY title ASC";
+            conditions.push(`title ILIKE $${params.length}`);
         }
+
+        let query = 'SELECT * FROM songs';
+        if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ');
+        query += q ? ' ORDER BY title ASC LIMIT 20' : ' ORDER BY title ASC';
 
         const result = await db.query(query, params);
         res.json(result.rows);
     } catch (err) {
         console.error('API Error:', err);
-        res.status(500).json({ message: "Server Error", error: err.message });
+        res.status(500).json({ message: 'Server Error', error: err.message });
     }
 });
 
@@ -240,22 +261,43 @@ router.put('/:id', authorize, adminCheck, async (req, res) => {
     }
 });
 
-// DELETE a Song (Admin only)
+// DELETE a Song (Admin only) — 論理削除（deleted_at を設定）
 router.delete('/:id', authorize, adminCheck, async (req, res) => {
     try {
         const { id } = req.params;
-        const deleteSong = await db.query("DELETE FROM songs WHERE id = $1", [id]);
+        const result = await db.query(
+            "UPDATE songs SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING id",
+            [id]
+        );
 
-        if (deleteSong.rowCount === 0) {
-            return res.status(404).json("Song not found");
+        if (result.rowCount === 0) {
+            return res.status(404).json("Song not found or already deleted");
         }
 
         res.json("Song deleted");
     } catch (err) {
         console.error(err.message);
-        // If FK constraint fails (e.g. used in setlist), 500 will be returned.
-        // Ideally handle code '23503' for foreign_key_violation
-        res.status(500).json({ message: "Server Error (Song might be used in a setlist)" });
+        res.status(500).json({ message: "Server Error" });
+    }
+});
+
+// RESTORE a Song (Admin only) — 論理削除を解除
+router.patch('/:id/restore', authorize, adminCheck, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await db.query(
+            "UPDATE songs SET deleted_at = NULL WHERE id = $1 AND deleted_at IS NOT NULL RETURNING *",
+            [id]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json("Song not found or not deleted");
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ message: "Server Error" });
     }
 });
 
