@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Loader, Plus, Search, Edit2, Trash2, ArrowUpDown, X } from 'lucide-react';
+import { Loader, Plus, Search, Edit2, Trash2, ArrowUpDown, X, RotateCcw } from 'lucide-react';
 import { Youtube as YoutubeIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useSongs } from '../../../hooks/queries/useSongs';
@@ -18,7 +18,8 @@ const ALBUM_RELEASE_YEAR: Record<string, number> = {
 const emptyForm = { title: '', album: '', release_year: '', mv_url: '', author: '', spotify_track_id: '', yt_video_id: '' };
 
 const AdminSongsTab = () => {
-    const { data: songs = [], isLoading } = useSongs();
+    const [showDeleted, setShowDeleted] = useState(false);
+    const { data: songs = [], isLoading } = useSongs({ includeDeleted: showDeleted });
     const queryClient = useQueryClient();
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -68,7 +69,9 @@ const AdminSongsTab = () => {
         return items;
     }, [songs, searchTerm, albumFilter, spotifyFilter, youtubeFilter, sortConfig]);
 
-    const invalidateSongs = () => queryClient.invalidateQueries({ queryKey: queryKeys.songs.all });
+    const invalidateSongs = () => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.songs.all });
+    };
 
     const openAdd = () => { setEditingSong(null); setFormData(emptyForm); setShowModal(true); };
     const openEdit = (song: Song) => {
@@ -102,12 +105,21 @@ const AdminSongsTab = () => {
     };
 
     const handleDelete = async (id: number) => {
-        if (!window.confirm("Delete this song? (If it's in a setlist, this might fail)")) return;
+        if (!window.confirm('この曲を削除しますか？\nセトリデータは保持されます（論理削除）。')) return;
         try {
             await apiClient.delete(`/api/songs/${id}`);
             invalidateSongs();
         } catch (err) {
-            alert((err as any).data?.message || 'Failed to delete song');
+            alert((err as any).data?.message || '削除に失敗しました');
+        }
+    };
+
+    const handleRestore = async (id: number) => {
+        try {
+            await apiClient.patch(`/api/songs/${id}/restore`, {});
+            invalidateSongs();
+        } catch (err) {
+            alert((err as any).data?.message || '復元に失敗しました');
         }
     };
 
@@ -163,7 +175,7 @@ const AdminSongsTab = () => {
     return (
         <div className="tab-content fade-in">
             <div className="table-header-panel">
-                <h3>Songs Master ({processed.length} / {songs.length})</h3>
+                <h3>Songs Master ({processed.length} / {songs.filter(s => !s.deleted_at).length}{showDeleted && ` + ${songs.filter(s => s.deleted_at).length}件削除済み`})</h3>
                 <div className="admin-filter-row" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                     <div style={{ position: 'relative' }}>
                         <Search size={16} className="search-icon" />
@@ -197,6 +209,13 @@ const AdminSongsTab = () => {
                         <option value="id-asc">ID 昇順</option>
                         <option value="id-desc">ID 降順</option>
                     </select>
+                    <button
+                        onClick={() => setShowDeleted(v => !v)}
+                        style={{ padding: '6px 12px', fontSize: '0.75rem', borderRadius: '6px', cursor: 'pointer', border: '1px solid', borderColor: showDeleted ? '#ef4444' : '#334155', background: showDeleted ? 'rgba(239,68,68,0.15)' : '#0f172a', color: showDeleted ? '#ef4444' : '#94a3b8' }}
+                    >
+                        <Trash2 size={14} style={{ display: 'inline', marginRight: '4px' }} />
+                        {showDeleted ? '削除済みを隠す' : '削除済みを表示'}
+                    </button>
                     <button className="btn-primary" style={{ width: 'auto' }} onClick={openAdd}><Plus size={18} /> Add Song</button>
                     <button className="btn-secondary" style={{ width: 'auto', borderColor: '#FF0000', color: '#FF0000', background: 'rgba(255,0,0,0.05)' }} onClick={handleYoutubeBulkAutoMap} disabled={isBulkMapping}>
                         {isBulkMapping ? <Loader className="spin" size={18} /> : <YoutubeIcon size={18} />} Bulk YT
@@ -220,33 +239,45 @@ const AdminSongsTab = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {processed.map(song => (
-                            <tr key={song.id}>
-                                <td style={{ color: '#94a3b8' }}>#{song.id}</td>
-                                <td style={{ fontWeight: 'bold' }}>
-                                    <Link to={`/song/${encodeURIComponent(song.title)}`} style={{ color: '#e2e8f0', textDecoration: 'none' }} className="hover-link">{song.title}</Link>
-                                </td>
-                                <td style={{ color: '#64748b', fontSize: '0.9rem' }}>{song.album || '-'}</td>
-                                <td style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>
-                                    {song.spotify_track_id ? (
-                                        <a href={`https://open.spotify.com/track/${song.spotify_track_id}`} target="_blank" rel="noreferrer" style={{ color: '#1DB954' }}>{song.spotify_track_id.slice(0, 8)}...</a>
-                                    ) : <span style={{ color: '#475569' }}>-</span>}
-                                </td>
-                                <td style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>
-                                    {song.yt_video_id ? (
-                                        <a href={`https://www.youtube.com/watch?v=${song.yt_video_id}`} target="_blank" rel="noreferrer" style={{ color: '#FF0000' }}>{song.yt_video_id.slice(0, 8)}...</a>
-                                    ) : <span style={{ color: '#475569' }}>-</span>}
-                                </td>
-                                <td>
-                                    <div className="actions-wrapper">
-                                        <button onClick={() => handleSpotifyAutoSearch(song)} className="action-btn" title="Spotify Auto Search" style={{ color: '#1DB954' }}><Search size={18} /></button>
-                                        <button onClick={() => handleYoutubeAutoSearch(song)} className="action-btn" title="YouTube Auto Search" style={{ color: '#FF0000' }}><YoutubeIcon size={18} /></button>
-                                        <button onClick={() => openEdit(song)} className="action-btn edit" title="Edit"><Edit2 size={18} /></button>
-                                        <button onClick={() => handleDelete(song.id)} className="action-btn delete" title="Delete"><Trash2 size={18} /></button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
+                        {processed.map(song => {
+                            const isDeleted = !!song.deleted_at;
+                            return (
+                                <tr key={song.id} style={isDeleted ? { opacity: 0.45 } : undefined}>
+                                    <td style={{ color: '#94a3b8' }}>#{song.id}</td>
+                                    <td style={{ fontWeight: 'bold' }}>
+                                        {isDeleted
+                                            ? <span style={{ color: '#ef4444', textDecoration: 'line-through' }}>{song.title}</span>
+                                            : <Link to={`/song/${encodeURIComponent(song.title)}`} style={{ color: '#e2e8f0', textDecoration: 'none' }} className="hover-link">{song.title}</Link>
+                                        }
+                                    </td>
+                                    <td style={{ color: '#64748b', fontSize: '0.9rem' }}>{song.album || '-'}</td>
+                                    <td style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>
+                                        {song.spotify_track_id ? (
+                                            <a href={`https://open.spotify.com/track/${song.spotify_track_id}`} target="_blank" rel="noreferrer" style={{ color: '#1DB954' }}>{song.spotify_track_id.slice(0, 8)}...</a>
+                                        ) : <span style={{ color: '#475569' }}>-</span>}
+                                    </td>
+                                    <td style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>
+                                        {song.yt_video_id ? (
+                                            <a href={`https://www.youtube.com/watch?v=${song.yt_video_id}`} target="_blank" rel="noreferrer" style={{ color: '#FF0000' }}>{song.yt_video_id.slice(0, 8)}...</a>
+                                        ) : <span style={{ color: '#475569' }}>-</span>}
+                                    </td>
+                                    <td>
+                                        <div className="actions-wrapper">
+                                            {isDeleted ? (
+                                                <button onClick={() => handleRestore(song.id)} className="action-btn" title="Restore" style={{ color: '#34d399' }}><RotateCcw size={18} /></button>
+                                            ) : (
+                                                <>
+                                                    <button onClick={() => handleSpotifyAutoSearch(song)} className="action-btn" title="Spotify Auto Search" style={{ color: '#1DB954' }}><Search size={18} /></button>
+                                                    <button onClick={() => handleYoutubeAutoSearch(song)} className="action-btn" title="YouTube Auto Search" style={{ color: '#FF0000' }}><YoutubeIcon size={18} /></button>
+                                                    <button onClick={() => openEdit(song)} className="action-btn edit" title="Edit"><Edit2 size={18} /></button>
+                                                    <button onClick={() => handleDelete(song.id)} className="action-btn delete" title="Delete"><Trash2 size={18} /></button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                         {processed.length === 0 && <tr><td colSpan={6} className="empty-cell">No songs found.</td></tr>}
                     </tbody>
                 </table>
