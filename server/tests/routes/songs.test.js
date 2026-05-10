@@ -28,7 +28,7 @@ describe('Songs API', () => {
             expect(res.statusCode).toEqual(200);
             expect(res.body).toEqual(mockSongs);
             expect(db.query).toHaveBeenCalledWith(
-                expect.stringContaining('SELECT * FROM songs'),
+                expect.stringContaining('deleted_at IS NULL'),
                 []
             );
         });
@@ -41,7 +41,7 @@ describe('Songs API', () => {
 
             expect(res.statusCode).toEqual(200);
             expect(db.query).toHaveBeenCalledWith(
-                expect.stringContaining('WHERE title ILIKE $1'),
+                expect.stringContaining('title ILIKE $'),
                 ['%7th%']
             );
         });
