@@ -29,3 +29,13 @@ export const useUpdateUserRole = () => {
     },
   })
 }
+
+export const useRestoreUser = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: number) => apiClient.patch(`/api/users/${userId}/restore`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.users })
+    },
+  })
+}

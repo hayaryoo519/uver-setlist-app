@@ -17,8 +17,9 @@ const getOptionalUserId = (req) => {
 // GET all users (Protected: Admin Only)
 router.get('/', authorize, adminCheck, async (req, res) => {
     try {
-        // Fetch all users
-        const allUsers = await db.query("SELECT id, username, email, created_at, role FROM users ORDER BY created_at DESC");
+        const allUsers = await db.query(
+            "SELECT id, username, email, created_at, role, deleted_at FROM users ORDER BY created_at DESC"
+        );
         res.json(allUsers.rows);
     } catch (err) {
         console.error(err.message);
@@ -54,24 +55,45 @@ router.put('/:id/role', authorize, adminCheck, async (req, res) => {
     }
 });
 
-// DELETE User (Admin only)
+// DELETE User (Admin only) — 論理削除
 router.delete('/:id', authorize, adminCheck, async (req, res) => {
     try {
         const currentUserId = req.user.user_id;
         const targetUserId = req.params.id;
 
-        // Prevent deleting yourself
         if (currentUserId == targetUserId) {
             return res.status(400).json("Cannot delete yourself");
         }
 
-        const deleteUser = await db.query("DELETE FROM users WHERE id = $1", [targetUserId]);
+        const result = await db.query(
+            "UPDATE users SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING id",
+            [targetUserId]
+        );
 
-        if (deleteUser.rowCount === 0) {
-            return res.json("User not found");
+        if (result.rowCount === 0) {
+            return res.json("User not found or already deleted");
         }
 
         res.json("User deleted");
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
+    }
+});
+
+// PATCH Restore User (Admin only) — 論理削除を解除
+router.patch('/:id/restore', authorize, adminCheck, async (req, res) => {
+    try {
+        const result = await db.query(
+            "UPDATE users SET deleted_at = NULL WHERE id = $1 AND deleted_at IS NOT NULL RETURNING id, username, email, role",
+            [req.params.id]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json("User not found or not deleted");
+        }
+
+        res.json(result.rows[0]);
     } catch (err) {
         console.error(err.message);
         res.status(500).send("Server Error");
@@ -311,7 +333,7 @@ router.get('/:id/profile', async (req, res) => {
                     )
                 END AS is_following
             FROM users u
-            WHERE u.id = $1
+            WHERE u.id = $1 AND u.deleted_at IS NULL
         `, [userId, currentUserId]);
 
         if (result.rows.length === 0) {
@@ -335,7 +357,7 @@ router.get('/:id/attended_lives', async (req, res) => {
 
     try {
         const userCheck = await db.query(
-            'SELECT is_public FROM users WHERE id = $1', [userId]
+            'SELECT is_public FROM users WHERE id = $1 AND deleted_at IS NULL', [userId]
         );
         if (userCheck.rows.length === 0) {
             return res.status(404).json({ message: 'ユーザーが見つかりません' });
@@ -419,15 +441,17 @@ router.get('/:id/predictions', async (req, res) => {
     }
 });
 
-// DELETE current user account
+// DELETE current user account — 論理削除（30日後に完全削除を想定）
 router.delete('/me', authorize, async (req, res) => {
     try {
         const currentUserId = req.user.user_id;
 
-        // attendance records will be deleted automatically due to ON DELETE CASCADE
-        const deleteResult = await db.query("DELETE FROM users WHERE id = $1", [currentUserId]);
+        const result = await db.query(
+            "UPDATE users SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING id",
+            [currentUserId]
+        );
 
-        if (deleteResult.rowCount === 0) {
+        if (result.rowCount === 0) {
             return res.status(404).json("User not found");
         }
 
