@@ -39,6 +39,7 @@ feature/* (ローカル) → dev (Staging 自動デプロイ) → main + GitHub 
 - `docs/development_workflow.md` — 開発からリリースまでの手順
 - `docs/environments.md` — 環境・DB 仕様・本番サーバー運用
 - `docs/db_operations.md` — DB バックアップ・同期手順
+- `docs/social_post_playbook.md` — SNS投稿ネタのSQL集・投稿テンプレート（DBから投稿文を生成する手順書）
 
 ---
 
