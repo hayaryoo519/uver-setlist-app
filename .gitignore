@@ -1,5 +1,6 @@
 # Logs
 logs
+.agent/temp/
 *.log
 npm-debug.log*
 yarn-debug.log*
