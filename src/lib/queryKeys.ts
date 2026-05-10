@@ -31,4 +31,9 @@ export const queryKeys = {
     attendedLives: (userId: number | string) => ['user', 'attended', userId] as const,
     predictions:   (userId: number | string) => ['user', 'predictions', userId] as const,
   },
+  admin: {
+    users:         ['admin', 'users']         as const,
+    corrections:   ['admin', 'corrections']   as const,
+    collectorLogs: ['admin', 'collectorLogs'] as const,
+  },
 }

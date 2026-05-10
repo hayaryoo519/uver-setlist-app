@@ -4,12 +4,12 @@ import { queryKeys } from '../../lib/queryKeys'
 import { STALE_TIMES } from '../../lib/queryClient'
 import type { Song, SongStats, SongImageResponse } from '../../types/api'
 
-export const useSongs = (options: { enabled?: boolean } = {}) =>
+export const useSongs = (options: { enabled?: boolean; includeDeleted?: boolean } = {}) =>
   useQuery({
-    queryKey: queryKeys.songs.all,
-    queryFn: () => apiClient.get<Song[]>('/api/songs'),
+    queryKey: options.includeDeleted ? [...queryKeys.songs.all, 'with-deleted'] : queryKeys.songs.all,
+    queryFn: () => apiClient.get<Song[]>(`/api/songs${options.includeDeleted ? '?include_deleted=true' : ''}`),
     staleTime: STALE_TIMES.songs,
-    ...options,
+    enabled: options.enabled !== false,
   })
 
 export const useSongDetail = (id: number | string | undefined) =>

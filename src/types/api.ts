@@ -48,6 +48,7 @@ export interface Song {
   spotify_track_id?: string | null
   yt_video_id?: string | null
   created_at?: string
+  deleted_at?: string | null
 }
 
 // 楽曲統計（詳細ページ用）

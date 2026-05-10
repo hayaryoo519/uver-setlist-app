@@ -51,3 +51,4 @@ npm test        # vitest（フロントエンド）
 @docs/environments.md
 @docs/SPECIFICATIONS.md
 @docs/db_operations.md
+@docs/social_post_playbook.md
