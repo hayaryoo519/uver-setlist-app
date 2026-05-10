@@ -80,6 +80,7 @@ export interface User {
   email_verified: boolean
   created_at: string
   is_public?: boolean
+  deleted_at?: string | null
 }
 
 // 認証済みユーザー（AuthContext）
