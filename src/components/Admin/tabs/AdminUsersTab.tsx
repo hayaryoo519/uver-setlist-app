@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Loader, ArrowUpDown, Trash2, ShieldAlert, Search } from 'lucide-react';
+import { Loader, ArrowUpDown, Trash2, ShieldAlert, Search, RotateCcw } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useAdminUsers, useDeleteUser, useUpdateUserRole } from '../../../hooks/queries/useAdminUsers';
+import { useAdminUsers, useDeleteUser, useUpdateUserRole, useRestoreUser } from '../../../hooks/queries/useAdminUsers';
 import type { User } from '../../../types/api';
 import { X } from 'lucide-react';
 
@@ -10,8 +10,10 @@ const AdminUsersTab = () => {
     const { data: users = [], isLoading } = useAdminUsers();
     const deleteUser = useDeleteUser();
     const updateRole = useUpdateUserRole();
+    const restoreUser = useRestoreUser();
 
     const [searchTerm, setSearchTerm] = useState('');
+    const [showDeleted, setShowDeleted] = useState(false);
     const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
 
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -25,6 +27,7 @@ const AdminUsersTab = () => {
 
     const processed = useMemo(() => {
         let items = [...users];
+        if (!showDeleted) items = items.filter(u => !u.deleted_at);
         if (searchTerm) {
             const lower = searchTerm.toLowerCase();
             items = items.filter(u => u.username.toLowerCase().includes(lower) || u.email.toLowerCase().includes(lower));
@@ -45,9 +48,18 @@ const AdminUsersTab = () => {
             await deleteUser.mutateAsync(userToDelete.id);
             setShowDeleteModal(false);
             setUserToDelete(null);
-            alert('ユーザーを削除しました。');
+            alert('ユーザーを削除しました（論理削除）。');
         } catch (err) {
             alert(`削除に失敗しました: ${(err as any).data?.message || (err as any).message}`);
+        }
+    };
+
+    const handleRestore = async (user: User) => {
+        try {
+            await restoreUser.mutateAsync(user.id);
+            alert(`${user.username} を復元しました。`);
+        } catch (err) {
+            alert(`復元に失敗しました: ${(err as any).data?.message || (err as any).message}`);
         }
     };
 
@@ -73,14 +85,23 @@ const AdminUsersTab = () => {
     return (
         <div className="tab-content fade-in">
             <div className="table-header-panel">
-                <h3>Registered Users</h3>
-                <div style={{ position: 'relative' }}>
-                    <Search size={16} className="search-icon" />
-                    <input
-                        type="text" placeholder="Search users..."
-                        value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                        className="search-input"
-                    />
+                <h3>Registered Users ({processed.length}{showDeleted && ` / 削除済み ${users.filter(u => u.deleted_at).length}件`})</h3>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <div style={{ position: 'relative' }}>
+                        <Search size={16} className="search-icon" />
+                        <input
+                            type="text" placeholder="Search users..."
+                            value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                            className="search-input"
+                        />
+                    </div>
+                    <button
+                        onClick={() => setShowDeleted(v => !v)}
+                        style={{ padding: '6px 12px', fontSize: '0.75rem', borderRadius: '6px', cursor: 'pointer', border: '1px solid', borderColor: showDeleted ? '#ef4444' : '#334155', background: showDeleted ? 'rgba(239,68,68,0.15)' : '#0f172a', color: showDeleted ? '#ef4444' : '#94a3b8' }}
+                    >
+                        <Trash2 size={14} style={{ display: 'inline', marginRight: '4px' }} />
+                        {showDeleted ? '削除済みを隠す' : '削除済みを表示'}
+                    </button>
                 </div>
             </div>
             <div className="table-container">
@@ -96,34 +117,45 @@ const AdminUsersTab = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {processed.map(user => (
-                            <tr key={user.id}>
-                                <td style={{ width: '60px' }}>#{user.id}</td>
-                                <td style={{ fontWeight: 'bold' }}>{user.username}</td>
-                                <td style={{ color: '#cbd5e1' }}>{user.email}</td>
-                                <td style={{ width: '100px' }}><span className={`role-badge ${user.role}`}>{user.role}</span></td>
-                                <td style={{ color: '#94a3b8', width: '120px' }}>{new Date(user.created_at).toLocaleDateString()}</td>
-                                <td style={{ width: '120px' }}>
-                                    <div className="actions-wrapper">
-                                        <button
-                                            onClick={() => { setUserToUpdate(user); setShowRoleModal(true); }}
-                                            className="action-btn promote"
-                                            title="Update Role"
-                                        >
-                                            <ShieldAlert size={18} />
-                                        </button>
-                                        <button
-                                            onClick={() => { setUserToDelete(user); setShowDeleteModal(true); }}
-                                            disabled={!!(currentUser && user.id === currentUser.id)}
-                                            className={`action-btn delete ${currentUser && user.id === currentUser.id ? 'disabled' : ''}`}
-                                            title="Delete"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
+                        {processed.map(user => {
+                            const isDeleted = !!user.deleted_at;
+                            return (
+                                <tr key={user.id} style={isDeleted ? { opacity: 0.45 } : undefined}>
+                                    <td style={{ width: '60px' }}>#{user.id}</td>
+                                    <td style={{ fontWeight: 'bold', textDecoration: isDeleted ? 'line-through' : undefined, color: isDeleted ? '#ef4444' : undefined }}>{user.username}</td>
+                                    <td style={{ color: '#cbd5e1' }}>{user.email}</td>
+                                    <td style={{ width: '100px' }}><span className={`role-badge ${user.role}`}>{user.role}</span></td>
+                                    <td style={{ color: '#94a3b8', width: '120px' }}>{new Date(user.created_at).toLocaleDateString()}</td>
+                                    <td style={{ width: '120px' }}>
+                                        <div className="actions-wrapper">
+                                            {isDeleted ? (
+                                                <button onClick={() => handleRestore(user)} className="action-btn" title="Restore" style={{ color: '#34d399' }}>
+                                                    <RotateCcw size={18} />
+                                                </button>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        onClick={() => { setUserToUpdate(user); setShowRoleModal(true); }}
+                                                        className="action-btn promote"
+                                                        title="Update Role"
+                                                    >
+                                                        <ShieldAlert size={18} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => { setUserToDelete(user); setShowDeleteModal(true); }}
+                                                        disabled={!!(currentUser && user.id === currentUser.id)}
+                                                        className={`action-btn delete ${currentUser && user.id === currentUser.id ? 'disabled' : ''}`}
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>
@@ -177,7 +209,7 @@ const AdminUsersTab = () => {
                                 <p style={{ color: '#94a3b8', marginBottom: '5px' }}>
                                     <strong>{userToDelete.username}</strong> ({userToDelete.email})
                                 </p>
-                                <p style={{ color: '#ef4444', fontSize: '0.9rem' }}>この操作は取り消せません。</p>
+                                <p style={{ color: '#fbbf24', fontSize: '0.9rem' }}>論理削除されます（復元可能）。</p>
                             </div>
                             <div className="form-actions">
                                 <button type="button" className="btn-secondary" onClick={() => setShowDeleteModal(false)}>キャンセル</button>

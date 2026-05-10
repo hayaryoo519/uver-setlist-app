@@ -86,7 +86,7 @@ router.post('/verify-email', async (req, res) => {
 router.post('/login', loginLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
-        const user = await db.query("SELECT * FROM users WHERE email = $1", [email]);
+        const user = await db.query("SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL", [email]);
 
         if (user.rows.length === 0) {
             // Log failed login attempt - user not found

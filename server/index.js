@@ -16,11 +16,38 @@ if (!process.env.JWT_SECRET) {
     process.exit(1);
 }
 
-// Middleware (Unified for all environments to ensure consistency)
-app.use(helmet({
-    contentSecurityPolicy: false,
+// CORS: ALLOWED_ORIGINS 環境変数でドメインを制限（未設定時は全許可）
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+    : null;
+
+app.use(cors({
+    origin: allowedOrigins
+        ? (origin, callback) => {
+            if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+            callback(new Error('CORS policy violation'));
+          }
+        : true,
+    credentials: true,
 }));
-app.use(cors());
+
+// CSP: Google Fonts・Spotify・YouTube を許可しつつスクリプト注入を防止
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc:     ["'self'"],
+            scriptSrc:      ["'self'"],
+            styleSrc:       ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+            fontSrc:        ["'self'", 'https://fonts.gstatic.com'],
+            imgSrc:         ["'self'", 'data:', 'https:'],
+            connectSrc:     ["'self'", 'https://api.spotify.com', 'https://accounts.spotify.com', 'https://api.setlist.fm'],
+            frameSrc:       ['https://www.youtube.com', 'https://open.spotify.com'],
+            objectSrc:      ["'none'"],
+            baseUri:        ["'self'"],
+        },
+    },
+}));
+
 app.use(express.json());
 
 // Request logging middleware
