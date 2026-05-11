@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Music, Calendar, Upload, Globe, AlertTriangle, FileText, Clock, ShieldAlert } from 'lucide-react';
+import { Shield, Users, Music, Calendar, Upload, Globe, AlertTriangle, FileText, Clock, ShieldAlert, Database } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLives } from '../hooks/queries/useLives';
@@ -16,8 +16,9 @@ import AdminCollectTab from '../components/Admin/tabs/AdminCollectTab';
 import AdminDraftsTab from '../components/Admin/tabs/AdminDraftsTab';
 import AdminCollectorLogsTab from '../components/Admin/tabs/AdminCollectorLogsTab';
 import AdminCorrectionsTab from '../components/Admin/tabs/AdminCorrectionsTab';
+import AdminBackupTab from '../components/Admin/tabs/AdminBackupTab';
 
-type TabId = 'lives' | 'songs' | 'users' | 'import' | 'collect' | 'drafts' | 'collector_logs' | 'corrections';
+type TabId = 'lives' | 'songs' | 'users' | 'import' | 'collect' | 'drafts' | 'collector_logs' | 'corrections' | 'backup';
 
 const AdminPage = () => {
     const { currentUser } = useAuth();
@@ -103,6 +104,12 @@ const AdminPage = () => {
                         </span>
                     </div>
                 </div>
+                <div className={`admin-card ${activeTab === 'backup' ? 'active' : ''}`} onClick={() => setActiveTab('backup')}>
+                    <div className="card-header">
+                        <h2 className="card-title"><Database size={24} color="#94a3b8" /> Backup</h2>
+                        <span className="card-badge" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#6ee7b7' }}>DB</span>
+                    </div>
+                </div>
                 <div className="admin-card" onClick={() => navigate('/admin/security-logs')}>
                     <div className="card-header">
                         <h2 className="card-title"><ShieldAlert size={24} color="#94a3b8" /> Security Logs</h2>
@@ -120,6 +127,7 @@ const AdminPage = () => {
                 {activeTab === 'drafts' && <AdminDraftsTab />}
                 {activeTab === 'collector_logs' && <AdminCollectorLogsTab />}
                 {activeTab === 'corrections' && <AdminCorrectionsTab />}
+                {activeTab === 'backup' && <AdminBackupTab />}
             </div>
         </div>
     );
