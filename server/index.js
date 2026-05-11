@@ -76,6 +76,7 @@ app.use('/api/music', require('./routes/music'));
 app.use('/api/spotify', require('./routes/spotify'));
 app.use('/api/youtube', require('./routes/youtube'));
 app.use('/api/stats', require('./routes/stats'));
+app.use('/api/admin', require('./routes/admin'));
 
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, '../dist')));
