@@ -36,5 +36,7 @@ export const queryKeys = {
     corrections:   ['admin', 'corrections']   as const,
     collectorLogs: ['admin', 'collectorLogs'] as const,
     stats:         ['admin', 'stats']         as const,
+    securityLogs:  (params: Record<string, unknown>) => ['admin', 'securityLogs', params] as const,
+    securityAnalysis: ['admin', 'securityAnalysis'] as const,
   },
 }

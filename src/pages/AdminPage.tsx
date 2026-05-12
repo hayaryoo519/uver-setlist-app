@@ -18,8 +18,9 @@ import AdminCollectorLogsTab from '../components/Admin/tabs/AdminCollectorLogsTa
 import AdminCorrectionsTab from '../components/Admin/tabs/AdminCorrectionsTab';
 import AdminBackupTab from '../components/Admin/tabs/AdminBackupTab';
 import AdminStatsTab from '../components/Admin/tabs/AdminStatsTab';
+import AdminSecurityLogsTab from '../components/Admin/tabs/AdminSecurityLogsTab';
 
-type TabId = 'lives' | 'songs' | 'users' | 'import' | 'collect' | 'drafts' | 'collector_logs' | 'corrections' | 'backup' | 'stats';
+type TabId = 'lives' | 'songs' | 'users' | 'import' | 'collect' | 'drafts' | 'collector_logs' | 'corrections' | 'backup' | 'stats' | 'security_logs';
 
 const AdminPage = () => {
     const { currentUser } = useAuth();
@@ -117,10 +118,10 @@ const AdminPage = () => {
                         <span className="card-badge" style={{ background: 'rgba(212, 175, 55, 0.1)', color: '#d4af37' }}>KPI</span>
                     </div>
                 </div>
-                <div className="admin-card" onClick={() => navigate('/admin/security-logs')}>
+                <div className={`admin-card ${activeTab === 'security_logs' ? 'active' : ''}`} onClick={() => setActiveTab('security_logs')}>
                     <div className="card-header">
                         <h2 className="card-title"><ShieldAlert size={24} color="#94a3b8" /> Security Logs</h2>
-                        <span className="card-badge">LOGS</span>
+                        <span className="card-badge" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#fca5a5' }}>SEC</span>
                     </div>
                 </div>
             </div>
@@ -136,6 +137,7 @@ const AdminPage = () => {
                 {activeTab === 'corrections' && <AdminCorrectionsTab />}
                 {activeTab === 'backup' && <AdminBackupTab />}
                 {activeTab === 'stats' && <AdminStatsTab />}
+                {activeTab === 'security_logs' && <AdminSecurityLogsTab />}
             </div>
         </div>
     );
