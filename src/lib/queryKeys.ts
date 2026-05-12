@@ -35,5 +35,6 @@ export const queryKeys = {
     users:         ['admin', 'users']         as const,
     corrections:   ['admin', 'corrections']   as const,
     collectorLogs: ['admin', 'collectorLogs'] as const,
+    stats:         ['admin', 'stats']         as const,
   },
 }
