@@ -38,15 +38,38 @@ npm install
 npm run dev
 ```
 
-### データベース (Supabase)
-ローカルDBはDockerコンテナ (`supabase_db_marumie`) として動作します。
+### データベース (PostgreSQL)
+ローカルDBはプロジェクト専用の Docker コンテナ (`docker-compose.local.yml`) として動作します。
 
-- **接続情報 (`server/.env`):**
-  - Host: `localhost`
-  - Port: `54332`
-  - User: `postgres`
-  - Pass: `postgres`
-  - DB: `uver_app_db`
+#### 初回セットアップ
+
+```powershell
+# 1. コンテナ起動
+docker compose -f docker-compose.local.yml up -d
+
+# 2. 全テーブルを作成（migrations/ を順番に適用）
+cd server
+npm run migrate
+
+# 3. テストデータ投入
+node scripts/seed_local.js
+```
+
+#### 接続情報 (`server/.env`)
+
+- Host: `localhost`
+- Port: `54332`
+- User: `postgres`
+- Pass: `postgres`
+- DB: `uver_app_db`
+
+#### 日常操作
+
+```powershell
+docker compose -f docker-compose.local.yml up -d    # 起動
+docker compose -f docker-compose.local.yml stop     # 一時停止
+docker compose -f docker-compose.local.yml down     # 完全停止（データ保持）
+```
 
 ---
 
@@ -79,9 +102,9 @@ npm run dev
 ### ローカルでデータが表示されない
 Dockerコンテナが起動していない可能性があります。
 ```powershell
-docker ps | findstr supabase
+docker compose -f docker-compose.local.yml ps
 # 起動していない場合
-docker restart supabase_db_marumie
+docker compose -f docker-compose.local.yml up -d
 ```
 
 ### ビルドエラーになるが dev では動く
