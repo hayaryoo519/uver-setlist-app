@@ -1,4 +1,3 @@
-console.log("!!! SERVER STARTING - DEBUG VERSION !!!");
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -32,18 +31,22 @@ app.use(cors({
 }));
 
 // CSP: Google Fonts・Spotify・YouTube を許可しつつスクリプト注入を防止
+// upgradeInsecureRequests は Helmet デフォルトで有効になるが、
+// staging 環境は HTTP のためこれを有効にするとサブリソース取得が全て HTTPS に
+// アップグレードされて失敗しアプリが白画面になる。そのため明示的に無効化する。
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
-            defaultSrc:     ["'self'"],
-            scriptSrc:      ["'self'"],
-            styleSrc:       ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-            fontSrc:        ["'self'", 'https://fonts.gstatic.com'],
-            imgSrc:         ["'self'", 'data:', 'https:'],
-            connectSrc:     ["'self'", 'https://api.spotify.com', 'https://accounts.spotify.com', 'https://api.setlist.fm'],
-            frameSrc:       ['https://www.youtube.com', 'https://open.spotify.com'],
-            objectSrc:      ["'none'"],
-            baseUri:        ["'self'"],
+            defaultSrc:              ["'self'"],
+            scriptSrc:               ["'self'"],
+            styleSrc:                ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+            fontSrc:                 ["'self'", 'https://fonts.gstatic.com'],
+            imgSrc:                  ["'self'", 'data:', 'https:'],
+            connectSrc:              ["'self'", 'https://api.spotify.com', 'https://accounts.spotify.com', 'https://api.setlist.fm'],
+            frameSrc:                ['https://www.youtube.com', 'https://open.spotify.com'],
+            objectSrc:               ["'none'"],
+            baseUri:                 ["'self'"],
+            upgradeInsecureRequests: null,
         },
     },
 }));
