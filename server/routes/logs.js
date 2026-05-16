@@ -117,6 +117,47 @@ router.get('/analysis', async (req, res) => {
     }
 });
 
+// セキュリティログ一覧取得（ページネーション・フィルタ付き）
+router.get('/security', async (req, res) => {
+    try {
+        const page  = Math.max(1, parseInt(req.query.page)  || 1);
+        const limit = Math.min(100, parseInt(req.query.limit) || 50);
+        const offset = (page - 1) * limit;
+        const { event_type, days = 30 } = req.query;
+
+        const conditions = [`timestamp > NOW() - INTERVAL '${parseInt(days)} days'`];
+        const params = [];
+
+        if (event_type) {
+            params.push(event_type);
+            conditions.push(`event_type = $${params.length}`);
+        }
+
+        const where = `WHERE ${conditions.join(' AND ')}`;
+
+        const [logsResult, countResult] = await Promise.all([
+            db.query(`
+                SELECT id, timestamp, event_type, message, user_email, ip_address, details
+                FROM security_logs
+                ${where}
+                ORDER BY timestamp DESC
+                LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+            `, [...params, limit, offset]),
+            db.query(`SELECT COUNT(*)::int AS total FROM security_logs ${where}`, params),
+        ]);
+
+        res.json({
+            logs:  logsResult.rows,
+            total: countResult.rows[0].total,
+            page,
+            limit,
+        });
+    } catch (err) {
+        console.error('Error fetching security logs:', err);
+        res.status(500).json({ message: 'セキュリティログの取得に失敗しました' });
+    }
+});
+
 // 古いログの削除（30日以上前）
 router.delete('/cleanup', async (req, res) => {
     try {
