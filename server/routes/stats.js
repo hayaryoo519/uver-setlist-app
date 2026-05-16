@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const db = require('../db');
 const { normalizeVenueName } = require('../utils/songTranslations');
+const { authorize, adminCheck } = require('../middleware/authorization');
 
 const formatDate = (dateStr) => {
     if (!dateStr) return '';
@@ -192,6 +193,99 @@ router.get('/', async (req, res) => {
         console.error('[/api/stats] Error:', err.message);
         console.error(err.stack);
         res.status(500).json({ message: 'Server Error', error: err.message });
+    }
+});
+
+// 管理者向けKPI統計
+router.get('/admin', authorize, adminCheck, async (req, res) => {
+    try {
+        const [
+            userStatsRes,
+            predictionStatsRes,
+            attendanceStatsRes,
+            activeUsersRes,
+            correctionStatsRes,
+            dailyRegistrationsRes,
+            dailyPredictionsRes,
+        ] = await Promise.all([
+            // ユーザー統計
+            db.query(`
+                SELECT
+                    COUNT(*)::int                                                          AS total_users,
+                    COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')::int AS new_users_30d,
+                    COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days')::int  AS new_users_7d,
+                    COUNT(*) FILTER (WHERE is_public = true)::int                         AS public_users
+                FROM users
+                WHERE deleted_at IS NULL
+            `),
+            // 予想統計
+            db.query(`
+                SELECT
+                    COUNT(*)::int                                                          AS total_predictions,
+                    COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')::int AS new_predictions_30d,
+                    COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days')::int  AS new_predictions_7d,
+                    COUNT(DISTINCT user_id)::int                                           AS users_with_predictions
+                FROM predictions
+            `),
+            // 参戦記録統計
+            db.query(`
+                SELECT
+                    COUNT(*)::int                                                          AS total_attendance,
+                    COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')::int AS new_attendance_30d,
+                    COUNT(DISTINCT user_id)::int                                           AS users_with_attendance
+                FROM attendance
+            `),
+            // アクティブユーザー（ログイン成功ベース）
+            db.query(`
+                SELECT
+                    COUNT(DISTINCT user_email) FILTER (WHERE timestamp >= NOW() - INTERVAL '7 days')::int  AS active_7d,
+                    COUNT(DISTINCT user_email) FILTER (WHERE timestamp >= NOW() - INTERVAL '30 days')::int AS active_30d
+                FROM security_logs
+                WHERE event_type = 'login_success'
+            `),
+            // 修正依頼統計
+            db.query(`
+                SELECT
+                    COUNT(*)::int                                              AS total_corrections,
+                    COUNT(*) FILTER (WHERE status = 'pending')::int           AS pending_corrections,
+                    COUNT(*) FILTER (WHERE status = 'resolved')::int          AS resolved_corrections
+                FROM corrections
+            `),
+            // 直近30日の日別新規ユーザー数
+            db.query(`
+                SELECT
+                    DATE(created_at)::text AS date,
+                    COUNT(*)::int          AS count
+                FROM users
+                WHERE created_at >= NOW() - INTERVAL '30 days'
+                  AND deleted_at IS NULL
+                GROUP BY DATE(created_at)
+                ORDER BY date ASC
+            `),
+            // 直近30日の日別予想投稿数
+            db.query(`
+                SELECT
+                    DATE(created_at)::text AS date,
+                    COUNT(*)::int          AS count
+                FROM predictions
+                WHERE created_at >= NOW() - INTERVAL '30 days'
+                GROUP BY DATE(created_at)
+                ORDER BY date ASC
+            `),
+        ]);
+
+        res.json({
+            users:        { ...userStatsRes.rows[0] },
+            predictions:  { ...predictionStatsRes.rows[0] },
+            attendance:   { ...attendanceStatsRes.rows[0] },
+            activeUsers:  { ...activeUsersRes.rows[0] },
+            corrections:  { ...correctionStatsRes.rows[0] },
+            dailyRegistrations: dailyRegistrationsRes.rows,
+            dailyPredictions:   dailyPredictionsRes.rows,
+        });
+    } catch (err) {
+        console.error('[/api/stats/admin] Error:', err.message);
+        res.status(500).json({ message: 'Server Error' });
     }
 });
 

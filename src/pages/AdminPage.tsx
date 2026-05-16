@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Music, Calendar, Upload, Globe, AlertTriangle, FileText, Clock, ShieldAlert } from 'lucide-react';
+import { Shield, Users, Music, Calendar, Upload, Globe, AlertTriangle, FileText, Clock, ShieldAlert, Database, BarChart2 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLives } from '../hooks/queries/useLives';
@@ -16,8 +16,11 @@ import AdminCollectTab from '../components/Admin/tabs/AdminCollectTab';
 import AdminDraftsTab from '../components/Admin/tabs/AdminDraftsTab';
 import AdminCollectorLogsTab from '../components/Admin/tabs/AdminCollectorLogsTab';
 import AdminCorrectionsTab from '../components/Admin/tabs/AdminCorrectionsTab';
+import AdminBackupTab from '../components/Admin/tabs/AdminBackupTab';
+import AdminStatsTab from '../components/Admin/tabs/AdminStatsTab';
+import AdminSecurityLogsTab from '../components/Admin/tabs/AdminSecurityLogsTab';
 
-type TabId = 'lives' | 'songs' | 'users' | 'import' | 'collect' | 'drafts' | 'collector_logs' | 'corrections';
+type TabId = 'lives' | 'songs' | 'users' | 'import' | 'collect' | 'drafts' | 'collector_logs' | 'corrections' | 'backup' | 'stats' | 'security_logs';
 
 const AdminPage = () => {
     const { currentUser } = useAuth();
@@ -103,10 +106,22 @@ const AdminPage = () => {
                         </span>
                     </div>
                 </div>
-                <div className="admin-card" onClick={() => navigate('/admin/security-logs')}>
+                <div className={`admin-card ${activeTab === 'backup' ? 'active' : ''}`} onClick={() => setActiveTab('backup')}>
+                    <div className="card-header">
+                        <h2 className="card-title"><Database size={24} color="#94a3b8" /> Backup</h2>
+                        <span className="card-badge" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#6ee7b7' }}>DB</span>
+                    </div>
+                </div>
+                <div className={`admin-card ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => setActiveTab('stats')}>
+                    <div className="card-header">
+                        <h2 className="card-title"><BarChart2 size={24} color="#94a3b8" /> Stats</h2>
+                        <span className="card-badge" style={{ background: 'rgba(212, 175, 55, 0.1)', color: '#d4af37' }}>KPI</span>
+                    </div>
+                </div>
+                <div className={`admin-card ${activeTab === 'security_logs' ? 'active' : ''}`} onClick={() => setActiveTab('security_logs')}>
                     <div className="card-header">
                         <h2 className="card-title"><ShieldAlert size={24} color="#94a3b8" /> Security Logs</h2>
-                        <span className="card-badge">LOGS</span>
+                        <span className="card-badge" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#fca5a5' }}>SEC</span>
                     </div>
                 </div>
             </div>
@@ -120,6 +135,9 @@ const AdminPage = () => {
                 {activeTab === 'drafts' && <AdminDraftsTab />}
                 {activeTab === 'collector_logs' && <AdminCollectorLogsTab />}
                 {activeTab === 'corrections' && <AdminCorrectionsTab />}
+                {activeTab === 'backup' && <AdminBackupTab />}
+                {activeTab === 'stats' && <AdminStatsTab />}
+                {activeTab === 'security_logs' && <AdminSecurityLogsTab />}
             </div>
         </div>
     );
