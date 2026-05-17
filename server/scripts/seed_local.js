@@ -169,6 +169,10 @@ async function seed() {
         console.log('=== ローカルテストデータ シード開始 ===\n');
 
         await client.query('BEGIN');
+        
+        // 既存のデータを全削除（初期化）
+        console.log('[0/5] 既存のデータを初期化中...');
+        await client.query('TRUNCATE TABLE prediction_songs, predictions, setlists, lives CASCADE');
 
         // 1. ユーザー投入
         console.log('[1/5] ユーザーを投入中...');

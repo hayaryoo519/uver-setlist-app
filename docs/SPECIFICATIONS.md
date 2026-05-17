@@ -87,6 +87,8 @@
 | GET | `/api/users/:id/profile` | 任意 | 公開プロフィール + フォロー統計 |
 | GET | `/api/users/:id/attended_lives` | 任意 | 参戦ライブ（非公開なら403） |
 | GET | `/api/users/:id/predictions` | 任意 | 予想一覧（常に公開） |
+| GET | `/api/stats` | 任意 | 一般用統計データの取得 |
+| GET | `/api/stats?admin=true` | 必須 | 管理者用統計データの取得（Admin Stats） |
 
 ---
 
@@ -104,3 +106,14 @@
   - `/predictions/new`: 予想作成画面
   - `/predictions/:id`: 予想詳細画面
   - `/users/:id`: 公開ユーザープロフィール
+
+---
+
+## 5. 楽曲詳細 & 演奏推移チャート
+- **概要**: 各楽曲の演奏履歴や、年別の演奏回数の推移を視覚的に確認できる機能。
+- **機能一覧**:
+  - **演奏推移チャート (Performance Timeline)**:
+    - `Recharts` を使用した棒グラフ（BarChart）。
+    - 楽曲が各年に何回演奏されたかを時系列で表示。
+  - **ライブ履歴一覧**: その曲が演奏された過去のライブ一覧を表示。
+- **データ取得**: `GET /api/songs/:id` にて、楽曲基本情報、ライブ履歴、および年別集計データ（`yearlyStats`）をまとめて取得。
