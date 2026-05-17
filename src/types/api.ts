@@ -219,3 +219,28 @@ export interface PublicUserProfile {
   is_following: boolean
   is_public: boolean
 }
+
+// 年別演奏データエントリ（楽曲演奏推移タイムライン用）
+export interface YearlyPerformanceEntry {
+  year: number
+  count: number
+  tours: string[]
+  hasMoreTours: boolean
+  tourLabel: string  // Tooltip表示用（API側で生成済み、フロント側で join しない）
+}
+
+// 楽曲演奏推移データ（GET /api/songs/:id/performance-timeline レスポンス）
+export interface SongPerformanceTimelineData {
+  totalPerformances: number
+  firstPerformedAt: string | null
+  lastPerformedAt: string | null
+  longestGapDays: number | null      // 連続する披露日の差分の最大値
+  longestGapStart: string | null
+  longestGapEnd: string | null
+  currentGapDays: number | null      // 最後の披露日から今日まで（Math.max(0, ...) 適用済み）
+  peakYear: number | null            // 最多披露年
+  peakCount: number | null           // 最多披露回数
+  avgYearlyCount: number | null      // 演奏あり年の平均演奏回数
+  consecutiveYears: number | null    // 最長連続披露年数
+  yearlyData: YearlyPerformanceEntry[]
+}

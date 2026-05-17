@@ -417,7 +417,7 @@ function MyPage() {
                                             <Link
                                                 to={`/predictions/edit/${item.id}`}
                                                 onClick={(e) => e.stopPropagation()}
-                                                style={{ color: '#94a3b8', hover: { color: '#3b82f6' } }}
+                                                style={{ color: '#94a3b8' }}
                                                 className="edit-icon-btn"
                                             >
                                                 <Edit2 size={16} />

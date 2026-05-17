@@ -197,6 +197,166 @@ router.get('/:id/stats', async (req, res) => {
     }
 });
 
+// GET 楽曲演奏推移タイムライン（年別集計）
+router.get('/:id/performance-timeline', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // IDまたはタイトルで楽曲を特定する
+        const isNumericId = /^\d+$/.test(id);
+        const searchParam = isNumericId
+            ? id
+            : id.replace(/\s+/g, '').toLowerCase();
+
+        const songLookupQuery = isNumericId
+            ? 'SELECT id FROM songs WHERE id = $1 AND deleted_at IS NULL'
+            : "SELECT id FROM songs WHERE REPLACE(LOWER(title), ' ', '') = $1 AND deleted_at IS NULL";
+
+        const songResult = await db.query(songLookupQuery, [searchParam]);
+        if (songResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Song not found' });
+        }
+        const songId = songResult.rows[0].id;
+
+        // 年別演奏回数・ツアー名を集計（NULL tour_name を除外、安全な ARRAY サブクエリを使用）
+        const yearlyResult = await db.query(`
+            SELECT
+              EXTRACT(YEAR FROM l.date)::int AS year,
+              COUNT(DISTINCT l.id)::int AS count,
+              ARRAY(
+                SELECT DISTINCT t
+                FROM unnest(
+                  ARRAY_AGG(l.tour_name) FILTER (WHERE l.tour_name IS NOT NULL)
+                ) t
+                ORDER BY t
+              ) AS tours
+            FROM setlists sl
+            JOIN lives l ON sl.live_id = l.id
+            WHERE sl.song_id = $1
+              AND l.date <= CURRENT_DATE
+            GROUP BY EXTRACT(YEAR FROM l.date)
+            ORDER BY year ASC
+        `, [songId]);
+
+        // 初披露・最終披露日を取得
+        const metaResult = await db.query(`
+            SELECT
+              MIN(l.date) AS first_performed_at,
+              MAX(l.date) AS last_performed_at
+            FROM setlists sl
+            JOIN lives l ON sl.live_id = l.id
+            WHERE sl.song_id = $1
+              AND l.date <= CURRENT_DATE
+        `, [songId]);
+
+        const meta = metaResult.rows[0];
+        const firstPerformedAt = meta.first_performed_at
+            ? new Date(meta.first_performed_at).toISOString().slice(0, 10)
+            : null;
+        const lastPerformedAt = meta.last_performed_at
+            ? new Date(meta.last_performed_at).toISOString().slice(0, 10)
+            : null;
+
+        // 演奏があった全ライブ日付（昇順）を取得してサーバー側で longestGap を計算
+        const datesResult = await db.query(`
+            SELECT DISTINCT l.date
+            FROM setlists sl
+            JOIN lives l ON sl.live_id = l.id
+            WHERE sl.song_id = $1
+              AND l.date <= CURRENT_DATE
+            ORDER BY l.date ASC
+        `, [songId]);
+
+        const performanceDates = datesResult.rows.map(r => new Date(r.date));
+
+        // longestGap: 連続する披露日の差分の最大値（「その曲が演奏されなかった期間」）
+        let longestGapDays = null;
+        let longestGapStart = null;
+        let longestGapEnd = null;
+
+        for (let i = 1; i < performanceDates.length; i++) {
+            const gapDays = Math.floor(
+                (performanceDates[i] - performanceDates[i - 1]) / (1000 * 60 * 60 * 24)
+            );
+            if (longestGapDays === null || gapDays > longestGapDays) {
+                longestGapDays = gapDays;
+                longestGapStart = performanceDates[i - 1].toISOString().slice(0, 10);
+                longestGapEnd = performanceDates[i].toISOString().slice(0, 10);
+            }
+        }
+
+        // currentGapDays: 最後の披露日から今日まで（負数ガード）
+        const currentGapDays = lastPerformedAt
+            ? Math.max(0, Math.floor(
+                (new Date() - new Date(lastPerformedAt)) / (1000 * 60 * 60 * 24)
+              ))
+            : null;
+
+        // 年別データを構築し欠番補完（MIN_YEAR: 2000、MAX_YEAR: 現在年）
+        const MIN_YEAR = 2000;
+        const MAX_YEAR = new Date().getFullYear();
+        const startYear = firstPerformedAt
+            ? Math.max(MIN_YEAR, parseInt(firstPerformedAt.slice(0, 4)))
+            : MIN_YEAR;
+
+        const yearMap = {};
+        for (const row of yearlyResult.rows) {
+            yearMap[row.year] = { count: row.count, tours: row.tours };
+        }
+
+        // ツアー名は5件まで表示、tourLabel は API 側で生成（Tooltip のパフォーマンス最適化）
+        const yearlyData = [];
+        for (let y = startYear; y <= MAX_YEAR; y++) {
+            const entry = yearMap[y] ?? { count: 0, tours: [] };
+            const tours = (entry.tours ?? []).slice(0, 5);
+            const hasMoreTours = (entry.tours ?? []).length > 5;
+            const tourLabel = tours.join(' / ') + (hasMoreTours ? '…他' : '');
+            yearlyData.push({ year: y, count: entry.count, tours, hasMoreTours, tourLabel });
+        }
+
+        // 演奏密度メタデータを計算
+        const totalPerformances = yearlyData.reduce((sum, y) => sum + y.count, 0);
+        const activeYears = yearlyData.filter(y => y.count > 0);
+        const peakEntry = activeYears.reduce(
+            (max, y) => (y.count > (max?.count ?? 0) ? y : max),
+            null
+        );
+        const avgYearlyCount = activeYears.length > 0
+            ? parseFloat((totalPerformances / activeYears.length).toFixed(1))
+            : 0;
+
+        // 連続披露年数: 最長の連続する演奏あり年の長さ
+        let consecutiveYears = 0;
+        let currentStreak = 0;
+        for (const y of yearlyData) {
+            if (y.count > 0) {
+                currentStreak++;
+                consecutiveYears = Math.max(consecutiveYears, currentStreak);
+            } else {
+                currentStreak = 0;
+            }
+        }
+
+        res.json({
+            totalPerformances,
+            firstPerformedAt,
+            lastPerformedAt,
+            longestGapDays,
+            longestGapStart,
+            longestGapEnd,
+            currentGapDays,
+            peakYear: peakEntry?.year ?? null,
+            peakCount: peakEntry?.count ?? null,
+            avgYearlyCount,
+            consecutiveYears: consecutiveYears > 0 ? consecutiveYears : null,
+            yearlyData,
+        });
+    } catch (err) {
+        console.error('[performance-timeline] Error:', err.message);
+        res.status(500).json({ message: 'Server Error', error: err.message });
+    }
+});
+
 // CREATE a Song (Admin only)
 router.post('/', authorize, adminCheck, async (req, res) => {
     try {
