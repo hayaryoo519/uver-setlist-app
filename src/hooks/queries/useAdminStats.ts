@@ -37,7 +37,7 @@ export const useAdminStats = () =>
   useQuery({
     queryKey: queryKeys.admin.stats,
     queryFn: async () => {
-      const data: any = await apiClient.get('/api/stats/admin')
+      const data: any = await apiClient.get('/api/stats?admin=true')
       return data as AdminStats
     },
     staleTime: 60_000,
