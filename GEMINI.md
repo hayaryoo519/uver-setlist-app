@@ -76,3 +76,10 @@ feature/* (ローカル) → dev (Staging 自動デプロイ) → main + GitHub 
 - データベース: PostgreSQL
 - モジュールシステム: ESM (`"type": "module"`)
 - ブランチ: `dev` で開発、`main` は本番用
+
+## Obsidian 運用ルール
+- **作業ログの自動資産化**: 毎日の作業終了時、またはセッションの終了時に、その日の会話や解決したエラーをまとめ、以下の場所に Markdown ファイルとして保存すること。
+  - 保存先: `C:\Users\oault\ドキュメント\Obsidian\ローカル\Daily\YYYY-MM-DD.md`
+- **エラーの資産化**: 重要なエラーや環境構築のトラブルを解決した場合は、独立したノートとして以下に保存すること。
+  - 保存先: `C:\Users\oault\ドキュメント\Obsidian\ローカル\Errors/`
+- **ワークフローの利用**: ログの生成には `/daily-archive` ワークフローを利用すること。
