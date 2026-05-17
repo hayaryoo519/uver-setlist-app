@@ -5,6 +5,7 @@ import { Music, Calendar, MapPin, Play, Clock, ArrowLeft, Loader, Sparkles, Chev
 import ImageWithFallback from '../components/common/ImageWithFallback';
 import SEO from '../components/SEO';
 import { DISCOGRAPHY } from '../data/discography';
+import SongYearlyPerformanceChart from '../components/Visual/SongYearlyPerformanceChart';
 
 const SongDetail = () => {
     const { id } = useParams();
@@ -287,6 +288,16 @@ const SongDetail = () => {
                         )}
                     </div>
                 </div>
+
+                {/* PERFORMANCE TIMELINE チャート（演奏回数が1件以上の場合のみ表示） */}
+                {playCount > 0 && (
+                    <section className="mb-8">
+                        <h2 className="text-2xl font-bold font-oswald border-l-4 border-blue-500 pl-4 mb-6">
+                            PERFORMANCE TIMELINE
+                        </h2>
+                        <SongYearlyPerformanceChart songId={id} />
+                    </section>
+                )}
 
                 {/* Performance History Controls */}
                 <div id="performance-history" className="flex flex-col md:flex-row items-start md:items-center mb-6 gap-4">
