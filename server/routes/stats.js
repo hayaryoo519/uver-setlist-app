@@ -11,7 +11,10 @@ const formatDate = (dateStr) => {
     return `${year}.${month}.${day}`;
 };
 
-router.get('/', async (req, res) => {
+router.get('/', async (req, res, next) => {
+    if (req.query.admin === 'true') {
+        return next();
+    }
     try {
         const today = new Date().toISOString().split('T')[0];
 
@@ -196,8 +199,8 @@ router.get('/', async (req, res) => {
     }
 });
 
-// 管理者向けKPI統計
-router.get('/admin', authorize, adminCheck, async (req, res) => {
+// 管理者向けKPI統計（/api/stats?admin=true でアクセスされる）
+router.get('/', authorize, adminCheck, async (req, res) => {
     try {
         const queryWithFallback = async (queryStr, fallbackRows) => {
             try {
