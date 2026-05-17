@@ -11,10 +11,118 @@ const formatDate = (dateStr) => {
     return `${year}.${month}.${day}`;
 };
 
-router.get('/', async (req, res, next) => {
+router.get('/', async (req, res) => {
     if (req.query.admin === 'true') {
-        return next();
+        return authorize(req, res, () => {
+            return adminCheck(req, res, async () => {
+                try {
+                    const queryWithFallback = async (queryStr, fallbackRows) => {
+                        try {
+                            return await db.query(queryStr);
+                        } catch (err) {
+                            console.error(`[STATS/ADMIN] Query failed:`, err.message);
+                            return { rows: fallbackRows };
+                        }
+                    };
+
+                    const [
+                        userStatsRes,
+                        predictionStatsRes,
+                        attendanceStatsRes,
+                        activeUsersRes,
+                        correctionStatsRes,
+                        dailyRegistrationsRes,
+                        dailyPredictionsRes,
+                    ] = await Promise.all([
+                        // ユーザー統計
+                        queryWithFallback(`
+                            SELECT
+                                COUNT(*)::int                                                          AS total_users,
+                                COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')::int AS new_users_30d,
+                                COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days')::int  AS new_users_7d,
+                                COUNT(*) FILTER (WHERE is_public = true)::int                         AS public_users
+                            FROM users
+                            WHERE deleted_at IS NULL
+                        `, [{ total_users: 0, new_users_30d: 0, new_users_7d: 0, public_users: 0 }]),
+
+                        // 予想統計
+                        queryWithFallback(`
+                            SELECT
+                                COUNT(*)::int                                                          AS total_predictions,
+                                COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')::int AS new_predictions_30d,
+                                COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days')::int  AS new_predictions_7d,
+                                COUNT(DISTINCT user_id)::int                                           AS users_with_predictions
+                            FROM predictions
+                        `, [{ total_predictions: 0, new_predictions_30d: 0, new_predictions_7d: 0, users_with_predictions: 0 }]),
+
+                        // 参戦記録統計
+                        queryWithFallback(`
+                            SELECT
+                                COUNT(*)::int                                                          AS total_attendance,
+                                COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')::int AS new_attendance_30d,
+                                COUNT(DISTINCT user_id)::int                                           AS users_with_attendance
+                            FROM attendance
+                        `, [{ total_attendance: 0, new_attendance_30d: 0, users_with_attendance: 0 }]),
+
+                        // アクティブユーザー（ログイン成功ベース）
+                        queryWithFallback(`
+                            SELECT
+                                COUNT(DISTINCT user_email) FILTER (WHERE timestamp >= NOW() - INTERVAL '7 days')::int  AS active_7d,
+                                COUNT(DISTINCT user_email) FILTER (WHERE timestamp >= NOW() - INTERVAL '30 days')::int AS active_30d
+                            FROM security_logs
+                            WHERE event_type = 'login_success'
+                        `, [{ active_7d: 0, active_30d: 0 }]),
+
+                        // 修正依頼統計
+                        queryWithFallback(`
+                            SELECT
+                                COUNT(*)::int                                              AS total_corrections,
+                                COUNT(*) FILTER (WHERE status = 'pending')::int           AS pending_corrections,
+                                COUNT(*) FILTER (WHERE status = 'resolved')::int          AS resolved_corrections
+                            FROM corrections
+                        `, [{ total_corrections: 0, pending_corrections: 0, resolved_corrections: 0 }]),
+
+                        // 直近30日の日別新規ユーザー数
+                        queryWithFallback(`
+                            SELECT
+                                DATE(created_at)::text AS date,
+                                COUNT(*)::int          AS count
+                            FROM users
+                            WHERE created_at >= NOW() - INTERVAL '30 days'
+                              AND deleted_at IS NULL
+                            GROUP BY DATE(created_at)
+                            ORDER BY date ASC
+                        `, []),
+
+                        // 直近30日の日別予想投稿数
+                        queryWithFallback(`
+                            SELECT
+                                DATE(created_at)::text AS date,
+                                COUNT(*)::int          AS count
+                            FROM predictions
+                            WHERE created_at >= NOW() - INTERVAL '30 days'
+                            GROUP BY DATE(created_at)
+                            ORDER BY date ASC
+                        `, [])
+                    ]);
+
+                    return res.json({
+                        users:        { ...userStatsRes.rows[0] },
+                        predictions:  { ...predictionStatsRes.rows[0] },
+                        attendance:   { ...attendanceStatsRes.rows[0] },
+                        activeUsers:  { ...activeUsersRes.rows[0] },
+                        corrections:  { ...correctionStatsRes.rows[0] },
+                        dailyRegistrations: dailyRegistrationsRes.rows,
+                        dailyPredictions:   dailyPredictionsRes.rows,
+                    });
+                } catch (err) {
+                    console.error('[/api/stats?admin=true] Error:', err.message);
+                    return res.status(500).json({ message: 'Server Error' });
+                }
+            });
+        });
     }
+
     try {
         const today = new Date().toISOString().split('T')[0];
 
@@ -196,114 +304,6 @@ router.get('/', async (req, res, next) => {
         console.error('[/api/stats] Error:', err.message);
         console.error(err.stack);
         res.status(500).json({ message: 'Server Error', error: err.message });
-    }
-});
-
-// 管理者向けKPI統計（/api/stats?admin=true でアクセスされる）
-router.get('/', authorize, adminCheck, async (req, res) => {
-    try {
-        const queryWithFallback = async (queryStr, fallbackRows) => {
-            try {
-                return await db.query(queryStr);
-            } catch (err) {
-                console.error(`[STATS/ADMIN] Query failed:`, err.message);
-                return { rows: fallbackRows };
-            }
-        };
-
-        const [
-            userStatsRes,
-            predictionStatsRes,
-            attendanceStatsRes,
-            activeUsersRes,
-            correctionStatsRes,
-            dailyRegistrationsRes,
-            dailyPredictionsRes,
-        ] = await Promise.all([
-            // ユーザー統計
-            queryWithFallback(`
-                SELECT
-                    COUNT(*)::int                                                          AS total_users,
-                    COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')::int AS new_users_30d,
-                    COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days')::int  AS new_users_7d,
-                    COUNT(*) FILTER (WHERE is_public = true)::int                         AS public_users
-                FROM users
-                WHERE deleted_at IS NULL
-            `, [{ total_users: 0, new_users_30d: 0, new_users_7d: 0, public_users: 0 }]),
-
-            // 予想統計
-            queryWithFallback(`
-                SELECT
-                    COUNT(*)::int                                                          AS total_predictions,
-                    COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')::int AS new_predictions_30d,
-                    COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days')::int  AS new_predictions_7d,
-                    COUNT(DISTINCT user_id)::int                                           AS users_with_predictions
-                FROM predictions
-            `, [{ total_predictions: 0, new_predictions_30d: 0, new_predictions_7d: 0, users_with_predictions: 0 }]),
-
-            // 参戦記録統計
-            queryWithFallback(`
-                SELECT
-                    COUNT(*)::int                                                          AS total_attendance,
-                    COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')::int AS new_attendance_30d,
-                    COUNT(DISTINCT user_id)::int                                           AS users_with_attendance
-                FROM attendance
-            `, [{ total_attendance: 0, new_attendance_30d: 0, users_with_attendance: 0 }]),
-
-            // アクティブユーザー（ログイン成功ベース）
-            queryWithFallback(`
-                SELECT
-                    COUNT(DISTINCT user_email) FILTER (WHERE timestamp >= NOW() - INTERVAL '7 days')::int  AS active_7d,
-                    COUNT(DISTINCT user_email) FILTER (WHERE timestamp >= NOW() - INTERVAL '30 days')::int AS active_30d
-                FROM security_logs
-                WHERE event_type = 'login_success'
-            `, [{ active_7d: 0, active_30d: 0 }]),
-
-            // 修正依頼統計
-            queryWithFallback(`
-                SELECT
-                    COUNT(*)::int                                              AS total_corrections,
-                    COUNT(*) FILTER (WHERE status = 'pending')::int           AS pending_corrections,
-                    COUNT(*) FILTER (WHERE status = 'resolved')::int          AS resolved_corrections
-                FROM corrections
-            `, [{ total_corrections: 0, pending_corrections: 0, resolved_corrections: 0 }]),
-
-            // 直近30日の日別新規ユーザー数
-            queryWithFallback(`
-                SELECT
-                    DATE(created_at)::text AS date,
-                    COUNT(*)::int          AS count
-                FROM users
-                WHERE created_at >= NOW() - INTERVAL '30 days'
-                  AND deleted_at IS NULL
-                GROUP BY DATE(created_at)
-                ORDER BY date ASC
-            `, []),
-
-            // 直近30日の日別予想投稿数
-            queryWithFallback(`
-                SELECT
-                    DATE(created_at)::text AS date,
-                    COUNT(*)::int          AS count
-                FROM predictions
-                WHERE created_at >= NOW() - INTERVAL '30 days'
-                GROUP BY DATE(created_at)
-                ORDER BY date ASC
-            `, [])
-        ]);
-
-        res.json({
-            users:        { ...userStatsRes.rows[0] },
-            predictions:  { ...predictionStatsRes.rows[0] },
-            attendance:   { ...attendanceStatsRes.rows[0] },
-            activeUsers:  { ...activeUsersRes.rows[0] },
-            corrections:  { ...correctionStatsRes.rows[0] },
-            dailyRegistrations: dailyRegistrationsRes.rows,
-            dailyPredictions:   dailyPredictionsRes.rows,
-        });
-    } catch (err) {
-        console.error('[/api/stats/admin] Error:', err.message);
-        res.status(500).json({ message: 'Server Error' });
     }
 });
 
