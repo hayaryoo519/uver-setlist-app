@@ -199,6 +199,15 @@ router.get('/', async (req, res) => {
 // 管理者向けKPI統計
 router.get('/admin', authorize, adminCheck, async (req, res) => {
     try {
+        const queryWithFallback = async (queryStr, fallbackRows) => {
+            try {
+                return await db.query(queryStr);
+            } catch (err) {
+                console.error(`[STATS/ADMIN] Query failed:`, err.message);
+                return { rows: fallbackRows };
+            }
+        };
+
         const [
             userStatsRes,
             predictionStatsRes,
@@ -209,7 +218,7 @@ router.get('/admin', authorize, adminCheck, async (req, res) => {
             dailyPredictionsRes,
         ] = await Promise.all([
             // ユーザー統計
-            db.query(`
+            queryWithFallback(`
                 SELECT
                     COUNT(*)::int                                                          AS total_users,
                     COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')::int AS new_users_30d,
@@ -217,42 +226,47 @@ router.get('/admin', authorize, adminCheck, async (req, res) => {
                     COUNT(*) FILTER (WHERE is_public = true)::int                         AS public_users
                 FROM users
                 WHERE deleted_at IS NULL
-            `),
+            `, [{ total_users: 0, new_users_30d: 0, new_users_7d: 0, public_users: 0 }]),
+
             // 予想統計
-            db.query(`
+            queryWithFallback(`
                 SELECT
                     COUNT(*)::int                                                          AS total_predictions,
                     COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')::int AS new_predictions_30d,
                     COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days')::int  AS new_predictions_7d,
                     COUNT(DISTINCT user_id)::int                                           AS users_with_predictions
                 FROM predictions
-            `),
+            `, [{ total_predictions: 0, new_predictions_30d: 0, new_predictions_7d: 0, users_with_predictions: 0 }]),
+
             // 参戦記録統計
-            db.query(`
+            queryWithFallback(`
                 SELECT
                     COUNT(*)::int                                                          AS total_attendance,
                     COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')::int AS new_attendance_30d,
                     COUNT(DISTINCT user_id)::int                                           AS users_with_attendance
                 FROM attendance
-            `),
+            `, [{ total_attendance: 0, new_attendance_30d: 0, users_with_attendance: 0 }]),
+
             // アクティブユーザー（ログイン成功ベース）
-            db.query(`
+            queryWithFallback(`
                 SELECT
                     COUNT(DISTINCT user_email) FILTER (WHERE timestamp >= NOW() - INTERVAL '7 days')::int  AS active_7d,
                     COUNT(DISTINCT user_email) FILTER (WHERE timestamp >= NOW() - INTERVAL '30 days')::int AS active_30d
                 FROM security_logs
                 WHERE event_type = 'login_success'
-            `),
+            `, [{ active_7d: 0, active_30d: 0 }]),
+
             // 修正依頼統計
-            db.query(`
+            queryWithFallback(`
                 SELECT
                     COUNT(*)::int                                              AS total_corrections,
                     COUNT(*) FILTER (WHERE status = 'pending')::int           AS pending_corrections,
                     COUNT(*) FILTER (WHERE status = 'resolved')::int          AS resolved_corrections
                 FROM corrections
-            `),
+            `, [{ total_corrections: 0, pending_corrections: 0, resolved_corrections: 0 }]),
+
             // 直近30日の日別新規ユーザー数
-            db.query(`
+            queryWithFallback(`
                 SELECT
                     DATE(created_at)::text AS date,
                     COUNT(*)::int          AS count
@@ -261,9 +275,10 @@ router.get('/admin', authorize, adminCheck, async (req, res) => {
                   AND deleted_at IS NULL
                 GROUP BY DATE(created_at)
                 ORDER BY date ASC
-            `),
+            `, []),
+
             // 直近30日の日別予想投稿数
-            db.query(`
+            queryWithFallback(`
                 SELECT
                     DATE(created_at)::text AS date,
                     COUNT(*)::int          AS count
@@ -271,7 +286,7 @@ router.get('/admin', authorize, adminCheck, async (req, res) => {
                 WHERE created_at >= NOW() - INTERVAL '30 days'
                 GROUP BY DATE(created_at)
                 ORDER BY date ASC
-            `),
+            `, [])
         ]);
 
         res.json({
