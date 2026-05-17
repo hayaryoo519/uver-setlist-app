@@ -17,7 +17,7 @@ function LiveDetail() {
     const { isAttended, addLive, removeLive, loading: attendanceLoading } = useAttendance();
     const { currentUser } = useAuth();
     const [isCorrectionModalOpen, setIsCorrectionModalOpen] = useState(false);
-    const [activePlatform, setActivePlatform] = useState<'spotify' | 'youtube'>('spotify');
+    const [activePlatform, setActivePlatform] = useState<'spotify' | 'youtube'>('youtube');
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -223,6 +223,7 @@ function LiveDetail() {
                             <h2 className="text-xs font-black tracking-[0.3em] text-slate-500 uppercase">Streaming Integration</h2>
                             
                             <div className="flex bg-slate-900/80 p-1 rounded-xl border border-slate-800">
+                                {/* Spotify は非表示
                                 <button 
                                     onClick={() => setActivePlatform('spotify')}
                                     className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-2
@@ -232,6 +233,7 @@ function LiveDetail() {
                                 >
                                     <Music size={12} /> Spotify
                                 </button>
+                                */}
                                 <button 
                                     onClick={() => setActivePlatform('youtube')}
                                     className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-2
@@ -246,7 +248,7 @@ function LiveDetail() {
 
                         {currentUser ? (
                             activePlatform === 'spotify' ? (
-                                <SpotifyPlaylistButton liveId={liveId} />
+                                <div className="text-center py-4 text-slate-500 text-xs">Spotify機能は現在停止中です。</div>
                             ) : (
                                 <YoutubePlaylistButton liveId={liveId} />
                             )
