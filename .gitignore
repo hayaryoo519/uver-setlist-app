@@ -58,3 +58,6 @@ server/final_infra_setup.sh
 
 # Claude / AI ツールのローカル設定
 .claude/settings.local.json
+
+# 機密情報を含むドキュメント（ローカル限定）
+docs/*.secret.md
