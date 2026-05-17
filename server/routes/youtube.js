@@ -323,6 +323,7 @@ router.post('/auto-map-batch', authorize, async (req, res) => {
                     results.failed++;
                 }
             } catch (err) {
+                console.error(`[YouTube Bulk] Error for song ID ${id}:`, err.message);
                 results.failed++;
             }
             // Rate limiting (Search API is expensive, but for admin it's fine with small delay)

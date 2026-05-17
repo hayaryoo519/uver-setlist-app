@@ -220,9 +220,11 @@ const AdminSongsTab = () => {
                     <button className="btn-secondary" style={{ width: 'auto', borderColor: '#FF0000', color: '#FF0000', background: 'rgba(255,0,0,0.05)' }} onClick={handleYoutubeBulkAutoMap} disabled={isBulkMapping}>
                         {isBulkMapping ? <Loader className="spin" size={18} /> : <YoutubeIcon size={18} />} Bulk YT
                     </button>
+                    {/* 
                     <button className="btn-secondary" style={{ width: 'auto', borderColor: '#1DB954', color: '#1DB954', background: 'rgba(29,185,84,0.05)' }} onClick={handleSpotifyBulkAutoMap} disabled={isBulkMapping}>
                         {isBulkMapping ? <Loader className="spin" size={18} /> : <Search size={18} />} Bulk Spotify
                     </button>
+                    */}
                 </div>
             </div>
 
@@ -267,7 +269,7 @@ const AdminSongsTab = () => {
                                                 <button onClick={() => handleRestore(song.id)} className="action-btn" title="Restore" style={{ color: '#34d399' }}><RotateCcw size={18} /></button>
                                             ) : (
                                                 <>
-                                                    <button onClick={() => handleSpotifyAutoSearch(song)} className="action-btn" title="Spotify Auto Search" style={{ color: '#1DB954' }}><Search size={18} /></button>
+                                                    {/* <button onClick={() => handleSpotifyAutoSearch(song)} className="action-btn" title="Spotify Auto Search" style={{ color: '#1DB954' }}><Search size={18} /></button> */}
                                                     <button onClick={() => handleYoutubeAutoSearch(song)} className="action-btn" title="YouTube Auto Search" style={{ color: '#FF0000' }}><YoutubeIcon size={18} /></button>
                                                     <button onClick={() => openEdit(song)} className="action-btn edit" title="Edit"><Edit2 size={18} /></button>
                                                     <button onClick={() => handleDelete(song.id)} className="action-btn delete" title="Delete"><Trash2 size={18} /></button>
