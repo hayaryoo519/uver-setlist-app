@@ -11,7 +11,7 @@ export function normalizeLive(raw: any): Live {
             id: 0,
             tour_name: 'Unknown Tour',
             title: 'Unknown Live',
-            date: new Date().toISOString(),
+            date: '',
             venue: 'Unknown Venue',
             type: 'HALL',
             special_note: null,
@@ -91,7 +91,7 @@ export function normalizeSong(raw: any): Song {
  * 日付の安全な変換
  */
 export function safeDate(dateStr: any): string {
-    if (!dateStr) return new Date().toISOString();
+    if (!dateStr) return '';
     // Safari は YYYY.MM.DD や "YYYY-MM-DD HH:MM:SS" を拒否する。ISO 8601 に正規化する
     const normalized = typeof dateStr === 'string'
         ? dateStr.replace(/\./g, '-').replace(' ', 'T')
@@ -99,7 +99,7 @@ export function safeDate(dateStr: any): string {
     const d = new Date(normalized);
     if (isNaN(d.getTime())) {
         console.warn(`[Normalization] Invalid date string: ${dateStr}`);
-        return new Date().toISOString();
+        return typeof dateStr === 'string' ? dateStr : '';
     }
     return d.toISOString();
 }
