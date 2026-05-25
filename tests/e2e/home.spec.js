@@ -19,7 +19,7 @@ test('トップページを表示できる', async ({ page }) => {
   await expect(page.locator('a[href="/dashboard"]').filter({ hasText: 'データを見る' }).first()).toBeVisible();
 });
 
-test('一般ユーザーでログインしてマイページの参戦年表を表示できる', async ({ page }) => {
+test('一般ユーザーでログインしてマイページを表示できる', async ({ page }) => {
   const guest = readGuestAccount();
   test.skip(!guest, 'docs/prod_accounts.secret.md がない環境ではログインE2Eをスキップします');
 
@@ -29,6 +29,6 @@ test('一般ユーザーでログインしてマイページの参戦年表を�
   await page.getByRole('button', { name: /ログイン/ }).click();
 
   await expect(page).toHaveURL(/\/mypage/);
-  await expect(page.getByRole('heading', { name: '参戦年表' })).toBeVisible();
-  await expect(page.getByText('最多参戦年')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /マイページ/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '年間参戦履歴' })).toBeVisible();
 });
