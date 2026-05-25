@@ -1,0 +1,14 @@
+node_modules
+server/node_modules
+dist
+coverage
+playwright-report
+test-results
+.git
+.github
+.env
+.env.*
+server/.env
+server/.env.*
+npm-debug.log*
+server/npm-debug.log*
