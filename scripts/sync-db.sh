@@ -74,13 +74,11 @@ TRUNCATE TABLE security_logs CASCADE;
 TRUNCATE TABLE push_subscriptions CASCADE;
 TRUNCATE TABLE collector_logs CASCADE;
 
--- 修正申請などの自由入力項目があればクリア (テーブルが存在する場合のみ)
-DO \$\$ 
-BEGIN 
-    IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'corrections' AND column_name = 'comment') THEN
-        UPDATE corrections SET comment = '（非公開）';
-    END IF;
-END \$\$;
+-- 修正申請の自由入力・提案内容を匿名化
+UPDATE corrections SET
+    description = '（非公開）',
+    suggested_data = NULL,
+    admin_note = NULL;
 EOF
 
 if [ $? -ne 0 ]; then
