@@ -5,6 +5,16 @@
       "headers": {
         "X-Goog-Api-Key": "process.env.GOOGLE_STITCH_API_KEY"
       }
+    },
+    "notion": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-notion"
+      ],
+      "env": {
+        "NOTION_API_KEY": "ntn_U3793630285abIcTEaNwzQBuLZDeP1ukKxySNzRI4odcdk"
+      }
     }
   }
 }

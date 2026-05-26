@@ -5,6 +5,7 @@
 | [environments.md](./environments.md) | 環境構成・インフラ・本番サーバー運用メモ |
 | [development_workflow.md](./development_workflow.md) | 開発フロー・デプロイ手順・CI/CD |
 | [SPECIFICATIONS.md](./SPECIFICATIONS.md) | 機能仕様 |
+| [decisions.md](./decisions.md) | 設計判断・取りやめた理由・再検討条件の記録 |
 | [db_operations.md](./db_operations.md) | DBマイグレーション・操作手順 |
 | [versioning_policy.md](./versioning_policy.md) | バージョニング規則 |
 | [playlist_integration.md](./playlist_integration.md) | プレイリスト機能統合仕様 |

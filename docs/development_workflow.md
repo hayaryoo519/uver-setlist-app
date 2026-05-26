@@ -8,7 +8,7 @@
 
 | 環境 | ブランチ | URL | DB |
 |:---|:---|:---|:---|
-| **ローカル (Local)** | `feature/*` | `http://localhost:8000` | Docker Supabase (port: 54332) |
+| **ローカル (Local)** | `feature/*` | `http://localhost:5173` | Docker Supabase (port: 54332) |
 | **検証 (Staging)** | `dev` | `http://<staging-server>:9001` | Docker PostgreSQL (port: 54325) |
 | **本番 (Production)** | `main` | `https://uver-setlist-archive.org` | Host PostgreSQL (port: 5432) |
 
@@ -34,6 +34,9 @@ npm run dev
 
 # バックエンド（別ターミナルで実行）
 cd server && npm run dev
+
+# Vite は /api と /uploads を http://127.0.0.1:3001 にプロキシします。
+# ローカルでは server/.env の PORT を 3001 に設定してください。
 ```
 
 ### コミットする
