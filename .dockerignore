@@ -2,6 +2,7 @@ node_modules
 server/node_modules
 dist
 coverage
+backups/
 playwright-report
 test-results
 .git

@@ -142,6 +142,8 @@ sudo journalctl -u uver-setlist -f
 
 ### デプロイ手順（本番）
 
+通常は GitHub Release publish による自動デプロイを使用します。以下は Actions 障害時など、復旧のために手動実行が必要な場合のみ使用します。
+
 ```bash
 # 本番サーバーにSSHしてから
 cd /home/<server-user>/apps/uver-setlist-app
@@ -171,7 +173,7 @@ sudo systemctl status uver-setlist
 
 1. `gh release create vX.Y.Z` でリリース publish
 2. GitHub Actions (`deploy-production.yml`) が self-hosted ランナーで起動
-3. `git reset --hard origin/main` → `npm install` → `node scripts/migrate.js` → `npm run build` → `systemctl restart uver-setlist`
+3. `git reset --hard origin/main` → `npm install` → DBバックアップ → `node scripts/migrate.js` → `npm run build` → `systemctl restart uver-setlist` → `/api/ping` ヘルスチェック
 
 > 詳細な手順・バージョン規則は `docs/development_workflow.md` を参照。
 
@@ -210,7 +212,8 @@ sudo systemctl status uver-setlist
 ### コードの反映フロー
 1. `feature/*` で開発 (Local)
 2. `dev` ブランチへマージ → 検証環境へデプロイ (Staging)
-3. 動作確認後、`main` ブランチへマージ → 本番環境へデプロイ (Production)
+3. 動作確認後、`main` ブランチへマージ
+4. GitHub Release を publish → 本番環境へデプロイ (Production)
 
 ---
 
