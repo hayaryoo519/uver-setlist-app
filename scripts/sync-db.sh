@@ -12,6 +12,7 @@ fi
 
 # 設定
 STAGING_DB_NAME="${STAGING_DB_NAME:-uver_setlist_staging}"
+export PGDATABASE="$STAGING_DB_NAME"
 BACKUP_FILE="${1:-}" # コマンドライン引数からバックアップファイルを指定
 
 # 1. 二段階 Safety Guard
@@ -51,7 +52,7 @@ createdb "$STAGING_DB_NAME"
 
 log_info "Importing data from ${BACKUP_FILE}..."
 # 圧縮ファイルを解凍しながら pg_restore
-zcat "$BACKUP_FILE" | pg_restore -d "$STAGING_DB_NAME" || {
+zcat "$BACKUP_FILE" | pg_restore --no-owner --no-privileges -d "$STAGING_DB_NAME" || {
     log_error "Import failed. Dropping inconsistent database to prevent raw data exposure."
     dropdb --if-exists "$STAGING_DB_NAME"
     exit 1
