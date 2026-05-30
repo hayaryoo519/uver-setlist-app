@@ -25,13 +25,31 @@ jobs:
           # 4. バックエンド依存関係のインストール
           npm install
 
-          # 5. DBマイグレーション
+          # 5. DBバックアップ
+          cd ~/apps/uver-setlist-app
+          BACKUP_DIR="$HOME/apps/uver-setlist-app/backups" ./scripts/backup-db.sh
+
+          # 6. DBマイグレーション
+          cd ~/apps/uver-setlist-app/server
           node scripts/migrate.js
 
-          # 6. フロントエンドビルド
+          # 7. フロントエンドビルド
           cd ~/apps/uver-setlist-app
           npm install --legacy-peer-deps
           npm run build
 
-          # 7. サービス再起動
+          # 8. サービス再起動
           echo "${{ secrets.SUDO_PASSWORD }}" | sudo -S systemctl restart uver-setlist
+
+          # 9. APIヘルスチェック
+          for attempt in {1..10}; do
+            if curl --fail --silent --show-error http://127.0.0.1:8000/api/ping; then
+              echo "API health check passed."
+              exit 0
+            fi
+            echo "Waiting for API startup... (${attempt}/10)"
+            sleep 2
+          done
+
+          echo "API health check failed."
+          exit 1

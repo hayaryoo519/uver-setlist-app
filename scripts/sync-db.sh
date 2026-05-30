@@ -12,6 +12,7 @@ fi
 
 # 設定
 STAGING_DB_NAME="${STAGING_DB_NAME:-uver_setlist_staging}"
+export PGDATABASE="$STAGING_DB_NAME"
 BACKUP_FILE="${1:-}" # コマンドライン引数からバックアップファイルを指定
 
 # 1. 二段階 Safety Guard
@@ -51,7 +52,7 @@ createdb "$STAGING_DB_NAME"
 
 log_info "Importing data from ${BACKUP_FILE}..."
 # 圧縮ファイルを解凍しながら pg_restore
-zcat "$BACKUP_FILE" | pg_restore -d "$STAGING_DB_NAME" || {
+zcat "$BACKUP_FILE" | pg_restore --no-owner --no-privileges -d "$STAGING_DB_NAME" || {
     log_error "Import failed. Dropping inconsistent database to prevent raw data exposure."
     dropdb --if-exists "$STAGING_DB_NAME"
     exit 1
@@ -74,13 +75,11 @@ TRUNCATE TABLE security_logs CASCADE;
 TRUNCATE TABLE push_subscriptions CASCADE;
 TRUNCATE TABLE collector_logs CASCADE;
 
--- 修正申請などの自由入力項目があればクリア (テーブルが存在する場合のみ)
-DO \$\$ 
-BEGIN 
-    IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'corrections' AND column_name = 'comment') THEN
-        UPDATE corrections SET comment = '（非公開）';
-    END IF;
-END \$\$;
+-- 修正申請の自由入力・提案内容を匿名化
+UPDATE corrections SET
+    description = '（非公開）',
+    suggested_data = NULL,
+    admin_note = NULL;
 EOF
 
 if [ $? -ne 0 ]; then

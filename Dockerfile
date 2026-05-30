@@ -9,7 +9,7 @@ ARG NODE_ENV=production
 
 # Copy package files first for better caching
 COPY package*.json ./
-RUN npm install --include=dev --legacy-peer-deps
+RUN npm ci --include=dev --legacy-peer-deps
 
 # Copy source and build frontend
 COPY . .
@@ -25,15 +25,16 @@ FROM node:20-slim
 
 WORKDIR /app
 
+# Install production dependencies for the runtime image.
 COPY --from=builder /app/package*.json ./
-RUN npm install --production --legacy-peer-deps
+RUN npm ci --omit=dev --legacy-peer-deps
 
 # Copy built assets and server code
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server ./server
 
 # server 専用の依存関係をインストール
-RUN cd server && npm install --production
+RUN cd server && npm ci --omit=dev
 
 EXPOSE 8000
 

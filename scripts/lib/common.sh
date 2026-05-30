@@ -33,13 +33,20 @@ notify_error() {
 # 環境ガード
 # $1: 操作の性質 ("destructive" を指定すると本番での実行を拒否)
 check_env_safety() {
-    local target_db_host="${DB_HOST:-}"
+    local target_db_host="${PGHOST:-${DB_HOST:-}}"
+    local target_db_port="${PGPORT:-${DB_PORT:-}}"
+    local target_db_name="${PGDATABASE:-${STAGING_DB_NAME:-${DB_NAME:-}}}"
     local prod_db_host="${PROD_DB_HOST:-prod-db.uver-setlist-archive.org}"
+    local prod_db_port="${PROD_DB_PORT:-5432}"
+    local prod_db_name="${PROD_DB_NAME:-uver_setlist_prod}"
 
     # 破壊的操作を行う場合の追加チェック
     if [[ "${1:-}" == "destructive" ]]; then
-        if [[ "${APP_ENV:-}" == "production" ]] || [[ "$target_db_host" == "$prod_db_host" ]]; then
-            log_error "Destructive operation blocked on PRODUCTION environment/host!"
+        if [[ "${APP_ENV:-}" == "production" ]] \
+            || [[ "$target_db_host" == "$prod_db_host" ]] \
+            || [[ "$target_db_name" == "$prod_db_name" ]] \
+            || [[ "$target_db_host" == "127.0.0.1" && "$target_db_port" == "$prod_db_port" && "$target_db_name" != "uver_setlist_staging" ]]; then
+            log_error "Destructive operation blocked on PRODUCTION environment/database!"
             notify_error "Destructive operation blocked on Production."
             exit 1
         fi

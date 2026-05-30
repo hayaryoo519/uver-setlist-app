@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const apiUrl = process.env.VITE_API_URL || (process.env.NODE_ENV === 'production' ? 'http://localhost:8000' : 'http://127.0.0.1:8003')
+
 // https://vite.dev/config/
 export default defineConfig({
   base: '/',
@@ -153,17 +155,17 @@ export default defineConfig({
   define: {
     // 環境変数をクライアント側に公開
     'import.meta.env.VITE_APP_ENV': JSON.stringify(process.env.NODE_ENV || process.env.VITE_APP_ENV || 'development'),
-    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'http://localhost:3001')
+    'import.meta.env.VITE_API_URL': JSON.stringify(apiUrl)
   },
   server: {
     host: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:3001',
+        target: apiUrl,
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'http://127.0.0.1:3001',
+        target: apiUrl,
         changeOrigin: true,
       },
     },
@@ -172,7 +174,14 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
-    exclude: ['**/node_modules/**', '**/dist/**', '**/server/tests/**'],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/server/tests/**',
+      '**/tests/e2e/**',
+      '**/playwright-report/**',
+      '**/test-results/**',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],

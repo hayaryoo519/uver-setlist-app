@@ -18,7 +18,7 @@ UVERworldのライブセットリストを、ユーザー自身のSpotifyまた�
 2. **外部認証**: 「連携して作成」ボタンを押し、Spotify/Googleの認証画面（ポップアップ/別タブ）で承認。
 3. **作成実行**: 連携完了後、「プレイリストを作成」ボタンをクリック。
 4. **自動生成**:
-    - DB内の `spotify_track_id` / `youtube_video_id` を優先して参照。
+    - DB内の `spotify_track_id` / `yt_video_id` を優先して参照。
     - IDがない場合は、楽曲タイトルで自動検索し、ヒットしたものを追加。
     - 検索結果を次回の高速化のためにDBへ書き戻し（オートマッピング）。
 5. **完了**: 作成されたプレイリストへの直リンクを表示。
@@ -35,9 +35,9 @@ UVERworldのライブセットリストを、ユーザー自身のSpotifyまた�
 - **Auto Mapping**: 楽曲が見つからなかった場合、次回以降の精度のために検索結果を `songs` テーブルに正規化して保存。
 
 ### データベース（主なテーブル）
-- `user_spotify_tokens` / `user_youtube_tokens`: 連携情報。
+- `user_spotify_tokens` / `user_google_tokens`: 連携情報。
 - `playlist_history`: 作成したプレイリストのメタデータ。
-- `songs`: `spotify_track_id`, `youtube_video_id` カラムでマッピングを保持。
+- `songs`: `spotify_track_id`, `yt_video_id` カラムでマッピングを保持。
 
 ## 7. 今後の拡張予定（検討事項）
 - **ゲスト対応**: ログインなしでもその場限りの認証で作成できるようにする。

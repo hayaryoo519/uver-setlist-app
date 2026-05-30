@@ -8,7 +8,7 @@
 
 | 環境 | ブランチ | URL | DB |
 |:---|:---|:---|:---|
-| **ローカル (Local)** | `feature/*` | `http://localhost:8000` | Docker Supabase (port: 54332) |
+| **ローカル (Local)** | `feature/*` | `http://localhost:5173` | Docker Supabase (port: 54332) |
 | **検証 (Staging)** | `dev` | `http://<staging-server>:9001` | Docker PostgreSQL (port: 54325) |
 | **本番 (Production)** | `main` | `https://uver-setlist-archive.org` | Host PostgreSQL (port: 5432) |
 
@@ -34,6 +34,9 @@ npm run dev
 
 # バックエンド（別ターミナルで実行）
 cd server && npm run dev
+
+# Vite は /api と /uploads を http://127.0.0.1:3001 にプロキシします。
+# ローカルでは server/.env の PORT を 3001 に設定してください。
 ```
 
 ### コミットする
@@ -71,13 +74,15 @@ docker compose stop     # 一時停止
 docker compose down     # 完全停止（データ保持）
 ```
 
-### DB マイグレーションを実行する（スキーマ変更がある場合）
-```bash
-# サーバー上で実行
-cd server
+### DB マイグレーションを確認する（スキーマ変更がある場合）
 
-node scripts/migrate.js --dry-run   # 未適用の確認（実行しない）
-node scripts/migrate.js             # 実際に適用
+`dev` への push で起動する `deploy-staging.yml` は、Staging のマイグレーションを自動実行します。
+以下は未適用ファイルの事前確認や、障害対応で手動実行が必要な場合に使用します。
+
+```bash
+# Staging サーバー上で実行
+docker compose run --rm app-staging node server/scripts/migrate.js --dry-run
+docker compose run --rm app-staging node server/scripts/migrate.js
 ```
 
 ### 動作確認する
@@ -106,12 +111,29 @@ GitHub 上でレビュー → Merge pull request。
 
 **GitHub Release を publish すると自動デプロイ**されます（main へのマージだけでは動きません）。
 
+### リリース前チェック
+
+Release publish 前に、最低限以下を確認します。
+
+```bash
+npm test
+npm run build
+cd server
+npm test
+npm run migrate:dry
+```
+
+DB変更がある場合は、[`docs/db_operations.md`](./db_operations.md) の「本番DBのスキーマ変更ルール」も確認してください。
+
 ### 自動デプロイの流れ
 1. `gh release create vX.Y.Z` でリリース publish
 2. GitHub Actions (`deploy-production.yml`) が self-hosted ランナーで起動
-3. `git reset --hard origin/main` → `npm install` → `node scripts/migrate.js` → `npm run build` → `systemctl restart uver-setlist`
+3. `git reset --hard origin/main` → `npm install` → DBバックアップ → `node scripts/migrate.js` → `npm run build` → `systemctl restart uver-setlist` → `/api/ping` ヘルスチェック
 
 ### 手動デプロイが必要な場合
+
+通常は GitHub Release 経由でデプロイします。以下は Actions 障害時など、復旧のために手動実行が必要な場合のみ使用します。
+
 ```bash
 ssh <server-user>@server01
 cd ~/apps/uver-setlist-app/server
@@ -133,6 +155,8 @@ sudo journalctl -u uver-setlist -f          # リアルタイムログ
 sudo journalctl -u uver-setlist -n 50       # 直近50行
 sudo journalctl -u uver-setlist --since "1 hour ago" | grep -E "Error|500"  # エラー絞り込み
 ```
+
+Actions 成功後は、ブラウザでもトップページ、ログイン、ライブ一覧、ライブ詳細、変更した機能を確認します。
 
 ---
 
@@ -207,7 +231,7 @@ feature/xxx (ローカル開発)
 |:---|:---|:---|:---|
 | `test.yml` | push/PR → `main`, `dev` | GitHub hosted | バックエンド・フロントエンドのテスト実行 |
 | `deploy-staging.yml` | push → `dev` | self-hosted | `docker compose up -d --build` |
-| `deploy-production.yml` | Release published | self-hosted | git pull → migrate → build → systemctl restart |
+| `deploy-production.yml` | Release published | self-hosted | git pull → backup → migrate → build → restart → health check |
 
 ### self-hosted ランナー
 
@@ -245,4 +269,4 @@ sudo journalctl -u actions.runner.hayaryoo519-uver-setlist-app.server01 -f
 
 ---
 
-最終更新日: 2026-05-03
+最終更新日: 2026-05-30

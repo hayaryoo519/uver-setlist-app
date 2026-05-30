@@ -35,7 +35,9 @@ feature/* → dev（push で Staging 自動デプロイ）→ main（GitHub Rele
 
 ## 重要なルール
 
-- 本番DBへの直接操作は禁止。スキーマ変更は `server/scripts/` のマイグレーションスクリプトで行う。
+- 本番DBへの直接操作は禁止。スキーマ変更は `server/migrations/` に SQL を追加し、`server/scripts/migrate.js` で適用する。
+- 適用済みのマイグレーション SQL は編集しない。修正は新しい連番ファイルで追加する。
+- 通常リリースのDB変更は、旧コードと新コードの両方で動作する後方互換な変更にする。
 - `main` ブランチへのマージだけでは本番デプロイされない。**必ず GitHub Release を publish する。**
 - 本番デプロイ後は `sudo systemctl status uver-setlist` で起動時刻を確認する（ゾンビプロセス対策）。
 
