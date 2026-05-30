@@ -49,14 +49,14 @@ if ! pg_restore --list "$BACKUP_FILE" > /dev/null; then
     exit 1
 fi
 
-# 4. チェックサム生成
-log_info "Generating SHA256 checksum..."
-sha256sum "$BACKUP_FILE" > "${BACKUP_FILE}.sha256"
-
-# 5. 圧縮
+# 4. 圧縮
 log_info "Compressing backup file..."
 gzip -f "$BACKUP_FILE"
 FINAL_BACKUP="${BACKUP_FILE}.gz"
+
+# 5. 圧縮後ファイルのチェックサム生成
+log_info "Generating SHA256 checksum for compressed backup..."
+sha256sum "$FINAL_BACKUP" > "${FINAL_BACKUP}.sha256"
 
 # 6. 外部転送 (rsync)
 if [ -n "$REMOTE_BACKUP_SERVER" ]; then
@@ -64,7 +64,7 @@ if [ -n "$REMOTE_BACKUP_SERVER" ]; then
     # 転送先ディレクトリの作成
     ssh "$REMOTE_BACKUP_SERVER" "mkdir -p $REMOTE_BACKUP_PATH"
     # チェックサム検証付き転送を模した rsync
-    if ! rsync -avz "$FINAL_BACKUP" "${BACKUP_FILE}.sha256" "${REMOTE_BACKUP_SERVER}:${REMOTE_BACKUP_PATH}"; then
+    if ! rsync -avz "$FINAL_BACKUP" "${FINAL_BACKUP}.sha256" "${REMOTE_BACKUP_SERVER}:${REMOTE_BACKUP_PATH}"; then
         log_error "Remote transfer failed."
         notify_error "Remote transfer failed"
         exit 1

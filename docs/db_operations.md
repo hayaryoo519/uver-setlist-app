@@ -13,7 +13,21 @@ BACKUP_DIR=./backups ./scripts/backup-db.sh
 
 - **出力先**: `backups/backup_YYYYMMDD_HHMMSS.dump.gz`
 - **自動実行**: Production Actions はマイグレーション直前に同じバックアップを取得します。
-- **特徴**: データの整合性チェックサム（sha256）の生成と、gzip圧縮が自動で行われます。
+- **特徴**: gzip圧縮後のバックアップに対する整合性チェックサム（sha256）が自動生成されます。
+
+生成されるファイル:
+
+```text
+backup_YYYYMMDD_HHMMSS.dump.gz
+backup_YYYYMMDD_HHMMSS.dump.gz.sha256
+```
+
+保存・転送後の検証:
+
+```bash
+cd backups
+sha256sum -c backup_YYYYMMDD_HHMMSS.dump.gz.sha256
+```
 
 ---
 
