@@ -436,15 +436,15 @@ function MyPage() {
 
             {/* フォローフィード */}
             <div className="dashboard-panel" style={{ marginTop: '30px', marginBottom: '30px' }}>
-                <h3 style={{ marginBottom: '20px' }}>フォロワーのセトリ予想</h3>
+                <h3 style={{ marginBottom: '20px' }}>フォロー中ユーザーのセトリ予想</h3>
                 {feedLoading ? (
                     <p style={{ color: '#64748b', textAlign: 'center', padding: '20px' }}>読み込み中...</p>
                 ) : feedItems.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '30px 20px', color: '#475569' }}>
                         <Users size={32} style={{ opacity: 0.3, marginBottom: '12px' }} />
-                        <p style={{ marginBottom: '8px', fontWeight: 700 }}>フォロワーがいません</p>
+                        <p style={{ marginBottom: '8px', fontWeight: 700 }}>フォロー中のユーザーがいません</p>
                         <p style={{ fontSize: '0.85rem', color: '#334155' }}>
-                            フォロワーがセトリ予想を投稿するとここに表示されます
+                            セトリ予想ランキングから気になるユーザーをフォローできます
                         </p>
                     </div>
                 ) : (

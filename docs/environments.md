@@ -8,7 +8,7 @@ UVERworld Setlist Archive の稼働環境と、それぞれのデータベース
 
 | 環境名 | 用途 | アクセスURL | データベース | DBポート | DB名 | ブランチ |
 |:---|:---|:---|:---|:---|:---|:---|
-| **ローカル (Local)** | 個人開発・機能実装 | `http://localhost:8000` | Docker Supabase | `54332` | `uver_app_db` | `feature/*` |
+| **ローカル (Local)** | 個人開発・機能実装 | `http://localhost:5173` | Docker Supabase | `54332` | `uver_app_db` | `feature/*` |
 | **検証 (Staging)** | 統合テスト・検証 | `http://<staging-server>:9001` | Docker PostgreSQL | `54325` | `uver_setlist_staging` | `dev` |
 | **本番 (Production)** | ユーザー向け公開 | `https://uver-setlist-archive.org` | Host PostgreSQL | `5432` | `uver_setlist_prod` | `main` |
 
@@ -20,6 +20,8 @@ UVERworld Setlist Archive の稼働環境と、それぞれのデータベース
 - **構成**: Docker Desktop 上で動作する Supabase コンテナ (`supabase_db_marumie`) を使用。
 - **特徴**: 手軽に起動・リセットが可能。開発者ごとに独立したデータを持ちます。
 - **管理**: `server/.env` の `DB_HOST=localhost`, `DB_PORT=54332` で接続。
+- **アプリURL**: フロントエンドは Vite dev server の `http://localhost:5173`。API は `vite.config.js` により `http://127.0.0.1:3001` へプロキシされます。
+- **バックエンドポート**: ローカルでは `server/.env` の `PORT=3001` を使用してください。未設定時の Express フォールバックは `8000` です。
 
 #### 🚀 開発サーバー起動
 
@@ -140,6 +142,8 @@ sudo journalctl -u uver-setlist -f
 
 ### デプロイ手順（本番）
 
+通常は GitHub Release publish による自動デプロイを使用します。以下は Actions 障害時など、復旧のために手動実行が必要な場合のみ使用します。
+
 ```bash
 # 本番サーバーにSSHしてから
 cd /home/<server-user>/apps/uver-setlist-app
@@ -169,7 +173,7 @@ sudo systemctl status uver-setlist
 
 1. `gh release create vX.Y.Z` でリリース publish
 2. GitHub Actions (`deploy-production.yml`) が self-hosted ランナーで起動
-3. `git reset --hard origin/main` → `npm install` → `node scripts/migrate.js` → `npm run build` → `systemctl restart uver-setlist`
+3. `git reset --hard origin/main` → `npm install` → DBバックアップ → `node scripts/migrate.js` → `npm run build` → `systemctl restart uver-setlist` → `/api/ping` ヘルスチェック
 
 > 詳細な手順・バージョン規則は `docs/development_workflow.md` を参照。
 
@@ -177,7 +181,7 @@ sudo systemctl status uver-setlist
 
 | 症状 | 原因 | 対処 |
 |:---|:---|:---|
-| API が 500 を返す | DBカラム名の不一致、未適用マイグレーション | `node migrate.js` を実行後に `sudo systemctl restart uver-setlist` |
+| API が 500 を返す | DBカラム名の不一致、未適用マイグレーション | `node scripts/migrate.js` を実行後に `sudo systemctl restart uver-setlist` |
 | **API が JSON を返さず HTML を返す** | `systemctl restart` で旧プロセスが残存（ゾンビ化）し、ポート 8000 を占有 | `ExecStartPre` (`fuser -k 8000/tcp`) が `.service` に設定されているか確認。手動復旧: `fuser -k 8000/tcp && sudo systemctl restart uver-setlist` |
 | `rate-limit` の ValidationError | `trust proxy` 未設定 (リバースプロキシ環境) | `app.set('trust proxy', 1)` が `index.js` にあるか確認 |
 | サービスが起動しない | `.env` が読めない等 | `sudo journalctl -u uver-setlist -n 30` でエラー内容を確認 |
@@ -201,13 +205,15 @@ sudo systemctl status uver-setlist
 1. **バックアップ**: 本番 DB からダンプファイルを取得。
 2. **転送・流し込み**: 検証環境の PostgreSQL コンテナへデータをリストア。
 3. **匿名化 (Masking)**: 
-   - `users` テーブルのメールアドレス、パスワード、トークンをダミーデータに置き換え。
+   - `users` テーブルのメールアドレス、ユーザー名、パスワード、検証・リセットトークンをダミー化。
+   - `corrections` テーブルの自由入力・提案内容・管理者メモを匿名化。
    - セキュリティログや機密性の高いログテーブルをクリア。
 
 ### コードの反映フロー
 1. `feature/*` で開発 (Local)
 2. `dev` ブランチへマージ → 検証環境へデプロイ (Staging)
-3. 動作確認後、`main` ブランチへマージ → 本番環境へデプロイ (Production)
+3. 動作確認後、`main` ブランチへマージ
+4. GitHub Release を publish → 本番環境へデプロイ (Production)
 
 ---
 
