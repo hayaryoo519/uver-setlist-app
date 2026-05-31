@@ -220,19 +220,23 @@ sudo systemctl status uver-setlist
 ## 🛠️ 5. メンテナンス・運用手順
 
 ### 検証環境 (Staging) の更新手順
-検証サーバーで最新コードを反映する際の標準手順です：
+検証サーバーで最新コードを反映する際の手動手順です。通常は `dev` push による `deploy-staging.yml` が、ビルド、マイグレーション、起動、`/api/ping` ヘルスチェックまで自動実行します。
 
 ```bash
-# 1. 最新コードの取得とビルド
+# 1. 最新コードの取得
 git pull origin dev
-npm install
-npm run build
 
-# 2. Docker コンテナの再起動
-docker compose up -d --build
+# 2. Docker イメージのビルド
+docker compose build
 
-# 3. マイグレーションの実行 (コンテナ内で実行)
-docker compose exec app-staging npm run migrate
+# 3. マイグレーションの実行
+docker compose run --rm app-staging node server/scripts/migrate.js
+
+# 4. サービス起動
+docker compose up -d
+
+# 5. APIヘルスチェック
+curl --fail --silent --show-error http://127.0.0.1:9001/api/ping
 ```
 
 ### 運用スクリプト

@@ -65,7 +65,7 @@ git merge feature/xxx
 git push origin dev
 ```
 
-`dev` へのプッシュで **Staging 環境へ自動デプロイ**されます。
+`dev` へのプッシュで **Staging 環境へ自動デプロイ**されます。デプロイ後は `http://127.0.0.1:9001/api/ping` を最大20秒リトライし、起動確認に失敗した場合は Actions を失敗扱いにします。
 
 ### Staging 環境を起動する（必要な場合）
 ```bash
@@ -230,7 +230,7 @@ feature/xxx (ローカル開発)
 | ファイル | トリガー | ランナー | 内容 |
 |:---|:---|:---|:---|
 | `test.yml` | push/PR → `main`, `dev` | GitHub hosted | バックエンド・フロントエンドのテスト実行 |
-| `deploy-staging.yml` | push → `dev` | self-hosted | `docker compose up -d --build` |
+| `deploy-staging.yml` | push → `dev` | self-hosted | build → migrate → `docker compose up -d` → `/api/ping` health check |
 | `deploy-production.yml` | Release published | self-hosted | git pull → backup → migrate → build → restart → health check |
 
 ### self-hosted ランナー
