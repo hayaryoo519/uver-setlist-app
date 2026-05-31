@@ -152,13 +152,13 @@ cd /home/<server-user>/apps/uver-setlist-app
 git pull origin main
 
 # 2. 依存パッケージの更新（package.json変更時のみ）
-cd server && npm install && cd ..
+cd server && npm ci && cd ..
 
 # 3. マイグレーションの実行
 cd server && npm run migrate && cd ..
 
 # 4. フロントエンドのビルド（UIに変更がある場合）
-npm install && npm run build
+npm ci --legacy-peer-deps && npm run build
 
 # 5. サーバーを再起動
 sudo systemctl restart uver-setlist
@@ -173,7 +173,7 @@ sudo systemctl status uver-setlist
 
 1. `gh release create vX.Y.Z` でリリース publish
 2. GitHub Actions (`deploy-production.yml`) が self-hosted ランナーで起動
-3. `git reset --hard origin/main` → `npm install` → DBバックアップ → `node scripts/migrate.js` → `npm run build` → `systemctl restart uver-setlist` → `/api/ping` ヘルスチェック
+3. `git reset --hard origin/main` → `npm ci` → DBバックアップ → `node scripts/migrate.js` → `npm run build` → `systemctl restart uver-setlist` → `/api/ping` ヘルスチェック
 
 > 詳細な手順・バージョン規則は `docs/development_workflow.md` を参照。
 
