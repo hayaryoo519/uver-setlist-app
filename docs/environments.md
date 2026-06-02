@@ -185,6 +185,8 @@ sudo systemctl status uver-setlist
 | **API が JSON を返さず HTML を返す** | `systemctl restart` で旧プロセスが残存（ゾンビ化）し、ポート 8000 を占有 | `ExecStartPre` (`fuser -k 8000/tcp`) が `.service` に設定されているか確認。手動復旧: `fuser -k 8000/tcp && sudo systemctl restart uver-setlist` |
 | `rate-limit` の ValidationError | `trust proxy` 未設定 (リバースプロキシ環境) | `app.set('trust proxy', 1)` が `index.js` にあるか確認 |
 | サービスが起動しない | `.env` が読めない等 | `sudo journalctl -u uver-setlist -n 30` でエラー内容を確認 |
+| CORS policy violation で API 取得失敗 | `ALLOWED_ORIGINS` にアクセス元のドメイン（例: wwwあり）が不足している | `server/.env` の `ALLOWED_ORIGINS` にカンマ区切りでドメインを追加し、`sudo systemctl restart uver-setlist` |
+| 重複起動によるプロセスのゾンビ化 | `uver-setlist.service` と `uver-app-prod.service` などが二重に有効化されている | 不要なサービスを `disable/stop` させ、`fuser -k 8000/tcp` 実行後に正しい `uver-setlist.service` のみ起動する |
 | サービスファイルを変更した | 設定反映されない | `sudo systemctl daemon-reload` 後に `restart` |
 
 ---
