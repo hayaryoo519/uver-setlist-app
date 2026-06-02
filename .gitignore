@@ -1,6 +1,8 @@
 # Logs
 logs
 .agent/temp/
+.agent/collab-run/
+.agent/collab-archive/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -64,3 +66,6 @@ server/final_infra_setup.sh
 
 # 機密情報を含むドキュメント（ローカル限定）
 docs/*.secret.md
+
+# AI エージェント協業スクリプト
+scripts/agent-collab/
