@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Search, Plus, Trash2, Save, X, ArrowUp, ArrowDown, Edit2, GripVertical, Replace, CheckCircle, ListMusic, ChevronUp, ChevronDown } from 'lucide-react';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
@@ -38,7 +38,14 @@ const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => 
     }, []);
 
     const sensors = useSensors(
-        useSensor(PointerSensor),
+        useSensor(PointerSensor, {
+            // タップとドラッグを区別：8px以上移動しないとドラッグ開始しない
+            activationConstraint: { distance: 8 },
+        }),
+        useSensor(TouchSensor, {
+            // モバイルタッチ：250ms長押しでドラッグ開始（短いタップは削除等のボタン操作として処理）
+            activationConstraint: { delay: 250, tolerance: 5 },
+        }),
         useSensor(KeyboardSensor, {
             coordinateGetter: sortableKeyboardCoordinates,
         })
@@ -82,17 +89,26 @@ const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => 
             setEditingIndex(null); // Exit edit mode
         } else {
             // Add Mode
-            const newTempId = `item-${song.id}-${Math.random()}`;
-            setCurrentSetlist([...currentSetlist, { ...song, tempId: newTempId }]);
+            const isAdded = addedSongIds.has(song.id);
+            if (isAdded) {
+                // すでに追加されている場合は取り消し（削除）
+                const newList = currentSetlist.filter(s => s.id !== song.id);
+                setCurrentSetlist(newList);
+                showToast(`❌ 「${song.title}」を取り消しました`);
+            } else {
+                // 新規追加
+                const newTempId = `item-${song.id}-${Math.random()}`;
+                setCurrentSetlist([...currentSetlist, { ...song, tempId: newTempId }]);
 
-            // トースト通知
-            showToast(`✅ 「${song.title}」を追加しました（#${currentSetlist.length + 1}）`);
-            // 追加後にリスト末尾へ自動スクロール
-            setTimeout(() => {
-                if (setlistScrollRef.current) {
-                    setlistScrollRef.current.scrollTo({ top: setlistScrollRef.current.scrollHeight, behavior: 'smooth' });
-                }
-            }, 100);
+                // トースト通知
+                showToast(`✅ 「${song.title}」を追加しました（#${currentSetlist.length + 1}）`);
+                // 追加後にリスト末尾へ自動スクロール
+                setTimeout(() => {
+                    if (setlistScrollRef.current) {
+                        setlistScrollRef.current.scrollTo({ top: setlistScrollRef.current.scrollHeight, behavior: 'smooth' });
+                    }
+                }, 100);
+            }
         }
     };
 
@@ -118,6 +134,18 @@ const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => 
                 return arrayMove(items, oldIndex, newIndex);
             });
         }
+    };
+
+    const handleMoveSong = (index, direction) => {
+        if (direction === 'up' && index === 0) return;
+        if (direction === 'down' && index === currentSetlist.length - 1) return;
+
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+        const newList = [...currentSetlist];
+        const temp = newList[index];
+        newList[index] = newList[targetIndex];
+        newList[targetIndex] = temp;
+        setCurrentSetlist(newList);
     };
 
     const handleSave = async () => {
@@ -231,6 +259,7 @@ const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => 
                         onTogglePreview={() => setShowSetlistPreview(!showSetlistPreview)}
                         currentSetlistCount={currentSetlist.length}
                         currentSetlist={currentSetlist}
+                        onMoveSong={handleMoveSong}
                     />
                 </div>
 
