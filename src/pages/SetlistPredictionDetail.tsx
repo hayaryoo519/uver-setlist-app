@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Heart, User, Calendar, MapPin, Music, ArrowLeft, Share2, Sparkles, ChevronRight, Copy, Edit2, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePredictionDetail, useLikePrediction, useDeletePrediction } from '../hooks/queries/usePredictions';
@@ -11,6 +11,7 @@ const SetlistPredictionDetail = () => {
     const { id } = useParams();
     const { currentUser } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const { showToast } = useToast();
 
     const { data: prediction, isLoading } = usePredictionDetail(id);
@@ -48,7 +49,27 @@ const SetlistPredictionDetail = () => {
     };
 
     const handleEdit = () => {
-        navigate(`/predictions/edit/${id}`);
+        navigate(`/predictions/edit/${id}`, { state: { from: `${location.pathname}${location.search}` } });
+    };
+
+    const getBackTarget = () => {
+        const fromPath = location.state?.from;
+        if (fromPath) {
+            return { path: fromPath, label: fromPath === '/mypage' ? 'My Pageに戻る' : fromPath.startsWith('/users/') ? 'プロフィールに戻る' : '前のページに戻る' };
+        }
+        if (prediction?.live_id) {
+            return { path: `/predictions?live_id=${prediction.live_id}`, label: '予想ランキングに戻る' };
+        }
+        return { path: '/predictions', label: 'セトリ予想一覧へ' };
+    };
+
+    const handleBack = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (location.state?.from) {
+            navigate(-1);
+            return;
+        }
+        navigate(getBackTarget().path);
     };
 
     const handleShare = () => {
@@ -94,9 +115,13 @@ const SetlistPredictionDetail = () => {
 
             <div className="max-w-3xl mx-auto px-4">
                 <div className="mb-8 flex items-center justify-between">
-                    <Link to="/predictions" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                    <Link
+                        to={getBackTarget().path}
+                        onClick={handleBack}
+                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                    >
                         <ArrowLeft size={18} />
-                        <span className="text-sm font-medium">セトリ予想一覧へ</span>
+                        <span className="text-sm font-medium">{getBackTarget().label}</span>
                     </Link>
                     {prediction.is_mine && (
                         <button onClick={handleShare} className="p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors">
@@ -281,7 +306,9 @@ const SetlistPredictionDetail = () => {
                                 </div>
                                 <Link 
                                     to={currentUser ? `/predictions/new?live_id=${prediction.live_id}` : "/login"}
-                                    state={!currentUser ? { from: `/predictions/new?live_id=${prediction.live_id}` } : null}
+                                    state={currentUser
+                                        ? { from: `${location.pathname}${location.search}` }
+                                        : { from: `/predictions/new?live_id=${prediction.live_id}` }}
                                     className="inline-flex items-center gap-3 px-10 py-5 bg-white text-black font-black rounded-full hover:bg-blue-400 hover:text-white transition-all shadow-2xl whitespace-nowrap"
                                 >
                                     {currentUser ? '自分の予想を作る' : 'ログインして予想する'}

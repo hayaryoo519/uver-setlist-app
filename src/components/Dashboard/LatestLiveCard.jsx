@@ -82,6 +82,7 @@ export const LatestLiveCard = ({ live }) => {
                     </Link>
                     <Link
                         to={`/predictions?live_id=${live.id}`}
+                        state={{ from: '/dashboard' }}
                         style={{
                             display: 'inline-flex',
                             alignItems: 'center',

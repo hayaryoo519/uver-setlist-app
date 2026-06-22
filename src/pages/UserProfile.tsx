@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { User, Lock, Calendar, MapPin, Music, ArrowLeft } from 'lucide-react';
 import SEO from '../components/SEO';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,6 +13,7 @@ type ProfileTab = 'predictions' | 'lives' | 'songs';
 function UserProfile() {
     const { id } = useParams<{ id: string }>();
     const { currentUser } = useAuth();
+    const location = useLocation();
     const [activeTab, setActiveTab] = useState<ProfileTab>('predictions');
 
     const userId = id ? parseInt(id, 10) : undefined;
@@ -141,6 +142,7 @@ function UserProfile() {
                                 <Link
                                     key={item.id}
                                     to={`/predictions/${item.id}`}
+                                    state={{ from: `${location.pathname}${location.search}` }}
                                     className="flex items-center gap-4 p-4 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-yellow-500/20 rounded-2xl transition-all group"
                                 >
                                     <div className="flex-1 min-w-0">
