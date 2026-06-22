@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Song } from '../types/api';
-import { useNavigate, Link, useSearchParams, useParams } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams, useParams, useLocation } from 'react-router-dom';
 import { useSongs, useSearchSongs } from '../hooks/queries/useSongs';
 import { useLiveDetail, useLives } from '../hooks/queries/useLives';
 import { useCreatePrediction, useUpdatePrediction, usePredictionDetail } from '../hooks/queries/usePredictions';
@@ -20,7 +20,7 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Search, Plus, Save, AlertCircle } from 'lucide-react';
+import { Search, Plus, Save, AlertCircle, ArrowLeft } from 'lucide-react';
 import PageHeader from '../components/Layout/PageHeader';
 import SEO from '../components/SEO';
 import { useAuth } from '../contexts/AuthContext';
@@ -37,9 +37,34 @@ const SetlistPredictionCreate = () => {
     const [selectedLiveId, setSelectedLiveId] = useState<string | null>(null);
     const { currentUser } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const { showToast } = useToast();
     const [searchParams] = useSearchParams();
     const liveIdFromQuery = searchParams.get('live_id');
+
+    const getBackTarget = () => {
+        const fromPath = location.state?.from;
+        if (fromPath) {
+            return { path: fromPath, label: isEdit ? '前のページに戻る' : '予想ランキングに戻る' };
+        }
+        if (isEdit && editId) {
+            return { path: `/predictions/${editId}`, label: '予想詳細に戻る' };
+        }
+        const targetLiveId = selectedLiveId ?? liveIdFromQuery;
+        if (targetLiveId) {
+            return { path: `/predictions?live_id=${targetLiveId}`, label: '予想ランキングに戻る' };
+        }
+        return { path: '/predictions', label: 'セトリ予想一覧へ' };
+    };
+
+    const handleBack = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (location.state?.from) {
+            navigate(-1);
+            return;
+        }
+        navigate(getBackTarget().path);
+    };
 
     const { data: allSongs = [] } = useSongs();
     
@@ -242,6 +267,14 @@ const SetlistPredictionCreate = () => {
         <div className="min-h-screen bg-slate-900 text-white fade-in" style={{ paddingTop: '100px', paddingBottom: '80px' }}>
             <SEO title={isEdit ? "予想を編集" : "セトリ予想を作成"} description="UVERworldのライブのセトリを予想して公開しましょう。" />
             <div className="max-w-4xl mx-auto px-4">
+                <Link
+                    to={getBackTarget().path}
+                    onClick={handleBack}
+                    className="inline-flex items-center text-slate-400 hover:text-white mb-6 transition-colors"
+                >
+                    <ArrowLeft size={18} className="mr-2" /> {getBackTarget().label}
+                </Link>
+
                 <PageHeader 
                     title={isEdit ? "予想を編集" : "予想を作成"} 
                     subtitle={isEdit ? "投稿済みの予想をブラッシュアップ" : "新しいセトリ予想を作成"} 

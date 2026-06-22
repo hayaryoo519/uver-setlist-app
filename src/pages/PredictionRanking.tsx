@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { Heart, Plus, Calendar, User, Sparkles, Eye, PenTool, MapPin, Edit2 } from 'lucide-react';
+import { Heart, Plus, Calendar, User, Sparkles, Eye, PenTool, MapPin, Edit2, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/Layout/PageHeader';
 import SEO from '../components/SEO';
@@ -18,14 +18,30 @@ const PredictionRanking = () => {
     const [searchParams] = useSearchParams();
     const liveId = searchParams.get('live_id');
     const fromPath = location.state?.from;
+    const currentPath = `${location.pathname}${location.search}`;
 
     // 戻り先のラベルとパスを決定
-    let backLabel = 'セトリ予想一覧へ';
-    let backPath = '/predictions';
-    if (fromPath?.startsWith('/live/')) {
+    let backLabel = liveId ? 'ライブ詳細に戻る' : 'セトリ予想一覧へ';
+    let backPath = liveId ? `/live/${liveId}` : '/predictions';
+    if (fromPath === '/dashboard') {
+        backLabel = 'ダッシュボードに戻る';
+        backPath = fromPath;
+    } else if (fromPath === '/mypage') {
+        backLabel = 'My Pageに戻る';
+        backPath = fromPath;
+    } else if (fromPath?.startsWith('/live/')) {
         backLabel = 'ライブ詳細に戻る';
         backPath = fromPath;
     }
+
+    const handleBack = (e?: React.MouseEvent) => {
+        e?.preventDefault();
+        if (fromPath) {
+            navigate(-1);
+            return;
+        }
+        navigate(backPath);
+    };
 
     // --- クエリ ---
     const { data: predictableLives = [], isLoading: predictableLivesLoading } = usePredictableLives();
@@ -88,6 +104,15 @@ const PredictionRanking = () => {
             />
 
             <div className="max-w-4xl mx-auto px-4">
+                {liveId && (
+                    <button
+                        onClick={handleBack}
+                        className="inline-flex items-center text-slate-400 hover:text-white mb-6 transition-colors"
+                    >
+                        <ArrowLeft size={18} className="mr-2" /> {backLabel}
+                    </button>
+                )}
+
                 <PageHeader
                     title="セトリ予想"
                     subtitle={liveId ? "みんなのセトリ予想" : "受付中のライブ一覧"}
@@ -168,6 +193,7 @@ const PredictionRanking = () => {
                                                 {live.has_predicted ? (
                                                     <Link
                                                         to={`/predictions/edit/${live.my_prediction_id}`}
+                                                        state={{ from: currentPath }}
                                                         className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-all hover:shadow-lg hover:shadow-amber-900/40 min-w-[140px]"
                                                     >
                                                         <Edit2 size={18} />
@@ -176,6 +202,7 @@ const PredictionRanking = () => {
                                                 ) : (
                                                     <Link
                                                         to={`/predictions/new?live_id=${live.id}`}
+                                                        state={{ from: currentPath }}
                                                         className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-all hover:shadow-lg hover:shadow-blue-900/40 min-w-[140px]"
                                                     >
                                                         <Plus size={18} />
@@ -223,6 +250,7 @@ const PredictionRanking = () => {
                                         <div key={prediction.id} className="relative group">
                                             <Link 
                                                 to={`/predictions/${prediction.id}`} 
+                                                state={{ from: currentPath }}
                                                 className={`block ring-2 ring-blue-500/50 rounded-2xl`}
                                             >
                                                 <div className={`bg-slate-800/50 hover:bg-slate-800 border border-slate-700 group-hover:border-blue-500/50 rounded-2xl p-5 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-900/20 flex items-center`}>
@@ -250,6 +278,7 @@ const PredictionRanking = () => {
                                                             {!prediction.is_closed && (
                                                                 <Link
                                                                     to={`/predictions/edit/${prediction.id}`}
+                                                                    state={{ from: currentPath }}
                                                                     className="p-2 text-slate-400 hover:text-blue-400 transition-colors"
                                                                     onClick={(e) => e.stopPropagation()}
                                                                 >
@@ -294,8 +323,8 @@ const PredictionRanking = () => {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <button 
-                                                    onClick={() => navigate(backPath)}
+                                                <button
+                                                    onClick={handleBack}
                                                     className="text-xs bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 px-3 py-2 rounded-lg border border-blue-500/30 transition-colors font-bold"
                                                 >
                                                     {backLabel}
@@ -359,6 +388,7 @@ const PredictionRanking = () => {
                                     liveInfo.has_predicted ? (
                                         <Link
                                             to={`/predictions/edit/${liveInfo.my_prediction_id}`}
+                                            state={{ from: currentPath }}
                                             className="w-full sm:w-auto bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-amber-900/20 flex items-center justify-center gap-2 transition-all"
                                         >
                                             <Edit2 size={18} />
@@ -367,6 +397,7 @@ const PredictionRanking = () => {
                                     ) : (
                                         <Link
                                             to={`/predictions/new?live_id=${liveId}`}
+                                            state={{ from: currentPath }}
                                             className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 transition-all"
                                         >
                                             <Plus size={18} />
@@ -398,6 +429,7 @@ const PredictionRanking = () => {
                                     <Link 
                                         to={`/predictions/${prediction.id}`} 
                                         key={prediction.id} 
+                                        state={{ from: currentPath }}
                                         className={`block group relative ${prediction.is_mine ? 'ring-2 ring-blue-500/50 rounded-2xl' : ''}`}
                                     >
                                         {prediction.is_mine && (
