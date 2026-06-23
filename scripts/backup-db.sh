@@ -17,6 +17,34 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/backup_${TIMESTAMP}.dump"
 REMOTE_BACKUP_SERVER="${REMOTE_BACKUP_SERVER:-}"
 REMOTE_BACKUP_PATH="${REMOTE_BACKUP_PATH:-/backups/$(date +%Y-%m-%d)/}"
+# ローカルバックアップの保持期間。既定は30日。
+# リモート転送先のファイルはこのスクリプトでは削除しない。
+BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
+
+if ! [[ "$BACKUP_RETENTION_DAYS" =~ ^[0-9]+$ ]]; then
+    log_error "BACKUP_RETENTION_DAYS must be a non-negative integer: $BACKUP_RETENTION_DAYS"
+    exit 1
+fi
+
+# バックアップ成功後に呼び出す。削除失敗は警告に留め、処理を継続する。
+cleanup_old_backups() {
+    local current_backup="$1"
+    local old_file
+
+    log_info "Cleaning up local backups older than ${BACKUP_RETENTION_DAYS} days..."
+    while IFS= read -r -d "" old_file; do
+        if [[ "$old_file" == "$current_backup" || "$old_file" == "${current_backup}.sha256" ]]; then
+            continue
+        fi
+
+        log_info "Deleting expired backup file: $old_file"
+        if ! rm -f -- "$old_file"; then
+            log_warn "Failed to delete expired backup file: $old_file"
+        fi
+    done < <(find "$BACKUP_DIR" -maxdepth 1 -type f \
+        \( -name "backup_*.dump.gz" -o -name "backup_*.dump.gz.sha256" \) \
+        -mtime "+$BACKUP_RETENTION_DAYS" -print0)
+}
 
 # ロック制御
 LOCK_FILE="/tmp/db_backup.lock"
@@ -49,27 +77,46 @@ if ! pg_restore --list "$BACKUP_FILE" > /dev/null; then
     exit 1
 fi
 
-# 4. チェックサム生成
-log_info "Generating SHA256 checksum..."
-sha256sum "$BACKUP_FILE" > "${BACKUP_FILE}.sha256"
-
-# 5. 圧縮
+# 4. 圧縮
 log_info "Compressing backup file..."
 gzip -f "$BACKUP_FILE"
 FINAL_BACKUP="${BACKUP_FILE}.gz"
+FINAL_BACKUP_NAME="$(basename "$FINAL_BACKUP")"
+CHECKSUM_FILE="${FINAL_BACKUP}.sha256"
+CHECKSUM_FILE_NAME="$(basename "$CHECKSUM_FILE")"
+
+# 5. 圧縮後ファイルのチェックサム生成
+# 保存先に依存せず検証できるよう、チェックサムにはファイル名だけを記録する。
+log_info "Generating SHA256 checksum for compressed backup..."
+(
+    cd "$BACKUP_DIR"
+    sha256sum "$FINAL_BACKUP_NAME" > "$CHECKSUM_FILE_NAME"
+)
 
 # 6. 外部転送 (rsync)
 if [ -n "$REMOTE_BACKUP_SERVER" ]; then
     log_info "Transferring backup to remote server: ${REMOTE_BACKUP_SERVER}"
     # 転送先ディレクトリの作成
-    ssh "$REMOTE_BACKUP_SERVER" "mkdir -p $REMOTE_BACKUP_PATH"
-    # チェックサム検証付き転送を模した rsync
-    if ! rsync -avz "$FINAL_BACKUP" "${BACKUP_FILE}.sha256" "${REMOTE_BACKUP_SERVER}:${REMOTE_BACKUP_PATH}"; then
+    ssh "$REMOTE_BACKUP_SERVER" "mkdir -p -- '$REMOTE_BACKUP_PATH'"
+    # バックアップ本体とチェックサムを転送
+    if ! rsync -avz "$FINAL_BACKUP" "$CHECKSUM_FILE" "${REMOTE_BACKUP_SERVER}:${REMOTE_BACKUP_PATH}"; then
         log_error "Remote transfer failed."
         notify_error "Remote transfer failed"
         exit 1
     fi
     log_info "Transfer completed successfully."
+
+    # 転送先でチェックサムを検証。失敗時は世代管理へ進まない。
+    log_info "Verifying transferred backup checksum..."
+    if ! ssh "$REMOTE_BACKUP_SERVER" "cd '$REMOTE_BACKUP_PATH' && sha256sum -c '$CHECKSUM_FILE_NAME'"; then
+        log_error "Remote checksum verification failed."
+        notify_error "Remote checksum verification failed"
+        exit 1
+    fi
+    log_info "Remote checksum verification completed successfully."
 fi
+
+# 7. ローカルバックアップの世代管理
+cleanup_old_backups "$FINAL_BACKUP"
 
 log_info "Backup process successfully finished: ${FINAL_BACKUP}"

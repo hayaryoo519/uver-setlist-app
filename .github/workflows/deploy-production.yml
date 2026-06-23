@@ -23,7 +23,7 @@ jobs:
           cp .env.backup .env
 
           # 4. バックエンド依存関係のインストール
-          npm install
+          npm ci
 
           # 5. DBバックアップ
           cd ~/apps/uver-setlist-app
@@ -35,7 +35,7 @@ jobs:
 
           # 7. フロントエンドビルド
           cd ~/apps/uver-setlist-app
-          npm install --legacy-peer-deps
+          npm ci --legacy-peer-deps
           npm run build
 
           # 8. サービス再起動

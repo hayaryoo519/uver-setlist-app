@@ -376,6 +376,7 @@ function MyPage() {
                             <div key={item.id} style={{ position: 'relative' }}>
                                 <Link
                                     to={`/predictions/${item.id}`}
+                                    state={{ from: '/mypage' }}
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
@@ -416,6 +417,7 @@ function MyPage() {
                                         {!item.is_closed && (
                                             <Link
                                                 to={`/predictions/edit/${item.id}`}
+                                                state={{ from: '/mypage' }}
                                                 onClick={(e) => e.stopPropagation()}
                                                 style={{ color: '#94a3b8' }}
                                                 className="edit-icon-btn"
@@ -453,6 +455,7 @@ function MyPage() {
                             <Link
                                 key={item.id}
                                 to={`/predictions/${item.id}`}
+                                state={{ from: '/mypage' }}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
