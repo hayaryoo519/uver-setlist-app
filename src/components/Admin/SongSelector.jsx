@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Plus, Replace, CheckCircle, ListMusic, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, Plus, Replace, CheckCircle, ListMusic, ChevronUp, ChevronDown, X } from 'lucide-react';
 
 /**
  * 楽曲を検索して選択・追加するためのパネルコンポーネント。
@@ -17,6 +17,7 @@ const SongSelector = ({
     onTogglePreview,
     currentSetlistCount = 0,
     currentSetlist = [],
+    onMoveSong,
     placeholder = "曲名を入力して検索..."
 }) => {
     return (
@@ -42,9 +43,29 @@ const SongSelector = ({
                 <div className="mb-3 bg-slate-900/80 border border-slate-600 rounded-lg p-2 max-h-40 overflow-y-auto">
                     <div className="space-y-1">
                         {currentSetlist.map((song, index) => (
-                            <div key={song.tempId || index} className="flex items-center gap-2 text-xs text-slate-300 px-1 py-0.5">
-                                <span className="text-slate-500 font-mono w-5 text-right">{index + 1}.</span>
-                                <span className="truncate">{song.title}</span>
+                            <div key={song.tempId || index} className="flex items-center justify-between gap-2 text-xs text-slate-300 px-1 py-0.5 hover:bg-slate-800 rounded">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <span className="text-slate-500 font-mono w-5 text-right">{index + 1}.</span>
+                                    <span className="truncate">{song.title}</span>
+                                </div>
+                                <div className="flex items-center gap-0.5 flex-shrink-0">
+                                    <button
+                                        disabled={index === 0}
+                                        onClick={() => onMoveSong && onMoveSong(index, 'up')}
+                                        className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                                        title="上に移動"
+                                    >
+                                        <ChevronUp size={12} />
+                                    </button>
+                                    <button
+                                        disabled={index === currentSetlist.length - 1}
+                                        onClick={() => onMoveSong && onMoveSong(index, 'down')}
+                                        className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                                        title="下に移動"
+                                    >
+                                        <ChevronDown size={12} />
+                                    </button>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -80,18 +101,23 @@ const SongSelector = ({
                             className={`w-full text-left px-3 py-2 rounded text-sm flex justify-between items-center group transition-colors ${isEditing
                                 ? 'hover:bg-yellow-400/20 hover:text-yellow-200 text-slate-300 border border-transparent hover:border-yellow-400/30'
                                 : isAdded
-                                    ? 'bg-slate-700/30 text-slate-500'
+                                    ? 'bg-slate-700/30 hover:bg-red-950/40 hover:text-red-400 text-slate-500 border border-transparent hover:border-red-500/20'
                                     : 'hover:bg-blue-600/20 hover:text-blue-400 text-slate-300 border border-transparent hover:border-blue-500/30'
                                 }`}
                         >
                             <span className="flex items-center gap-2">
                                 {isAdded && !isEditing && (
-                                    <CheckCircle size={14} className="text-emerald-500 flex-shrink-0" />
+                                    <>
+                                        <CheckCircle size={14} className="text-emerald-500 flex-shrink-0 group-hover:hidden" />
+                                        <X size={14} className="text-red-500 flex-shrink-0 hidden group-hover:inline" />
+                                    </>
                                 )}
                                 <span className={isAdded && !isEditing ? 'line-through opacity-60' : ''}>{song.title}</span>
                             </span>
                             {isEditing ? (
                                 <Replace size={16} className="opacity-0 group-hover:opacity-100 text-yellow-400 flex-shrink-0" />
+                            ) : isAdded ? (
+                                <X size={16} className="opacity-0 group-hover:opacity-100 flex-shrink-0 text-red-500" />
                             ) : (
                                 <Plus size={16} className="opacity-0 group-hover:opacity-100 flex-shrink-0 text-blue-400" />
                             )}

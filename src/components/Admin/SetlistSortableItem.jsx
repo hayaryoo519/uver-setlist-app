@@ -63,12 +63,11 @@ const SetlistSortableItem = ({
         <div
             ref={setNodeRef}
             style={style}
-            onClick={onEditStart ? () => onEditStart(index) : undefined}
             className={`flex items-center gap-3 p-2 rounded border group transition-all ${
                 isEditingTarget || isActive
                     ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-900/10' 
                     : 'bg-slate-800 border-slate-700 hover:border-blue-500/50'
-            } ${onEditStart ? 'cursor-pointer' : ''}`}
+            }`}
         >
             <div {...attributes} {...listeners} className="cursor-grab hover:text-white text-slate-600 flex items-center justify-center p-1">
                 <GripVertical size={16} />
@@ -78,7 +77,10 @@ const SetlistSortableItem = ({
                 {index + 1}
             </div>
 
-            <div className="flex-1 min-w-0">
+            <div
+                onClick={onEditStart ? () => onEditStart(index) : undefined}
+                className={`flex-1 min-w-0 ${onEditStart ? 'cursor-pointer hover:text-blue-400 transition-colors' : ''}`}
+            >
                 {originalText ? (
                     // インポートモード
                     <>
@@ -95,7 +97,7 @@ const SetlistSortableItem = ({
                 )}
             </div>
 
-            <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+            <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0">
                 {/* エディタ用の置換ボタン */}
                 {onEditStart && !originalText && (
                     <button

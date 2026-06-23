@@ -65,7 +65,7 @@ git merge feature/xxx
 git push origin dev
 ```
 
-`dev` へのプッシュで **Staging 環境へ自動デプロイ**されます。
+`dev` へのプッシュで **Staging 環境へ自動デプロイ**されます。デプロイ後は `http://127.0.0.1:9001/api/ping` を最大20秒リトライし、起動確認に失敗した場合は Actions を失敗扱いにします。
 
 ### Staging 環境を起動する（必要な場合）
 ```bash
@@ -128,7 +128,7 @@ DB変更がある場合は、[`docs/db_operations.md`](./db_operations.md) の�
 ### 自動デプロイの流れ
 1. `gh release create vX.Y.Z` でリリース publish
 2. GitHub Actions (`deploy-production.yml`) が self-hosted ランナーで起動
-3. `git reset --hard origin/main` → `npm install` → DBバックアップ → `node scripts/migrate.js` → `npm run build` → `systemctl restart uver-setlist` → `/api/ping` ヘルスチェック
+3. `git reset --hard origin/main` → `npm ci` → DBバックアップ → `node scripts/migrate.js` → `npm run build` → `systemctl restart uver-setlist` → `/api/ping` ヘルスチェック
 
 ### 手動デプロイが必要な場合
 
@@ -139,11 +139,11 @@ ssh <server-user>@server01
 cd ~/apps/uver-setlist-app/server
 
 git fetch origin main && git reset --hard origin/main
-npm install
+npm ci
 node scripts/migrate.js
 
 cd ~/apps/uver-setlist-app
-npm install --legacy-peer-deps
+npm ci --legacy-peer-deps
 npm run build
 sudo systemctl restart uver-setlist
 ```
@@ -230,7 +230,7 @@ feature/xxx (ローカル開発)
 | ファイル | トリガー | ランナー | 内容 |
 |:---|:---|:---|:---|
 | `test.yml` | push/PR → `main`, `dev` | GitHub hosted | バックエンド・フロントエンドのテスト実行 |
-| `deploy-staging.yml` | push → `dev` | self-hosted | `docker compose up -d --build` |
+| `deploy-staging.yml` | push → `dev` | self-hosted | build → migrate → `docker compose up -d` → `/api/ping` health check |
 | `deploy-production.yml` | Release published | self-hosted | git pull → backup → migrate → build → restart → health check |
 
 ### self-hosted ランナー
@@ -265,7 +265,7 @@ sudo journalctl -u actions.runner.hayaryoo519-uver-setlist-app.server01 -f
 |:---|:---|:---|
 | ジョブが "Waiting for runner..." のまま | ランナーが停止中 | `sudo systemctl start actions.runner.*` |
 | "A session for this runner already exists" | 旧プロセスのセッションが残存 | 数分待って `sudo systemctl restart actions.runner.*` |
-| `npm error ERESOLVE` (フロントエンド) | `react-helmet-async` の React 19 非対応 | `npm install --legacy-peer-deps` を使用（ワークフロー設定済み） |
+| `npm error ERESOLVE` (フロントエンド) | `react-helmet-async` の React 19 非対応 | `npm ci --legacy-peer-deps` を使用（ワークフロー設定済み） |
 
 ---
 
