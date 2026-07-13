@@ -19,8 +19,8 @@ export function normalizeLive(raw: any): Live {
         };
     }
 
-    // 必須フィールドの欠落チェックとログ
-    if (!raw.id || !raw.tour_name || !raw.date) {
+    // 集計APIのネストされたライブ情報は tour_name を持たないため、ID/日付のみを必須扱いにする。
+    if (!raw.id || !raw.date) {
         console.warn('[Normalization] Potentially malformed live data detected:', raw);
     }
 
