@@ -133,7 +133,9 @@ router.get('/', async (req, res) => {
             upcomingRes,
             songFreqRes,
             tourBaseRes,
-            tourSongsRes
+            tourSongsRes,
+            summerFestivalBaseRes,
+            summerFestivalSongsRes
         ] = await Promise.all([
             // 基本集計
             db.query(`
@@ -230,6 +232,42 @@ router.get('/', async (req, res) => {
                         OR (UPPER(l.tour_name) NOT LIKE '%FES.%' AND UPPER(l.tour_name) NOT LIKE '%FESTIVAL%')
                     )
                 GROUP BY COALESCE(l.tour_name, l.title), s.title, s.id
+            `),
+
+            // 年別夏フェス基本統計（7-9月のFESTIVALを年単位で集約）
+            db.query(`
+                SELECT
+                    EXTRACT(YEAR FROM date)::text as year,
+                    COUNT(*)::int as live_count,
+                    MIN(date)::text as start_date,
+                    MAX(date)::text as end_date,
+                    MAX(date)::text as latest_date
+                FROM lives
+                WHERE (setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists sl_sub WHERE sl_sub.live_id = lives.id))
+                    AND type = 'FESTIVAL'
+                    AND EXTRACT(MONTH FROM date) BETWEEN 7 AND 9
+                GROUP BY EXTRACT(YEAR FROM date)
+                ORDER BY MAX(date) DESC
+            `),
+
+            // 年別夏フェス楽曲ランキング
+            db.query(`
+                SELECT
+                    EXTRACT(YEAR FROM l.date)::text as year,
+                    s.title as song_title,
+                    s.id as song_id,
+                    COUNT(sl.id)::int as count,
+                    JSON_AGG(
+                        JSON_BUILD_OBJECT('id', l.id, 'date', l.date::text, 'venue', l.venue, 'title', COALESCE(l.tour_name, l.title))
+                        ORDER BY l.date DESC
+                    ) as lives
+                FROM lives l
+                JOIN setlists sl ON l.id = sl.live_id
+                JOIN songs s ON sl.song_id = s.id
+                WHERE (l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists sl_sub WHERE sl_sub.live_id = l.id))
+                    AND l.type = 'FESTIVAL'
+                    AND EXTRACT(MONTH FROM l.date) BETWEEN 7 AND 9
+                GROUP BY EXTRACT(YEAR FROM l.date), s.title, s.id
             `)
         ]);
 
@@ -276,6 +314,36 @@ router.get('/', async (req, res) => {
             latestDate: formatDate(tour.latest_date)
         }));
 
+        // 年別夏フェスランキング構築
+        const summerFestivalLiveCountMap = {};
+        summerFestivalBaseRes.rows.forEach(festival => {
+            summerFestivalLiveCountMap[festival.year] = festival.live_count;
+        });
+
+        const summerFestivalSongMap = {};
+        summerFestivalSongsRes.rows.forEach(row => {
+            const year = row.year;
+            if (!summerFestivalSongMap[year]) summerFestivalSongMap[year] = [];
+            const liveCount = summerFestivalLiveCountMap[year] || 1;
+            summerFestivalSongMap[year].push({
+                title: row.song_title,
+                count: row.count,
+                lives: row.lives,
+                percentage: ((row.count / liveCount) * 100).toFixed(1)
+            });
+        });
+
+        const summerFestivalRanking = summerFestivalBaseRes.rows.map(festival => ({
+            name: `${festival.year} 夏フェス`,
+            year: festival.year,
+            liveCount: festival.live_count,
+            totalSongs: (summerFestivalSongMap[festival.year] || []).reduce((sum, s) => sum + s.count, 0),
+            songRanking: (summerFestivalSongMap[festival.year] || []).sort((a, b) => b.count - a.count),
+            startDate: formatDate(festival.start_date),
+            endDate: formatDate(festival.end_date),
+            latestDate: formatDate(festival.latest_date)
+        }));
+
         res.json({
             totalLives,
             totalSongsPerformed: basic.total_songs_performed,
@@ -297,6 +365,7 @@ router.get('/', async (req, res) => {
             })),
             globalSongRanking,
             tourRanking,
+            summerFestivalRanking,
             currentTour: tourRanking[0] || null,
             songFrequencyMap
         });

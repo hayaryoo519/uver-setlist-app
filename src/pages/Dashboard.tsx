@@ -198,6 +198,7 @@ function Dashboard() {
     };
 
     const [selectedAnalysisTour, setSelectedAnalysisTour] = useState<any>(null);
+    const [selectedSummerFestival, setSelectedSummerFestival] = useState<any>(null);
 
     // Set default analysis tour when data loads
     React.useEffect(() => {
@@ -206,6 +207,12 @@ function Dashboard() {
             setSelectedAnalysisTour(stats.tourRanking[0]);
         }
     }, [stats.tourRanking]);
+
+    React.useEffect(() => {
+        if (stats.summerFestivalRanking && stats.summerFestivalRanking.length > 0 && !selectedSummerFestival) {
+            setSelectedSummerFestival(stats.summerFestivalRanking[0]);
+        }
+    }, [stats.summerFestivalRanking]);
 
     if (loading) return (
         <div style={{ padding: '100px', textAlign: 'center', color: '#888' }}>
@@ -540,6 +547,60 @@ function Dashboard() {
                                 })()} onBarClick={handleAlbumClick} />
                             </ErrorBoundary>
                         </div>
+                    </div>
+                </div>
+
+
+                {/* Summer Festival Analysis */}
+                <div style={{ marginTop: '60px', marginBottom: '60px' }}>
+                    <h2 className="section-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Music size={20} color="var(--primary-color)" />
+                        Summer Festival Analysis
+                    </h2>
+
+                    <div className="dashboard-panel">
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', color: '#94a3b8', marginBottom: '8px', fontSize: '0.9rem' }}>Select Year</label>
+                            <select
+                                value={selectedSummerFestival ? selectedSummerFestival.year : ''}
+                                onChange={(e) => {
+                                    const festival = stats.summerFestivalRanking?.find((item: any) => item.year === e.target.value);
+                                    setSelectedSummerFestival(festival);
+                                }}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    background: '#1e293b',
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    color: '#fff',
+                                    fontSize: '1rem',
+                                    outline: 'none',
+                                    appearance: 'none',
+                                    backgroundImage: `url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")`,
+                                    backgroundRepeat: 'no-repeat',
+                                    backgroundPosition: 'right 12px top 50%',
+                                    backgroundSize: '12px auto',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {(stats.summerFestivalRanking || []).map((festival: any) => (
+                                    <option key={festival.year} value={festival.year} style={{ background: '#1e293b', color: '#fff' }}>
+                                        {festival.name} ({festival.startDate} ~ {festival.endDate} / {festival.liveCount} shows)
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {selectedSummerFestival ? (
+                            <ErrorBoundary>
+                                <TourTrends tour={selectedSummerFestival} />
+                            </ErrorBoundary>
+                        ) : (
+                            <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                                夏フェスのセットリストデータがありません
+                            </div>
+                        )}
                     </div>
                 </div>
 
