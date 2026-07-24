@@ -36,6 +36,11 @@ const pool = new Pool({
  * schema_migrations テーブルを作成する（存在しない場合のみ）
  */
 async function ensureMigrationTable(client) {
+    const existing = await client.query("SELECT to_regclass('schema_migrations') AS table_name");
+    if (existing.rows[0].table_name) {
+        return;
+    }
+
     await client.query(`
         CREATE TABLE IF NOT EXISTS schema_migrations (
             id SERIAL PRIMARY KEY,
