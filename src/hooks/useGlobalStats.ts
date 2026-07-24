@@ -34,6 +34,7 @@ interface StatsResponse {
         percentage: string;
     }>;
     tourRanking: any[];
+    summerFestivalRanking: any[];
     currentTour: any | null;
     songFrequencyMap: Record<string, number>;
 }
@@ -61,6 +62,13 @@ export const useGlobalStats = () => {
                 ...normalizeSong(s)
             })),
             tourRanking: (rawStatsData.tourRanking || []).map(t => ({
+                ...t,
+                songRanking: (t.songRanking || []).map((s: any) => ({
+                    ...s,
+                    lives: (s.lives || []).map((l: any) => normalizeLive(l))
+                }))
+            })),
+            summerFestivalRanking: (rawStatsData.summerFestivalRanking || []).map(t => ({
                 ...t,
                 songRanking: (t.songRanking || []).map((s: any) => ({
                     ...s,
@@ -145,6 +153,7 @@ export const useGlobalStats = () => {
         upcomingLives: statsData?.upcomingLives ?? [],
         globalSongRanking: statsData?.globalSongRanking ?? [],
         tourRanking: statsData?.tourRanking ?? [],
+        summerFestivalRanking: statsData?.summerFestivalRanking ?? [],
         currentTour: statsData?.currentTour ?? null,
         songFrequencyMap: statsData?.songFrequencyMap ?? {},
         ...derived,
