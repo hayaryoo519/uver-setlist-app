@@ -207,6 +207,7 @@ function Dashboard() {
         }
     }, [stats.tourRanking]);
 
+
     if (loading) return (
         <div style={{ padding: '100px', textAlign: 'center', color: '#888' }}>
             Loading statistics...
@@ -221,6 +222,12 @@ function Dashboard() {
         { id: 'liveCount', label: 'ライブ数', icon: <Calendar size={14} /> },
         { id: 'totalSongs', label: '総披露曲数', icon: <Music size={14} /> },
     ];
+
+    const selectedAnalysisValue = selectedAnalysisTour?.year
+        ? `summer:${selectedAnalysisTour.year}`
+        : selectedAnalysisTour?.name
+            ? `tour:${selectedAnalysisTour.name}`
+            : '';
 
     return (
         <div className="page-wrapper">
@@ -543,6 +550,7 @@ function Dashboard() {
                     </div>
                 </div>
 
+
                 {/* Past Tour Analysis (New Section) */}
                 <div style={{ marginTop: '60px', marginBottom: '100px' }}>
                     <h2 className="section-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -554,9 +562,18 @@ function Dashboard() {
                         <div style={{ marginBottom: '20px' }}>
                             <label style={{ display: 'block', color: '#94a3b8', marginBottom: '8px', fontSize: '0.9rem' }}>Select Tour</label>
                             <select
-                                value={selectedAnalysisTour ? selectedAnalysisTour.name : ''}
+                                value={selectedAnalysisValue}
                                 onChange={(e) => {
-                                    const tour = stats.tourRanking?.find((t: any) => t.name === e.target.value);
+                                    const value = e.target.value;
+                                    if (value.startsWith('summer:')) {
+                                        const year = value.replace('summer:', '');
+                                        const festival = stats.summerFestivalRanking?.find((item: any) => item.year === year);
+                                        setSelectedAnalysisTour(festival);
+                                        return;
+                                    }
+
+                                    const tourName = value.replace('tour:', '');
+                                    const tour = stats.tourRanking?.find((t: any) => t.name === tourName);
                                     setSelectedAnalysisTour(tour);
                                 }}
                                 style={{
@@ -577,25 +594,39 @@ function Dashboard() {
                                 }}
                             >
                                 {(() => {
-                                    if (!stats.tourRanking) return null;
                                     const groups: Record<string, any[]> = {};
-                                    stats.tourRanking.forEach((tour: any) => {
+
+                                    (stats.summerFestivalRanking || []).forEach((festival: any) => {
+                                        const year = String(festival.year);
+                                        if (!groups[year]) groups[year] = [];
+                                        groups[year].push({ ...festival, analysisType: 'summer' });
+                                    });
+
+                                    (stats.tourRanking || []).forEach((tour: any) => {
                                         const year = tour.startDate.split('.')[0];
                                         if (!groups[year]) groups[year] = [];
-                                        groups[year].push(tour);
+                                        groups[year].push({ ...tour, analysisType: 'tour' });
                                     });
 
                                     return Object.entries(groups)
                                         .sort((a, b) => b[0].localeCompare(a[0]))
-                                        .map(([year, tours]) => (
-                                            <optgroup key={year} label={`${year}`} style={{ color: '#94a3b8', background: '#0f172a' }}>
-                                                {tours.map((tour: any, idx: number) => (
-                                                    <option key={`${year}-${idx}`} value={tour.name} style={{ background: '#1e293b', color: '#fff' }}>
-                                                        {tour.name} ({tour.startDate} ~ {tour.endDate} / {tour.liveCount} shows)
-                                                    </option>
-                                                ))}
-                                            </optgroup>
-                                        ));
+                                        .map(([year, items]) => {
+                                            const sortedItems = [...items].sort((a: any, b: any) => a.startDate.localeCompare(b.startDate));
+
+                                            return (
+                                                <optgroup key={year} label={`${year}`} style={{ color: '#94a3b8', background: '#0f172a' }}>
+                                                    {sortedItems.map((item: any, idx: number) => (
+                                                        <option
+                                                            key={`${year}-${item.analysisType}-${idx}`}
+                                                            value={item.analysisType === 'summer' ? `summer:${item.year}` : `tour:${item.name}`}
+                                                            style={{ background: '#1e293b', color: '#fff' }}
+                                                        >
+                                                            {item.analysisType === 'summer' ? '夏フェス: ' : ''}{item.name} ({item.startDate} ~ {item.endDate} / {item.liveCount} shows)
+                                                        </option>
+                                                    ))}
+                                                </optgroup>
+                                            );
+                                        });
                                 })()}
                             </select>
                         </div>
