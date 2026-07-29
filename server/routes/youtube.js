@@ -4,6 +4,33 @@ const YoutubeService = require('../services/youtubeService');
 const db = require('../db');
 const { encrypt, signState, verifyState } = require('../utils/encryption');
 const { google } = require('googleapis');
+const YOUTUBE_RELINK_MESSAGE = 'YouTube Music連携の有効期限が切れました。再度連携してください。';
+
+function isGoogleAuthRevokedError(err) {
+    const payload = [
+        err?.message,
+        err?.response?.data?.error,
+        err?.response?.data?.error_description,
+        err?.errors?.map(e => e.message).join(' ')
+    ].filter(Boolean).join(' ');
+
+    return /invalid_grant|invalid_rapt|Token has been expired or revoked/i.test(payload);
+}
+
+async function handleYoutubeRouteError(res, userId, err, context) {
+    console.error(`[YouTube] ${context}:`, err.message);
+
+    if (userId && isGoogleAuthRevokedError(err)) {
+        await db.query('DELETE FROM user_google_tokens WHERE user_id = $1', [userId]);
+        return res.status(401).json({
+            message: YOUTUBE_RELINK_MESSAGE,
+            relinkRequired: true
+        });
+    }
+
+    return res.status(500).json({ message: err.message });
+}
+
 
 /**
  * YouTube (Google) 認証URL取得
@@ -184,6 +211,9 @@ router.post('/create-playlist', authorize, async (req, res) => {
                         await db.query('UPDATE songs SET yt_video_id = $1 WHERE id = $2', [videoId, song.id]);
                     }
                 } catch (searchErr) {
+                    if (isGoogleAuthRevokedError(searchErr)) {
+                        return handleYoutubeRouteError(res, userId, searchErr, 'Create Playlist Search Error');
+                    }
                     console.warn(`[YouTube] Search error for "${song.title}":`, searchErr.message);
                 }
             }
@@ -218,6 +248,9 @@ router.post('/create-playlist', authorize, async (req, res) => {
                 await youtube.addVideoToPlaylist(playlist.id, vid);
                 addedIds.push(vid);
             } catch (addErr) {
+                if (isGoogleAuthRevokedError(addErr)) {
+                    return handleYoutubeRouteError(res, userId, addErr, 'Create Playlist Add Video Error');
+                }
                 console.error(`[YouTube] Failed to add video ${vid} to playlist:`, addErr.message);
                 failedToAddSongs.push(videoIdToTitle[vid] || vid);
             }
@@ -238,8 +271,7 @@ router.post('/create-playlist', authorize, async (req, res) => {
         });
 
     } catch (err) {
-        console.error('[YouTube] Create Playlist Error:', err.message);
-        res.status(500).json({ message: err.message });
+        return handleYoutubeRouteError(res, userId, err, 'Create Playlist Error');
     }
 });
 
@@ -286,7 +318,7 @@ router.post('/auto-map-song', authorize, async (req, res) => {
         }
         res.json({ success: false, message: 'No match found' });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        return handleYoutubeRouteError(res, userId, err, 'Auto Map Song Error');
     }
 });
 
@@ -323,6 +355,9 @@ router.post('/auto-map-batch', authorize, async (req, res) => {
                     results.failed++;
                 }
             } catch (err) {
+                if (isGoogleAuthRevokedError(err)) {
+                    return handleYoutubeRouteError(res, userId, err, 'Auto Map Batch Error');
+                }
                 console.error(`[YouTube Bulk] Error for song ID ${id}:`, err.message);
                 results.failed++;
             }
@@ -332,7 +367,7 @@ router.post('/auto-map-batch', authorize, async (req, res) => {
 
         res.json({ success: true, results });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        return handleYoutubeRouteError(res, userId, err, 'Auto Map Batch Error');
     }
 });
 
