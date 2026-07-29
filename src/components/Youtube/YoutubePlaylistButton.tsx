@@ -92,6 +92,11 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
             fetchHistory();
         } catch (err: any) {
             setStatus('ERROR');
+            const relinkRequired = err.response?.data?.relinkRequired || err.response?.status === 401;
+            if (relinkRequired) {
+                setIsLinked(false);
+                setResult(null);
+            }
             setError(err.response?.data?.message || 'プレイリストの作成に失敗しました。');
         }
     };
