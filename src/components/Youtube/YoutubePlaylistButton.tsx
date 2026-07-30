@@ -37,6 +37,40 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
         }
     }, [currentUser]);
 
+    useEffect(() => {
+        if (!currentUser) return;
+
+        const refreshYoutubeStatus = () => {
+            setError(null);
+            setRelinkRequired(false);
+            setStatus('IDLE');
+            checkStatus();
+            fetchHistory();
+        };
+
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data?.type === 'youtube-linked') {
+                refreshYoutubeStatus();
+            }
+        };
+
+        const handleStorage = (event: StorageEvent) => {
+            if (event.key === 'youtubeLinkedAt') {
+                refreshYoutubeStatus();
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        window.addEventListener('storage', handleStorage);
+        window.addEventListener('focus', checkStatus);
+
+        return () => {
+            window.removeEventListener('message', handleMessage);
+            window.removeEventListener('storage', handleStorage);
+            window.removeEventListener('focus', checkStatus);
+        };
+    }, [currentUser, liveId]);
+
     const checkStatus = async () => {
         try {
             const res = await axios.get('/api/youtube/status', authHeaders());
@@ -75,6 +109,7 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
                 if (!popup || popup.closed) {
                     clearInterval(timer);
                     checkStatus();
+                    fetchHistory();
                 }
             }, 1000);
         } catch (err) {
