@@ -51,12 +51,28 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
         const handleMessage = (event: MessageEvent) => {
             if (event.data?.type === 'youtube-linked') {
                 refreshYoutubeStatus();
+                return;
+            }
+
+            if (event.data?.type === 'youtube-link-failed') {
+                setIsLinked(false);
+                setStatus('ERROR');
+                setRelinkRequired(true);
+                setError(event.data.message || 'YouTube連携を完了できませんでした。');
             }
         };
 
         const handleStorage = (event: StorageEvent) => {
             if (event.key === 'youtubeLinkedAt') {
                 refreshYoutubeStatus();
+                return;
+            }
+
+            if (event.key === 'youtubeLinkFailedAt') {
+                setIsLinked(false);
+                setStatus('ERROR');
+                setRelinkRequired(true);
+                setError(localStorage.getItem('youtubeLinkMessage') || 'YouTube連携を完了できませんでした。');
             }
         };
 
