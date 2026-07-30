@@ -108,6 +108,11 @@ router.get('/auth-url', authorize, (req, res) => {
  * YouTube OAuth コールバック
  */
 router.get('/callback', async (req, res) => {
+    res.setHeader(
+        'Content-Security-Policy',
+        "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'"
+    );
+
     const { code, state } = req.query;
 
     if (!code) {
