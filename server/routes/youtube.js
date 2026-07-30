@@ -5,6 +5,39 @@ const db = require('../db');
 const { encrypt, signState, verifyState } = require('../utils/encryption');
 const { google } = require('googleapis');
 const YOUTUBE_RELINK_MESSAGE = 'YouTube Music連携の有効期限が切れました。再度連携してください。';
+const YOUTUBE_REFRESH_TOKEN_MESSAGE = 'YouTube連携に必要な認証情報を取得できませんでした。Googleアカウント側でこのアプリの連携を削除してから、もう一度連携してください。';
+
+function renderYoutubeCallbackPage({ success, message }) {
+    const type = success ? 'youtube-linked' : 'youtube-link-failed';
+    const title = success ? 'YouTube連携が完了しました！' : 'YouTube連携を完了できませんでした';
+    const buttonColor = success ? '#ff0000' : '#f59e0b';
+    const storageKey = success ? 'youtubeLinkedAt' : 'youtubeLinkFailedAt';
+    const serializedMessage = JSON.stringify(message);
+
+    return `
+        <html>
+            <head><title>${success ? 'Success' : 'Authentication Error'}</title></head>
+            <body style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; gap:12px; padding:24px; font-family:sans-serif; background:#0f172a; color:#fff; text-align:center;">
+                <h1>${title}</h1>
+                <p style="max-width:520px; line-height:1.7; color:#cbd5e1;">${message}</p>
+                <button onclick="window.close()" style="padding:12px 18px; border:0; border-radius:10px; background:${buttonColor}; color:#fff; font-weight:bold; cursor:pointer;">閉じる</button>
+                <script>
+                    (function () {
+                        try {
+                            var payload = { type: '${type}', message: ${serializedMessage} };
+                            if (window.opener && !window.opener.closed) {
+                                window.opener.postMessage(payload, '*');
+                            }
+                            localStorage.setItem('${storageKey}', String(Date.now()));
+                            localStorage.setItem('youtubeLinkMessage', ${serializedMessage});
+                        } catch (e) {}
+                        setTimeout(function () { window.close(); }, 1200);
+                    })();
+                </script>
+            </body>
+        </html>
+    `;
+}
 
 function isGoogleAuthRevokedError(err) {
     const payload = [
@@ -62,7 +95,7 @@ router.get('/auth-url', authorize, (req, res) => {
             access_type: 'offline',
             scope: ['https://www.googleapis.com/auth/youtube'],
             state: signState(userId),
-            prompt: 'consent'
+            prompt: 'consent select_account'
         });
         res.json({ url });
     } catch (err) {
@@ -115,7 +148,7 @@ router.get('/callback', async (req, res) => {
                 [userId, encrypt(access_token), encrypt(refresh_token), expiresAt]
             );
         } else {
-            await db.query(
+            const updateResult = await db.query(
                 `UPDATE user_google_tokens SET
                     access_token = $1,
                     expires_at = $2,
@@ -123,32 +156,26 @@ router.get('/callback', async (req, res) => {
                  WHERE user_id = $3`,
                 [encrypt(access_token), expiresAt, userId]
             );
+
+            if (updateResult.rowCount === 0) {
+                console.warn('[YouTube] refresh_token missing and no existing token row:', { userId });
+                return res.status(400).send(renderYoutubeCallbackPage({
+                    success: false,
+                    message: YOUTUBE_REFRESH_TOKEN_MESSAGE
+                }));
+            }
         }
 
-        res.send(`
-            <html>
-                <head><title>Success</title></head>
-                <body style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; gap:12px; font-family:sans-serif; background:#0f172a; color:#fff; text-align:center;">
-                    <h1>YouTube連携が完了しました！</h1>
-                    <p>アプリに戻ると連携状態が更新されます。</p>
-                    <button onclick="window.close()" style="padding:12px 18px; border:0; border-radius:10px; background:#ff0000; color:#fff; font-weight:bold; cursor:pointer;">閉じる</button>
-                    <script>
-                        (function () {
-                            try {
-                                if (window.opener && !window.opener.closed) {
-                                    window.opener.postMessage({ type: 'youtube-linked' }, '*');
-                                }
-                                localStorage.setItem('youtubeLinkedAt', String(Date.now()));
-                            } catch (e) {}
-                            setTimeout(function () { window.close(); }, 800);
-                        })();
-                    </script>
-                </body>
-            </html>
-        `);
+        res.send(renderYoutubeCallbackPage({
+            success: true,
+            message: 'アプリに戻ると連携状態が更新されます。'
+        }));
     } catch (err) {
         console.error('[YouTube] Callback Error:', err.message);
-        res.status(500).send('YouTube連携中にエラーが発生しました。再度お試しください。');
+        res.status(500).send(renderYoutubeCallbackPage({
+            success: false,
+            message: 'YouTube連携中にエラーが発生しました。再度お試しください。'
+        }));
     }
 });
 
