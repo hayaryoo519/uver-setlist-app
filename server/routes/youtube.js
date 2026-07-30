@@ -128,10 +128,21 @@ router.get('/callback', async (req, res) => {
         res.send(`
             <html>
                 <head><title>Success</title></head>
-                <body style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:sans-serif;">
+                <body style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; gap:12px; font-family:sans-serif; background:#0f172a; color:#fff; text-align:center;">
                     <h1>YouTube連携が完了しました！</h1>
-                    <p>このウィンドウを閉じて、アプリに戻ってください。</p>
-                    <script>setTimeout(() => window.close(), 2000)</script>
+                    <p>アプリに戻ると連携状態が更新されます。</p>
+                    <button onclick="window.close()" style="padding:12px 18px; border:0; border-radius:10px; background:#ff0000; color:#fff; font-weight:bold; cursor:pointer;">閉じる</button>
+                    <script>
+                        (function () {
+                            try {
+                                if (window.opener && !window.opener.closed) {
+                                    window.opener.postMessage({ type: 'youtube-linked' }, '*');
+                                }
+                                localStorage.setItem('youtubeLinkedAt', String(Date.now()));
+                            } catch (e) {}
+                            setTimeout(function () { window.close(); }, 800);
+                        })();
+                    </script>
                 </body>
             </html>
         `);
