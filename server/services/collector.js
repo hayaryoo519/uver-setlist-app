@@ -1,9 +1,18 @@
 const db = require('../db');
-const crypto = require('crypto');
 const { notifyDraftAdded } = require('../utils/lineNotification');
+const { normalizeForHash: normalizeText, generateHash } = require('../utils/setlistHash');
+const xClient = require('./xClient');
 
-// レート制限用メモリキャッシュ
+const { XCollectorAbortError } = xClient;
+
+// レート制限用メモリキャッシュ（キーは live_id + クエリ単位）
 const lastRunCache = new Map();
+const RATE_LIMIT_MS = 60 * 60 * 1000;
+
+// 曲マスタのキャッシュ（Confidence 計算のたびに全件取得しないため）
+const SONG_CACHE_TTL_MS = 5 * 60 * 1000;
+let songCache = null;
+let songCacheAt = 0;
 
 /**
  * ログを DB に書き込む
@@ -20,22 +29,66 @@ async function logToDb(level, message, details = null) {
 }
 
 /**
- * テキストを正規化する
+ * 曲マスタを取得（5分キャッシュ）
  */
-function normalizeText(text) {
-    if (!text) return '';
-    return text.toUpperCase()
-        .replace(/[\s\W_]/g, '')
-        .replace(/[！"＃＄％＆'（）＊＋，－．／：；＜＝＞？＠［＼］＾＿｀｛｜｝～]/g, '')
-        .replace(/[ー−―－]/g, '');
+async function loadSongs() {
+    if (songCache && Date.now() - songCacheAt < SONG_CACHE_TTL_MS) {
+        return songCache;
+    }
+    const result = await db.query(
+        'SELECT id, title, normalized_title FROM songs WHERE deleted_at IS NULL'
+    );
+    songCache = result.rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        normalizedTitle: (row.normalized_title || '').toLowerCase().trim(),
+        fuzzyKey: normalizeText(row.title),
+    }));
+    songCacheAt = Date.now();
+    return songCache;
 }
 
 /**
- * 正規化ハッシュを生成
+ * 曲名を曲マスタに突き合わせる
+ * 完全一致 → normalized_title 一致 → 記号・空白を落としたファジー一致 の順に試す
  */
-function generateHash(text) {
-    const normalized = normalizeText(text);
-    return crypto.createHash('md5').update(normalized).digest('hex');
+function matchSong(title, songs) {
+    const raw = (title || '').trim();
+    if (!raw) return null;
+
+    const exact = songs.find((s) => s.title === raw);
+    if (exact) return exact;
+
+    const normalizedKey = raw.toLowerCase().replace(/\s+/g, ' ').trim();
+    const normalized = songs.find((s) => s.normalizedTitle && s.normalizedTitle === normalizedKey);
+    if (normalized) return normalized;
+
+    const fuzzyKey = normalizeText(raw);
+    if (!fuzzyKey) return null;
+    return songs.find((s) => s.fuzzyKey && s.fuzzyKey === fuzzyKey) || null;
+}
+
+/**
+ * 抽出した曲名リストを parsed_json 形式へ変換する
+ * 曲マスタに一致した場合は song_id を持たせ、不明曲は song_id: null（管理画面で要確認）
+ */
+async function buildParsedSongs(titles) {
+    let songs = [];
+    try {
+        songs = await loadSongs();
+    } catch (err) {
+        console.warn('[Collector] 曲マスタの取得に失敗しました:', err.message);
+    }
+
+    return titles.map((title, index) => {
+        const matched = songs.length > 0 ? matchSong(title, songs) : null;
+        return {
+            position: index + 1,
+            title,
+            song_id: matched ? matched.id : null,
+            matched_title: matched ? matched.title : null,
+        };
+    });
 }
 
 /**
@@ -43,8 +96,10 @@ function generateHash(text) {
  */
 async function estimateLiveId(text, postDate) {
     try {
-        const dateStr = postDate instanceof Date ? postDate.toISOString().split('T')[0] : postDate.split('T')[0];
-        
+        const dateStr = postDate instanceof Date
+            ? postDate.toISOString().split('T')[0]
+            : String(postDate).split('T')[0];
+
         // その日のライブを取得
         const lives = await db.query('SELECT * FROM lives WHERE date = $1', [dateStr]);
         if (lives.rows.length === 0) return null;
@@ -52,6 +107,7 @@ async function estimateLiveId(text, postDate) {
 
         // 複数ある場合は会場名でマッチング
         for (const live of lives.rows) {
+            if (!live.venue) continue;
             if (text.includes(live.venue) || text.includes(live.venue.replace('Zepp ', ''))) {
                 return live.id;
             }
@@ -63,33 +119,51 @@ async function estimateLiveId(text, postDate) {
 }
 
 /**
- * X (Twitter) 等から投稿を取得する (抽象化)
+ * X (Twitter) から投稿を取得する
+ * 実体は twitter-cli アダプタ（services/xClient.js）
  */
-async function getPosts(query) {
-    // console.log(`Searching SNS for: ${query}`);
-    return []; // 実装はユーザーに委ねる、または外部API連携
+async function getPosts(query, limit = 20) {
+    return xClient.getPosts(query, limit);
 }
 
 /**
  * GPT判定
+ * セトリ予想・願望・感想のみの投稿を除外させる（仕様 §6）
  */
 async function identifySetlist(text) {
     try {
         const OpenAI = (await import('openai')).default;
         const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-        const prompt = `以下のテキストがライブのセットリストか判定してください。
-演奏曲のみ抽出しJSONで返してください。
-{ "is_setlist": boolean, "songs": ["曲名1", ...] }`;
+        const prompt = `以下のX(Twitter)投稿が、実際に開催されたUVERworldのライブで演奏されたセットリストの記録か判定してください。
+演奏された曲のみを演奏順に抽出し、JSONで返してください。
+
+is_setlist を false にする例:
+- セトリ予想・願望（「〇〇やってほしい」「予想」「聴きたい」等）
+- ライブの感想のみで曲順の記載がないもの
+- 過去公演の振り返りや、日付が明示的に別公演のもの
+- Spotify/Apple Music 等のプレイリスト
+- UVERworld 以外のアーティストのセットリスト
+
+is_setlist を true にする例:
+- 番号付き・箇条書きで演奏曲が並んでいるもの
+- 「本日のセトリ」「今日のセットリスト」等の明確な記載があるもの
+
+出力形式:
+{ "is_setlist": boolean, "songs": ["曲名1", "曲名2", ...] }`;
 
         const response = await openai.chat.completions.create({
             model: "gpt-4o-mini",
-            messages: [{ role: "user", content: `${prompt}\n\nテキスト:\n${text}` }],
+            messages: [{ role: "user", content: `${prompt}\n\n投稿:\n${text}` }],
             response_format: { type: "json_object" },
             temperature: 0.1
         });
 
-        return JSON.parse(response.choices[0].message.content);
+        const parsed = JSON.parse(response.choices[0].message.content);
+        return {
+            is_setlist: Boolean(parsed.is_setlist),
+            songs: Array.isArray(parsed.songs) ? parsed.songs : [],
+        };
     } catch (err) {
         await logToDb('error', 'GPT identification failed', { error: err.message, text: text.substring(0, 100) });
         return { is_setlist: false, songs: [] };
@@ -97,103 +171,188 @@ async function identifySetlist(text) {
 }
 
 /**
- * 信頼度計算 (グルーピング加点あり)
+ * 信頼度計算（仕様 §9 の重み付け）
+ *
+ *   楽曲DB一致率   40%
+ *   曲数の妥当性   20%
+ *   複数投稿一致   20%
+ *   ノイズの少なさ 20%
+ *
+ * 仕様の「曲順の一貫性 10%」は単一投稿からは判定できないため、
+ * ノイズ判定に統合して 20% としている。
+ *
+ * @param {Array} parsedSongs buildParsedSongs() の戻り値
  */
-async function calculateConfidence(songs, duplicateCount = 1) {
-    let score = 0.3;
-    if (songs.length >= 12) score += 0.3;
-    
-    // 重複投稿ボーナス
-    if (duplicateCount >= 5) score += 0.3;
-    else if (duplicateCount >= 2) score += 0.15;
+function calculateConfidence(parsedSongs, duplicateCount = 1, rawText = '') {
+    const total = parsedSongs.length;
+    if (total === 0) return 0;
 
-    return Math.min(1.0, score);
+    // 楽曲DB一致率
+    const matchRate = parsedSongs.filter((s) => s.song_id).length / total;
+    let score = matchRate * 0.4;
+
+    // 曲数の妥当性（ワンマンは概ね 15〜30 曲、フェスは 5 曲前後）
+    if (total >= 15 && total <= 30) score += 0.2;
+    else if (total >= 10) score += 0.15;
+    else if (total >= 5) score += 0.08;
+
+    // 複数投稿一致
+    if (duplicateCount >= 5) score += 0.2;
+    else if (duplicateCount >= 3) score += 0.15;
+    else if (duplicateCount >= 2) score += 0.1;
+
+    // ノイズの少なさ
+    const noiseMatches = rawText.match(/[!?#$%^]/g);
+    if (!noiseMatches) score += 0.2;
+    else if (noiseMatches.length <= 15) score += 0.1;
+
+    return Math.max(0, Math.min(1, Number(score.toFixed(2))));
 }
 
 /**
  * 収集器のメイン処理
+ *
+ * @throws {XCollectorAbortError} レート制限・認証エラー時（呼び出し側は残りのクエリを中止する）
+ * @returns {number} 新規作成したドラフト数
  */
 async function collect(query, inputLiveId = null) {
-    // レート制限チェック
+    // レート制限チェック（同一ライブ × 同一クエリで 1 時間に 1 回）
     const now = Date.now();
-    const cacheKey = inputLiveId || query;
-    if (lastRunCache.has(cacheKey) && (now - lastRunCache.get(cacheKey) < 3600000)) {
+    const cacheKey = `${inputLiveId ?? 'any'}::${query}`;
+    if (lastRunCache.has(cacheKey) && (now - lastRunCache.get(cacheKey) < RATE_LIMIT_MS)) {
         console.log(`[Rate Limit] Skipping collection for ${cacheKey}`);
         return 0;
     }
     lastRunCache.set(cacheKey, now);
 
-    // 内部関数をモック可能にするため exports を経由
-    const posts = await module.exports.getPosts(query);
-    console.log(`[Collector] Found ${posts.length} posts to process`);
-    if (!posts || posts.length === 0) {
+    const stats = { query, liveId: inputLiveId, fetched: 0, candidates: 0, created: 0, grouped: 0, errors: 0 };
+
+    let posts;
+    try {
+        // 内部関数をモック可能にするため exports を経由
+        posts = await module.exports.getPosts(query);
+    } catch (err) {
+        stats.errors++;
+        await logToDb(
+            err instanceof XCollectorAbortError ? 'warn' : 'error',
+            'X post fetch failed',
+            { ...stats, error: err.message }
+        );
+        // レート制限・認証エラーは呼び出し側で収集全体を打ち切らせる
+        if (err instanceof XCollectorAbortError) throw err;
         return 0;
     }
 
-    let count = 0;
+    stats.fetched = posts.length;
+    console.log(`[Collector] Found ${posts.length} posts to process`);
+
     for (const post of posts) {
         try {
-            console.log(`[Collector] Processing post: ${post.url || 'no-url'}`);
-            const result = await identifySetlist(post.text);
+            console.log(`[Collector] Processing post: ${post.post_url || 'no-url'}`);
+            const result = await module.exports.identifySetlist(post.text);
             console.log(`[Collector] GPT Result: is_setlist=${result.is_setlist}, songs=${result.songs?.length}`);
-            
+
             if (!result.is_setlist || result.songs.length < 10) {
                 console.log(`[Collector] Skipping (not a setlist or too short)`);
                 continue;
             }
+            stats.candidates++;
 
             const songsText = result.songs.join('\n');
             const hash = generateHash(songsText);
 
             // ライブIDの自動紐付け (指定がない場合)
-            const liveId = inputLiveId || await estimateLiveId(post.text, post.created_at || new Date());
+            const liveId = inputLiveId || await estimateLiveId(post.text, post.posted_at || new Date());
             console.log(`[Collector] Estimated Live ID: ${liveId}`);
 
             // 重複チェック & グルーピング
             const existing = await db.query(
-                'SELECT id, duplicate_count FROM raw_setlists WHERE raw_text_hash = $1',
+                'SELECT id, duplicate_count, source_urls, source_post_ids FROM raw_setlists WHERE raw_text_hash = $1',
                 [hash]
             );
 
             if (existing.rows.length > 0) {
-                // グルーピング: 同一ハッシュならカウントアップ
-                const newCount = (existing.rows[0].duplicate_count || 1) + 1;
-                const newConfidence = await calculateConfidence(result.songs, newCount);
-                
+                const draft = existing.rows[0];
+                const knownPostIds = draft.source_post_ids || [];
+
+                // 別クエリで同じ投稿を再取得した場合はカウントしない
+                if (knownPostIds.includes(post.post_id)) {
+                    console.log(`[Grouping] Post ${post.post_id} already counted in Draft #${draft.id}`);
+                    continue;
+                }
+
+                const newCount = (draft.duplicate_count || 1) + 1;
+                const parsedSongs = await buildParsedSongs(result.songs);
+                const newConfidence = calculateConfidence(parsedSongs, newCount, post.text);
+
                 await db.query(
-                    'UPDATE raw_setlists SET duplicate_count = $1, confidence = $2, updated_at = NOW() WHERE id = $3',
-                    [newCount, newConfidence, existing.rows[0].id]
+                    `UPDATE raw_setlists
+                     SET duplicate_count = $1,
+                         confidence = $2,
+                         source_urls = array_append(COALESCE(source_urls, ARRAY[]::TEXT[]), $3),
+                         source_post_ids = array_append(COALESCE(source_post_ids, ARRAY[]::TEXT[]), $4),
+                         updated_at = NOW()
+                     WHERE id = $5`,
+                    [newCount, newConfidence, post.post_url, post.post_id, draft.id]
                 );
-                console.log(`[Grouping] Updated Draft #${existing.rows[0].id} (Count: ${newCount})`);
+                stats.grouped++;
+                console.log(`[Grouping] Updated Draft #${draft.id} (Count: ${newCount})`);
                 continue;
             }
 
             // 新規作成
-            const confidence = await calculateConfidence(result.songs, 1);
-            const parsedJson = result.songs.map((s, i) => ({ position: i+1, title: s }));
+            const parsedSongs = await buildParsedSongs(result.songs);
+            const confidence = calculateConfidence(parsedSongs, 1, post.text);
 
             console.log(`[Collector] Creating new draft with live_id=${liveId}`);
             const insertResult = await db.query(
-                `INSERT INTO raw_setlists (live_id, source, raw_text, parsed_json, status, source_url, raw_text_hash, confidence, duplicate_count)
-                 VALUES ($1, 'x', $2, $3, 'pending', $4, $5, $6, $7)
+                `INSERT INTO raw_setlists (live_id, source, raw_text, parsed_json, status, source_url, source_urls, source_post_ids, raw_text_hash, confidence, duplicate_count)
+                 VALUES ($1, 'x', $2, $3, 'pending', $4, $5, $6, $7, $8, 1)
                  RETURNING *`,
-                [liveId, post.text, JSON.stringify(parsedJson), post.url, hash, confidence, 1]
+                [
+                    liveId,
+                    post.text,
+                    JSON.stringify(parsedSongs),
+                    post.post_url,
+                    [post.post_url],
+                    [post.post_id],
+                    hash,
+                    confidence,
+                ]
             );
 
             // LINE通知（非同期・失敗しても引き続き処理する）
             notifyDraftAdded(insertResult.rows[0]).catch(err => console.error('[LINE] 自動収集ドラフト通知エラー:', err.message));
 
-            count++;
+            stats.created++;
         } catch (postErr) {
+            stats.errors++;
             console.error(`[Collector] Post processing error:`, postErr);
-            await logToDb('error', 'Post processing error', { error: postErr.message, url: post.url });
+            await logToDb('error', 'Post processing error', { error: postErr.message, url: post.post_url });
         }
     }
 
-    if (count > 0) {
-        await logToDb('info', `Collected ${count} new setlists`, { query, liveId: inputLiveId });
-    }
-    return count;
+    // 仕様 §11: 実行ごとに取得件数・候補数・作成数を残す
+    await logToDb(stats.errors > 0 ? 'warn' : 'info', 'X collection finished', stats);
+    return stats.created;
 }
 
-module.exports = { collect, identifySetlist, getPosts };
+/**
+ * テスト用: レート制限キャッシュと曲マスタキャッシュを初期化する
+ */
+function _resetCaches() {
+    lastRunCache.clear();
+    songCache = null;
+    songCacheAt = 0;
+}
+
+module.exports = {
+    collect,
+    identifySetlist,
+    getPosts,
+    calculateConfidence,
+    buildParsedSongs,
+    matchSong,
+    XCollectorAbortError,
+    _resetCaches,
+};
