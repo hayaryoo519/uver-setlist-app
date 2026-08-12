@@ -141,6 +141,15 @@ describe('collector', () => {
             );
         });
 
+        it('リツイートは処理せずスキップすること', async () => {
+            collector.getPosts = jest.fn().mockResolvedValue([makePost({ is_retweet: true })]);
+            collector.identifySetlist.mockResolvedValue({ is_setlist: true, songs: TWELVE_SONGS });
+            db.query.mockResolvedValue({ rows: [] });
+
+            await expect(collector.collect('rt', 1)).resolves.toBe(0);
+            expect(collector.identifySetlist).not.toHaveBeenCalled();
+        });
+
         it('曲数が10未満の投稿は候補にしないこと', async () => {
             collector.getPosts = jest.fn().mockResolvedValue([makePost()]);
             collector.identifySetlist.mockResolvedValue({ is_setlist: true, songs: ['CORE PRIDE', 'IMPACT'] });

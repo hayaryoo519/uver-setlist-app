@@ -248,6 +248,12 @@ async function collect(query, inputLiveId = null) {
 
     for (const post of posts) {
         try {
+            // リツイートは本文が原投稿と同一なため、複数投稿一致の加点を水増ししてしまう
+            if (post.is_retweet) {
+                console.log(`[Collector] Skipping retweet: ${post.post_url || 'no-url'}`);
+                continue;
+            }
+
             console.log(`[Collector] Processing post: ${post.post_url || 'no-url'}`);
             const result = await module.exports.identifySetlist(post.text);
             console.log(`[Collector] GPT Result: is_setlist=${result.is_setlist}, songs=${result.songs?.length}`);

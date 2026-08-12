@@ -32,21 +32,51 @@ describe('xClient', () => {
     });
 
     describe('normalizeTwitterPost', () => {
-        it('twitter-cli の形式を共通形式へ変換すること', () => {
+        // twitter-cli 0.8.5 の実出力に合わせた形
+        it('twitter-cli の実際の形式(camelCase)を共通形式へ変換すること', () => {
             const post = normalizeTwitterPost({
-                id: '1234567890',
-                text: '本日のセトリ',
-                created_at: '2026-08-12T12:00:00Z',
-                author: { username: 'uver_fan' },
+                id: '2086072522588737870',
+                text: 'UVERworld セトリ',
+                createdAtISO: '2026-08-11T12:45:57+00:00',
+                createdAt: 'Tue Aug 11 12:45:57 +0000 2026',
+                author: { name: '表示名', screenName: 'uver_fan' },
+                isRetweet: false,
             });
 
             expect(post).toMatchObject({
-                post_id: '1234567890',
-                post_url: 'https://x.com/i/status/1234567890',
-                posted_at: '2026-08-12T12:00:00Z',
+                post_id: '2086072522588737870',
+                post_url: 'https://x.com/uver_fan/status/2086072522588737870',
+                posted_at: '2026-08-11T12:45:57+00:00',
                 author: 'uver_fan',
-                text: '本日のセトリ',
+                text: 'UVERworld セトリ',
+                is_retweet: false,
             });
+        });
+
+        it('snake_case 形式も扱えること', () => {
+            const post = normalizeTwitterPost({
+                id: '1',
+                text: 'a',
+                created_at: '2026-08-12T12:00:00Z',
+                author: { username: 'fan' },
+            });
+
+            expect(post).toMatchObject({ posted_at: '2026-08-12T12:00:00Z', author: 'fan' });
+        });
+
+        it('HTMLエンティティを復元すること', () => {
+            expect(normalizeTwitterPost({ id: '1', text: 'ROB THE FRONTIER &amp; CORE PRIDE' }).text)
+                .toBe('ROB THE FRONTIER & CORE PRIDE');
+        });
+
+        it('リツイートを判別できること', () => {
+            expect(normalizeTwitterPost({ id: '1', text: 'a', isRetweet: true }).is_retweet).toBe(true);
+        });
+
+        it('screenName が無ければ表示名にフォールバックし、URLは i/status になること', () => {
+            const post = normalizeTwitterPost({ id: '9', text: 'a', author: { name: '表示名' } });
+            expect(post.author).toBe('表示名');
+            expect(post.post_url).toBe('https://x.com/i/status/9');
         });
 
         it('id が数値でも文字列化されること', () => {
@@ -134,6 +164,33 @@ describe('xClient', () => {
             mockExec('not json');
 
             await expect(xClient.getPosts('q')).rejects.toThrow(/JSON/);
+        });
+
+        // twitter-cli は失敗時 { ok:false, error:{code,message} } を返す
+        it('ok:false を握り潰さずエラーにすること', async () => {
+            mockExec(JSON.stringify({ ok: false, schema_version: '1', error: { code: 'not_found', message: 'HTTP 404' } }));
+
+            await expect(xClient.getPosts('q')).rejects.toThrow(/not_found/);
+        });
+
+        it('ok:false が認証エラーなら中断エラーにすること', async () => {
+            mockExec(JSON.stringify({ ok: false, error: { code: 'unauthorized', message: 'bad cookie' } }));
+
+            await expect(xClient.getPosts('q')).rejects.toThrow(XCollectorAbortError);
+        });
+
+        it('ok:true の実形式から投稿を取り出せること', async () => {
+            mockExec(JSON.stringify({
+                ok: true,
+                schema_version: '1',
+                data: [{ id: '1', text: 'セトリ', author: { screenName: 'fan' }, createdAtISO: '2026-08-11T12:45:57+00:00' }],
+            }));
+
+            const posts = await xClient.getPosts('q');
+
+            expect(posts).toHaveLength(1);
+            expect(posts[0].author).toBe('fan');
+            expect(posts[0].posted_at).toBe('2026-08-11T12:45:57+00:00');
         });
     });
 });
