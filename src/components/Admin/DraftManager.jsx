@@ -481,11 +481,14 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
                                     <span style={{ color: '#64748b', fontSize: '12px', fontFamily: 'monospace' }}>#{draft.id}</span>
                                     {getStatusBadge(draft.status)}
                                     {getSourceLabel(draft.source)}
-                                    {draft.source_url && (
-                                        <a href={draft.source_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: '#3b82f6', textDecoration: 'none' }}>
-                                            🔗 リンクを表示
-                                        </a>
-                                    )}
+                                    {/* 統合された元投稿がある場合は全件、なければ従来の source_url を表示 */}
+                                    {(draft.source_urls?.length > 0 ? draft.source_urls : [draft.source_url])
+                                        .filter(Boolean)
+                                        .map((url, i, arr) => (
+                                            <a key={url} href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: '#3b82f6', textDecoration: 'none' }}>
+                                                🔗 {arr.length > 1 ? `元投稿 ${i + 1}` : 'リンクを表示'}
+                                            </a>
+                                        ))}
                                     {draft.duplicate_count > 1 && (
                                         <span style={{ 
                                             fontSize: '10px', background: '#3b82f620', color: '#60a5fa', 
