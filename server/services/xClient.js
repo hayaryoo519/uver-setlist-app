@@ -44,26 +44,56 @@ function extractTweets(parsed) {
 }
 
 /**
+ * X の text に含まれる HTML エンティティを戻す
+ * twitter-cli は "&amp;" 等をそのまま返すため、曲名照合の前に復元する
+ */
+function decodeEntities(text) {
+    if (!text) return '';
+    return text
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
+}
+
+/**
  * twitter-cli 固有形式 → collector 共通形式 (CollectedPost)
  *
- * @returns {{post_id: string, post_url: string, posted_at: string|null, author: string|null, text: string, raw: object}}
+ * twitter-cli 0.8.5 の実際のフィールド名は camelCase（createdAtISO / screenName /
+ * isRetweet）。他バックエンドや将来の変更に備えて snake_case も見る。
+ *
+ * @returns {{post_id: string, post_url: string, posted_at: string|null, author: string|null, text: string, is_retweet: boolean, raw: object}}
  */
 function normalizeTwitterPost(tweet) {
     const postId = tweet.id ?? tweet.id_str ?? tweet.rest_id ?? null;
-    const author =
+    const screenName =
+        tweet.author?.screenName ??
         tweet.author?.username ??
         tweet.author?.screen_name ??
-        tweet.author?.name ??
         tweet.user?.screen_name ??
         tweet.username ??
         null;
+    const author = screenName ?? tweet.author?.name ?? null;
+
+    let postUrl = tweet.url ?? tweet.permalink ?? null;
+    if (!postUrl && postId) {
+        postUrl = `https://x.com/${screenName ?? 'i'}/status/${postId}`;
+    }
 
     return {
         post_id: postId != null ? String(postId) : null,
-        post_url: tweet.url ?? tweet.permalink ?? (postId ? `https://x.com/i/status/${postId}` : null),
-        posted_at: tweet.created_at ?? tweet.posted_at ?? tweet.timestamp ?? null,
+        post_url: postUrl,
+        posted_at:
+            tweet.createdAtISO ??
+            tweet.created_at ??
+            tweet.createdAt ??
+            tweet.posted_at ??
+            tweet.timestamp ??
+            null,
         author,
-        text: tweet.text ?? tweet.full_text ?? tweet.content ?? '',
+        text: decodeEntities(tweet.text ?? tweet.full_text ?? tweet.content ?? ''),
+        is_retweet: Boolean(tweet.isRetweet ?? tweet.is_retweet ?? tweet.retweeted ?? false),
         raw: tweet,
     };
 }
@@ -124,6 +154,17 @@ async function getPosts(query, limit = DEFAULT_LIMIT) {
         parsed = JSON.parse(stdout);
     } catch (err) {
         throw new Error(`twitter search の JSON 出力を解析できませんでした: ${err.message}`);
+    }
+
+    // twitter-cli は { ok, schema_version, data } 形式。
+    // 失敗時は exit 1 になるが、ok:false だけが返る経路も握り潰さないようにする
+    if (parsed && parsed.ok === false) {
+        const code = parsed.error?.code ?? 'unknown';
+        const message = parsed.error?.message ?? '(詳細なし)';
+        if (/rate_limit|unauthorized|forbidden|auth/i.test(code)) {
+            throw new XCollectorAbortError(`X 検索が失敗しました [${code}]: ${message}`);
+        }
+        throw new Error(`X 検索が失敗しました [${code}]: ${message}`);
     }
 
     return extractTweets(parsed)
