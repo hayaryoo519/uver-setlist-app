@@ -33,12 +33,16 @@ router.get('/recent', async (req, res) => {
 // SNS収集ログ取得 (最新10件)
 router.get('/collector', async (req, res) => {
     try {
+        // ダッシュボードで期間を遡れるよう件数を可変にする（既定10件・最大200件）
+        const parsed = Number.parseInt(req.query.limit, 10);
+        const limit = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), 200) : 10;
+
         const result = await db.query(`
             SELECT id, level, message, details, created_at
             FROM collector_logs
             ORDER BY created_at DESC
-            LIMIT 10
-        `);
+            LIMIT $1
+        `, [limit]);
         res.json({ logs: result.rows });
     } catch (err) {
         console.error('Error fetching collector logs:', err);
