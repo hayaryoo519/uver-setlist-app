@@ -67,6 +67,19 @@ describe('collector', () => {
         });
     });
 
+    describe('minSongsForType', () => {
+        it.each([['FESTIVAL', 5], ['EVENT', 5]])('%s は %i 曲', (type, expected) => {
+            expect(collector.minSongsForType(type)).toBe(expected);
+        });
+
+        it.each([['ONEMAN'], ['ARENA'], ['HALL'], ['LIVEHOUSE'], [null], [undefined]])(
+            '%s は 10 曲（不明も厳しい方に倒す）',
+            (type) => {
+                expect(collector.minSongsForType(type)).toBe(10);
+            }
+        );
+    });
+
     describe('calculateConfidence', () => {
         const parsed = (matchedCount, total) =>
             Array.from({ length: total }, (_, i) => ({
@@ -91,6 +104,12 @@ describe('collector', () => {
 
         it('曲が0件なら0を返すこと', () => {
             expect(collector.calculateConfidence([], 1, '')).toBe(0);
+        });
+
+        it('フェスの6曲は曲数妥当性で満点、ワンマンの6曲は減点されること', () => {
+            const fes = collector.calculateConfidence(parsed(6, 6), 1, 'text', 'FESTIVAL');
+            const oneman = collector.calculateConfidence(parsed(6, 6), 1, 'text', 'ONEMAN');
+            expect(fes).toBeGreaterThan(oneman);
         });
 
         it('0〜1に収まること', () => {
@@ -150,12 +169,53 @@ describe('collector', () => {
             expect(collector.identifySetlist).not.toHaveBeenCalled();
         });
 
-        it('曲数が10未満の投稿は候補にしないこと', async () => {
+        it('ワンマンで曲数が10未満の投稿は候補にしないこと', async () => {
             collector.getPosts = jest.fn().mockResolvedValue([makePost()]);
             collector.identifySetlist.mockResolvedValue({ is_setlist: true, songs: ['CORE PRIDE', 'IMPACT'] });
-            db.query.mockResolvedValue({ rows: [] });
+            db.query.mockImplementation((sql) => {
+                if (sql.includes('SELECT type FROM lives')) return Promise.resolve({ rows: [{ type: 'ONEMAN' }] });
+                return Promise.resolve({ rows: [] });
+            });
 
             await expect(collector.collect('q3', 1)).resolves.toBe(0);
+        });
+
+        // フェスは持ち時間が短く、本番実績でも最小6曲
+        it('フェスなら6曲でもドラフト化すること', async () => {
+            const SIX = ['CORE PRIDE', 'IMPACT', '曲3', '曲4', '曲5', '曲6'];
+            collector.getPosts = jest.fn().mockResolvedValue([makePost({ post_id: '61', post_url: 'https://x.com/a/status/61' })]);
+            collector.identifySetlist.mockResolvedValue({ is_setlist: true, songs: SIX });
+            db.query.mockImplementation((sql) => {
+                if (sql.includes('SELECT type FROM lives')) return Promise.resolve({ rows: [{ type: 'FESTIVAL' }] });
+                if (sql.includes('FROM songs')) return Promise.resolve({ rows: SONGS });
+                if (sql.includes('SELECT id, duplicate_count')) return Promise.resolve({ rows: [] });
+                if (sql.includes('INSERT INTO raw_setlists')) return Promise.resolve({ rows: [{ id: 20 }] });
+                return Promise.resolve({ rows: [] });
+            });
+
+            await expect(collector.collect('fes', 1)).resolves.toBe(1);
+        });
+
+        it('フェスでも5曲未満なら候補にしないこと', async () => {
+            collector.getPosts = jest.fn().mockResolvedValue([makePost()]);
+            collector.identifySetlist.mockResolvedValue({ is_setlist: true, songs: ['CORE PRIDE', 'IMPACT', '曲3'] });
+            db.query.mockImplementation((sql) => {
+                if (sql.includes('SELECT type FROM lives')) return Promise.resolve({ rows: [{ type: 'FESTIVAL' }] });
+                return Promise.resolve({ rows: [] });
+            });
+
+            await expect(collector.collect('fes-short', 1)).resolves.toBe(0);
+        });
+
+        it('公演種別が不明なら厳しい方(10曲)を適用すること', async () => {
+            collector.getPosts = jest.fn().mockResolvedValue([makePost()]);
+            collector.identifySetlist.mockResolvedValue({ is_setlist: true, songs: Array.from({ length: 6 }, (_, i) => `曲${i}`) });
+            db.query.mockImplementation((sql) => {
+                if (sql.includes('SELECT type FROM lives')) return Promise.resolve({ rows: [{ type: null }] });
+                return Promise.resolve({ rows: [] });
+            });
+
+            await expect(collector.collect('unknown-type', 1)).resolves.toBe(0);
         });
 
         it('新規セトリを source_urls / source_post_ids 付きで登録すること', async () => {

@@ -91,6 +91,42 @@ async function buildParsedSongs(titles) {
     });
 }
 
+// フェス・イベントは持ち時間が短く曲数が少ない。
+// 本番DB実績では FESTIVAL が平均8.9曲・最小6曲、ONEMAN は平均21.0曲・最小10曲。
+const SHORT_SET_TYPES = new Set(['FESTIVAL', 'EVENT']);
+const MIN_SONGS_SHORT_SET = 5;
+const MIN_SONGS_DEFAULT = 10;
+
+// 公演種別のキャッシュ（1回の collect 内で同じライブを何度も引かない）
+const liveTypeCache = new Map();
+
+/**
+ * live_id から公演種別を取得する
+ * 特定できない場合は null（呼び出し側は保守的な既定値を使う）
+ */
+async function getLiveType(liveId) {
+    if (!liveId) return null;
+    if (liveTypeCache.has(liveId)) return liveTypeCache.get(liveId);
+
+    let type = null;
+    try {
+        const result = await db.query('SELECT type FROM lives WHERE id = $1', [liveId]);
+        type = result.rows[0]?.type ?? null;
+    } catch (err) {
+        console.warn('[Collector] 公演種別の取得に失敗しました:', err.message);
+    }
+    liveTypeCache.set(liveId, type);
+    return type;
+}
+
+/**
+ * 公演種別ごとの最低曲数
+ * 種別が不明な場合は、ノイズを拾わないよう厳しい方（10曲）に倒す
+ */
+function minSongsForType(liveType) {
+    return SHORT_SET_TYPES.has(liveType) ? MIN_SONGS_SHORT_SET : MIN_SONGS_DEFAULT;
+}
+
 /**
  * 投稿日時とテキストから live_id を推定する
  */
@@ -182,8 +218,9 @@ is_setlist を true にする例:
  * ノイズ判定に統合して 20% としている。
  *
  * @param {Array} parsedSongs buildParsedSongs() の戻り値
+ * @param {string|null} liveType 公演種別。フェス・イベントは曲数の期待値が異なる
  */
-function calculateConfidence(parsedSongs, duplicateCount = 1, rawText = '') {
+function calculateConfidence(parsedSongs, duplicateCount = 1, rawText = '', liveType = null) {
     const total = parsedSongs.length;
     if (total === 0) return 0;
 
@@ -191,8 +228,11 @@ function calculateConfidence(parsedSongs, duplicateCount = 1, rawText = '') {
     const matchRate = parsedSongs.filter((s) => s.song_id).length / total;
     let score = matchRate * 0.4;
 
-    // 曲数の妥当性（ワンマンは概ね 15〜30 曲、フェスは 5 曲前後）
-    if (total >= 15 && total <= 30) score += 0.2;
+    // 曲数の妥当性（本番DB実績: FESTIVAL は 6〜17曲、ワンマン系は 10〜28曲）
+    if (SHORT_SET_TYPES.has(liveType)) {
+        if (total >= 5 && total <= 18) score += 0.2;
+        else if (total >= 3) score += 0.1;
+    } else if (total >= 15 && total <= 30) score += 0.2;
     else if (total >= 10) score += 0.15;
     else if (total >= 5) score += 0.08;
 
@@ -258,18 +298,26 @@ async function collect(query, inputLiveId = null) {
             const result = await module.exports.identifySetlist(post.text);
             console.log(`[Collector] GPT Result: is_setlist=${result.is_setlist}, songs=${result.songs?.length}`);
 
-            if (!result.is_setlist || result.songs.length < 10) {
-                console.log(`[Collector] Skipping (not a setlist or too short)`);
+            if (!result.is_setlist) {
+                console.log(`[Collector] Skipping (not a setlist)`);
+                continue;
+            }
+
+            // ライブIDの自動紐付け (指定がない場合)
+            // 最低曲数の判定に公演種別が要るため、曲数チェックより先に確定させる
+            const liveId = inputLiveId || await estimateLiveId(post.text, post.posted_at || new Date());
+            console.log(`[Collector] Estimated Live ID: ${liveId}`);
+
+            const liveType = await getLiveType(liveId);
+            const minSongs = minSongsForType(liveType);
+            if (result.songs.length < minSongs) {
+                console.log(`[Collector] Skipping (${result.songs.length} songs < ${minSongs} for type=${liveType ?? 'unknown'})`);
                 continue;
             }
             stats.candidates++;
 
             const songsText = result.songs.join('\n');
             const hash = generateHash(songsText);
-
-            // ライブIDの自動紐付け (指定がない場合)
-            const liveId = inputLiveId || await estimateLiveId(post.text, post.posted_at || new Date());
-            console.log(`[Collector] Estimated Live ID: ${liveId}`);
 
             // 重複チェック & グルーピング
             const existing = await db.query(
@@ -289,7 +337,7 @@ async function collect(query, inputLiveId = null) {
 
                 const newCount = (draft.duplicate_count || 1) + 1;
                 const parsedSongs = await buildParsedSongs(result.songs);
-                const newConfidence = calculateConfidence(parsedSongs, newCount, post.text);
+                const newConfidence = calculateConfidence(parsedSongs, newCount, post.text, liveType);
 
                 await db.query(
                     `UPDATE raw_setlists
@@ -308,7 +356,7 @@ async function collect(query, inputLiveId = null) {
 
             // 新規作成
             const parsedSongs = await buildParsedSongs(result.songs);
-            const confidence = calculateConfidence(parsedSongs, 1, post.text);
+            const confidence = calculateConfidence(parsedSongs, 1, post.text, liveType);
 
             console.log(`[Collector] Creating new draft with live_id=${liveId}`);
             const insertResult = await db.query(
@@ -348,6 +396,7 @@ async function collect(query, inputLiveId = null) {
  */
 function _resetCaches() {
     lastRunCache.clear();
+    liveTypeCache.clear();
     songCache = null;
     songCacheAt = 0;
 }
@@ -359,6 +408,7 @@ module.exports = {
     calculateConfidence,
     buildParsedSongs,
     matchSong,
+    minSongsForType,
     XCollectorAbortError,
     _resetCaches,
 };
