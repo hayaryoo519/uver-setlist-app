@@ -4,8 +4,9 @@ const { authorize, adminCheck } = require('../middleware/authorization');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const crypto = require('crypto');
 const { notifyDraftAdded } = require('../utils/lineNotification');
+// 重複検知ハッシュは services/collector.js と共通の実装を使う
+const { generateHash } = require('../utils/setlistHash');
 
 // アップロード先ディレクトリの設定と自動作成
 const uploadDir = path.join(__dirname, '../uploads');
@@ -40,9 +41,10 @@ const upload = multer({
 // ===== 前処理ユーティリティ =====
 
 /**
- * テキストを正規化する（大文字化、空白・記号・長音すべて除去）
- * 表記揺れによる重複を防ぐため、できる限りシンプルな文字列に変換する
- * 例: "CORE PRIDE" / "CORE-PRIDE" / "COREPRIDE" → すべて同一ハッシュになる
+ * 曲マスタ照合用にテキストを正規化する（大文字化、空白・記号・長音すべて除去）
+ * 例: "CORE PRIDE" / "CORE-PRIDE" / "COREPRIDE" → すべて同一キーになる
+ *
+ * 重複検知ハッシュ用の正規化は utils/setlistHash.js の normalizeForHash を使うこと
  */
 function normalizeText(text) {
     if (!text) return '';
@@ -81,15 +83,6 @@ function buildParsedJson(lines) {
         position: index + 1,
         title: title
     }));
-}
-
-/**
- * テキストから一意な正規化ハッシュを生成する（SHA-256使用）
- * normalizeText経由で表記揺れを吸収してからハッシュ化する
- */
-function generateHash(text) {
-    const normalized = normalizeText(text);
-    return crypto.createHash('sha256').update(normalized).digest('hex');
 }
 
 /**
