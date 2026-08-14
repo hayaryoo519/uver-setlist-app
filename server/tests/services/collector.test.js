@@ -14,6 +14,8 @@ const SONGS = [
     { id: 1, title: 'CORE PRIDE', normalized_title: 'core pride' },
     { id: 2, title: 'IMPACT', normalized_title: 'impact' },
     { id: 3, title: '7th Trigger', normalized_title: '7th trigger' },
+    { id: 4, title: '儚くも永久のカナシ', normalized_title: '儚くも永久のカナシ' },
+    { id: 5, title: 'ODD FUTURE', normalized_title: 'odd future' },
 ];
 
 function makePost(overrides = {}) {
@@ -27,7 +29,14 @@ function makePost(overrides = {}) {
     };
 }
 
-const TWELVE_SONGS = Array.from({ length: 12 }, (_, i) => (i === 0 ? 'CORE PRIDE' : `曲${i}`));
+// 曲マスタ一致率の足切り(30%)を通す構成: 12曲中5曲がマスタに存在（42%）
+const TWELVE_SONGS = [
+    'CORE PRIDE', 'IMPACT', '7th Trigger', '儚くも永久のカナシ', 'ODD FUTURE',
+    ...Array.from({ length: 7 }, (_, i) => `曲${i + 6}`),
+];
+
+// マスタに1曲も無いセトリ（他アーティストのセトリを模したもの）
+const OTHER_ARTIST_SONGS = Array.from({ length: 12 }, (_, i) => `別アーティスト曲${i}`);
 
 describe('collector', () => {
     beforeEach(() => {
@@ -64,6 +73,28 @@ describe('collector', () => {
 
         it('空文字は null を返すこと', () => {
             expect(collector.matchSong('  ', songs)).toBeNull();
+        });
+    });
+
+    describe('buildLiveContext', () => {
+        it('日付・会場・公演名をプロンプト用の文面に含めること', () => {
+            const ctx = collector.buildLiveContext({
+                date: '2026-08-02', venue: 'みずほPayPay ドーム福岡', tour_name: 'NUMBER SHOT2026',
+            });
+
+            expect(ctx).toContain('2026-08-02');
+            expect(ctx).toContain('みずほPayPay ドーム福岡');
+            expect(ctx).toContain('NUMBER SHOT2026');
+            expect(ctx).toContain('false');
+        });
+
+        it('Date 型の date も扱えること', () => {
+            expect(collector.buildLiveContext({ date: new Date('2026-08-02T00:00:00Z'), venue: 'X' })).toContain('2026-08-02');
+        });
+
+        it('ライブ情報が無ければ空文字を返すこと', () => {
+            expect(collector.buildLiveContext(null)).toBe('');
+            expect(collector.buildLiveContext({})).toBe('');
         });
     });
 
@@ -173,7 +204,7 @@ describe('collector', () => {
             collector.getPosts = jest.fn().mockResolvedValue([makePost()]);
             collector.identifySetlist.mockResolvedValue({ is_setlist: true, songs: ['CORE PRIDE', 'IMPACT'] });
             db.query.mockImplementation((sql) => {
-                if (sql.includes('SELECT type FROM lives')) return Promise.resolve({ rows: [{ type: 'ONEMAN' }] });
+                if (sql.includes('FROM lives')) return Promise.resolve({ rows: [{ type: 'ONEMAN' }] });
                 return Promise.resolve({ rows: [] });
             });
 
@@ -186,7 +217,7 @@ describe('collector', () => {
             collector.getPosts = jest.fn().mockResolvedValue([makePost({ post_id: '61', post_url: 'https://x.com/a/status/61' })]);
             collector.identifySetlist.mockResolvedValue({ is_setlist: true, songs: SIX });
             db.query.mockImplementation((sql) => {
-                if (sql.includes('SELECT type FROM lives')) return Promise.resolve({ rows: [{ type: 'FESTIVAL' }] });
+                if (sql.includes('FROM lives')) return Promise.resolve({ rows: [{ type: 'FESTIVAL' }] });
                 if (sql.includes('FROM songs')) return Promise.resolve({ rows: SONGS });
                 if (sql.includes('SELECT id, duplicate_count')) return Promise.resolve({ rows: [] });
                 if (sql.includes('INSERT INTO raw_setlists')) return Promise.resolve({ rows: [{ id: 20 }] });
@@ -200,7 +231,7 @@ describe('collector', () => {
             collector.getPosts = jest.fn().mockResolvedValue([makePost()]);
             collector.identifySetlist.mockResolvedValue({ is_setlist: true, songs: ['CORE PRIDE', 'IMPACT', '曲3'] });
             db.query.mockImplementation((sql) => {
-                if (sql.includes('SELECT type FROM lives')) return Promise.resolve({ rows: [{ type: 'FESTIVAL' }] });
+                if (sql.includes('FROM lives')) return Promise.resolve({ rows: [{ type: 'FESTIVAL' }] });
                 return Promise.resolve({ rows: [] });
             });
 
@@ -211,11 +242,44 @@ describe('collector', () => {
             collector.getPosts = jest.fn().mockResolvedValue([makePost()]);
             collector.identifySetlist.mockResolvedValue({ is_setlist: true, songs: Array.from({ length: 6 }, (_, i) => `曲${i}`) });
             db.query.mockImplementation((sql) => {
-                if (sql.includes('SELECT type FROM lives')) return Promise.resolve({ rows: [{ type: null }] });
+                if (sql.includes('FROM lives')) return Promise.resolve({ rows: [{ type: null }] });
                 return Promise.resolve({ rows: [] });
             });
 
             await expect(collector.collect('unknown-type', 1)).resolves.toBe(0);
+        });
+
+        // フェスでは同じ会場の別アーティストのセトリが同一クエリで大量に引っかかる
+        it('曲マスタ一致率が低いセトリは他アーティストとみなして捨てること', async () => {
+            collector.getPosts = jest.fn().mockResolvedValue([makePost()]);
+            collector.identifySetlist.mockResolvedValue({ is_setlist: true, songs: OTHER_ARTIST_SONGS });
+            db.query.mockImplementation((sql) => {
+                if (sql.includes('FROM lives')) return Promise.resolve({ rows: [{ id: 1, type: 'FESTIVAL' }] });
+                if (sql.includes('FROM songs')) return Promise.resolve({ rows: SONGS });
+                return Promise.resolve({ rows: [] });
+            });
+
+            await expect(collector.collect('other-artist', 1)).resolves.toBe(0);
+            expect(db.query).not.toHaveBeenCalledWith(
+                expect.stringContaining('INSERT INTO raw_setlists'),
+                expect.anything()
+            );
+        });
+
+        it('対象公演の情報を GPT 判定へ渡すこと', async () => {
+            const live = { id: 1, date: '2026-08-02', venue: 'みずほPayPay ドーム福岡', tour_name: 'NUMBER SHOT2026', type: 'FESTIVAL' };
+            collector.getPosts = jest.fn().mockResolvedValue([makePost()]);
+            db.query.mockImplementation((sql) => {
+                if (sql.includes('FROM lives')) return Promise.resolve({ rows: [live] });
+                return Promise.resolve({ rows: [] });
+            });
+
+            await collector.collect('ctx', 1);
+
+            expect(collector.identifySetlist).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.objectContaining({ venue: 'みずほPayPay ドーム福岡' })
+            );
         });
 
         it('新規セトリを source_urls / source_post_ids 付きで登録すること', async () => {
