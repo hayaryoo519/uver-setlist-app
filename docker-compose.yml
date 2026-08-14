@@ -21,6 +21,10 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      # X セトリ収集。未設定なら収集はスキップされる（アプリ起動には影響しない）
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - TWITTER_AUTH_TOKEN=${TWITTER_AUTH_TOKEN:-}
+      - TWITTER_CT0=${TWITTER_CT0:-}
     depends_on:
       db-staging:
         condition: service_healthy
