@@ -97,26 +97,33 @@ const SHORT_SET_TYPES = new Set(['FESTIVAL', 'EVENT']);
 const MIN_SONGS_SHORT_SET = 5;
 const MIN_SONGS_DEFAULT = 10;
 
-// 公演種別のキャッシュ（1回の collect 内で同じライブを何度も引かない）
-const liveTypeCache = new Map();
+// UVERworld の曲がこの割合を下回るセトリは対象外とする。
+// 同じフェスに出演した他アーティストのセトリが同一クエリで大量に引っかかるため。
+const MIN_SONG_MATCH_RATE = 0.3;
+
+// ライブ情報のキャッシュ（1回の collect 内で同じライブを何度も引かない）
+const liveCache = new Map();
 
 /**
- * live_id から公演種別を取得する
+ * live_id からライブ情報を取得する
  * 特定できない場合は null（呼び出し側は保守的な既定値を使う）
  */
-async function getLiveType(liveId) {
+async function getLive(liveId) {
     if (!liveId) return null;
-    if (liveTypeCache.has(liveId)) return liveTypeCache.get(liveId);
+    if (liveCache.has(liveId)) return liveCache.get(liveId);
 
-    let type = null;
+    let live = null;
     try {
-        const result = await db.query('SELECT type FROM lives WHERE id = $1', [liveId]);
-        type = result.rows[0]?.type ?? null;
+        const result = await db.query(
+            'SELECT id, date, venue, tour_name, type FROM lives WHERE id = $1',
+            [liveId]
+        );
+        live = result.rows[0] ?? null;
     } catch (err) {
-        console.warn('[Collector] 公演種別の取得に失敗しました:', err.message);
+        console.warn('[Collector] ライブ情報の取得に失敗しました:', err.message);
     }
-    liveTypeCache.set(liveId, type);
-    return type;
+    liveCache.set(liveId, live);
+    return live;
 }
 
 /**
@@ -163,23 +170,50 @@ async function getPosts(query, limit = 20) {
 }
 
 /**
+ * 対象公演をプロンプトに埋め込む文面を組み立てる
+ */
+function buildLiveContext(live) {
+    if (!live) return '';
+
+    const dateStr = live.date instanceof Date
+        ? live.date.toISOString().split('T')[0]
+        : String(live.date || '').split('T')[0];
+    const parts = [
+        dateStr && `日付: ${dateStr}`,
+        live.venue && `会場: ${live.venue}`,
+        live.tour_name && `公演名: ${live.tour_name}`,
+    ].filter(Boolean);
+    if (parts.length === 0) return '';
+
+    return `
+対象公演は以下です。この公演のセットリストでなければ is_setlist を false にしてください。
+${parts.join('\n')}
+投稿に別の日付・会場・公演名が明記されている場合は、たとえ UVERworld のセットリストであっても false にしてください。
+`;
+}
+
+/**
  * GPT判定
  * セトリ予想・願望・感想のみの投稿を除外させる（仕様 §6）
+ *
+ * @param {object|null} live 対象公演。渡すと「その公演のものか」も判定させる
  */
-async function identifySetlist(text) {
+async function identifySetlist(text, live = null) {
     try {
         const OpenAI = (await import('openai')).default;
         const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
         const prompt = `以下のX(Twitter)投稿が、実際に開催されたUVERworldのライブで演奏されたセットリストの記録か判定してください。
 演奏された曲のみを演奏順に抽出し、JSONで返してください。
-
+${buildLiveContext(live)}
 is_setlist を false にする例:
 - セトリ予想・願望（「〇〇やってほしい」「予想」「聴きたい」等）
 - ライブの感想のみで曲順の記載がないもの
 - 過去公演の振り返りや、日付が明示的に別公演のもの
 - Spotify/Apple Music 等のプレイリスト
-- UVERworld 以外のアーティストのセットリスト
+- UVERworld 以外のアーティストのセットリスト。
+  フェスでは同じ会場の別アーティストのセトリが紛れ込みやすいので特に注意すること。
+  曲名に UVERworld の楽曲が含まれない場合は false にすること。
 
 is_setlist を true にする例:
 - 番号付き・箇条書きで演奏曲が並んでいるもの
@@ -265,7 +299,7 @@ async function collect(query, inputLiveId = null) {
     }
     lastRunCache.set(cacheKey, now);
 
-    const stats = { query, liveId: inputLiveId, fetched: 0, candidates: 0, created: 0, grouped: 0, errors: 0 };
+    const stats = { query, liveId: inputLiveId, fetched: 0, candidates: 0, lowMatch: 0, created: 0, grouped: 0, errors: 0 };
 
     let posts;
     try {
@@ -294,8 +328,11 @@ async function collect(query, inputLiveId = null) {
                 continue;
             }
 
+            // 対象ライブが分かっていれば、その公演のセトリかを GPT にも判定させる
+            const inputLive = inputLiveId ? await getLive(inputLiveId) : null;
+
             console.log(`[Collector] Processing post: ${post.post_url || 'no-url'}`);
-            const result = await module.exports.identifySetlist(post.text);
+            const result = await module.exports.identifySetlist(post.text, inputLive);
             console.log(`[Collector] GPT Result: is_setlist=${result.is_setlist}, songs=${result.songs?.length}`);
 
             if (!result.is_setlist) {
@@ -308,10 +345,21 @@ async function collect(query, inputLiveId = null) {
             const liveId = inputLiveId || await estimateLiveId(post.text, post.posted_at || new Date());
             console.log(`[Collector] Estimated Live ID: ${liveId}`);
 
-            const liveType = await getLiveType(liveId);
+            const liveType = (inputLive || await getLive(liveId))?.type ?? null;
             const minSongs = minSongsForType(liveType);
             if (result.songs.length < minSongs) {
                 console.log(`[Collector] Skipping (${result.songs.length} songs < ${minSongs} for type=${liveType ?? 'unknown'})`);
+                continue;
+            }
+
+            // 曲マスタ一致率での足切り。
+            // 同じフェスに出演した他アーティストのセトリが同一クエリで引っかかるため、
+            // UVERworld の曲が一定割合含まれないものは対象外とする。
+            const parsedSongs = await buildParsedSongs(result.songs);
+            const matchRate = parsedSongs.filter((s) => s.song_id).length / parsedSongs.length;
+            if (matchRate < MIN_SONG_MATCH_RATE) {
+                stats.lowMatch++;
+                console.log(`[Collector] Skipping (曲マスタ一致率 ${Math.round(matchRate * 100)}% < ${MIN_SONG_MATCH_RATE * 100}%)`);
                 continue;
             }
             stats.candidates++;
@@ -336,7 +384,6 @@ async function collect(query, inputLiveId = null) {
                 }
 
                 const newCount = (draft.duplicate_count || 1) + 1;
-                const parsedSongs = await buildParsedSongs(result.songs);
                 const newConfidence = calculateConfidence(parsedSongs, newCount, post.text, liveType);
 
                 await db.query(
@@ -355,7 +402,6 @@ async function collect(query, inputLiveId = null) {
             }
 
             // 新規作成
-            const parsedSongs = await buildParsedSongs(result.songs);
             const confidence = calculateConfidence(parsedSongs, 1, post.text, liveType);
 
             console.log(`[Collector] Creating new draft with live_id=${liveId}`);
@@ -396,7 +442,7 @@ async function collect(query, inputLiveId = null) {
  */
 function _resetCaches() {
     lastRunCache.clear();
-    liveTypeCache.clear();
+    liveCache.clear();
     songCache = null;
     songCacheAt = 0;
 }
@@ -409,6 +455,8 @@ module.exports = {
     buildParsedSongs,
     matchSong,
     minSongsForType,
+    buildLiveContext,
+    MIN_SONG_MATCH_RATE,
     XCollectorAbortError,
     _resetCaches,
 };
