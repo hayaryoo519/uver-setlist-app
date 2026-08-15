@@ -159,17 +159,21 @@ function detectType(category, venue) {
 }
 
 /**
- * 既に登録済みか判定する
- * external_source_id での一致に加え、手動登録済みの公演と重複しないよう
- * 同日・同会場でも既存とみなす
+ * ソース側IDで登録済みか判定する
+ * 詳細ページを取得する前に判定できるため、既知の公演では追加リクエストを出さずに済む
+ */
+async function findLiveBySourceId(sourceId) {
+    const result = await db.query(
+        'SELECT id FROM lives WHERE external_source_id = $1',
+        [`${SOURCE_NAME}:${sourceId}`]
+    );
+    return result.rows[0]?.id ?? null;
+}
+
+/**
+ * 手動登録済みの公演と重複しないよう、同日・同会場（または同日・同タイトル）でも既存とみなす
  */
 async function findExistingLive(entry, venue) {
-    const bySource = await db.query(
-        'SELECT id FROM lives WHERE external_source_id = $1',
-        [`${SOURCE_NAME}:${entry.sourceId}`]
-    );
-    if (bySource.rows.length > 0) return bySource.rows[0].id;
-
     if (venue) {
         const byDateVenue = await db.query(
             `SELECT id FROM lives
@@ -210,8 +214,25 @@ async function importSchedule({ dryRun = false } = {}) {
     stats.fetched = entries.length;
     console.log(`[Schedule] ${entries.length} 件のライブ関連エントリを取得`);
 
+    // スクレイピングのため、先方のHTML構造が変わるとパースが黙って0件になる。
+    // ページは取得できているのに1件も取れない状態は異常として記録する
+    if (entries.length === 0) {
+        await logToDb('warn', 'Schedule import parsed no entries', {
+            url: LIST_URL,
+            hint: '一覧ページのHTML構造が変わった可能性があります',
+        });
+        console.warn('[Schedule] エントリを1件も抽出できませんでした。HTML構造の変更を確認してください');
+    }
+
     for (const entry of entries) {
         try {
+            // 既知の公演は詳細ページを取りに行かない。
+            // 定常状態では一覧の1リクエストだけで済み、相手サイトへの負荷を抑えられる
+            if (await findLiveBySourceId(entry.sourceId)) {
+                stats.skipped++;
+                continue;
+            }
+
             let venue = null;
             try {
                 await sleep(DETAIL_INTERVAL_MS);
