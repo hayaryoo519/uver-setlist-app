@@ -27,6 +27,7 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
         missing: string[];
     } | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [relinkRequired, setRelinkRequired] = useState(false);
     const [history, setHistory] = useState<HistoryEntry[]>([]);
 
     useEffect(() => {
@@ -35,6 +36,56 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
             fetchHistory();
         }
     }, [currentUser]);
+
+    useEffect(() => {
+        if (!currentUser) return;
+
+        const refreshYoutubeStatus = () => {
+            setError(null);
+            setRelinkRequired(false);
+            setStatus('IDLE');
+            checkStatus();
+            fetchHistory();
+        };
+
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data?.type === 'youtube-linked') {
+                refreshYoutubeStatus();
+                return;
+            }
+
+            if (event.data?.type === 'youtube-link-failed') {
+                setIsLinked(false);
+                setStatus('ERROR');
+                setRelinkRequired(true);
+                setError(event.data.message || 'YouTube連携を完了できませんでした。');
+            }
+        };
+
+        const handleStorage = (event: StorageEvent) => {
+            if (event.key === 'youtubeLinkedAt') {
+                refreshYoutubeStatus();
+                return;
+            }
+
+            if (event.key === 'youtubeLinkFailedAt') {
+                setIsLinked(false);
+                setStatus('ERROR');
+                setRelinkRequired(true);
+                setError(localStorage.getItem('youtubeLinkMessage') || 'YouTube連携を完了できませんでした。');
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        window.addEventListener('storage', handleStorage);
+        window.addEventListener('focus', checkStatus);
+
+        return () => {
+            window.removeEventListener('message', handleMessage);
+            window.removeEventListener('storage', handleStorage);
+            window.removeEventListener('focus', checkStatus);
+        };
+    }, [currentUser, liveId]);
 
     const checkStatus = async () => {
         try {
@@ -56,6 +107,7 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
 
     const handleLink = async () => {
         setError(null);
+        setRelinkRequired(false);
         try {
             const res = await axios.get('/api/youtube/auth-url', authHeaders());
             const width = 600;
@@ -73,6 +125,7 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
                 if (!popup || popup.closed) {
                     clearInterval(timer);
                     checkStatus();
+                    fetchHistory();
                 }
             }, 1000);
         } catch (err) {
@@ -85,6 +138,7 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
 
         setStatus('CREATING');
         setError(null);
+        setRelinkRequired(false);
         try {
             const res = await axios.post('/api/youtube/create-playlist', { liveId }, authHeaders());
             setResult(res.data);
@@ -96,6 +150,7 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
             if (relinkRequired) {
                 setIsLinked(false);
                 setResult(null);
+                setRelinkRequired(true);
             }
             setError(err.response?.data?.message || 'プレイリストの作成に失敗しました。');
         }
@@ -172,7 +227,25 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
                 )}
             </div>
 
-            {error && (
+            {error && relinkRequired && (
+                <div className="bg-red-400/5 border border-red-400/10 rounded-xl p-4 mb-4 text-xs text-slate-300 space-y-3">
+                    <div className="flex items-start gap-2 text-red-300 font-bold">
+                        <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                        <span>{error}</span>
+                    </div>
+                    <ol className="list-decimal list-inside space-y-1 text-slate-300 leading-relaxed">
+                        <li>下の「YouTube Musicと連携してプレイリスト作成」を押す</li>
+                        <li>Googleの認証画面で、同じGoogleアカウントを選ぶ</li>
+                        <li>YouTubeへのアクセスを許可する</li>
+                        <li>連携完了後、もう一度プレイリストを作成する</li>
+                    </ol>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                        それでも同じ表示が出る場合は、Googleアカウントの「セキュリティ」から「サードパーティ製アプリとサービス」を開き、このアプリの連携を削除してから再連携してください。
+                    </p>
+                </div>
+            )}
+
+            {error && !relinkRequired && (
                 <div className="flex items-center gap-2 text-red-400 text-xs justify-center bg-red-400/5 py-2 rounded-lg border border-red-400/10 mb-3">
                     <AlertCircle size={14} />
                     {error}
