@@ -25,6 +25,18 @@ FROM node:20-slim
 
 WORKDIR /app
 
+# X セトリ収集で使う twitter-cli (Python製)。
+# Debian の PEP 668 を避けるため専用の venv に隔離する。
+# server/scripts/twitter-search.py が TWITTER_CLI_PYTHON 経由でこの venv を使う。
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 python3-venv \
+    && rm -rf /var/lib/apt/lists/* \
+    && python3 -m venv /opt/twitter-cli \
+    && /opt/twitter-cli/bin/pip install --no-cache-dir twitter-cli
+
+ENV TWITTER_CLI_PYTHON=/opt/twitter-cli/bin/python3
+ENV TWITTER_CLI_BIN=/app/server/scripts/twitter-search.py
+
 # Install production dependencies for the runtime image.
 COPY --from=builder /app/package*.json ./
 RUN npm ci --omit=dev --legacy-peer-deps
