@@ -115,10 +115,78 @@ async function notifyNewLive(live) {
     return await sendNotificationToAll(payload);
 }
 
+/**
+ * 購読リストへ Web Push を送る（無効な購読は削除する）
+ */
+async function sendToSubscriptions(subscriptions, payload) {
+    let sent = 0;
+    let failed = 0;
+
+    for (const sub of subscriptions) {
+        try {
+            await webpush.sendNotification(
+                { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+                JSON.stringify(payload)
+            );
+            sent++;
+        } catch (error) {
+            console.error(`Push failed for ${sub.endpoint}:`, error.statusCode);
+            if (error.statusCode === 410 || error.statusCode === 404) {
+                await removeSubscription(sub.endpoint);
+            }
+            failed++;
+        }
+    }
+    return { sent, failed };
+}
+
+/**
+ * 管理者にだけ Web Push を送る。
+ *
+ * 収集の運用通知はユーザー向けではないため、購読を管理者ユーザーに絞る。
+ * 通知は補助的な機能なので、失敗しても呼び出し元の処理は止めない。
+ *
+ * @param {{title: string, body: string, url?: string, type?: string}} params
+ */
+async function notifyAdmins({ title, body, url = '/admin', type = 'admin_alert' }) {
+    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+        console.warn('[Push] VAPID キーが未設定のため管理者通知をスキップします');
+        return { sent: 0, failed: 0 };
+    }
+
+    try {
+        const result = await db.query(`
+            SELECT ps.endpoint, ps.p256dh, ps.auth
+            FROM push_subscriptions ps
+            JOIN users u ON u.id = ps.user_id
+            WHERE u.role = 'admin' AND u.deleted_at IS NULL
+        `);
+
+        if (result.rows.length === 0) {
+            console.log('[Push] 管理者の購読がないため通知をスキップします');
+            return { sent: 0, failed: 0 };
+        }
+
+        const stats = await sendToSubscriptions(result.rows, {
+            title,
+            body,
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/icon-192x192.png',
+            data: { url, type },
+        });
+        console.log(`[Push] 管理者通知: ${stats.sent} 件送信 / ${stats.failed} 件失敗`);
+        return stats;
+    } catch (err) {
+        console.error('[Push] 管理者通知に失敗しました:', err.message);
+        return { sent: 0, failed: 0 };
+    }
+}
+
 module.exports = {
     saveSubscription,
     removeSubscription,
     sendNotificationToAll,
     notifyNewLive,
+    notifyAdmins,
     getVapidPublicKey: () => VAPID_PUBLIC_KEY
 };

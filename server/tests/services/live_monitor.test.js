@@ -1,8 +1,10 @@
+jest.mock('../../utils/pushNotification', () => ({ notifyAdmins: jest.fn().mockResolvedValue({ sent: 1, failed: 0 }) }));
 jest.mock('../../db');
 jest.mock('../../services/collector', () => ({ collect: jest.fn().mockResolvedValue(0) }));
 
 const db = require('../../db');
 const collector = require('../../services/collector');
+const { notifyAdmins } = require('../../utils/pushNotification');
 const monitor = require('../../services/live_monitor');
 
 describe('live_monitor', () => {
@@ -116,6 +118,48 @@ describe('live_monitor', () => {
 
             expect(collector.collect).toHaveBeenCalled();
             expect(collector.collect.mock.calls.every(([, liveId]) => liveId === 7)).toBe(true);
+        });
+
+        // 1公演で最大5クエリ投げるため、通知はクエリ単位ではなく公演単位にまとめる
+        it('ドラフトができたら公演ごとに1回だけ通知すること', async () => {
+            jest.useFakeTimers().setSystemTime(new Date('2026-08-12T11:00:00Z'));
+            db.query.mockResolvedValue({
+                rows: [{ id: 7, date: '2026-08-12', venue: '日本ガイシホール', tour_name: 'EPIPHANY', prefecture: '愛知' }],
+            });
+            collector.collect.mockResolvedValue(2);
+
+            await monitor.monitor();
+
+            expect(notifyAdmins).toHaveBeenCalledTimes(1);
+            expect(notifyAdmins.mock.calls[0][0].title).toContain('件');
+            expect(notifyAdmins.mock.calls[0][0].body).toContain('日本ガイシホール');
+        });
+
+        it('ドラフトが0件なら通知しないこと', async () => {
+            jest.useFakeTimers().setSystemTime(new Date('2026-08-12T11:00:00Z'));
+            db.query.mockResolvedValue({
+                rows: [{ id: 7, date: '2026-08-12', venue: '日本ガイシホール', tour_name: null, prefecture: null }],
+            });
+            collector.collect.mockResolvedValue(0);
+
+            await monitor.monitor();
+
+            expect(notifyAdmins).not.toHaveBeenCalled();
+        });
+
+        // Cookie 失効は放置すると収集が止まり続けるため必ず知らせる
+        it('収集中断時は管理者へ通知すること', async () => {
+            jest.useFakeTimers().setSystemTime(new Date('2026-08-12T11:00:00Z'));
+            db.query.mockResolvedValue({
+                rows: [{ id: 7, date: '2026-08-12', venue: '会場', tour_name: null, prefecture: null }],
+            });
+            const { XCollectorAbortError } = require('../../services/xClient');
+            collector.collect.mockRejectedValueOnce(new XCollectorAbortError('unauthorized'));
+
+            await monitor.monitor();
+
+            expect(notifyAdmins).toHaveBeenCalledTimes(1);
+            expect(notifyAdmins.mock.calls[0][0].body).toContain('Cookie');
         });
 
         it('レート制限エラーを検知したら残りのクエリを実行しないこと', async () => {

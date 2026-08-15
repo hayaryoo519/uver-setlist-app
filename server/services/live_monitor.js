@@ -1,6 +1,7 @@
 const db = require('../db');
 const collector = require('./collector');
 const { XCollectorAbortError } = require('./xClient');
+const { notifyAdmins } = require('../utils/pushNotification');
 
 // 収集を実行する時刻（JST）。仕様 §11「ライブがある日にだけ、常時監視はしない」
 //
@@ -92,17 +93,36 @@ async function monitor() {
         for (const live of lives) {
             console.log(`[Monitor] Processing live: ${live.tour_name} @ ${live.venue}`);
 
+            // 通知はクエリごとではなく公演単位でまとめる（1公演で最大5クエリ投げるため）
+            let created = 0;
             for (const q of buildQueries(live)) {
                 const count = await collector.collect(q, live.id);
+                created += count;
                 if (count > 0) {
                     console.log(`[Monitor] Found ${count} potential setlists for "${q}"`);
                 }
+            }
+
+            if (created > 0) {
+                await notifyAdmins({
+                    title: `セトリ候補が${created}件見つかりました`,
+                    body: `${live.tour_name || 'ライブ'} @ ${live.venue || '会場未定'}\n管理画面で内容を確認してください。`,
+                    url: '/admin',
+                    type: 'setlist_drafts_collected',
+                });
             }
         }
     } catch (err) {
         // 仕様 §12: レート制限・認証エラーを検知したらその回の収集を打ち切り、リトライしない
         if (err instanceof XCollectorAbortError) {
             console.warn('[Monitor] X 収集を中断しました:', err.message);
+            // Cookie 失効はこの経路で出る。放置すると収集が止まり続けるため必ず通知する
+            await notifyAdmins({
+                title: 'X収集を中断しました',
+                body: `${err.message}\nCookie(auth_token / ct0)の失効が疑われます。`,
+                url: '/admin',
+                type: 'x_collection_aborted',
+            });
             return;
         }
         console.error('[Monitor] Error during live monitoring:', err);
