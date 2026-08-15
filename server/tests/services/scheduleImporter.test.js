@@ -178,6 +178,36 @@ describe('scheduleImporter', () => {
             expect(db.query).not.toHaveBeenCalledWith(expect.stringContaining('INSERT INTO lives'), expect.anything());
         });
 
+        // 相手サイトへの負荷を抑えるため、既知の公演では詳細ページを取りに行かない
+        it('登録済みの公演では詳細ページを取得しないこと', async () => {
+            db.query.mockImplementation((sql) =>
+                sql.includes('external_source_id = $1')
+                    ? Promise.resolve({ rows: [{ id: 1 }] })
+                    : Promise.resolve({ rows: [] })
+            );
+
+            await importer.importSchedule();
+
+            const detailCalls = axios.get.mock.calls.filter(([url]) => url.includes('/detail/'));
+            expect(detailCalls).toHaveLength(0);
+            expect(axios.get).toHaveBeenCalledTimes(1); // 一覧のみ
+        });
+
+        // HTML構造が変わるとパースが黙って0件になるため、異常として記録する
+        it('1件も抽出できなければ warn を記録すること', async () => {
+            axios.get.mockResolvedValue({ data: '<html><body>構造が変わった</body></html>' });
+            db.query.mockResolvedValue({ rows: [] });
+
+            const stats = await importer.importSchedule();
+
+            expect(stats.fetched).toBe(0);
+            const warn = db.query.mock.calls.find(
+                ([sql, params]) => sql.includes('collector_logs') && params[0] === 'warn'
+            );
+            expect(warn).toBeDefined();
+            expect(warn[1][1]).toContain('parsed no entries');
+        });
+
         // 手動登録済みの公演と二重にならないこと
         it('同じ日付・会場の公演が既にあればスキップすること', async () => {
             db.query.mockImplementation((sql) => {
