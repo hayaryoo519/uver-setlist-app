@@ -1,8 +1,10 @@
+jest.mock('../../utils/pushNotification', () => ({ notifyAdmins: jest.fn().mockResolvedValue({ sent: 1, failed: 0 }) }));
 jest.mock('../../db');
 jest.mock('axios');
 
 const axios = require('axios');
 const db = require('../../db');
+const { notifyAdmins } = require('../../utils/pushNotification');
 const importer = require('../../services/scheduleImporter');
 
 // 実際の www.uverworld.jp/schedule/list/ の構造をそのまま縮小したもの
@@ -220,6 +222,51 @@ describe('scheduleImporter', () => {
 
             expect(stats.created).toBe(0);
             expect(stats.skipped).toBe(2);
+        });
+
+        // 出演解禁を知るのがこの機能の目的なので、追加があった時は必ず通知する
+        it('新規公演を追加したら管理者へ通知すること', async () => {
+            db.query.mockImplementation((sql) =>
+                sql.includes('INSERT INTO lives')
+                    ? Promise.resolve({ rows: [{ id: 900 }] })
+                    : Promise.resolve({ rows: [] })
+            );
+
+            await importer.importSchedule();
+
+            expect(notifyAdmins).toHaveBeenCalledTimes(1);
+            expect(notifyAdmins.mock.calls[0][0].title).toContain('2件');
+            expect(notifyAdmins.mock.calls[0][0].body).toContain('RISING SUN ROCK FESTIVAL');
+        });
+
+        it('追加が0件なら通知しないこと', async () => {
+            db.query.mockImplementation((sql) =>
+                sql.includes('external_source_id = $1')
+                    ? Promise.resolve({ rows: [{ id: 1 }] })
+                    : Promise.resolve({ rows: [] })
+            );
+
+            await importer.importSchedule();
+
+            expect(notifyAdmins).not.toHaveBeenCalled();
+        });
+
+        it('HTML構造の変更を検知したら管理者へ通知すること', async () => {
+            axios.get.mockResolvedValue({ data: '<html><body>構造が変わった</body></html>' });
+            db.query.mockResolvedValue({ rows: [] });
+
+            await importer.importSchedule();
+
+            expect(notifyAdmins).toHaveBeenCalledTimes(1);
+            expect(notifyAdmins.mock.calls[0][0].title).toContain('失敗');
+        });
+
+        it('dryRun では通知しないこと', async () => {
+            db.query.mockResolvedValue({ rows: [] });
+
+            await importer.importSchedule({ dryRun: true });
+
+            expect(notifyAdmins).not.toHaveBeenCalled();
         });
 
         it('dryRun では DB に書き込まないこと', async () => {
