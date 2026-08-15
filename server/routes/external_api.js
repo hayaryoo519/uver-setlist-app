@@ -2,6 +2,7 @@ const router = require('express').Router();
 const axios = require('axios');
 const { authorize, adminCheck } = require('../middleware/authorization');
 const { createJob, getJob } = require('../services/collectJob');
+const { importSchedule } = require('../services/scheduleImporter');
 const { collectYears } = require('../services/collectYears');
 
 const UVER_MBID = '1f534f37-d284-4866-a36c-9dddd008e31a';
@@ -108,6 +109,24 @@ router.get('/setlistfm/collect-status/:jobId', authorize, adminCheck, (req, res)
     const job = getJob(req.params.jobId);
     if (!job) return res.status(404).json({ message: 'ジョブが見つかりません' });
     res.json(job);
+});
+
+// POST /api/external/schedule/import — 公式サイトのスケジュールを取り込む
+// ?dryRun=true で DB に書き込まず、追加される公演の一覧だけ返す
+router.post('/schedule/import', authorize, adminCheck, async (req, res) => {
+    try {
+        const dryRun = req.query.dryRun === 'true' || req.body?.dryRun === true;
+        const stats = await importSchedule({ dryRun });
+        res.json({
+            message: dryRun
+                ? `${stats.candidates} 件が新規登録の対象です（dry-run のため未登録）`
+                : `${stats.created} 件の公演を追加しました`,
+            ...stats,
+        });
+    } catch (err) {
+        console.error('スケジュール取り込みエラー:', err);
+        res.status(500).json({ message: 'スケジュールの取り込みに失敗しました', error: err.message });
+    }
 });
 
 module.exports = router;

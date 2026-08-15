@@ -109,12 +109,17 @@ app.listen(PORT, () => {
     try {
         const { startMonitoring } = require('./services/live_monitor');
         const { startCleanup } = require('./services/cleanup_service');
+        const { startScheduleImport } = require('./services/scheduleImporter');
 
         // ライブ監視 (1時間おき)
         startMonitoring(60 * 60 * 1000);
-        
+
         // クリーンアップ (24時間おき)
         startCleanup(24 * 60 * 60 * 1000);
+
+        // 公式サイトのスケジュール取り込み (12時間おき)
+        // 出演発表は解禁タイミングが読めないため低頻度で回す
+        startScheduleImport(12 * 60 * 60 * 1000);
 
         console.log('[Services] Background services started successfully.');
     } catch (serviceErr) {
