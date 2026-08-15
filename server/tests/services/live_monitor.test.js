@@ -69,6 +69,42 @@ describe('live_monitor', () => {
             expect(db.query).not.toHaveBeenCalled();
         });
 
+        // フェスの昼枠に対応するため15時から回す
+        it('JST 15時は収集対象であること', async () => {
+            jest.useFakeTimers().setSystemTime(new Date('2026-08-12T06:00:00Z'));
+            db.query.mockResolvedValue({ rows: [] });
+
+            await monitor.monitor();
+
+            expect(db.query).toHaveBeenCalled();
+        });
+
+        it('JST 14時は収集対象外であること', async () => {
+            jest.useFakeTimers().setSystemTime(new Date('2026-08-12T05:00:00Z'));
+
+            await monitor.monitor();
+
+            expect(db.query).not.toHaveBeenCalled();
+        });
+
+        it('JST 23時は収集対象であること', async () => {
+            jest.useFakeTimers().setSystemTime(new Date('2026-08-12T14:00:00Z'));
+            db.query.mockResolvedValue({ rows: [] });
+
+            await monitor.monitor();
+
+            expect(db.query).toHaveBeenCalled();
+        });
+
+        // 深夜〜早朝は投稿が増えないので回さない
+        it('JST 3時は収集対象外であること', async () => {
+            jest.useFakeTimers().setSystemTime(new Date('2026-08-11T18:00:00Z'));
+
+            await monitor.monitor();
+
+            expect(db.query).not.toHaveBeenCalled();
+        });
+
         it('収集対象時刻なら対象ライブごとに収集を実行すること', async () => {
             // JST 20:00 = UTC 11:00
             jest.useFakeTimers().setSystemTime(new Date('2026-08-12T11:00:00Z'));
