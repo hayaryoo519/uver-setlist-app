@@ -262,21 +262,19 @@ async function importSchedule({ dryRun = false } = {}) {
                 continue;
             }
 
+            // external_source_id にはユニーク制約を張っていない。
+            // 本番では既に別用途（日付+会場+ツアー名のハッシュ）で使われており、
+            // 同日同会場の昼夜2公演が同じ値を持つため、一意にできない。
+            // 重複は上の findLiveBySourceId / findExistingLive で防ぐ。
             const inserted = await db.query(
                 `INSERT INTO lives (date, venue, tour_name, type, setlist_status, external_source_id, import_metadata)
                  VALUES ($1, $2, $3, $4, 'UNKNOWN_SETLIST', $5, $6)
-                 ON CONFLICT (external_source_id) WHERE external_source_id IS NOT NULL DO NOTHING
                  RETURNING id`,
                 [
                     live.date, live.venue, live.tour_name, live.type, live.external_source_id,
                     JSON.stringify({ source: SOURCE_NAME, source_url: entry.detailUrl, category: entry.category, imported_at: new Date().toISOString() }),
                 ]
             );
-
-            if (inserted.rows.length === 0) {
-                stats.skipped++;
-                continue;
-            }
 
             stats.created++;
             stats.created_lives.push({ id: inserted.rows[0].id, ...live });
