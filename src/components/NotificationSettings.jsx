@@ -30,6 +30,16 @@ export default function NotificationSettings() {
             const registration = await navigator.serviceWorker.ready;
             const subscription = await registration.pushManager.getSubscription();
             setIsSubscribed(!!subscription);
+
+            // ブラウザに購読が残っていてもサーバー側の登録とズレていることがある
+            // （ログイン前に購読した、保存に失敗した等）。
+            // その場合ボタンは「ON」表示になり、押すと解除になってしまうため
+            // ユーザーが自力で直せない。ここで登録し直して自動的に揃える。
+            // サーバー側は endpoint で upsert するので、何度送っても安全。
+            if (subscription) {
+                apiClient.post('/api/push/subscribe', { subscription })
+                    .catch(err => console.warn('購読情報の同期に失敗しました:', err.message));
+            }
         } catch (err) {
             console.error('Subscription check error:', err);
         } finally {
