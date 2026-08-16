@@ -1,3 +1,4 @@
+jest.mock('../../utils/lineNotification', () => ({ notifyDraftsCollected: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../../utils/pushNotification', () => ({ notifyAdmins: jest.fn().mockResolvedValue({ sent: 1, failed: 0 }) }));
 jest.mock('../../db');
 jest.mock('../../services/collector', () => ({ collect: jest.fn().mockResolvedValue(0) }));
@@ -5,6 +6,7 @@ jest.mock('../../services/collector', () => ({ collect: jest.fn().mockResolvedVa
 const db = require('../../db');
 const collector = require('../../services/collector');
 const { notifyAdmins } = require('../../utils/pushNotification');
+const { notifyDraftsCollected } = require('../../utils/lineNotification');
 const monitor = require('../../services/live_monitor');
 
 describe('live_monitor', () => {
@@ -133,6 +135,41 @@ describe('live_monitor', () => {
             expect(notifyAdmins).toHaveBeenCalledTimes(1);
             expect(notifyAdmins.mock.calls[0][0].title).toContain('件');
             expect(notifyAdmins.mock.calls[0][0].body).toContain('日本ガイシホール');
+        });
+
+        // ドラフト1件ごとではなく公演ごとに1通へまとめる
+        it('LINEにも公演ごとに1通だけ送ること', async () => {
+            jest.useFakeTimers().setSystemTime(new Date('2026-08-12T11:00:00Z'));
+            const drafts = [
+                { id: 10, confidence: '0.80', parsed_json: [{ position: 1, title: 'A' }] },
+                { id: 11, confidence: '0.60', parsed_json: [{ position: 1, title: 'B' }] },
+            ];
+            db.query.mockImplementation((sql) =>
+                sql.includes('FROM raw_setlists')
+                    ? Promise.resolve({ rows: drafts })
+                    : Promise.resolve({ rows: [{ id: 7, date: '2026-08-12', venue: '日本ガイシホール', tour_name: 'EPIPHANY', prefecture: null }] })
+            );
+            collector.collect.mockResolvedValue(2);
+
+            await monitor.monitor();
+
+            expect(notifyDraftsCollected).toHaveBeenCalledTimes(1);
+            const [live, passedDrafts] = notifyDraftsCollected.mock.calls[0];
+            expect(live.venue).toBe('日本ガイシホール');
+            expect(passedDrafts).toHaveLength(2);
+        });
+
+        it('ドラフト取得に失敗しても収集処理を止めないこと', async () => {
+            jest.useFakeTimers().setSystemTime(new Date('2026-08-12T11:00:00Z'));
+            db.query.mockImplementation((sql) =>
+                sql.includes('FROM raw_setlists')
+                    ? Promise.reject(new Error('db down'))
+                    : Promise.resolve({ rows: [{ id: 7, date: '2026-08-12', venue: '会場', tour_name: null, prefecture: null }] })
+            );
+            collector.collect.mockResolvedValue(1);
+
+            await expect(monitor.monitor()).resolves.toBeUndefined();
+            expect(notifyAdmins).toHaveBeenCalledTimes(1);
         });
 
         it('ドラフトが0件なら通知しないこと', async () => {
