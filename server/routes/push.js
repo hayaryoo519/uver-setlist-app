@@ -4,23 +4,28 @@ const db = require('../db');
 const { authorize, adminCheck } = require('../middleware/authorization');
 const { saveSubscription, removeSubscription, getVapidPublicKey, notifyNewLive } = require('../utils/pushNotification');
 
-// 認証ミドルウェア（任意 - ログインユーザーのみ購読可能）
+// 認証ミドルウェア（任意 - 未ログインでも購読はできる）
+//
+// トークンの取り出しと claim 名は middleware/authorization.js の authorize に揃える。
+// JWT は { user_id, role } で発行しているため、decoded.user_id を見ること。
+// 以前は decoded.id を読んでおり、常に undefined になって
+// push_subscriptions.user_id が NULL で保存されていた。
+// その結果、管理者宛ての通知（notifyAdmins）が誰にも届かなかった。
 const authMiddleware = (req, res, next) => {
     const jwt = require('jsonwebtoken');
-    const token = req.headers.token;
+    const token = req.header('token');
+
     if (!token) {
-        // 未ログインでも購読可能にする場合は userId = null
         req.userId = null;
         return next();
     }
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.userId = decoded.id;
-        next();
+        req.userId = decoded.user_id ?? null;
     } catch (err) {
         req.userId = null;
-        next();
     }
+    next();
 };
 
 /**
