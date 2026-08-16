@@ -1,6 +1,7 @@
 const axios = require('axios');
 const db = require('../db');
 const { normalizeVenueName } = require('../utils/songTranslations');
+const { notifyAdmins } = require('../utils/pushNotification');
 
 /**
  * UVERworld 公式サイトのスケジュールから、出演予定の公演を取り込む。
@@ -222,6 +223,12 @@ async function importSchedule({ dryRun = false } = {}) {
             hint: '一覧ページのHTML構造が変わった可能性があります',
         });
         console.warn('[Schedule] エントリを1件も抽出できませんでした。HTML構造の変更を確認してください');
+        await notifyAdmins({
+            title: '公演情報の取り込みに失敗',
+            body: '公式サイトから公演を1件も抽出できませんでした。ページ構造が変わった可能性があります。',
+            url: '/admin',
+            type: 'schedule_import_broken',
+        });
     }
 
     for (const entry of entries) {
@@ -294,6 +301,21 @@ async function importSchedule({ dryRun = false } = {}) {
         errors: stats.errors,
         dryRun,
     });
+
+    // 新規公演があった時だけ通知する（出演解禁を知るのがこの機能の目的）
+    if (!dryRun && stats.created > 0) {
+        const lines = stats.created_lives
+            .slice(0, 5)
+            .map((l) => `${l.date.replace(/-/g, '/')} ${l.tour_name}`);
+        if (stats.created_lives.length > 5) lines.push(`ほか${stats.created_lives.length - 5}件`);
+
+        await notifyAdmins({
+            title: `新しい公演を${stats.created}件追加しました`,
+            body: lines.join('\n'),
+            url: '/admin',
+            type: 'schedule_imported',
+        });
+    }
 
     return stats;
 }
