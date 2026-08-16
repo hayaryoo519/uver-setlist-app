@@ -1,5 +1,4 @@
 const db = require('../db');
-const { notifyDraftAdded } = require('../utils/lineNotification');
 const { normalizeForHash: normalizeText, generateHash } = require('../utils/setlistHash');
 const xClient = require('./xClient');
 
@@ -421,9 +420,9 @@ async function collect(query, inputLiveId = null) {
                 ]
             );
 
-            // LINE通知（非同期・失敗しても引き続き処理する）
-            notifyDraftAdded(insertResult.rows[0]).catch(err => console.error('[LINE] 自動収集ドラフト通知エラー:', err.message));
-
+            // 個別のLINE通知はここでは送らない。
+            // 1公演で最大5クエリ投げるため通知が溢れるので、
+            // live_monitor 側で公演ごとに1通へまとめる。
             stats.created++;
         } catch (postErr) {
             stats.errors++;

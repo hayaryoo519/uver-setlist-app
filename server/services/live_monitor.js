@@ -2,6 +2,7 @@ const db = require('../db');
 const collector = require('./collector');
 const { XCollectorAbortError } = require('./xClient');
 const { notifyAdmins } = require('../utils/pushNotification');
+const { notifyDraftsCollected } = require('../utils/lineNotification');
 
 // 収集を実行する時刻（JST）。仕様 §11「ライブがある日にだけ、常時監視はしない」
 //
@@ -71,6 +72,39 @@ async function findTargetLives() {
 }
 
 /**
+ * 1公演の収集が終わった時点で、作成されたドラフトをまとめて通知する。
+ *
+ * collect() は作成件数しか返さないため、この回に作られたドラフトを
+ * 開始時刻を基準に引き直して内容を添える。
+ * 通知は補助機能なので、失敗しても収集処理は止めない。
+ */
+async function notifyCollected(live, runStartedAt, created) {
+    let drafts = [];
+    try {
+        const result = await db.query(
+            `SELECT id, confidence, parsed_json
+             FROM raw_setlists
+             WHERE live_id = $1 AND source = 'x' AND created_at >= $2
+             ORDER BY confidence DESC NULLS LAST, id`,
+            [live.id, runStartedAt]
+        );
+        drafts = result.rows;
+    } catch (err) {
+        console.warn('[Monitor] 通知用のドラフト取得に失敗しました:', err.message);
+    }
+
+    await Promise.all([
+        notifyAdmins({
+            title: `セトリ候補が${created}件見つかりました`,
+            body: `${live.tour_name || 'ライブ'} @ ${live.venue || '会場未定'}\n管理画面で内容を確認してください。`,
+            url: '/admin',
+            type: 'setlist_drafts_collected',
+        }),
+        notifyDraftsCollected(live, drafts.length > 0 ? drafts : null),
+    ]).catch((err) => console.error('[Monitor] 通知エラー:', err.message));
+}
+
+/**
  * ライブ情報を監視し、SNS収集をトリガーする
  */
 async function monitor() {
@@ -94,6 +128,7 @@ async function monitor() {
             console.log(`[Monitor] Processing live: ${live.tour_name} @ ${live.venue}`);
 
             // 通知はクエリごとではなく公演単位でまとめる（1公演で最大5クエリ投げるため）
+            const runStartedAt = new Date();
             let created = 0;
             for (const q of buildQueries(live)) {
                 const count = await collector.collect(q, live.id);
@@ -104,12 +139,7 @@ async function monitor() {
             }
 
             if (created > 0) {
-                await notifyAdmins({
-                    title: `セトリ候補が${created}件見つかりました`,
-                    body: `${live.tour_name || 'ライブ'} @ ${live.venue || '会場未定'}\n管理画面で内容を確認してください。`,
-                    url: '/admin',
-                    type: 'setlist_drafts_collected',
-                });
+                await notifyCollected(live, runStartedAt, created);
             }
         }
     } catch (err) {
