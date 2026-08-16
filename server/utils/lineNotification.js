@@ -77,10 +77,56 @@ async function notifyDraftAdded(draft) {
         '🔗 https://uver-setlist-archive.org/admin/drafts',
     ].join('\n');
 
+    await sendLineMessage(messageText, 'ドラフト追加通知');
+}
+
+/**
+ * 自動収集の結果を1公演につき1通にまとめて通知する。
+ *
+ * 1公演で最大5クエリ投げるため、ドラフト1件ごとに送ると通知が溢れる。
+ * 個別の中身は管理画面で確認する前提で、ここでは一覧の要約だけ送る。
+ *
+ * @param {object} live 対象公演（date / venue / tour_name）
+ * @param {object[]} drafts 作成された raw_setlists のレコード
+ */
+async function notifyDraftsCollected(live, drafts) {
+    if (!drafts || drafts.length === 0) return;
+
+    const lines = drafts.map((d) => {
+        const songCount = Array.isArray(d.parsed_json) ? d.parsed_json.length : '?';
+        return ` #${d.id}  信頼度 ${formatConfidence(d.confidence)} / ${songCount}曲`;
+    });
+
+    const messageText = [
+        `🎸 セトリ候補が${drafts.length}件見つかりました`,
+        '',
+        `📅 ライブ日: ${formatDate(live?.date)}`,
+        `🏟️  会場: ${live?.venue || '未紐付け'}`,
+        ...(live?.tour_name ? [`🎤 公演: ${live.tour_name}`] : []),
+        '',
+        '📋 ドラフト一覧',
+        ...lines,
+        '',
+        '🔗 https://uver-setlist-archive.org/admin/drafts',
+    ].join('\n');
+
+    await sendLineMessage(messageText, '収集まとめ通知');
+}
+
+/**
+ * LINE へテキストを送る
+ * 通知は補助機能なので、失敗しても例外は投げない
+ */
+async function sendLineMessage(messageText, label) {
+    if (!LINE_CHANNEL_ACCESS_TOKEN || !LINE_USER_ID) {
+        console.warn('[LINE] 通知設定なし: LINE_CHANNEL_ACCESS_TOKEN または LINE_USER_ID が未設定です。');
+        return;
+    }
+
     try {
         const https = require('https');
         const url = new URL(LINE_API_URL);
-        
+
         const data = JSON.stringify({
             to: LINE_USER_ID,
             messages: [
@@ -104,7 +150,7 @@ async function notifyDraftAdded(draft) {
             res.on('data', (chunk) => body += chunk);
             res.on('end', () => {
                 if (res.statusCode >= 200 && res.statusCode < 300) {
-                    console.log('[LINE] ドラフト追加通知を送信しました。');
+                    console.log(`[LINE] ${label}を送信しました。`);
                 } else {
                     console.error(`[LINE] 通知失敗 (status: ${res.statusCode}):`, body);
                 }
@@ -123,4 +169,4 @@ async function notifyDraftAdded(draft) {
     }
 }
 
-module.exports = { notifyDraftAdded };
+module.exports = { notifyDraftAdded, notifyDraftsCollected };
