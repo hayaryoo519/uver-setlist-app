@@ -138,6 +138,28 @@ describe('scheduleImporter', () => {
         });
     });
 
+    // 「Monster BaSH 2026 / 讃岐まんのう公園」と
+    // 「MONSTER baSH 2026 / 香川・国営讃岐まんのう公園」が実際に二重登録された
+    describe('isSameVenue', () => {
+        it.each([
+            ['香川・国営讃岐まんのう公園', '讃岐まんのう公園'],
+            ['大阪・舞洲スポーツアイランド', '舞洲スポーツアイランド'],
+            ['山口きらら博記念公園', '山口きらら博記念公園'],
+            ['ZEPP HANEDA', 'Zepp Haneda'],
+        ])('%s と %s を同一とみなすこと', (a, b) => {
+            expect(importer.isSameVenue(a, b)).toBe(true);
+        });
+
+        it.each([
+            ['Zepp Haneda', 'Zepp Sapporo'],
+            ['日本武道館', '横浜アリーナ'],
+            ['', '日本武道館'],
+            ['日本武道館', null],
+        ])('%s と %s は別会場とすること', (a, b) => {
+            expect(importer.isSameVenue(a, b)).toBe(false);
+        });
+    });
+
     describe('importSchedule', () => {
         beforeEach(() => {
             axios.get.mockImplementation((url) =>
@@ -214,7 +236,9 @@ describe('scheduleImporter', () => {
         it('同じ日付・会場の公演が既にあればスキップすること', async () => {
             db.query.mockImplementation((sql) => {
                 if (sql.includes('external_source_id = $1')) return Promise.resolve({ rows: [] });
-                if (sql.includes('normalized_venue')) return Promise.resolve({ rows: [{ id: 5 }] });
+                if (sql.includes('SELECT id, venue, tour_name FROM lives')) {
+                    return Promise.resolve({ rows: [{ id: 5, venue: '石狩湾新港樽川ふ頭横野外特設ステージ', tour_name: '別名義' }] });
+                }
                 return Promise.resolve({ rows: [] });
             });
 
@@ -259,6 +283,41 @@ describe('scheduleImporter', () => {
 
             expect(notifyAdmins).toHaveBeenCalledTimes(1);
             expect(notifyAdmins.mock.calls[0][0].title).toContain('失敗');
+        });
+
+        // 会場名の前置き・大文字小文字の揺れで二重登録されていた
+        it('表記の違う同一会場の公演は既存とみなすこと', async () => {
+            db.query.mockImplementation((sql) => {
+                if (sql.includes('external_source_id = $1')) return Promise.resolve({ rows: [] });
+                if (sql.includes('SELECT id, venue, tour_name FROM lives')) {
+                    return Promise.resolve({ rows: [{ id: 1714, venue: '石狩湾新港樽川ふ頭横野外特設ステージ', tour_name: 'Rising Sun Rock Fes 2026' }] });
+                }
+                return Promise.resolve({ rows: [] });
+            });
+
+            const stats = await importer.importSchedule();
+
+            expect(stats.created).toBe(0);
+            expect(db.query).not.toHaveBeenCalledWith(expect.stringContaining('INSERT INTO lives'), expect.anything());
+        });
+
+        it('公演名が一致すれば会場が取れなくても既存とみなすこと', async () => {
+            axios.get.mockImplementation((url) =>
+                url.includes('/detail/')
+                    ? Promise.resolve({ data: '<div>会場未定</div>' })
+                    : Promise.resolve({ data: LIST_HTML })
+            );
+            db.query.mockImplementation((sql) => {
+                if (sql.includes('external_source_id = $1')) return Promise.resolve({ rows: [] });
+                if (sql.includes('SELECT id, venue, tour_name FROM lives')) {
+                    return Promise.resolve({ rows: [{ id: 99, venue: null, tour_name: 'RISING SUN ROCK FESTIVAL 2026 in EZO' }] });
+                }
+                return Promise.resolve({ rows: [] });
+            });
+
+            const stats = await importer.importSchedule();
+
+            expect(stats.created).toBe(1); // TOUR の1件だけ新規
         });
 
         it('dryRun では通知しないこと', async () => {
