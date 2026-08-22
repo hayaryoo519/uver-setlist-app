@@ -6,7 +6,14 @@ const { XCollectorAbortError } = xClient;
 
 // レート制限用メモリキャッシュ（キーは live_id + クエリ単位）
 const lastRunCache = new Map();
-const RATE_LIMIT_MS = 60 * 60 * 1000;
+
+// 同一公演×同一クエリの再検索を抑える下限。
+//
+// live_monitor は 1時間おきに起床するため、ここを 60分ちょうどにすると
+// 起床のタイミングが数十秒早いだけで全クエリがスキップされ、
+// 実効間隔が2時間になってしまう（2026-08-22 のモンバスで実際に発生）。
+// 監視間隔より明確に短くしておくこと。
+const RATE_LIMIT_MS = 45 * 60 * 1000;
 
 // 曲マスタのキャッシュ（Confidence 計算のたびに全件取得しないため）
 const SONG_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -293,7 +300,12 @@ async function collect(query, inputLiveId = null) {
     const now = Date.now();
     const cacheKey = `${inputLiveId ?? 'any'}::${query}`;
     if (lastRunCache.has(cacheKey) && (now - lastRunCache.get(cacheKey) < RATE_LIMIT_MS)) {
+        const elapsedMin = Math.round((now - lastRunCache.get(cacheKey)) / 60000);
         console.log(`[Rate Limit] Skipping collection for ${cacheKey}`);
+        // 黙って return すると記録が残らず、収集が回っていないことに気付けない
+        await logToDb('info', 'X collection skipped (rate limit)', {
+            query, liveId: inputLiveId, elapsedMin,
+        });
         return 0;
     }
     lastRunCache.set(cacheKey, now);

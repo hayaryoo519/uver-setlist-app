@@ -172,25 +172,63 @@ async function findLiveBySourceId(sourceId) {
 }
 
 /**
- * 手動登録済みの公演と重複しないよう、同日・同会場（または同日・同タイトル）でも既存とみなす
+ * 表記揺れを落とした比較用キー（大小文字・空白・記号を除去）
+ */
+function comparisonKey(value) {
+    return (value || '')
+        .toLowerCase()
+        .replace(/[\s\u3000]/g, '')
+        .replace(/[.．・､、,()（）「」【】\-‐－―ー~〜!！?？]/g, '');
+}
+
+/**
+ * 会場名の比較キー。
+ * 公式サイトは「香川・国営讃岐まんのう公園」、手動登録は「讃岐まんのう公園」のように
+ * 都道府県や「国営」等の前置きが付いたり付かなかったりするため、
+ * 完全一致では突き合わせられない。
+ */
+function venueKey(venue) {
+    return comparisonKey(normalizeVenueName(venue))
+        .replace(/^[^\u30fb]*?[都道府県]/, '')
+        .replace(/^(国営|市営|県営)/, '');
+}
+
+/**
+ * 2つの会場名が同じ会場を指しているとみなせるか。
+ * 短い方が長い方に含まれていれば同一とみなす（前置きの有無を吸収する）。
+ */
+function isSameVenue(a, b) {
+    const ka = venueKey(a);
+    const kb = venueKey(b);
+    if (!ka || !kb) return false;
+    if (ka === kb) return true;
+
+    // 「まんのう公園」のような短すぎる断片での誤判定を避ける
+    const shorter = ka.length <= kb.length ? ka : kb;
+    const longer = ka.length <= kb.length ? kb : ka;
+    return shorter.length >= 4 && longer.includes(shorter);
+}
+
+/**
+ * 手動登録済みの公演と重複しないよう、同日・同会場（または同日・同公演名）でも既存とみなす。
+ *
+ * 会場名もツアー名も表記が揺れるため、正規化したキーで突き合わせる。
+ * 実際に「Monster BaSH 2026 / 讃岐まんのう公園」と
+ * 「MONSTER baSH 2026 / 香川・国営讃岐まんのう公園」が二重登録された。
  */
 async function findExistingLive(entry, venue) {
-    if (venue) {
-        const byDateVenue = await db.query(
-            `SELECT id FROM lives
-             WHERE date = $1
-               AND (venue = $2 OR normalized_venue = $3)`,
-            [entry.date, venue, normalizeVenueName(venue)]
-        );
-        if (byDateVenue.rows.length > 0) return byDateVenue.rows[0].id;
-    }
-
-    // 会場未定の告知は日付とタイトルで突き合わせる
-    const byDateTitle = await db.query(
-        'SELECT id FROM lives WHERE date = $1 AND tour_name = $2',
-        [entry.date, entry.title]
+    const sameDate = await db.query(
+        'SELECT id, venue, tour_name FROM lives WHERE date = $1',
+        [entry.date]
     );
-    return byDateTitle.rows[0]?.id ?? null;
+
+    for (const live of sameDate.rows) {
+        if (venue && isSameVenue(venue, live.venue)) return live.id;
+        if (comparisonKey(entry.title) && comparisonKey(entry.title) === comparisonKey(live.tour_name)) {
+            return live.id;
+        }
+    }
+    return null;
 }
 
 /**
@@ -335,6 +373,8 @@ module.exports = {
     parseScheduleList,
     parseVenue,
     detectType,
+    isSameVenue,
+    venueKey,
     LIST_URL,
     SOURCE_NAME,
 };

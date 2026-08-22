@@ -355,6 +355,37 @@ describe('collector', () => {
             expect(collector.getPosts).not.toHaveBeenCalled();
         });
 
+        // 監視は1時間おきに起床する。レート制限を60分ちょうどにすると
+        // 起床が数十秒早いだけで全スキップされ、実効間隔が2時間になっていた
+        it('50分後の再実行はレート制限に掛からないこと', async () => {
+            collector.getPosts = jest.fn().mockResolvedValue([]);
+            db.query.mockResolvedValue({ rows: [] });
+            const base = Date.now();
+            jest.spyOn(Date, 'now').mockReturnValue(base);
+
+            await collector.collect('hourly', 50);
+            collector.getPosts.mockClear();
+
+            Date.now.mockReturnValue(base + 50 * 60 * 1000);
+            await collector.collect('hourly', 50);
+
+            expect(collector.getPosts).toHaveBeenCalled();
+        });
+
+        it('レート制限でスキップした場合も記録を残すこと', async () => {
+            collector.getPosts = jest.fn().mockResolvedValue([]);
+            db.query.mockResolvedValue({ rows: [] });
+
+            await collector.collect('skip-log', 51);
+            db.query.mockClear();
+            await collector.collect('skip-log', 51);
+
+            const logged = db.query.mock.calls.find(
+                ([sql, params]) => sql.includes('collector_logs') && String(params[1]).includes('skipped')
+            );
+            expect(logged).toBeDefined();
+        });
+
         it('同一ライブでもクエリが違えば実行すること', async () => {
             collector.getPosts = jest.fn().mockResolvedValue([]);
             db.query.mockResolvedValue({ rows: [] });
