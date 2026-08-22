@@ -579,7 +579,18 @@ router.post('/:id/commit', authorize, adminCheck, async (req, res) => {
             );
         }
 
-        // 5. ドラフトの更新
+        // 5. ライブのセトリ状態を確定にする
+        //
+        // ここを更新しないと、セトリを登録したのに setlist_status が
+        // 'UNKNOWN_SETLIST' のまま残り、当日のライブがダッシュボードの
+        // LatestLive にも NextLive にも出ないという状態になる
+        // （2026-08-22 の MONSTER baSH で発生）。
+        await client.query(
+            "UPDATE lives SET setlist_status = 'NORMAL' WHERE id = $1",
+            [liveId]
+        );
+
+        // 6. ドラフトの更新
         await client.query(
             "UPDATE raw_setlists SET status = 'approved', live_id = $1, updated_at = NOW() WHERE id = $2",
             [liveId, id]
