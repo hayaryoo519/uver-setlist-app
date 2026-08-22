@@ -161,23 +161,36 @@ router.get('/', async (req, res) => {
             `),
 
             // 直近10件（LatestLive候補）
-            // 過去日付 OR 当日でsetlist_status = 'NORMAL' の場合に表示
+            // 過去日付 OR 当日でセトリ確定済みの場合に表示。
+            //
+            // 「確定済み」の判定は他の集計と揃えて setlist_status だけに頼らない。
+            // ドラフト取り込みでは setlists に曲が入るだけで setlist_status が
+            // 更新されないことがあり、実際に 2026-08-22 の MONSTER baSH が
+            // セトリ登録済みなのに LatestLive にも NextLive にも出ない状態になった。
+            // なお setlist_status は 611件が NULL、422件が 'NORMAL' と混在しており、
+            // セトリの有無を表す実質的な情報は setlists の存在の方にある。
             db.query(`
                 SELECT id, tour_name, title, date::text, venue, type, prefecture, special_note, setlist_status
-                FROM lives
+                FROM lives l
                 WHERE date::date < $1
-                   OR (date::date = $1 AND setlist_status = 'NORMAL')
+                   OR (date::date = $1
+                       AND (setlist_status = 'NORMAL'
+                            OR EXISTS (SELECT 1 FROM setlists sl WHERE sl.live_id = l.id)))
                 ORDER BY date DESC
                 LIMIT 10
             `, [today]),
 
             // 今後のライブ（NextLive候補）
-            // 未来日付 OR 当日でNORMAL未確定の場合に表示
+            // 今後のライブ（NextLive候補）
+            // 未来日付 OR 当日でセトリ未確定の場合に表示。
+            // LatestLive と重複／欠落しないよう、判定条件を厳密に裏返しておく。
             db.query(`
                 SELECT id, tour_name, title, date::text, venue, type, prefecture, special_note, setlist_status
-                FROM lives
+                FROM lives l
                 WHERE date::date > $1
-                   OR (date::date = $1 AND (setlist_status IS NULL OR setlist_status != 'NORMAL'))
+                   OR (date::date = $1
+                       AND setlist_status IS DISTINCT FROM 'NORMAL'
+                       AND NOT EXISTS (SELECT 1 FROM setlists sl WHERE sl.live_id = l.id))
                 ORDER BY date ASC
             `, [today]),
 
