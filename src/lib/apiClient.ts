@@ -2,11 +2,16 @@ interface RequestOptions extends Omit<RequestInit, 'headers'> {
   headers?: Record<string, string>
 }
 
+interface ApiErrorData {
+  message?: string
+  detail?: string
+}
+
 export class ApiError extends Error {
   status: number
-  data: { message?: string } | null
+  data: ApiErrorData | null
 
-  constructor(status: number, data: { message?: string } | null) {
+  constructor(status: number, data: ApiErrorData | null) {
     super(data?.message ?? `HTTP Error ${status}`)
     this.status = status
     this.data = data
@@ -24,7 +29,7 @@ const request = async <T>(url: string, options: RequestOptions = {}): Promise<T>
   const res = await fetch(url, { ...options, headers })
 
   if (!res.ok) {
-    let data: { message?: string } | null = null
+    let data: ApiErrorData | null = null
     try {
       data = await res.json()
     } catch {

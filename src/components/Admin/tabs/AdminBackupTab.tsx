@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Database, Play, Loader, CheckCircle, XCircle, RefreshCw } from 'lucide-react'
 import { useBackupList, useRunBackup } from '../../../hooks/queries/useAdminBackup'
+import { ApiError } from '../../../lib/apiClient'
 
 const formatBytes = (bytes: number) => {
   if (bytes === 0) return '0 B'
@@ -20,6 +21,9 @@ const AdminBackupTab = () => {
   const { data: backups = [], isLoading, refetch } = useBackupList()
   const { mutate: runBackup, isPending, isSuccess, isError, data: result, error } = useRunBackup()
   const [confirmed, setConfirmed] = useState(false)
+  const errorMessage = error instanceof ApiError
+    ? error.data?.detail || error.data?.message || 'バックアップに失敗しました'
+    : 'バックアップに失敗しました'
 
   const handleRun = () => {
     if (!confirmed) {
@@ -56,8 +60,9 @@ const AdminBackupTab = () => {
         )}
 
         {isError && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#7f1d1d20', border: '1px solid #7f1d1d', borderRadius: '6px', padding: '12px', marginBottom: '16px', color: '#fca5a5', fontSize: '13px' }}>
-            <XCircle size={16} /> バックアップに失敗しました
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', background: '#7f1d1d20', border: '1px solid #7f1d1d', borderRadius: '6px', padding: '12px', marginBottom: '16px', color: '#fca5a5', fontSize: '13px', lineHeight: 1.6 }}>
+            <XCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+            <span>{errorMessage}</span>
           </div>
         )}
 
