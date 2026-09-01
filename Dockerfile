@@ -29,10 +29,11 @@ WORKDIR /app
 # Debian の PEP 668 を避けるため専用の venv に隔離する。
 # server/scripts/twitter-search.py が TWITTER_CLI_PYTHON 経由でこの venv を使う。
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends python3 python3-venv \
+    && apt-get install -y --no-install-recommends python3 python3-venv postgresql-client \
     && rm -rf /var/lib/apt/lists/* \
     && python3 -m venv /opt/twitter-cli \
-    && /opt/twitter-cli/bin/pip install --no-cache-dir twitter-cli
+    && /opt/twitter-cli/bin/pip install --no-cache-dir twitter-cli \
+    && mkdir -p /var/backups/postgres
 
 ENV TWITTER_CLI_PYTHON=/opt/twitter-cli/bin/python3
 ENV TWITTER_CLI_BIN=/app/server/scripts/twitter-search.py

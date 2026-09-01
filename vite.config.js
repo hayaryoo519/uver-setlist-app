@@ -177,6 +177,7 @@ export default defineConfig({
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
+      '**/.claude/**',
       '**/server/tests/**',
       '**/tests/e2e/**',
       '**/playwright-report/**',
