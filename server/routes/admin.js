@@ -39,7 +39,7 @@ router.get('/backups', (req, res) => {
 
 // バックアップ実行
 router.post('/backup', (req, res) => {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.DB_NAME !== 'uver_setlist_prod') {
         return res.status(403).json({ message: 'バックアップは本番環境でのみ実行できます' });
     }
 

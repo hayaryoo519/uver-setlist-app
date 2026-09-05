@@ -5,6 +5,18 @@ import type { AuthUser } from '../types/api';
 
 type AuthResult = { success: boolean; message?: string }
 
+export const isSessionExpiredResponse = async (response: Response) => {
+    if (response.status === 401) return true;
+    if (response.status !== 403) return false;
+
+    try {
+        const data = await response.clone().json();
+        return typeof data?.message === 'string' && data.message.startsWith('認証されていません');
+    } catch {
+        return false;
+    }
+};
+
 interface AuthContextType {
     currentUser: AuthUser | null;
     login: (email: string, password: string) => Promise<AuthResult>;
@@ -59,7 +71,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, []);
 
     // 認証エラーのグローバルインターセプター
-    // 保護されたAPIへの401/403でセッションを破棄する
+    // 保護されたAPIへの認証エラーでセッションを破棄する
     // ※ /api/auth/ は除外（ログイン失敗の401でセッション破棄しないため）
     useEffect(() => {
         const originalFetch = window.fetch;
@@ -69,7 +81,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const url = typeof args[0] === 'string' ? args[0] : ((args[0] as Request)?.url ?? '');
             const isAuthEndpoint = url.includes('/api/auth/');
 
-            if (!isAuthEndpoint && (response.status === 401 || response.status === 403) && url.includes('/api/')) {
+            if (!isAuthEndpoint && url.includes('/api/') && await isSessionExpiredResponse(response)) {
                 const token = localStorage.getItem('token');
                 if (token) {
                     console.warn(`[API] 認証エラー (${response.status}) URL: ${url}`);
