@@ -13,7 +13,7 @@ const TYPES: Array<{ value: PostType; label: string }> = [
   { value: 'seasonal', label: '季節ネタ' },
   { value: 'tour_stats', label: 'ツアー統計' },
 ]
-const STATUS_LABEL = { draft: 'AI下書き', approved: 'チェック済み', published: '投稿済み', failed: '失敗' }
+const STATUS_LABEL = { draft: '下書き', approved: 'チェック済み', published: '投稿済み', failed: '失敗' }
 
 const AdminSocialPostsTab = () => {
   const { data: lives = [] } = useLives({ include_setlists: true }) as { data: any[] }
@@ -64,7 +64,7 @@ const AdminSocialPostsTab = () => {
       {postType === 'tour_stats' && <select value={tourName} onChange={e => setTourName(e.target.value)} style={{ flex: '1 1 260px', minWidth: 0, background: '#0f172a', color: '#fff', border: '1px solid #475569', borderRadius: 6, padding: 10 }}>
         <option value="">ツアーを選択...</option>{tours.map(tour => <option key={tour} value={tour}>{tour}</option>)}
       </select>}
-      <button className="btn-primary" onClick={generate} disabled={generating || (postType === 'tour_stats' && !tourName)}>{generating ? <Loader className="spin" size={16} /> : <FileText size={16} />}AI下書きを生成</button>
+      <button className="btn-primary" onClick={generate} disabled={generating || (postType === 'tour_stats' && !tourName)}>{generating ? <Loader className="spin" size={16} /> : <FileText size={16} />}投稿下書きを生成</button>
     </div>
     {message && <p style={{ color: '#fbbf24' }}>{message}</p>}
     {loading ? <Loader className="spin" /> : posts.length === 0 ? <p style={{ color: '#94a3b8' }}>投稿候補はありません。</p> : posts.map(post => <div key={post.id} className="collect-panel" style={{ padding: 16, marginBottom: 12 }}>
