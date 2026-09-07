@@ -9,6 +9,18 @@ router.use(adminCheck);
 const APP_URL = process.env.APP_URL || 'https://uver-setlist-archive.org';
 const POST_TYPES = new Set(['on_this_day', 'frequent_ranking', 'rare_song', 'seasonal', 'tour_stats']);
 
+function parseXPostUrl(value) {
+    try {
+        const url = new URL(String(value || '').trim());
+        if (url.protocol !== 'https:' || !['x.com', 'www.x.com', 'twitter.com', 'www.twitter.com'].includes(url.hostname)) return null;
+        const match = url.pathname.match(/^\/(?:i\/web\/)?(?:[^/]+\/)?status\/(\d+)\/?$/);
+        if (!match) return null;
+        return { postId: match[1], postUrl: `https://x.com/i/status/${match[1]}` };
+    } catch {
+        return null;
+    }
+}
+
 function lineList(rows, formatter) {
     return rows.map((row, index) => formatter(row, index)).join('\n');
 }
@@ -109,4 +121,35 @@ router.patch('/:id', async (req, res) => {
     } catch (err) { console.error('[social-posts] update error:', err); res.status(500).json({ message: '投稿候補の更新に失敗しました' }); }
 });
 
+router.post('/:id/publish', async (req, res) => {
+    const parsed = parseXPostUrl(req.body.postUrl);
+    if (!parsed) return res.status(400).json({ message: '有効なXの投稿URLを入力してください' });
+
+    const client = await db.pool.connect();
+    try {
+        await client.query('BEGIN');
+        const result = await client.query(
+            `UPDATE social_posts
+             SET status = 'published', external_post_id = $1, external_post_url = $2,
+                 published_at = NOW(), error_message = NULL, updated_at = NOW()
+             WHERE id = $3 AND status = 'approved'
+             RETURNING *`,
+            [parsed.postId, parsed.postUrl, req.params.id]
+        );
+        if (!result.rows.length) {
+            await client.query('ROLLBACK');
+            return res.status(409).json({ message: 'チェック済みの投稿だけを投稿済みにできます' });
+        }
+        await client.query('COMMIT');
+        res.json(result.rows[0]);
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('[social-posts] publish error:', err);
+        res.status(500).json({ message: '投稿済みへの更新に失敗しました' });
+    } finally {
+        client.release();
+    }
+});
+
 module.exports = router;
+module.exports.parseXPostUrl = parseXPostUrl;
