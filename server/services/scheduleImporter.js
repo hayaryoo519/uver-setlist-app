@@ -103,6 +103,19 @@ function parseScheduleList(html) {
     return entries;
 }
 
+/**
+ * 公式サイトの「次月」リンクを取り出す。
+ * 一覧は現在月だけを返すため、今後の発表分も取り込めるよう月送りする。
+ */
+function parseNextMonthUrl(html) {
+    const match = (html || '').match(/<li[^>]*class="[^"]*next[^"]*"[^>]*>[\s\S]*?onclick="return send\('list',\s*(\d{4}),\s*(\d{1,2})\);"/i);
+    if (!match) return null;
+
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    return `${BASE_URL}/schedule/list/${year}/${String(month).padStart(2, '0')}/`;
+}
+
 // 会場欄に紛れ込みやすい別項目。ここまでを会場名として切り出す
 const VENUE_STOP_WORDS = /(日程|開催日|開場|開演|出演|チケット|料金|問\s*合|主催)/;
 
@@ -240,10 +253,21 @@ async function findExistingLive(entry, venue) {
 async function importSchedule({ dryRun = false } = {}) {
     const stats = { fetched: 0, candidates: 0, created: 0, skipped: 0, errors: 0, created_lives: [] };
 
-    let entries;
+    let entries = [];
     try {
-        const html = await fetchHtml(LIST_URL);
-        entries = parseScheduleList(html);
+        let listUrl = LIST_URL;
+        const visitedUrls = new Set();
+
+        // 発表直後の公演は翌月以降の一覧に出るため、最大6か月先まで確認する。
+        for (let month = 0; month < 6 && listUrl && !visitedUrls.has(listUrl); month++) {
+            visitedUrls.add(listUrl);
+            const html = await fetchHtml(listUrl);
+            entries.push(...parseScheduleList(html));
+            listUrl = parseNextMonthUrl(html);
+        }
+
+        // 同じ公演が月一覧の境界で重複して返っても1回だけ処理する。
+        entries = [...new Map(entries.map((entry) => [entry.sourceId, entry])).values()];
     } catch (err) {
         stats.errors++;
         await logToDb('error', 'Schedule import failed', { error: err.message });
@@ -371,6 +395,7 @@ module.exports = {
     importSchedule,
     startScheduleImport,
     parseScheduleList,
+    parseNextMonthUrl,
     parseVenue,
     detectType,
     isSameVenue,

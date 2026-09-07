@@ -84,6 +84,18 @@ describe('scheduleImporter', () => {
         });
     });
 
+    describe('parseNextMonthUrl', () => {
+        it('公式一覧の次月URLを生成すること', () => {
+            expect(importer.parseNextMonthUrl(
+                `<li class="next"><a onclick="return send('list', 2026, 10);">NEXT MONTH</a></li>`
+            )).toBe('https://www.uverworld.jp/schedule/list/2026/10/');
+        });
+
+        it('次月リンクがなければ null を返すこと', () => {
+            expect(importer.parseNextMonthUrl('<html></html>')).toBeNull();
+        });
+    });
+
     describe('parseVenue', () => {
         it('詳細ページから会場名を取り出すこと', () => {
             expect(importer.parseVenue(DETAIL_HTML)).toBe('石狩湾新港樽川ふ頭横野外特設ステージ');
