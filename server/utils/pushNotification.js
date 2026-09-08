@@ -82,7 +82,7 @@ async function sendNotificationToAll(payload) {
 }
 
 /**
- * 新ライブ追加通知を送信
+ * 新ライブ追加通知を管理者へ送信
  */
 async function notifyNewLive(live) {
     // 日付をYYYY/MM/DD形式に整形
@@ -101,18 +101,12 @@ async function notifyNewLive(live) {
         console.error('Date parsing error:', e);
     }
 
-    const payload = {
+    return notifyAdmins({
         title: '🎸 新しいライブ情報！',
         body: `${live.title || live.tour_name || 'ライブ'} (${dateStr})`,
-        icon: '/icons/icon-192x192.png',
-        badge: '/icons/icon-192x192.png',
-        data: {
-            url: `/live/${live.id}`,
-            type: 'new_live'
-        }
-    };
-
-    return await sendNotificationToAll(payload);
+        url: `/live/${live.id}`,
+        type: 'new_live',
+    });
 }
 
 /**
