@@ -133,6 +133,20 @@ describe('scheduleImporter', () => {
         });
     });
 
+    describe('parseVenueFromTitle', () => {
+        it.each([
+            ['KT Zepp Yokohama 17:30/18:30', 'KT Zepp Yokohama'],
+            ['Zepp New Taipei 17:30開場/19:00開演（現地時間）', 'Zepp New Taipei'],
+            ['日本武道館 day 13:00/14:00 night 18:00/19:00', '日本武道館'],
+        ])('%s から会場名を取り出すこと', (title, expected) => {
+            expect(importer.parseVenueFromTitle(title)).toBe(expected);
+        });
+
+        it('時刻を含まない公演名は会場とみなさないこと', () => {
+            expect(importer.parseVenueFromTitle('YURIN LIVE vol.5')).toBeNull();
+        });
+    });
+
     describe('detectType', () => {
         it('EVENT カテゴリは FESTIVAL とすること', () => {
             expect(importer.detectType('EVENT', '石狩湾新港')).toBe('FESTIVAL');
@@ -258,6 +272,35 @@ describe('scheduleImporter', () => {
 
             expect(stats.created).toBe(0);
             expect(stats.skipped).toBe(2);
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining('external_source_id = COALESCE'),
+                expect.arrayContaining(['uverworld.jp:3186', 5])
+            );
+        });
+
+        it('一覧タイトルから補完した会場で既存公演を判定すること', async () => {
+            const zeppList = LIST_HTML
+                .replace('2026.08.15', '2026.09.24')
+                .replace('RISING SUN ROCK FESTIVAL 2026 in EZO', 'KT Zepp Yokohama 17:30/18:30');
+            axios.get.mockImplementation((url) => Promise.resolve({
+                data: url.includes('/detail/') ? '<div>会場の記載なし</div>' : zeppList,
+            }));
+            db.query.mockImplementation((sql) => {
+                if (sql.includes('external_source_id = $1')) return Promise.resolve({ rows: [] });
+                if (sql.includes('SELECT id, venue, tour_name FROM lives')) {
+                    return Promise.resolve({ rows: [{ id: 1716, venue: 'KT Zepp Yokohama', tour_name: 'UVERworld LIVE “危ない” TOUR 2026' }] });
+                }
+                if (sql.includes('INSERT INTO lives')) return Promise.resolve({ rows: [{ id: 900 }] });
+                return Promise.resolve({ rows: [] });
+            });
+
+            const stats = await importer.importSchedule();
+
+            expect(stats.created).toBe(1); // もう1件のTOURは新規
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining('external_source_id = COALESCE'),
+                expect.arrayContaining(['uverworld.jp:3186', 1716])
+            );
         });
 
         // 出演解禁を知るのがこの機能の目的なので、追加があった時は必ず通知する
