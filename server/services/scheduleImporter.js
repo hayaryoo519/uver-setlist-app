@@ -158,6 +158,19 @@ function parseVenue(html) {
 }
 
 /**
+ * 「KT Zepp Yokohama 17:30/18:30」のように、一覧タイトルが
+ * 会場名と開場・開演時刻で構成される場合の会場名を取り出す。
+ */
+function parseVenueFromTitle(title) {
+    const value = stripTags(title);
+    const timeIndex = value.search(/\s+(?:day\s+|night\s+|open\s+)?\d{1,2}[:：]\d{2}/i);
+    if (timeIndex < 0) return null;
+
+    const venue = value.slice(0, timeIndex).trim();
+    return venue.length >= 3 ? venue : null;
+}
+
+/**
  * 公演種別を推定する
  * 一覧の EVENT はフェス等の複数アーティスト公演、TOUR は自身のツアー
  */
@@ -244,6 +257,20 @@ async function findExistingLive(entry, venue) {
     return null;
 }
 
+async function linkOfficialSource(liveId, entry) {
+    await db.query(
+        `UPDATE lives
+         SET external_source_id = COALESCE(external_source_id, $1),
+             import_metadata = COALESCE(import_metadata, '{}'::jsonb) || $2::jsonb
+         WHERE id = $3`,
+        [
+            `${SOURCE_NAME}:${entry.sourceId}`,
+            JSON.stringify({ source: SOURCE_NAME, source_url: entry.detailUrl, category: entry.category, linked_at: new Date().toISOString() }),
+            liveId,
+        ]
+    );
+}
+
 /**
  * 公式サイトのスケジュールを取り込む
  *
@@ -309,9 +336,11 @@ async function importSchedule({ dryRun = false } = {}) {
             } catch (err) {
                 console.warn(`[Schedule] 詳細ページ取得に失敗: ${entry.detailUrl} (${err.message})`);
             }
+            venue ||= parseVenueFromTitle(entry.title);
 
             const existingId = await findExistingLive(entry, venue);
             if (existingId) {
+                if (!dryRun) await linkOfficialSource(existingId, entry);
                 stats.skipped++;
                 continue;
             }
@@ -397,6 +426,7 @@ module.exports = {
     parseScheduleList,
     parseNextMonthUrl,
     parseVenue,
+    parseVenueFromTitle,
     detectType,
     isSameVenue,
     venueKey,
