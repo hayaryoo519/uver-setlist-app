@@ -40,13 +40,13 @@ jobs:
 
           revoke_schema_create() {
             echo "${{ secrets.SUDO_PASSWORD }}" | sudo -S -u postgres \
-              psql --dbname="$DB_NAME" --set=app_role="$DB_ROLE" \
-              --command='REVOKE CREATE ON SCHEMA public FROM :"app_role";'
+              psql --dbname="$DB_NAME" \
+              --command="REVOKE CREATE ON SCHEMA public FROM \"$DB_ROLE\";"
           }
           trap revoke_schema_create EXIT
           echo "${{ secrets.SUDO_PASSWORD }}" | sudo -S -u postgres \
-            psql --dbname="$DB_NAME" --set=app_role="$DB_ROLE" \
-            --command='GRANT CREATE ON SCHEMA public TO :"app_role";'
+            psql --dbname="$DB_NAME" \
+            --command="GRANT CREATE ON SCHEMA public TO \"$DB_ROLE\";"
           node scripts/migrate.js
           revoke_schema_create
           trap - EXIT
