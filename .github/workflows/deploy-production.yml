@@ -31,7 +31,25 @@ jobs:
 
           # 6. DBマイグレーション
           cd ~/apps/uver-setlist-app/server
+          DB_ROLE=$(node -e "require('dotenv').config({ path: '.env', quiet: true }); const { Pool } = require('pg'); const pool = new Pool({ user: process.env.DB_USER, password: process.env.DB_PASSWORD, host: process.env.DB_HOST, port: process.env.DB_PORT, database: process.env.DB_NAME }); pool.query('SELECT current_user').then(({ rows }) => { console.log(rows[0].current_user); return pool.end(); }).catch(err => { console.error(err.message); process.exit(1); });")
+          DB_NAME=$(node -e "require('dotenv').config({ path: '.env', quiet: true }); console.log(process.env.DB_NAME || '')")
+          if [[ ! "$DB_ROLE" =~ ^[A-Za-z_][A-Za-z0-9_-]*$ ]] || [[ ! "$DB_NAME" =~ ^[A-Za-z_][A-Za-z0-9_-]*$ ]]; then
+            echo "Invalid database role or database name"
+            exit 1
+          fi
+
+          revoke_schema_create() {
+            echo "${{ secrets.SUDO_PASSWORD }}" | sudo -S -u postgres \
+              psql --dbname="$DB_NAME" --set=app_role="$DB_ROLE" \
+              --command='REVOKE CREATE ON SCHEMA public FROM :"app_role";'
+          }
+          trap revoke_schema_create EXIT
+          echo "${{ secrets.SUDO_PASSWORD }}" | sudo -S -u postgres \
+            psql --dbname="$DB_NAME" --set=app_role="$DB_ROLE" \
+            --command='GRANT CREATE ON SCHEMA public TO :"app_role";'
           node scripts/migrate.js
+          revoke_schema_create
+          trap - EXIT
 
           # 7. フロントエンドビルド
           cd ~/apps/uver-setlist-app
