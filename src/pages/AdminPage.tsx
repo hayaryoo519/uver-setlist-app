@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Music, Calendar, Upload, Globe, AlertTriangle, FileText, Clock, ShieldAlert, Database, BarChart2 } from 'lucide-react';
+import { Shield, Users, Music, Calendar, Upload, Globe, AlertTriangle, FileText, Clock, ShieldAlert, Database, BarChart2, Send } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLives } from '../hooks/queries/useLives';
@@ -19,8 +19,9 @@ import AdminCorrectionsTab from '../components/Admin/tabs/AdminCorrectionsTab';
 import AdminBackupTab from '../components/Admin/tabs/AdminBackupTab';
 import AdminStatsTab from '../components/Admin/tabs/AdminStatsTab';
 import AdminSecurityLogsTab from '../components/Admin/tabs/AdminSecurityLogsTab';
+import AdminSocialPostsTab from '../components/Admin/tabs/AdminSocialPostsTab';
 
-type TabId = 'lives' | 'songs' | 'users' | 'import' | 'collect' | 'drafts' | 'collector_logs' | 'corrections' | 'backup' | 'stats' | 'security_logs';
+type TabId = 'lives' | 'songs' | 'users' | 'import' | 'collect' | 'drafts' | 'social_posts' | 'collector_logs' | 'corrections' | 'backup' | 'stats' | 'security_logs';
 
 const AdminPage = () => {
     const { currentUser } = useAuth();
@@ -92,6 +93,12 @@ const AdminPage = () => {
                         <span className="card-badge" style={{ background: '#8b5cf620', color: '#a78bfa' }}>AI</span>
                     </div>
                 </div>
+                <div className={`admin-card ${activeTab === 'social_posts' ? 'active' : ''}`} onClick={() => setActiveTab('social_posts')}>
+                    <div className="card-header">
+                        <h2 className="card-title"><Send size={24} color="#94a3b8" /> Social Posts</h2>
+                        <span className="card-badge" style={{ background: '#1da1f220', color: '#60a5fa' }}>X</span>
+                    </div>
+                </div>
                 <div className={`admin-card ${activeTab === 'collector_logs' ? 'active' : ''}`} onClick={() => setActiveTab('collector_logs')}>
                     <div className="card-header">
                         <h2 className="card-title"><Clock size={24} color="#94a3b8" /> Collector Logs</h2>
@@ -133,6 +140,7 @@ const AdminPage = () => {
                 {activeTab === 'import' && <AdminImportTab />}
                 {activeTab === 'collect' && <AdminCollectTab />}
                 {activeTab === 'drafts' && <AdminDraftsTab />}
+                {activeTab === 'social_posts' && <AdminSocialPostsTab />}
                 {activeTab === 'collector_logs' && <AdminCollectorLogsTab />}
                 {activeTab === 'corrections' && <AdminCorrectionsTab />}
                 {activeTab === 'backup' && <AdminBackupTab />}

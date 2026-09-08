@@ -10,7 +10,7 @@ process.env.VAPID_PRIVATE_KEY = 'test-private-key';
 
 const webpush = require('web-push');
 const db = require('../../db');
-const { notifyAdmins } = require('../../utils/pushNotification');
+const { notifyAdmins, notifyNewLive } = require('../../utils/pushNotification');
 
 const ADMIN_SUBS = [
     { endpoint: 'https://push.example/admin1', p256dh: 'k1', auth: 'a1' },
@@ -81,5 +81,24 @@ describe('notifyAdmins', () => {
         db.query.mockRejectedValue(new Error('db down'));
 
         await expect(notifyAdmins({ title: 'T', body: 'B' })).resolves.toEqual({ sent: 0, failed: 0 });
+    });
+});
+
+describe('notifyNewLive', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        webpush.sendNotification.mockResolvedValue({});
+    });
+
+    it('ライブ追加通知を管理者の購読だけに送ること', async () => {
+        db.query.mockResolvedValue({ rows: [ADMIN_SUBS[0]] });
+
+        await notifyNewLive({ id: 10, date: '2026-10-04', tour_name: 'Festival' });
+
+        const [sql] = db.query.mock.calls[0];
+        expect(sql).toContain("u.role = 'admin'");
+        expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
+        const payload = JSON.parse(webpush.sendNotification.mock.calls[0][1]);
+        expect(payload.data).toEqual({ url: '/live/10', type: 'new_live' });
     });
 });
