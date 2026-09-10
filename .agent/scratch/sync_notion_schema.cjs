@@ -1,9 +1,13 @@
 const { Pool } = require('pg');
 const path = require('path');
 
-const NOTION_API_KEY = 'ntn_U3793630285abIcTEaNwzQBuLZDeP1ukKxySNzRI4odcdk';
+const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const NOTION_VERSION = '2022-06-28';
 const TARGET_PAGE_ID = '3050e21e-344d-81b5-a68c-e71f92075312'; // 3. データベース設計 (Database Schema)
+
+if (!NOTION_API_KEY) {
+    throw new Error('NOTION_API_KEY is required');
+}
 
 // server/.envを読み込む
 require('dotenv').config({ path: path.join(__dirname, '../../server/.env') });
