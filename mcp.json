@@ -13,7 +13,7 @@
         "@modelcontextprotocol/server-notion"
       ],
       "env": {
-        "NOTION_API_KEY": "ntn_U3793630285abIcTEaNwzQBuLZDeP1ukKxySNzRI4odcdk"
+        "NOTION_API_KEY": "process.env.NOTION_API_KEY"
       }
     }
   }

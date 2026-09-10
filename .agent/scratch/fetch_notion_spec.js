@@ -1,8 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 
-const NOTION_API_KEY = 'ntn_U3793630285abIcTEaNwzQBuLZDeP1ukKxySNzRI4odcdk';
+const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const NOTION_VERSION = '2022-06-28';
+
+if (!NOTION_API_KEY) {
+    throw new Error('NOTION_API_KEY is required');
+}
 
 // Notion API を呼び出す共通関数
 async function callNotionAPI(endpoint, method = 'GET', body = null) {
