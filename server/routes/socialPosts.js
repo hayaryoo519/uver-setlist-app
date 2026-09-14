@@ -7,7 +7,10 @@ router.use(authorize);
 router.use(adminCheck);
 
 const APP_URL = process.env.APP_URL || 'https://uver-setlist-archive.org';
-const POST_TYPES = new Set(['on_this_day', 'frequent_ranking', 'rare_song', 'seasonal', 'tour_stats']);
+const POST_TYPES = new Set([
+    'on_this_day', 'frequent_ranking', 'rare_song', 'seasonal', 'tour_stats',
+    'song_history', 'longest_absence', 'debut_anniversary',
+]);
 
 function parseXPostUrl(value) {
     try {
@@ -43,6 +46,19 @@ function buildSeasonal(rows, season) {
     return `【${label}のUVERworldといえばこの曲】${season === 'summer' ? '🌊☀️' : '❄️'}\n${season === 'summer' ? '7〜8月' : '12〜2月'}のライブで特に演奏回数が多い曲をピックアップ！\n\n${lineList(rows.slice(0, 3), row => `🌟「${row.title}」… ${label}ライブ${row.cnt}回`)}\n\n過去の${label}ライブセトリはこちら👇\n${APP_URL}\n\n#UVERworld #${season === 'summer' ? '夏フェス' : 'セトリ'}`;
 }
 
+function buildSongHistory(song) {
+    return `【UVERworld楽曲データ】\n「${song.title}」\n\n初披露：${song.first_date}\n最終披露：${song.last_date}\n通算披露回数：${song.total_count}回\n最終披露から${song.days_since_last}日\n\n詳しい演奏履歴はこちら👇\n${APP_URL}/song/${song.id}\n\n#UVERworld #セトリアーカイブ`;
+}
+
+function buildLongestAbsence(rows) {
+    return `【長く披露されていないUVERworld楽曲】\n\n${lineList(rows.slice(0, 5), (row, i) => `${i + 1}位「${row.title}」\n最終披露：${row.last_date}（${row.days_since}日前）`)}\n\n次に聴きたい曲は？\n${APP_URL}\n\n#UVERworld #セトリアーカイブ`;
+}
+
+function buildDebutAnniversary(song) {
+    const [year, month, day] = song.first_date.split('-');
+    return `【初披露記念日】\n今日${Number(month)}/${Number(day)}は「${song.title}」がライブで初披露されてから${song.years_ago}周年！\n\n初披露：${year}年${Number(month)}月${Number(day)}日\n通算披露回数：${song.total_count}回\n\n演奏履歴はこちら👇\n${APP_URL}/song/${song.id}\n\n#UVERworld #セトリアーカイブ`;
+}
+
 async function generatePost(postType, req) {
     if (postType === 'on_this_day') {
         const liveResult = await db.query(`SELECT l.id, l.date, l.venue FROM lives l WHERE TO_CHAR(l.date, 'MM-DD') = TO_CHAR(CURRENT_DATE, 'MM-DD') AND l.date < CURRENT_DATE AND (l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists s WHERE s.live_id = l.id)) ORDER BY l.date DESC LIMIT 1`);
@@ -71,6 +87,26 @@ async function generatePost(postType, req) {
         const rows = await db.query(`SELECT s.title, COUNT(*)::int AS cnt FROM setlists sl JOIN songs s ON s.id = sl.song_id JOIN lives l ON l.id = sl.live_id WHERE EXTRACT(MONTH FROM l.date) = ANY($1::int[]) GROUP BY s.id, s.title ORDER BY cnt DESC, s.title LIMIT 5`, [months]);
         if (!rows.rows.length) throw Object.assign(new Error('季節ネタの対象データがありません'), { statusCode: 422 });
         return { body: buildSeasonal(rows.rows, summer ? 'summer' : 'winter'), keyPart: `seasonal:${summer ? 'summer' : 'winter'}:${new Date().getFullYear()}` };
+    }
+
+    if (postType === 'song_history') {
+        const result = await db.query(`SELECT s.id, s.title, MIN(l.date)::text AS first_date, MAX(l.date)::text AS last_date, COUNT(DISTINCT l.id)::int AS total_count, (CURRENT_DATE - MAX(l.date)::date)::int AS days_since_last FROM songs s JOIN setlists sl ON sl.song_id = s.id JOIN lives l ON l.id = sl.live_id WHERE l.date <= CURRENT_DATE AND (l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists s2 WHERE s2.live_id = l.id)) GROUP BY s.id, s.title ORDER BY RANDOM() LIMIT 1`);
+        if (!result.rows.length) throw Object.assign(new Error('楽曲履歴の対象データがありません'), { statusCode: 422 });
+        const song = result.rows[0];
+        return { body: buildSongHistory(song), keyPart: `song_history:${song.id}:${new Date().toISOString().slice(0, 10)}` };
+    }
+
+    if (postType === 'longest_absence') {
+        const result = await db.query(`SELECT s.id, s.title, MAX(l.date)::text AS last_date, (CURRENT_DATE - MAX(l.date)::date)::int AS days_since FROM songs s JOIN setlists sl ON sl.song_id = s.id JOIN lives l ON l.id = sl.live_id WHERE l.date <= CURRENT_DATE AND (l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists s2 WHERE s2.live_id = l.id)) GROUP BY s.id, s.title HAVING MAX(l.date) < CURRENT_DATE - INTERVAL '2 years' ORDER BY days_since DESC, s.title LIMIT 5`);
+        if (!result.rows.length) throw Object.assign(new Error('最長未披露ランキングの対象データがありません'), { statusCode: 422 });
+        return { body: buildLongestAbsence(result.rows), keyPart: `longest_absence:${new Date().toISOString().slice(0, 10)}` };
+    }
+
+    if (postType === 'debut_anniversary') {
+        const result = await db.query(`SELECT s.id, s.title, MIN(l.date)::text AS first_date, COUNT(DISTINCT l.id)::int AS total_count, EXTRACT(YEAR FROM AGE(CURRENT_DATE, MIN(l.date)))::int AS years_ago FROM songs s JOIN setlists sl ON sl.song_id = s.id JOIN lives l ON l.id = sl.live_id WHERE l.date <= CURRENT_DATE AND (l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists s2 WHERE s2.live_id = l.id)) GROUP BY s.id, s.title HAVING EXTRACT(MONTH FROM MIN(l.date)) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM MIN(l.date)) = EXTRACT(DAY FROM CURRENT_DATE) AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, MIN(l.date))) > 0 ORDER BY first_date LIMIT 1`);
+        if (!result.rows.length) throw Object.assign(new Error('今日は初披露記念日の対象曲がありません'), { statusCode: 422 });
+        const song = result.rows[0];
+        return { body: buildDebutAnniversary(song), keyPart: `debut_anniversary:${song.id}:${new Date().toISOString().slice(0, 10)}` };
     }
 
     const tourName = String(req.body.tourName || '').trim();
