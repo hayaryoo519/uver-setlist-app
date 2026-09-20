@@ -3,7 +3,7 @@ import { Check, ExternalLink, FileText, Loader, RefreshCw, Send } from 'lucide-r
 import { apiClient } from '../../../lib/apiClient'
 import { useLives } from '../../../hooks/queries/useLives'
 
-type PostType = 'on_this_day' | 'frequent_ranking' | 'rare_song' | 'seasonal' | 'tour_stats'
+type PostType = 'on_this_day' | 'frequent_ranking' | 'rare_song' | 'seasonal' | 'tour_stats' | 'song_history' | 'longest_absence' | 'debut_anniversary'
 type SocialPost = { id: number; body: string; status: 'draft' | 'approved' | 'published' | 'failed'; post_type: PostType; external_post_url?: string; published_at?: string; live_tour_name?: string; live_venue?: string }
 
 const TYPES: Array<{ value: PostType; label: string }> = [
@@ -12,6 +12,9 @@ const TYPES: Array<{ value: PostType; label: string }> = [
   { value: 'rare_song', label: 'レア曲紹介' },
   { value: 'seasonal', label: '季節ネタ' },
   { value: 'tour_stats', label: 'ツアー統計' },
+  { value: 'song_history', label: '初披露・最終披露' },
+  { value: 'longest_absence', label: '最長未披露ランキング' },
+  { value: 'debut_anniversary', label: '初披露記念日' },
 ]
 const STATUS_LABEL = { draft: '下書き', approved: 'チェック済み', published: '投稿済み', failed: '失敗' }
 
