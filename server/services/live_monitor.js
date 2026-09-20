@@ -58,15 +58,21 @@ function buildQueries(live) {
 async function findTargetLives() {
     const now = nowJst();
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const currentHour = now.getUTCHours();
+
+    // 0時・7時は前日公演の取りこぼし確認だけを行う。
+    // 当日公演は未実施なので、通常のライブ開始帯となる15時以降に対象へ加える。
+    const targetDates = [toDateString(yesterday)];
+    if (currentHour >= 15) targetDates.unshift(toDateString(now));
 
     const result = await db.query(
         `SELECT l.*
          FROM lives l
-         WHERE l.date IN ($1, $2)
+         WHERE l.date = ANY($1::date[])
            AND (l.setlist_status IS DISTINCT FROM 'NORMAL')
            AND NOT EXISTS (SELECT 1 FROM setlists s WHERE s.live_id = l.id)
          ORDER BY l.date DESC, l.id`,
-        [toDateString(now), toDateString(yesterday)]
+        [targetDates]
     );
     return result.rows;
 }
