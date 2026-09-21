@@ -161,7 +161,7 @@ const PredictionRanking = () => {
                                         {predictableLives.map((live, idx) => (
                                     <div 
                                         key={live.id}
-                                        className={`bg-gradient-to-br from-slate-800/80 to-slate-900/80 border ${live.has_predicted ? 'border-amber-500/50 shadow-lg shadow-amber-900/10' : 'border-slate-700'} rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all duration-300 group`}
+                                        className={`bg-slate-800/80 border ${live.has_predicted ? 'border-amber-500/50' : 'border-slate-700'} rounded-xl overflow-hidden hover:border-blue-500/50 transition-all duration-300 group`}
                                         style={{ animationDelay: `${idx * 0.1}s` }}
                                     >
                                         <div className="p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -194,7 +194,7 @@ const PredictionRanking = () => {
                                                     <Link
                                                         to={`/predictions/edit/${live.my_prediction_id}`}
                                                         state={{ from: currentPath }}
-                                                        className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-all hover:shadow-lg hover:shadow-amber-900/40 min-w-[140px]"
+                                                        className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all min-w-[140px]"
                                                     >
                                                         <Edit2 size={18} />
                                                         予想を編集
@@ -203,7 +203,7 @@ const PredictionRanking = () => {
                                                     <Link
                                                         to={`/predictions/new?live_id=${live.id}`}
                                                         state={{ from: currentPath }}
-                                                        className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-all hover:shadow-lg hover:shadow-blue-900/40 min-w-[140px]"
+                                                        className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all min-w-[140px]"
                                                     >
                                                         <Plus size={18} />
                                                         予想する
@@ -226,7 +226,7 @@ const PredictionRanking = () => {
                         ) : (
                             <div className="grid gap-4">
                                 {myPredictions.length === 0 ? (
-                                    <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-3xl p-8 md:p-12 border border-blue-500/30 relative overflow-hidden group text-center">
+                                    <div className="bg-slate-800/70 rounded-xl p-8 md:p-12 border border-slate-700 relative overflow-hidden group text-center">
                                         <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
                                             <Sparkles size={160} />
                                         </div>
@@ -238,7 +238,7 @@ const PredictionRanking = () => {
                                             </p>
                                             <button 
                                                 onClick={() => setPortalTab('upcoming')}
-                                                className="inline-flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-full transition-all shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95"
+                                                className="inline-flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-lg transition-all active:scale-95"
                                             >
                                                 <PenTool size={20} />
                                                 ライブを選んで予想する
@@ -253,7 +253,7 @@ const PredictionRanking = () => {
                                                 state={{ from: currentPath }}
                                                 className={`block ring-2 ring-blue-500/50 rounded-2xl`}
                                             >
-                                                <div className={`bg-slate-800/50 hover:bg-slate-800 border border-slate-700 group-hover:border-blue-500/50 rounded-2xl p-5 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-900/20 flex items-center`}>
+                                                <div className={`bg-slate-800/50 hover:bg-slate-800 border border-slate-700 group-hover:border-blue-500/50 rounded-xl p-5 transition-all duration-300 hover:transform hover:-translate-y-1 flex items-center`}>
                                                         <div className="flex-1 min-w-0 pr-4">
                                                             <div className="flex items-center gap-2 mb-1">
                                                                 <h2 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors truncate">
@@ -303,7 +303,7 @@ const PredictionRanking = () => {
                     <>
                         {/* ライブ情報・セレクター */}
                         <div className="mt-4 mb-6">
-                            <div className="bg-gradient-to-r from-slate-800/80 to-slate-900/80 border border-slate-700 rounded-2xl overflow-hidden shadow-xl">
+                            <div className="bg-slate-800/80 border border-slate-700 rounded-xl overflow-hidden">
                                 {liveInfo ? (
                                     <div className="p-5 md:p-6">
                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -389,7 +389,7 @@ const PredictionRanking = () => {
                                         <Link
                                             to={`/predictions/edit/${liveInfo.my_prediction_id}`}
                                             state={{ from: currentPath }}
-                                            className="w-full sm:w-auto bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-amber-900/20 flex items-center justify-center gap-2 transition-all"
+                                            className="w-full sm:w-auto bg-amber-600 hover:bg-amber-500 text-white font-bold px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all"
                                         >
                                             <Edit2 size={18} />
                                             自分の予想を編集
@@ -398,7 +398,7 @@ const PredictionRanking = () => {
                                         <Link
                                             to={`/predictions/new?live_id=${liveId}`}
                                             state={{ from: currentPath }}
-                                            className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 transition-all"
+                                            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all"
                                         >
                                             <Plus size={18} />
                                             予想を投稿する
@@ -438,7 +438,7 @@ const PredictionRanking = () => {
                                             </div>
                                         )}
                                         
-                                        <div className={`bg-slate-800/50 hover:bg-slate-800 border border-slate-700 group-hover:border-blue-500/50 rounded-2xl p-5 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-900/20 flex items-center`}>
+                                        <div className={`bg-slate-800/50 hover:bg-slate-800 border border-slate-700 group-hover:border-blue-500/50 rounded-xl p-5 transition-all duration-300 hover:transform hover:-translate-y-1 flex items-center`}>
                                             <div className="w-10 text-center mr-4">
                                                 {sortBy === 'popular' ? (
                                                     <span className={`text-2xl font-black ${index === 0 && !prediction.is_mine ? 'text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]' : index === 1 ? 'text-slate-300' : index === 2 ? 'text-amber-600' : 'text-slate-600'}`}>

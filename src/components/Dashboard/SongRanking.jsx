@@ -93,7 +93,7 @@ const SongRanking = ({ songs }) => {
                                 padding: '10px',
                                 backgroundColor: 'rgba(0,0,0,0.2)',
                                 borderRadius: '8px',
-                                borderLeft: '4px solid var(--primary-color)'
+                                border: '1px solid rgba(212, 175, 55, 0.25)'
                             }}>
                                 {displayedLives.map((live, idx) => {
                                     const d = new Date(live.date);

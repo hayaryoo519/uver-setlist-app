@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import SEO from '../components/SEO';
-import { Music, BarChart3, AlertTriangle, User, ShieldAlert, Mail, ListMusic } from 'lucide-react';
+import { Music, BarChart3, AlertTriangle, User, ShieldAlert, Mail, ListMusic, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import './LandingPage.css';
 import mainVisualPc from '../assets/main-visual2-pc.png';
@@ -88,7 +88,7 @@ const LandingPage = () => {
                             </Link>
                             <Link to="/dashboard" className="lp-btn lp-btn-secondary">
                                 <span className="pc-text">データを見る（登録不要）</span>
-                                <span className="sp-text">データを見る →</span>
+                                <span className="sp-text">データを見る <ArrowRight size={14} aria-hidden="true" /></span>
                             </Link>
                         </div>
                     </div>
@@ -97,10 +97,13 @@ const LandingPage = () => {
 
             {/* Features Section */}
             <section className="lp-section lp-features">
-                <h2 className="lp-section-title">主な機能</h2>
-                <p className="lp-section-subtitle">
-                    UVERworldのライブをもっと楽しむための機能が満載
-                </p>
+                <div className="lp-section-heading">
+                    <span className="lp-section-kicker">Features</span>
+                    <h2 className="lp-section-title">主な機能</h2>
+                    <p className="lp-section-subtitle">
+                        参戦した公演、聴いた楽曲、ライブごとの記憶をひとつずつ整理できます。
+                    </p>
+                </div>
 
                 <div className="lp-features-grid">
                     <div className="lp-feature-card">
@@ -137,10 +140,13 @@ const LandingPage = () => {
 
             {/* How to Use Section */}
             <section className="lp-section lp-how-to-use">
-                <h2 className="lp-section-title">使い方</h2>
-                <p className="lp-section-subtitle">
-                    たった4ステップで始められます
-                </p>
+                <div className="lp-section-heading">
+                    <span className="lp-section-kicker">Start</span>
+                    <h2 className="lp-section-title">使い方</h2>
+                    <p className="lp-section-subtitle">
+                        ライブを探して参戦記録を付けるだけで、集計は自動で更新されます。
+                    </p>
+                </div>
 
                 <div className="lp-steps">
                     <div className="lp-step">
@@ -179,10 +185,13 @@ const LandingPage = () => {
 
             {/* Disclaimer Section */}
             <section className="lp-section lp-disclaimer">
-                <h2 className="lp-section-title">重要なお知らせ</h2>
-                <p className="lp-section-subtitle">
-                    ご利用前に必ずお読みください
-                </p>
+                <div className="lp-section-heading">
+                    <span className="lp-section-kicker">Notice</span>
+                    <h2 className="lp-section-title">重要なお知らせ</h2>
+                    <p className="lp-section-subtitle">
+                        非公式ファンサイトとして、運営範囲と免責事項を明記しています。
+                    </p>
+                </div>
 
                 <div className="lp-disclaimer-grid">
                     <div className="lp-disclaimer-card">

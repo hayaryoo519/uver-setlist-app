@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Loader } from 'lucide-react';
+import { Upload, Loader, CheckCircle, XCircle } from 'lucide-react';
 
 const AdminImportTab = () => {
     const [importFile, setImportFile] = useState<File | null>(null);
@@ -74,7 +74,11 @@ const AdminImportTab = () => {
                 {importResult && (
                     <div style={{ marginTop: '20px', padding: '15px', borderRadius: '8px', background: importResult.success ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)', border: `1px solid ${importResult.success ? '#22c55e' : '#ef4444'}` }}>
                         <h5 style={{ color: importResult.success ? '#22c55e' : '#ef4444', marginBottom: '10px' }}>
-                            {importResult.success ? '✓ インポート成功' : '✗ インポート失敗'}
+                            {importResult.success ? (
+                                <><CheckCircle size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: '-3px' }} /> インポート成功</>
+                            ) : (
+                                <><XCircle size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: '-3px' }} /> インポート失敗</>
+                            )}
                         </h5>
                         {importResult.success && importResult.stats && (
                             <div style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>

@@ -130,12 +130,7 @@ const SetlistPredictionDetail = () => {
                     )}
                 </div>
 
-                <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-3xl p-6 md:p-10 border border-slate-700 shadow-2xl relative overflow-hidden">
-                    {/* Background Decorative Element */}
-                    <div className="absolute top-0 right-0 p-8 opacity-5">
-                        <Sparkles size={120} />
-                    </div>
-
+                <div className="bg-slate-800/80 rounded-xl p-6 md:p-10 border border-slate-700 relative overflow-hidden">
                     <div className="relative z-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
                             <div>
@@ -175,14 +170,14 @@ const SetlistPredictionDetail = () => {
                                     <>
                                         <button
                                             onClick={handleEdit}
-                                            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-full font-bold hover:bg-blue-600 hover:text-white transition-all text-sm"
+                                            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-lg font-bold hover:bg-blue-600 hover:text-white transition-all text-sm"
                                         >
                                             <Edit2 size={16} />
                                             編集
                                         </button>
                                         <button
                                             onClick={handleDelete}
-                                            className="flex items-center gap-2 px-5 py-2.5 bg-red-600/10 text-red-400 border border-red-500/20 rounded-full font-bold hover:bg-red-600 hover:text-white transition-all text-sm"
+                                            className="flex items-center gap-2 px-5 py-2.5 bg-red-600/10 text-red-400 border border-red-500/20 rounded-lg font-bold hover:bg-red-600 hover:text-white transition-all text-sm"
                                         >
                                             <Trash2 size={16} />
                                             削除
@@ -191,9 +186,9 @@ const SetlistPredictionDetail = () => {
                                 )}
                                 <button
                                     onClick={handleLike}
-                                    className={`flex items-center gap-2 px-6 py-3 rounded-full font-bold transition-all ${
+                                    className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all ${
                                         prediction.is_liked 
-                                        ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/20' 
+                                        ? 'bg-pink-500 text-white'
                                         : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                                     }`}
                                 >
@@ -205,8 +200,8 @@ const SetlistPredictionDetail = () => {
 
                         {/* Live Info Banner */}
                         {prediction.tour_name && (
-                            <div className="bg-blue-600/10 border border-blue-500/20 rounded-2xl p-5 mb-10 flex items-start gap-4">
-                                <div className="bg-blue-500/20 p-2.5 rounded-xl">
+                            <div className="bg-slate-900/45 border border-blue-500/20 rounded-xl p-5 mb-10 flex items-start gap-4">
+                                <div className="bg-blue-500/15 p-2.5 rounded-lg">
                                     <Music size={20} className="text-blue-400" />
                                 </div>
                                 <div>
@@ -225,7 +220,7 @@ const SetlistPredictionDetail = () => {
                             {prediction.songs?.map((song, index) => (
                                 <div 
                                     key={index} 
-                                    className="group flex items-center gap-4 p-4 bg-slate-900/50 border border-slate-800 rounded-2xl hover:border-blue-500/30 transition-all hover:bg-slate-800/50"
+                                    className="group flex items-center gap-4 p-4 bg-slate-900/50 border border-slate-800 rounded-lg hover:border-blue-500/30 transition-all hover:bg-slate-800/50"
                                 >
                                     <div className="w-8 h-8 flex items-center justify-center font-mono text-sm font-bold text-slate-500 group-hover:text-blue-400 bg-slate-900 rounded-lg border border-slate-700 transition-colors">
                                         {(index + 1).toString().padStart(2, '0')}
@@ -250,7 +245,7 @@ const SetlistPredictionDetail = () => {
                 <div className="mt-12 space-y-6">
                     {/* Share Section - Only show for owner */}
                     {prediction.is_mine && (
-                        <div className="bg-slate-800/30 rounded-3xl p-8 border border-slate-700/50 text-center">
+                        <div className="bg-slate-800/30 rounded-xl p-8 border border-slate-700/50 text-center">
                             <p className="text-slate-400 text-sm mb-6 font-medium">この予想をあなたのSNSでシェアしませんか？</p>
                             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                                 <button 
@@ -268,12 +263,12 @@ const SetlistPredictionDetail = () => {
                                         const headerText = `セットリストを予想しました！`;
                                         
                                         // 本文にURLとハッシュタグを詰め込んで改行を制御
-                                        const text = `${headerText}\n${prediction.tour_name}\n${dateStr} @ ${prediction.venue}\n\n${songsText}\n\nセトリ予想はこちらから👇\n${url}\n\n#UVERworld #セトリ予想 ${tourTag ? '#' + tourTag : ''}`;
+                                        const text = `${headerText}\n${prediction.tour_name}\n${dateStr} @ ${prediction.venue}\n\n${songsText}\n\nセトリ予想はこちらから\n${url}\n\n#UVERworld #セトリ予想 ${tourTag ? '#' + tourTag : ''}`;
                                         
                                         const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
                                         window.open(xUrl, '_blank');
                                     }}
-                                    className="flex items-center gap-3 px-8 py-4 bg-[#1DA1F2] text-white font-black rounded-full hover:brightness-110 transition-all shadow-lg shadow-blue-500/20 w-full sm:w-auto"
+                                    className="flex items-center gap-3 px-8 py-4 bg-[#1DA1F2] text-white font-black rounded-lg hover:brightness-110 transition-all w-full sm:w-auto"
                                 >
                                     <Share2 size={20} />
                                     Xでシェア
@@ -281,7 +276,7 @@ const SetlistPredictionDetail = () => {
                                 
                                 <button 
                                     onClick={handleShare}
-                                    className="flex items-center gap-3 px-8 py-4 bg-slate-700 text-white font-black rounded-full hover:bg-slate-600 transition-all w-full sm:w-auto"
+                                    className="flex items-center gap-3 px-8 py-4 bg-slate-700 text-white font-black rounded-lg hover:bg-slate-600 transition-all w-full sm:w-auto"
                                 >
                                     <Copy size={20} />
                                     リンクをコピー
@@ -292,10 +287,7 @@ const SetlistPredictionDetail = () => {
 
                     {/* Guest CTA Section - Only show if not the owner and not logged in (or just not the owner to encourage more) */}
                     {!prediction.is_mine && (
-                        <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-3xl p-8 border border-blue-500/30 relative overflow-hidden group">
-                            <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
-                                <Sparkles size={160} />
-                            </div>
+                        <div className="bg-slate-800/70 rounded-xl p-8 border border-slate-700 relative overflow-hidden group">
                             <div className="relative z-10 text-center md:text-left md:flex items-center justify-between gap-8">
                                 <div className="mb-6 md:mb-0">
                                     <h3 className="text-2xl font-black text-white mb-2 italic">ARE YOU READY?</h3>

@@ -160,7 +160,7 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
 
     if (status === 'SUCCESS' && result) {
         return (
-            <div className="mt-8 p-6 bg-red-500/5 border border-red-500/20 rounded-3xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="mt-8 p-6 bg-red-500/5 border border-red-500/20 rounded-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center gap-3 text-red-400 font-black mb-4">
                     <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
                         <Check size={20} />
@@ -267,7 +267,7 @@ const YoutubePlaylistButton: React.FC<YoutubePlaylistButtonProps> = ({ liveId })
                     <button
                         onClick={handleCreate}
                         disabled={status === 'CREATING'}
-                        className={`w-full py-5 rounded-3xl bg-gradient-to-r from-[#FF0000] to-[#cc0000] text-white font-black flex items-center justify-center gap-3 transition-all relative overflow-hidden group shadow-lg shadow-[#FF0000]/20
+                        className={`w-full py-5 rounded-xl bg-[#FF0000] hover:bg-[#cc0000] text-white font-black flex items-center justify-center gap-3 transition-all relative overflow-hidden group
                             ${status === 'CREATING' ? 'opacity-70 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-95'}`}
                     >
                         {status === 'CREATING' ? (

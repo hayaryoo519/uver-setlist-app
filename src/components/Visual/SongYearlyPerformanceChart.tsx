@@ -8,7 +8,7 @@ import {
   Tooltip,
   Cell,
 } from 'recharts';
-import { TrendingUp, Calendar, Clock, Zap } from 'lucide-react';
+import { TrendingUp, Calendar, Clock, Zap, Flame } from 'lucide-react';
 import { useSongPerformanceTimeline } from '../../hooks/queries/useSongPerformanceTimeline';
 import type { YearlyPerformanceEntry } from '../../types/api';
 
@@ -229,7 +229,8 @@ const SongYearlyPerformanceChart: React.FC<Props> = ({ songId }) => {
           )}
           {consecutiveYears && consecutiveYears > 1 && (
             <span className="flex items-center gap-1">
-              🔥 連続披露: <b className="text-slate-300 ml-0.5">{consecutiveYears}年</b>
+              <Flame size={11} className="text-orange-400" />
+              連続披露: <b className="text-slate-300 ml-0.5">{consecutiveYears}年</b>
             </span>
           )}
         </div>

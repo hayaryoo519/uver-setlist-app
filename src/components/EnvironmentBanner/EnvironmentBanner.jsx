@@ -1,4 +1,5 @@
 import React from 'react';
+import { AlertTriangle, MapPin, Wrench } from 'lucide-react';
 import { useEnvironment } from '../../hooks/useEnvironment';
 import './EnvironmentBanner.css';
 
@@ -16,9 +17,9 @@ export const EnvironmentBanner = () => {
 
     // 環境に応じたアイコン
     const getIcon = () => {
-        if (label === '検証環境') return '⚠️';
-        if (label === 'ローカル開発') return '🔧';
-        return '📍';
+        if (label === '検証環境') return <AlertTriangle size={14} />;
+        if (label === 'ローカル開発') return <Wrench size={14} />;
+        return <MapPin size={14} />;
     };
 
     return (

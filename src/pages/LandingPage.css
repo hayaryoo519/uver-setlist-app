@@ -3,7 +3,7 @@
 :root {
     --lp-gold: #d4af37;
     --lp-gold-light: #f1d279;
-    --lp-gold-glow: rgba(212, 175, 55, 0.4);
+    --lp-gold-glow: rgba(212, 175, 55, 0.18);
     --lp-black: #0f172a;
     --lp-navy-deep: #080b15;
     --lp-slate-800: #1e293b;
@@ -101,7 +101,6 @@
 
 .lp-logo-text .text-gold {
     color: var(--lp-gold);
-    text-shadow: 0 0 15px var(--lp-gold-glow);
 }
 
 .lp-nav {
@@ -132,7 +131,6 @@
     font-weight: 800;
     font-size: 0.9rem;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
     border: none;
     cursor: pointer;
 }
@@ -140,7 +138,6 @@
 .lp-nav-btn:hover {
     transform: translateY(-2px);
     background: var(--lp-gold-light);
-    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
 }
 
 /* Hero Section */
@@ -160,10 +157,7 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-        transparent,
-        rgba(0, 0, 0, 0.75)
-    );
+    background: rgba(0, 0, 0, 0.28);
     pointer-events: none;
     z-index: 5;
 }
@@ -192,8 +186,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.3) 45%, transparent 100%),
-                radial-gradient(circle at 70% 30%, transparent 20%, rgba(15, 23, 42, 0.3) 60%, rgba(15, 23, 42, 0.9) 100%);
+    background: rgba(8, 11, 21, 0.28);
     z-index: 2;
 }
 
@@ -205,15 +198,7 @@
 }
 
 .lp-glow-effect {
-    position: absolute;
-    top: 20%;
-    left: 30%;
-    width: 60vw;
-    height: 60vh;
-    background: radial-gradient(circle, rgba(212, 175, 55, 0.15) 0%, transparent 70%);
-    filter: blur(60px);
-    z-index: 3;
-    animation: pulse-glow 8s infinite alternate;
+    display: none;
 }
 
 .lp-hero-content {
@@ -249,10 +234,7 @@
     color: var(--lp-gold);
     margin-bottom: 24px;
     letter-spacing: 0.12em;
-    /* 強力なテキストシャドウで背景から浮き立たせる */
-    text-shadow: 
-        0 2px 10px rgba(0, 0, 0, 0.8),
-        0 0 20px var(--lp-gold-glow);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
 }
 
 .lp-hero-description {
@@ -262,10 +244,7 @@
     margin-bottom: 45px;
     font-weight: 500; /* さらに太く */
     letter-spacing: 0.05em;
-    /* 多層シャドウで縁取りを強化 */
-    text-shadow: 
-        0 2px 4px rgba(0, 0, 0, 0.8),
-        0 4px 12px rgba(0, 0, 0, 0.4);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
 }
 
 .lp-hero-cta {
@@ -290,20 +269,17 @@
 .lp-btn-primary {
     background: var(--lp-gold);
     color: #000;
-    box-shadow: 0 8px 25px rgba(212, 175, 55, 0.25);
 }
 
 .lp-btn-primary:hover {
     transform: translateY(-4px);
     background: var(--lp-gold-light);
-    box-shadow: 0 12px 35px rgba(212, 175, 55, 0.45);
 }
 
 .lp-btn-secondary {
     background: var(--lp-slate-800); /* 塗りつぶし背景（深めのスレートブルー） */
     color: var(--lp-white);
     border: 1.5px solid rgba(212, 175, 55, 0.7);
-    backdrop-filter: blur(10px);
 }
 
 .lp-btn-secondary:hover {
@@ -387,9 +363,8 @@
 }
 
 .lp-next-btn-primary {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: #2563eb;
     color: #fff;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
 }
 
 .lp-next-btn-secondary {
@@ -400,8 +375,7 @@
 
 .lp-next-btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(37, 99, 235, 0.4);
-    filter: brightness(1.1);
+    background: #1d4ed8;
 }
 
 .lp-next-btn-secondary:hover {
@@ -432,73 +406,102 @@
     margin: 0 auto;
 }
 
+.lp-section-heading {
+    max-width: 720px;
+    margin-bottom: 44px;
+}
+
+.lp-section-kicker {
+    display: block;
+    color: var(--lp-gold);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
 .lp-section-title {
-    font-size: 3rem;
+    font-size: 2.35rem;
     font-weight: 800;
-    text-align: center;
-    margin-bottom: 20px;
-    background: linear-gradient(135deg, var(--lp-gold), #60a5fa);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    text-align: left;
+    margin-bottom: 14px;
+    color: var(--lp-gold);
+    line-height: 1.25;
 }
 
 .lp-section-subtitle {
-    text-align: center;
+    text-align: left;
     color: var(--lp-slate-400);
-    font-size: 1.2rem;
-    margin-bottom: 60px;
-    max-width: 700px;
-    margin-left: auto;
-    margin-right: auto;
+    font-size: 1rem;
+    line-height: 1.8;
+    margin: 0;
+    max-width: 640px;
 }
 
 /* Features Section */
 .lp-features {
-    background: linear-gradient(180deg, var(--lp-black) 0%, #080b15 100%);
+    background: var(--lp-black);
 }
 
 .lp-features-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 30px;
-    margin-top: 50px;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-top: 0;
 }
 
 .lp-feature-card {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(212, 175, 55, 0.2);
-    border-radius: 20px;
-    padding: 40px 30px;
-    text-align: center;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
+    background: rgba(15, 23, 42, 0.72);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 8px;
+    padding: 24px;
+    text-align: left;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 18px;
+    align-items: flex-start;
 }
 
 .lp-feature-card:hover {
-    transform: translateY(-10px);
-    border-color: var(--lp-gold);
-    box-shadow: 0 10px 40px rgba(212, 175, 55, 0.2);
-    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
+    border-color: rgba(212, 175, 55, 0.34);
+    background: rgba(15, 23, 42, 0.88);
 }
 
 .lp-feature-icon {
-    font-size: 4rem;
-    margin-bottom: 20px;
-    filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.3));
-}
-
-.lp-feature-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: 15px;
+    grid-row: 1 / span 2;
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(212, 175, 55, 0.28);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0;
     color: var(--lp-gold);
 }
 
+.lp-feature-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+.lp-feature-title {
+    grid-column: 2;
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--lp-white);
+}
+
 .lp-feature-description {
+    grid-column: 2;
     color: var(--lp-slate-400);
-    line-height: 1.7;
-    font-size: 1rem;
+    line-height: 1.8;
+    font-size: 0.95rem;
+    margin: 0;
 }
 
 /* How to Use Section */
@@ -510,7 +513,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 40px;
-    margin-top: 50px;
+    margin-top: 0;
 }
 
 .lp-step {
@@ -525,12 +528,11 @@
     height: 60px;
     line-height: 60px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--lp-gold), #f59e0b);
+    background: var(--lp-gold);
     color: #000;
     font-size: 1.5rem;
     font-weight: 900;
     margin-bottom: 20px;
-    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
 }
 
 .lp-step-title {
@@ -547,31 +549,29 @@
 
 /* Disclaimer Section */
 .lp-disclaimer {
-    background: linear-gradient(180deg, var(--lp-black) 0%, #080b15 100%);
+    background: var(--lp-black);
 }
 
 .lp-disclaimer-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 25px;
-    margin-top: 50px;
+    margin-top: 0;
     max-width: 900px;
     margin-left: auto;
     margin-right: auto;
 }
 
 .lp-disclaimer-card {
-    background: rgba(239, 68, 68, 0.1);
-    border: 2px solid rgba(239, 68, 68, 0.3);
-    border-radius: 15px;
+    background: rgba(15, 23, 42, 0.72);
+    border: 1px solid rgba(239, 68, 68, 0.28);
+    border-radius: 8px;
     padding: 30px 25px;
     transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
 }
 
 .lp-disclaimer-card:hover {
     border-color: #ef4444;
-    box-shadow: 0 8px 30px rgba(239, 68, 68, 0.2);
 }
 
 .lp-disclaimer-icon {
@@ -594,7 +594,7 @@
 
 /* Final CTA Section */
 .lp-final-cta {
-    background: radial-gradient(circle at center, #1a1a2e 0%, var(--lp-black) 100%);
+    background: var(--lp-navy-deep);
     text-align: center;
     padding: 120px 20px;
     position: relative;
@@ -604,10 +604,7 @@
     font-size: 3.5rem;
     font-weight: 900;
     margin-bottom: 30px;
-    background: linear-gradient(135deg, var(--lp-gold), #60a5fa);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--lp-gold);
 }
 
 .lp-final-cta-buttons {
@@ -658,10 +655,9 @@
     }
 
     .lp-section-title {
-        font-size: 2.8rem;
+        font-size: 2.1rem;
     }
 
-    .lp-features-grid,
     .lp-steps {
         grid-template-columns: repeat(2, 1fr);
     }
@@ -746,8 +742,6 @@
     .lp-hero-cta .lp-btn-secondary {
         background: var(--lp-slate-800); /* スマホ版も塗りつぶし背景 */
         border: 1.5px solid rgba(212, 175, 55, 0.6); /* ゴールド枠で統一感 */
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
         text-decoration: none;
         color: rgba(255, 255, 255, 0.95);
         font-size: 14px;
@@ -770,15 +764,31 @@
     }
 
     .lp-section-title {
-        font-size: 2.2rem;
-        margin-bottom: 40px;
+        font-size: 1.8rem;
+        margin-bottom: 12px;
     }
 
-    .lp-features-grid,
     .lp-steps,
     .lp-disclaimer-grid {
         grid-template-columns: 1fr;
         gap: 20px;
+    }
+
+    .lp-section-heading {
+        margin-bottom: 32px;
+    }
+
+    .lp-feature-card {
+        grid-template-columns: 1fr;
+        gap: 14px;
+        padding: 22px;
+    }
+
+    .lp-feature-icon,
+    .lp-feature-title,
+    .lp-feature-description {
+        grid-column: 1;
+        grid-row: auto;
     }
 
     /* Header responsive */
