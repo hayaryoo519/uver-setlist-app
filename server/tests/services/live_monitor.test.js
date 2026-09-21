@@ -51,7 +51,7 @@ describe('live_monitor', () => {
     });
 
     describe('findTargetLives', () => {
-        it('15時以降はセトリ未登録の当日・前日を検索すること', async () => {
+        it('15時以降も未実施の当日公演を検索しないこと', async () => {
             jest.useFakeTimers().setSystemTime(new Date('2026-08-12T06:00:00Z'));
             db.query.mockResolvedValue({ rows: [] });
 
@@ -60,7 +60,7 @@ describe('live_monitor', () => {
             const [sql, params] = db.query.mock.calls[0];
             expect(sql).toContain("setlist_status IS DISTINCT FROM 'NORMAL'");
             expect(sql).toContain('NOT EXISTS');
-            expect(params).toEqual([['2026-08-12', '2026-08-11']]);
+            expect(params).toEqual([['2026-08-11']]);
         });
 
         it.each([

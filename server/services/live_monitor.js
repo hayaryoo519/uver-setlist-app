@@ -58,12 +58,9 @@ function buildQueries(live) {
 async function findTargetLives() {
     const now = nowJst();
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const currentHour = now.getUTCHours();
-
-    // 0時・7時は前日公演の取りこぼし確認だけを行う。
-    // 当日公演は未実施なので、通常のライブ開始帯となる15時以降に対象へ加える。
+    // 開演・終演時刻を保持していないため、当日公演は終演済みと安全に判定できない。
+    // 未実施・公演中の候補作成を防ぎ、翌日になった公演だけを対象にする。
     const targetDates = [toDateString(yesterday)];
-    if (currentHour >= 15) targetDates.unshift(toDateString(now));
 
     const result = await db.query(
         `SELECT l.*
