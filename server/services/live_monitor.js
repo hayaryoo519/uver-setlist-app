@@ -53,23 +53,27 @@ function buildQueries(live) {
 
 /**
  * 収集対象のライブを取得する（仕様 §3）
- * 当日・前日で、セットリストがまだ登録されていない公演のみ
+ * 終演見込みを過ぎた当日公演と、時刻不明を含む前日公演のみ
  */
 async function findTargetLives() {
     const now = nowJst();
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    // 開演・終演時刻を保持していないため、当日公演は終演済みと安全に判定できない。
-    // 未実施・公演中の候補作成を防ぎ、翌日になった公演だけを対象にする。
-    const targetDates = [toDateString(yesterday)];
+    const todayString = toDateString(now);
+    const yesterdayString = toDateString(yesterday);
+    const targetDates = [todayString, yesterdayString];
 
     const result = await db.query(
         `SELECT l.*
          FROM lives l
          WHERE l.date = ANY($1::date[])
+           AND (
+               (l.collect_after IS NOT NULL AND l.collect_after <= NOW())
+               OR (l.collect_after IS NULL AND l.date = $2::date)
+           )
            AND (l.setlist_status IS DISTINCT FROM 'NORMAL')
            AND NOT EXISTS (SELECT 1 FROM setlists s WHERE s.live_id = l.id)
          ORDER BY l.date DESC, l.id`,
-        [targetDates]
+        [targetDates, yesterdayString]
     );
     return result.rows;
 }
