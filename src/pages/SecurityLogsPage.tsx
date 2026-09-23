@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import DailyLogsView from '../components/Admin/DailyLogsView';
 import WeeklyAnalysisView from '../components/Admin/WeeklyAnalysisView';
-import { Calendar, BarChart3, Trash2, Loader } from 'lucide-react';
+import { Calendar, BarChart3, Trash2, Loader, CheckCircle, ArrowLeft } from 'lucide-react';
 import SEO from '../components/SEO';
 import { apiClient } from '../lib/apiClient';
 
@@ -105,7 +105,8 @@ export default function SecurityLogsPage() {
                             e.currentTarget.style.color = '#94a3b8';
                         }}
                     >
-                        ← 管理画面に戻る
+                        <ArrowLeft size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: '-3px' }} />
+                        管理画面に戻る
                     </button>
                 </div>
 
@@ -155,7 +156,7 @@ export default function SecurityLogsPage() {
                                 marginLeft: '0.75rem',
                                 color: '#f1f5f9'
                             }}>
-                                📅 毎日チェック
+                                毎日チェック
                             </h3>
                         </div>
                         <p style={{
@@ -217,7 +218,7 @@ export default function SecurityLogsPage() {
                                 marginLeft: '0.75rem',
                                 color: '#f1f5f9'
                             }}>
-                                📊 週間分析
+                                週間分析
                             </h3>
                         </div>
                         <p style={{
@@ -279,7 +280,7 @@ export default function SecurityLogsPage() {
                                 marginLeft: '0.75rem',
                                 color: '#f1f5f9'
                             }}>
-                                🗑️ 月次クリーンアップ
+                                月次クリーンアップ
                             </h3>
                         </div>
                         <p style={{
@@ -336,7 +337,8 @@ export default function SecurityLogsPage() {
                             color: '#6ee7b7',
                             fontWeight: 'bold'
                         }}>
-                            ✅ {cleanupResult.message}
+                            <CheckCircle size={20} style={{ display: 'inline', marginRight: '6px', verticalAlign: '-4px' }} />
+                            {cleanupResult.message}
                         </p>
                     </div>
                 )}

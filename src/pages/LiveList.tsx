@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Live } from '../types/api';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, MapPin, Calendar, Check, Plus, ArrowRight, Loader, Filter, X } from 'lucide-react';
+import { Search, MapPin, Calendar, Check, Plus, ArrowRight, Loader, Filter, X, Music } from 'lucide-react';
 import { useAttendance } from '../hooks/useAttendance';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
@@ -313,7 +313,7 @@ const LiveList = () => {
                                     ))}
                                 </div>
                                 <div className="song-filter-wrap">
-                                    <span className="song-filter-icon">♫</span>
+                                    <Music size={14} className="song-filter-icon" aria-hidden="true" />
                                     <select
                                         value={(filters.songIds && filters.songIds[0]) || ''}
                                         onChange={handleSongChange}
@@ -368,7 +368,7 @@ const LiveList = () => {
                                     ))}
                                 </div>
                                 <div className="song-filter-wrap">
-                                    <span className="song-filter-icon">♫</span>
+                                    <Music size={14} className="song-filter-icon" aria-hidden="true" />
                                     <select
                                         value={(filters.songIds && filters.songIds[0]) || ''}
                                         onChange={handleSongChange}
@@ -410,7 +410,7 @@ const LiveList = () => {
                                         ))}
                                         {selectedSongName && (
                                             <span className="filter-chip filter-chip-song">
-                                                ♫ {selectedSongName}
+                                                <Music size={10} aria-hidden="true" /> {selectedSongName}
                                                 <button onClick={() => handleFilterChange({ ...filters, songIds: [] })}><X size={10} /></button>
                                             </span>
                                         )}

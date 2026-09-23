@@ -14,28 +14,6 @@ const AuthLayout = ({ children, title, subtitle }) => {
             position: 'relative',
             overflow: 'hidden'
         }}>
-            {/* Background Decor */}
-            <div style={{
-                position: 'absolute',
-                top: '-15%',
-                right: '-10%',
-                width: '800px',
-                height: '800px',
-                background: 'radial-gradient(circle, rgba(212, 175, 55, 0.12) 0%, rgba(0,0,0,0) 70%)',
-                filter: 'blur(100px)',
-                zIndex: 0
-            }} />
-            <div style={{
-                position: 'absolute',
-                bottom: '-10%',
-                left: '-10%',
-                width: '600px',
-                height: '600px',
-                background: 'radial-gradient(circle, rgba(212, 175, 55, 0.08) 0%, rgba(0,0,0,0) 70%)',
-                filter: 'blur(80px)',
-                zIndex: 0
-            }} />
-
             <div className="glass-panel" style={{
                 width: '100%',
                 maxWidth: '1200px',

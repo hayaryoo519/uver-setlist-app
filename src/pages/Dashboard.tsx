@@ -3,7 +3,7 @@ import { DISCOGRAPHY } from '../data/discography';
 import PageHeader from '../components/Layout/PageHeader';
 import { Link, useLocation } from 'react-router-dom';
 import { useGlobalStats } from '../hooks/useGlobalStats';
-import { Calendar, Music, MapPin, ArrowRight, List, TrendingUp, Activity, Filter, Disc, Trophy, History } from 'lucide-react';
+import { Calendar, Music, MapPin, ArrowRight, List, TrendingUp, Activity, Filter, Disc, Trophy, History, X } from 'lucide-react';
 import LiveGraph from '../components/Dashboard/LiveGraph';
 import AlbumDistribution from '../components/Dashboard/AlbumDistribution';
 import { LatestLiveCard } from '../components/Dashboard/LatestLiveCard';
@@ -293,7 +293,7 @@ function Dashboard() {
                             <div className="stat-icon"><List size={28} /></div>
                             <div className="stat-label">Archive</div>
                             <div className="stat-value" style={{ fontSize: '1.5rem', marginTop: '10px' }}>
-                                View All Lives &rarr;
+                                View All Lives <ArrowRight size={18} aria-hidden="true" style={{ display: 'inline', verticalAlign: '-3px' }} />
                             </div>
                         </Link>
                     </div>
@@ -390,7 +390,7 @@ function Dashboard() {
                                                         width: '24px',
                                                         height: '24px',
                                                         borderRadius: '50%',
-                                                        background: index < 3 ? 'linear-gradient(135deg, #fbbf24, #d97706)' : 'rgba(255,255,255,0.1)',
+                                                        background: index < 3 ? '#fbbf24' : 'rgba(255,255,255,0.1)',
                                                         color: index < 3 ? '#000' : '#fff',
                                                         display: 'flex',
                                                         alignItems: 'center',
@@ -428,7 +428,9 @@ function Dashboard() {
                                 <History size={20} color="var(--primary-color)" />
                                 Recent Lives
                             </h2>
-                            <Link to="/lives" style={{ color: '#94a3b8', fontSize: '0.85rem', textDecoration: 'none' }}>View All &rarr;</Link>
+                            <Link to="/lives" style={{ color: '#94a3b8', fontSize: '0.85rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                View All <ArrowRight size={14} aria-hidden="true" />
+                            </Link>
                         </div>
                         <div className="dashboard-panel" style={{ padding: '0', flex: 1, display: 'flex', flexDirection: 'column' }}>
                             {(!stats.recentLives || stats.recentLives.length === 0) ? (
@@ -654,7 +656,7 @@ function Dashboard() {
                     transition: transform 0.2s;
                 }
                 .stat-card.highlight {
-                    background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(0,0,0,0));
+                    background: rgba(15, 23, 42, 0.82);
                     border-color: var(--primary-color);
                 }
                 .stat-card:hover {
@@ -746,7 +748,7 @@ function Dashboard() {
                                         padding: '0 10px'
                                     }}
                                 >
-                                    ×
+                                    <X size={20} aria-hidden="true" />
                                 </button>
                             </div>
 

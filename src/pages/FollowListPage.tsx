@@ -71,7 +71,7 @@ function FollowListPage() {
                                         width: 40,
                                         height: 40,
                                         borderRadius: '50%',
-                                        background: 'linear-gradient(135deg, #d4a017 0%, #b8860b 100%)',
+                                        background: '#b8860b',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',

@@ -4,7 +4,7 @@ import { DISCOGRAPHY } from '../data/discography';
 import { useGlobalStats } from '../hooks/useGlobalStats';
 import { useAlbumImage } from '../hooks/queries/useSongs';
 import SEO from '../components/SEO';
-import { Calendar, Search, Filter, ArrowUpDown, ChevronRight } from 'lucide-react';
+import { Calendar, Search, Filter, ArrowUpDown, ChevronRight, ChevronDown } from 'lucide-react';
 import ImageWithFallback from '../components/common/ImageWithFallback';
 
 // Release Item Component to handle its own image fetching if needed
@@ -201,7 +201,7 @@ function Songs() {
                             <option value="ALBUM">アルバム</option>
                             <option value="SINGLE">シングル</option>
                         </select>
-                        <div className="absolute right-3 pointer-events-none text-slate-400 text-xs text-center pr-1">▼</div>
+                        <ChevronDown className="absolute right-3 pointer-events-none text-slate-400 w-4 h-4" aria-hidden="true" />
                     </div>
 
                     <div className="flex items-center relative gap-2">
@@ -216,7 +216,7 @@ function Songs() {
                             <option value="title-asc">タイトル A→Z</option>
                             <option value="title-desc">タイトル Z→A</option>
                         </select>
-                        <div className="absolute right-3 pointer-events-none text-slate-400 text-xs text-center pr-1">▼</div>
+                        <ChevronDown className="absolute right-3 pointer-events-none text-slate-400 w-4 h-4" aria-hidden="true" />
                     </div>
                 </div>
 
@@ -257,4 +257,3 @@ function Songs() {
 }
 
 export default Songs;
-

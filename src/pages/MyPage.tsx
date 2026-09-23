@@ -7,7 +7,7 @@ import VenueTypePie from '../components/Dashboard/VenueTypePie';
 import AlbumDistribution from '../components/Dashboard/AlbumDistribution';
 import SongRanking from '../components/Dashboard/SongRanking';
 import MyPageOnboarding from '../components/Dashboard/MyPageOnboarding';
-import { Music, Calendar, MapPin, Filter, Building2, User, Settings as SettingsIcon, ArrowRight, Users, Heart, Edit2, Plus, PenTool } from 'lucide-react';
+import { Music, Calendar, MapPin, Filter, Building2, User, Settings as SettingsIcon, ArrowRight, ArrowLeft, Users, Heart, Edit2, Plus, PenTool, Shield, X } from 'lucide-react';
 import SEO from '../components/SEO';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import { useAuth } from '../contexts/AuthContext';
@@ -157,7 +157,7 @@ function MyPage() {
             <SEO title="My Page" description="あなたのUVERworld参戦記録と統計データ。" />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <Link to="/dashboard" style={{ color: '#94a3b8', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    &larr; <span style={{ fontSize: '0.9rem' }}>ダッシュボードに戻る</span>
+                    <ArrowLeft size={16} aria-hidden="true" /> <span style={{ fontSize: '0.9rem' }}>ダッシュボードに戻る</span>
                 </Link>
                 <Link to="/settings" className="edit-btn" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <SettingsIcon size={16} /> アカウント設定
@@ -174,18 +174,17 @@ function MyPage() {
                 alignItems: 'center',
                 gap: '24px',
                 marginBottom: '40px',
-                background: 'linear-gradient(145deg, rgba(51, 65, 85, 0.6) 0%, rgba(30, 41, 59, 0.8) 100%)',
+                background: 'rgba(15, 23, 42, 0.76)',
                 padding: '25px',
-                borderRadius: '16px',
+                borderRadius: '8px',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
-                backdropFilter: 'blur(8px)',
-                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)'
+                boxShadow: '0 10px 20px -12px rgba(0, 0, 0, 0.6)'
             }}>
                 <div className="profile-avatar" style={{
                     width: '90px',
                     height: '90px',
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, var(--primary-color) 0%, #b8860b 100%)',
+                    background: 'var(--primary-color)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -193,7 +192,6 @@ function MyPage() {
                     color: '#000',
                     fontWeight: '900',
                     flexShrink: 0,
-                    boxShadow: '0 0 30px rgba(251, 191, 36, 0.15)',
                     border: '4px solid rgba(255, 255, 255, 0.05)'
                 }}>
                     {currentUser?.username?.charAt(0).toUpperCase() || <User size={40} />}
@@ -203,7 +201,7 @@ function MyPage() {
                         {currentUser?.username ? `${currentUser.username}'s` : 'My'}
                         <br className="md:hidden" />
                         <span className="hidden md:inline">&nbsp;</span>
-                        <span className="text-gold" style={{ textShadow: '0 0 15px rgba(251, 191, 36, 0.2)' }}>UVER</span> Records
+                        <span className="text-gold">UVER</span> Records
                     </h1>
                     <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginTop: '12px' }}>
                         {currentUser?.role === 'admin' && (
@@ -218,7 +216,8 @@ function MyPage() {
                                 letterSpacing: '0.05em',
                                 textTransform: 'uppercase'
                             }}>
-                                🛡️ 管理者
+                                <Shield size={12} style={{ display: 'inline', marginRight: '4px', verticalAlign: '-2px' }} />
+                                管理者
                             </span>
                         )}
                     </div>
@@ -254,7 +253,7 @@ function MyPage() {
                             <div className="stat-value">{stats.uniqueSongs}</div>
                         </div>
                         {stats.firstLive && (
-                            <Link to={`/live/${stats.firstLive.id}`} state={{ from: location.pathname }} className="stat-card group" style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)', borderColor: '#d4af37', textDecoration: 'none' }}>
+                            <Link to={`/live/${stats.firstLive.id}`} state={{ from: location.pathname }} className="stat-card group" style={{ gridColumn: '1 / -1', background: 'rgba(15, 23, 42, 0.82)', borderColor: '#d4af37', textDecoration: 'none' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                     <div>
                                         <div className="stat-icon" style={{ color: '#d4af37', marginBottom: '5px' }}><MapPin size={24} /></div>
@@ -514,17 +513,23 @@ function MyPage() {
                                                 modalFilter.type === 'album' ? `${modalFilter.value} の収録曲` :
                                                     modalFilter.value}
                                 </h2>
-                                <button onClick={closeModal} className="close-modal-btn">×</button>
+                                <button onClick={closeModal} className="close-modal-btn" aria-label="閉じる"><X size={22} aria-hidden="true" /></button>
                             </div>
 
                             {modalFilter.type === 'collectedSongs' || modalFilter.type === 'album' ? (
                                 selectedSong ? (
                                     <>
                                         <button onClick={handleBackToSongs} className="back-btn" style={{ marginBottom: '15px', background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.9rem' }}>
-                                            <ArrowRight size={16} style={{ transform: 'rotate(180deg)' }} /> リストに戻る
+                                            <ArrowLeft size={16} /> リストに戻る
                                         </button>
                                         <div style={{ marginBottom: '20px' }}>
-                                            <h3 style={{ margin: '0 0 15px 0', borderLeft: '4px solid var(--primary-color)', paddingLeft: '10px' }}>{selectedSong.title}</h3>
+                                            <h3 style={{
+                                                margin: '0 0 15px 0',
+                                                padding: '10px 12px',
+                                                borderRadius: '8px',
+                                                border: '1px solid rgba(212, 175, 55, 0.28)',
+                                                background: 'rgba(212, 175, 55, 0.08)'
+                                            }}>{selectedSong.title}</h3>
                                             <div className="live-list-compact">
                                                 {selectedSong.lives.map((live) => {
                                                     const d = new Date(live.date);

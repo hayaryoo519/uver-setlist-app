@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
-import { User, Lock, Calendar, MapPin, Music, ArrowLeft } from 'lucide-react';
+import { User, Lock, Calendar, MapPin, Music, ArrowLeft, Heart } from 'lucide-react';
 import SEO from '../components/SEO';
 import { useAuth } from '../contexts/AuthContext';
 import FollowButton from '../components/common/FollowButton';
@@ -70,7 +70,7 @@ function UserProfile() {
                             width: 80,
                             height: 80,
                             borderRadius: '50%',
-                            background: 'linear-gradient(135deg, #d4a017 0%, #b8860b 100%)',
+                            background: '#b8860b',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -163,7 +163,8 @@ function UserProfile() {
                                         </div>
                                     </div>
                                     <div className="text-xs text-slate-500 flex-shrink-0">
-                                        ♥ {item.like_count}
+                                        <Heart size={11} style={{ display: 'inline', marginRight: '3px', verticalAlign: '-2px' }} />
+                                        {item.like_count}
                                     </div>
                                 </Link>
                             ))

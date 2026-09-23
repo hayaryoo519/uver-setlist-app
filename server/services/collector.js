@@ -1,6 +1,7 @@
 const db = require('../db');
 const { normalizeForHash: normalizeText, generateHash } = require('../utils/setlistHash');
 const xClient = require('./xClient');
+const systemOne = require('./typesafeSystemOne');
 
 const { XCollectorAbortError } = xClient;
 
@@ -14,6 +15,7 @@ const lastRunCache = new Map();
 // 実効間隔が2時間になってしまう（2026-08-22 のモンバスで実際に発生）。
 // 監視間隔より明確に短くしておくこと。
 const RATE_LIMIT_MS = 45 * 60 * 1000;
+const SYSTEM_ONE_SKIP_CONFIDENCE = Number(process.env.SYSTEM_ONE_SETLIST_SKIP_CONFIDENCE || 0.86);
 
 // 曲マスタのキャッシュ（Confidence 計算のたびに全件取得しないため）
 const SONG_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -198,6 +200,71 @@ ${parts.join('\n')}
 `;
 }
 
+function buildSetlistClassificationState(text, live = null) {
+    return {
+        task: 'Classify whether this X post should be sent to a slower setlist extraction model.',
+        artist: 'UVERworld',
+        targetLive: live ? buildLiveContext(live).trim() : null,
+        postText: text,
+    };
+}
+
+/**
+ * TypeSafe System One / Jev が設定されている場合だけ、GPT 抽出前に軽量分類する。
+ * 高確信で「セトリではない」と判断できる投稿だけ捨て、迷うものは従来の GPT 判定へ流す。
+ */
+async function preclassifySetlistPost(text, live = null) {
+    if (!systemOne.isEnabled()) {
+        return { enabled: false, shouldSkip: false };
+    }
+
+    try {
+        const result = await systemOne.askChoice(
+            'setlist_post_type',
+            buildSetlistClassificationState(text, live),
+            [
+                'Classify the X post for UVERworld setlist collection.',
+                'Pick actual_setlist only when the post appears to record songs actually performed in order.',
+                'If it is a prediction, wish list, impression-only post, playlist, other artist setlist, or unrelated content, choose the matching non-setlist category.',
+                'When unsure, choose unclear so the slower extraction model can review it.',
+            ].join('\n'),
+            {
+                actual_setlist: 'A real UVERworld setlist record with multiple performed songs in order.',
+                prediction_or_wishlist: 'A setlist prediction, wish list, expectation, or songs the author wants to hear.',
+                impression_only: 'Live impressions or comments without a usable ordered setlist.',
+                other_artist_or_wrong_live: 'A different artist, different live date, different venue, or otherwise wrong target performance.',
+                playlist_or_media: 'A Spotify, Apple Music, YouTube, or other media playlist rather than a live setlist record.',
+                unrelated: 'Not useful for UVERworld setlist collection.',
+                unclear: 'Ambiguous enough that a slower extractor should inspect it.',
+            }
+        );
+
+        const nonSetlistChoices = new Set([
+            'prediction_or_wishlist',
+            'impression_only',
+            'other_artist_or_wrong_live',
+            'playlist_or_media',
+            'unrelated',
+        ]);
+        const confidence = typeof result.confidence === 'number' ? result.confidence : 0;
+        const shouldSkip = nonSetlistChoices.has(result.choice) && confidence >= SYSTEM_ONE_SKIP_CONFIDENCE;
+
+        return {
+            enabled: true,
+            shouldSkip,
+            category: result.choice,
+            confidence,
+            probabilities: result.probabilities,
+        };
+    } catch (err) {
+        await logToDb('warn', 'System One preclassification failed', {
+            error: err.message,
+            text: text.substring(0, 100),
+        });
+        return { enabled: true, shouldSkip: false, error: err.message };
+    }
+}
+
 /**
  * GPT判定
  * セトリ予想・願望・感想のみの投稿を除外させる（仕様 §6）
@@ -343,6 +410,14 @@ async function collect(query, inputLiveId = null) {
             const inputLive = inputLiveId ? await getLive(inputLiveId) : null;
 
             console.log(`[Collector] Processing post: ${post.post_url || 'no-url'}`);
+            const preclassification = await module.exports.preclassifySetlistPost(post.text, inputLive);
+            if (preclassification.shouldSkip) {
+                console.log(
+                    `[Collector] System One skipped post: category=${preclassification.category}, confidence=${preclassification.confidence}`
+                );
+                continue;
+            }
+
             const result = await module.exports.identifySetlist(post.text, inputLive);
             console.log(`[Collector] GPT Result: is_setlist=${result.is_setlist}, songs=${result.songs?.length}`);
 
@@ -461,6 +536,7 @@ function _resetCaches() {
 module.exports = {
     collect,
     identifySetlist,
+    preclassifySetlistPost,
     getPosts,
     calculateConfidence,
     buildParsedSongs,

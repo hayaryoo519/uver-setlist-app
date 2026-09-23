@@ -7,6 +7,7 @@ jest.mock('../../services/xClient', () => {
 
 const db = require('../../db');
 const xClient = require('../../services/xClient');
+const systemOne = require('../../services/typesafeSystemOne');
 const collector = require('../../services/collector');
 const { XCollectorAbortError } = xClient;
 
@@ -39,13 +40,18 @@ const TWELVE_SONGS = [
 const OTHER_ARTIST_SONGS = Array.from({ length: 12 }, (_, i) => `別アーティスト曲${i}`);
 
 describe('collector', () => {
+    const originalTypesafeKey = process.env.TYPESAFE_API_KEY;
+
     beforeEach(() => {
         jest.clearAllMocks();
+        delete process.env.TYPESAFE_API_KEY;
         collector._resetCaches();
         jest.spyOn(collector, 'identifySetlist').mockResolvedValue({ is_setlist: false, songs: [] });
     });
 
     afterEach(() => {
+        if (originalTypesafeKey) process.env.TYPESAFE_API_KEY = originalTypesafeKey;
+        else delete process.env.TYPESAFE_API_KEY;
         jest.restoreAllMocks();
     });
 
@@ -95,6 +101,65 @@ describe('collector', () => {
         it('ライブ情報が無ければ空文字を返すこと', () => {
             expect(collector.buildLiveContext(null)).toBe('');
             expect(collector.buildLiveContext({})).toBe('');
+        });
+    });
+
+    describe('preclassifySetlistPost', () => {
+        it('TypeSafe APIキー未設定時は無効として従来処理へ流すこと', async () => {
+            await expect(collector.preclassifySetlistPost('本日のセトリ')).resolves.toEqual({
+                enabled: false,
+                shouldSkip: false,
+            });
+        });
+
+        it('高確信の非セトリ分類はスキップ対象にすること', async () => {
+            process.env.TYPESAFE_API_KEY = 'test-key';
+            jest.spyOn(systemOne, 'askChoice').mockResolvedValue({
+                enabled: true,
+                choice: 'prediction_or_wishlist',
+                confidence: 0.93,
+                probabilities: { prediction_or_wishlist: 0.93 },
+            });
+
+            const result = await collector.preclassifySetlistPost('セトリ予想 CORE PRIDE 聴きたい');
+
+            expect(result).toMatchObject({
+                enabled: true,
+                shouldSkip: true,
+                category: 'prediction_or_wishlist',
+                confidence: 0.93,
+            });
+        });
+
+        it('不確実な分類はGPT判定へフォールバックさせること', async () => {
+            process.env.TYPESAFE_API_KEY = 'test-key';
+            jest.spyOn(systemOne, 'askChoice').mockResolvedValue({
+                enabled: true,
+                choice: 'impression_only',
+                confidence: 0.5,
+                probabilities: { impression_only: 0.5 },
+            });
+
+            const result = await collector.preclassifySetlistPost('最高だった');
+
+            expect(result.shouldSkip).toBe(false);
+        });
+
+        it('TypeSafe APIエラー時はログを残してGPT判定へフォールバックさせること', async () => {
+            process.env.TYPESAFE_API_KEY = 'test-key';
+            jest.spyOn(systemOne, 'askChoice').mockRejectedValue(new Error('typesafe down'));
+
+            const result = await collector.preclassifySetlistPost('本日のセトリ');
+
+            expect(result).toMatchObject({
+                enabled: true,
+                shouldSkip: false,
+                error: 'typesafe down',
+            });
+            expect(db.query).toHaveBeenCalledWith(
+                expect.stringContaining('INSERT INTO collector_logs'),
+                expect.arrayContaining(['warn', 'System One preclassification failed'])
+            );
         });
     });
 
@@ -189,6 +254,22 @@ describe('collector', () => {
                 expect.stringContaining('INSERT INTO raw_setlists'),
                 expect.anything()
             );
+        });
+
+        it('System Oneが高確信で非セトリと判定した投稿はGPT判定前にスキップすること', async () => {
+            process.env.TYPESAFE_API_KEY = 'test-key';
+            collector.getPosts = jest.fn().mockResolvedValue([makePost()]);
+            jest.spyOn(systemOne, 'askChoice').mockResolvedValue({
+                enabled: true,
+                choice: 'prediction_or_wishlist',
+                confidence: 0.91,
+                probabilities: { prediction_or_wishlist: 0.91 },
+            });
+            db.query.mockResolvedValue({ rows: [] });
+
+            await expect(collector.collect('system-one-skip', 1)).resolves.toBe(0);
+
+            expect(collector.identifySetlist).not.toHaveBeenCalled();
         });
 
         it('リツイートは処理せずスキップすること', async () => {

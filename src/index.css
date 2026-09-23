@@ -6,7 +6,7 @@
   /* Premium Theme Palette (Shared with Landing Page) */
   --lp-gold: #d4af37;
   --lp-gold-light: #f1d279;
-  --lp-gold-glow: rgba(212, 175, 55, 0.4);
+  --lp-gold-glow: rgba(212, 175, 55, 0.18);
   --lp-black: #0f172a;
   --lp-navy-deep: #080b15;
   --lp-slate-800: #1e293b;
@@ -71,24 +71,25 @@ h3 {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+  background: var(--primary-color);
   color: #000;
   padding: 10px 24px;
   border-radius: 9999px;
   font-weight: 700;
   transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
   text-decoration: none;
 }
 
 .section-title {
-  border-left: 4px solid var(--primary-color);
-  padding-left: 15px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.35);
   font-size: 1.5rem;
   color: var(--text-color);
 }
@@ -606,19 +607,23 @@ h3 {
 }
 
 .toast-success {
-  border-left: 4px solid #10b981;
+  border-color: rgba(16, 185, 129, 0.45);
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.12);
 }
 
 .toast-error {
-  border-left: 4px solid #ef4444;
+  border-color: rgba(239, 68, 68, 0.45);
+  box-shadow: 0 10px 30px rgba(239, 68, 68, 0.12);
 }
 
 .toast-info {
-  border-left: 4px solid #3b82f6;
+  border-color: rgba(59, 130, 246, 0.45);
+  box-shadow: 0 10px 30px rgba(59, 130, 246, 0.12);
 }
 
 .toast-warning {
-  border-left: 4px solid #f59e0b;
+  border-color: rgba(245, 158, 11, 0.45);
+  box-shadow: 0 10px 30px rgba(245, 158, 11, 0.12);
 }
 
 .toast-icon {

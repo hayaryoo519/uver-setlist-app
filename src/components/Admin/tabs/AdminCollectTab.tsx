@@ -299,8 +299,8 @@ const AdminCollectTab = () => {
                                     {setlist.specialNote && <span style={{ color: '#fbbf24', marginLeft: '8px' }}>({setlist.specialNote})</span>}
                                 </div>
                                 <div style={{ display: 'flex', gap: '10px' }}>
-                                    {setlist.alreadyImported && <span style={{ color: '#fbbf24', fontSize: '0.8rem' }}>⚠ Already Imported</span>}
-                                    {(!setlist.sets?.set || setlist.sets.set.length === 0) && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>⚠ No Songs Listed</span>}
+                                    {setlist.alreadyImported && <span style={{ color: '#fbbf24', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '3px' }}><AlertTriangle size={12} /> Already Imported</span>}
+                                    {(!setlist.sets?.set || setlist.sets.set.length === 0) && <span style={{ color: '#ef4444', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '3px' }}><AlertTriangle size={12} /> No Songs Listed</span>}
                                 </div>
                             </div>
                             <div className="actions-wrapper">
