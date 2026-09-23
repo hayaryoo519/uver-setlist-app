@@ -1,4 +1,5 @@
 import React from 'react';
+import { AlertTriangle, CheckCircle, Target } from 'lucide-react';
 
 export default function WeeklyAnalysisView({ data }) {
     if (!data) {
@@ -140,7 +141,8 @@ export default function WeeklyAnalysisView({ data }) {
                         marginBottom: '1rem',
                         color: '#fca5a5'
                     }}>
-                        ⚠️ 疑わしいIPアドレス（過去24時間で5回以上失敗）
+                        <AlertTriangle size={20} style={{ display: 'inline', marginRight: '6px', verticalAlign: '-4px' }} />
+                        疑わしいIPアドレス（過去24時間で5回以上失敗）
                     </h3>
                     {data.suspiciousIPs.map((ip, index) => (
                         <div key={index} style={{
@@ -192,7 +194,8 @@ export default function WeeklyAnalysisView({ data }) {
                         color: '#6ee7b7',
                         fontWeight: 'bold'
                     }}>
-                        ✅ 疑わしいIPアドレスはありません
+                        <CheckCircle size={20} style={{ display: 'inline', marginRight: '6px', verticalAlign: '-4px' }} />
+                        疑わしいIPアドレスはありません
                     </span>
                 </div>
             )}
@@ -211,7 +214,8 @@ export default function WeeklyAnalysisView({ data }) {
                         marginBottom: '1rem',
                         color: '#f1f5f9'
                     }}>
-                        🎯 最も攻撃されているメールアドレス
+                        <Target size={20} style={{ display: 'inline', marginRight: '6px', verticalAlign: '-4px' }} />
+                        最も攻撃されているメールアドレス
                     </h3>
                     <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>

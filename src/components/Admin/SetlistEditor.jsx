@@ -94,14 +94,14 @@ const SetlistEditor = ({ liveId, onClose, liveDate, liveTitle, onEditLive }) => 
                 // すでに追加されている場合は取り消し（削除）
                 const newList = currentSetlist.filter(s => s.id !== song.id);
                 setCurrentSetlist(newList);
-                showToast(`❌ 「${song.title}」を取り消しました`);
+                showToast(`「${song.title}」を取り消しました`);
             } else {
                 // 新規追加
                 const newTempId = `item-${song.id}-${Math.random()}`;
                 setCurrentSetlist([...currentSetlist, { ...song, tempId: newTempId }]);
 
                 // トースト通知
-                showToast(`✅ 「${song.title}」を追加しました（#${currentSetlist.length + 1}）`);
+                showToast(`「${song.title}」を追加しました（#${currentSetlist.length + 1}）`);
                 // 追加後にリスト末尾へ自動スクロール
                 setTimeout(() => {
                     if (setlistScrollRef.current) {

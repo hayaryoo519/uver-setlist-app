@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Loader, ArrowUpDown, Trash2, ShieldAlert, Search, RotateCcw } from 'lucide-react';
+import { Loader, ArrowUpDown, Trash2, ShieldAlert, Search, RotateCcw, ArrowRight, X } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useAdminUsers, useDeleteUser, useUpdateUserRole, useRestoreUser } from '../../../hooks/queries/useAdminUsers';
 import type { User } from '../../../types/api';
-import { X } from 'lucide-react';
 
 const AdminUsersTab = () => {
     const { currentUser } = useAuth();
@@ -178,7 +177,9 @@ const AdminUsersTab = () => {
                                     <strong>{userToUpdate.username}</strong> ({userToUpdate.email})
                                 </p>
                                 <p style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 'bold', marginTop: '10px' }}>
-                                    {userToUpdate.role} → {userToUpdate.role === 'admin' ? 'user' : 'admin'}
+                                    {userToUpdate.role}
+                                    <ArrowRight size={16} style={{ display: 'inline', margin: '0 6px', verticalAlign: '-3px' }} />
+                                    {userToUpdate.role === 'admin' ? 'user' : 'admin'}
                                 </p>
                             </div>
                             <div className="form-actions">

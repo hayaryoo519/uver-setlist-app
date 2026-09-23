@@ -20,7 +20,7 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Search, Plus, Save, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Search, Plus, Save, AlertCircle, ArrowLeft, Eye, MicVocal } from 'lucide-react';
 import PageHeader from '../components/Layout/PageHeader';
 import SEO from '../components/SEO';
 import { useAuth } from '../contexts/AuthContext';
@@ -300,7 +300,7 @@ const SetlistPredictionCreate = () => {
                 {liveInfo && (
                     <div className="mt-4 bg-slate-800/50 border border-yellow-500/30 rounded-xl p-4 flex flex-col gap-4">
                         <div className="flex items-start gap-3 flex-1">
-                            <span className="text-yellow-400 text-lg shrink-0 mt-0.5">🎤</span>
+                            <MicVocal size={20} className="text-yellow-400 shrink-0 mt-0.5" />
                             <div>
                                 <div className="text-white font-bold leading-tight mb-1">{liveInfo.tour_name || 'スペシャルライブ'}</div>
                                 <div className="text-sm text-slate-400">
@@ -468,7 +468,8 @@ const SetlistPredictionCreate = () => {
                         className="flex items-center gap-2 text-slate-400 hover:text-purple-300 font-medium transition-colors"
                         style={{ textDecoration: 'none' }}
                     >
-                        👀 みんなの予想を見る
+                        <Eye size={18} />
+                        みんなの予想を見る
                     </Link>
                 </div>
             </div>

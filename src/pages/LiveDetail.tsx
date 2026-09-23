@@ -4,7 +4,7 @@ import { useAttendance } from '../hooks/useAttendance';
 import { useAuth } from '../contexts/AuthContext';
 import { useLiveDetail } from '../hooks/queries/useLives';
 import CorrectionModal from '../components/CorrectionModal';
-import { AlertTriangle, Tag, MapPin, Check, Plus, Star, Music, Sparkles, LogIn } from 'lucide-react';
+import { AlertTriangle, Tag, MapPin, Check, Plus, Star, Music, Sparkles, LogIn, ArrowLeft } from 'lucide-react';
 import SEO from '../components/SEO';
 import SpotifyPlaylistButton from '../components/Spotify/SpotifyPlaylistButton';
 import YoutubePlaylistButton from '../components/Youtube/YoutubePlaylistButton';
@@ -95,7 +95,7 @@ function LiveDetail() {
                         className="flex items-center gap-2 text-slate-500 hover:text-white transition-all group"
                     >
                         <div className="w-8 h-8 rounded-full border border-slate-800 flex items-center justify-center group-hover:border-slate-600 transition-colors">
-                            &larr;
+                            <ArrowLeft size={16} aria-hidden="true" />
                         </div>
                         <span className="text-sm font-medium">{backLabel}</span>
                     </button>
@@ -305,7 +305,7 @@ function LiveDetail() {
                             <Link
                                 to={`/predictions?live_id=${liveId}`}
                                 state={{ from: location.pathname }}
-                                className="group block relative overflow-hidden bg-gradient-to-br from-blue-600/10 via-slate-800/40 to-indigo-600/10 border border-blue-500/20 hover:border-blue-500/50 rounded-3xl p-8 transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/10"
+                                className="group block relative overflow-hidden bg-slate-800/55 border border-blue-500/20 hover:border-blue-500/50 rounded-xl p-8 transition-all duration-300"
                             >
                                 <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
                                     <Sparkles size={120} className="text-blue-400" />

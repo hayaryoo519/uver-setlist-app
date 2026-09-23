@@ -154,13 +154,13 @@ const SongDetail = () => {
                                     </div>
                                     {song.is_rare && (
                                         <div className="relative group">
-                                            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-red-500/20 border border-amber-500/50 text-amber-400 text-sm font-bold shadow-[0_0_15px_rgba(245,158,11,0.2)] animate-pulse cursor-help">
+                                            <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-amber-500/10 border border-amber-500/40 text-amber-400 text-sm font-bold cursor-help">
                                                 <Sparkles size={14} />
                                                 <span>レア曲</span>
                                             </div>
                                             <div className="absolute top-full right-0 mt-2 w-64 p-3 bg-slate-800 border border-slate-600 rounded-lg text-xs text-slate-300 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 shadow-xl">
                                                 <div className="font-bold text-amber-400 mb-1">レア曲とは？</div>
-                                                <div>演奏率が低い（5%以下）または長期間演奏されていない（3年以上）曲のことです。ライブで聴けたらラッキー！✨</div>
+                                                <div>演奏率が低い（5%以下）または長期間演奏されていない（3年以上）曲のことです。ライブで聴けたら特別な一曲です。</div>
                                             </div>
                                         </div>
                                     )}
@@ -212,7 +212,7 @@ const SongDetail = () => {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
                     {/* Days Since Last Played - Featured Card */}
                     <div className={`col-span-1 md:col-span-2 p-6 rounded-xl border relative overflow-hidden flex flex-col justify-center ${song.is_rare
-                        ? 'bg-gradient-to-br from-slate-800 to-slate-900 border-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.05)]'
+                        ? 'bg-slate-800 border-amber-500/30'
                         : 'bg-slate-800 border-slate-700/50'
                         }`}>
                         <div className="text-slate-400 text-sm mb-2 flex items-center gap-2 uppercase tracking-wide">

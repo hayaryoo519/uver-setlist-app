@@ -147,6 +147,36 @@ describe('scheduleImporter', () => {
         });
     });
 
+    describe('parsePerformanceTimes', () => {
+        it('開場/開演表記の2番目を開演時刻として扱うこと', () => {
+            expect(importer.parsePerformanceTimes('2026-09-24', 'KT Zepp Yokohama 17:30/18:30', 'KT Zepp Yokohama')).toEqual({
+                starts_at: '2026-09-24T09:30:00.000Z',
+                collect_after: '2026-09-24T12:30:00.000Z',
+            });
+        });
+
+        it('台北公演は現地時刻として扱うこと', () => {
+            expect(importer.parsePerformanceTimes('2026-11-21', 'Zepp New Taipei 17:30開場/19:00開演（現地時間）', 'Zepp New Taipei')).toEqual({
+                starts_at: '2026-11-21T11:00:00.000Z',
+                collect_after: '2026-11-21T14:00:00.000Z',
+            });
+        });
+
+        it('昼夜公演は遅い公演の開演後に収集すること', () => {
+            expect(importer.parsePerformanceTimes('2026-12-25', '日本武道館 day 13:00/14:00 night 18:00/19:00', '日本武道館')).toEqual({
+                starts_at: '2026-12-25T10:00:00.000Z',
+                collect_after: '2026-12-25T13:00:00.000Z',
+            });
+        });
+
+        it('時刻がなければ翌日収集へフォールバックできる値を返すこと', () => {
+            expect(importer.parsePerformanceTimes('2026-08-15', 'RISING SUN ROCK FESTIVAL', '石狩湾新港')).toEqual({
+                starts_at: null,
+                collect_after: null,
+            });
+        });
+    });
+
     describe('detectType', () => {
         it('EVENT カテゴリは FESTIVAL とすること', () => {
             expect(importer.detectType('EVENT', '石狩湾新港')).toBe('FESTIVAL');

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, MapPin, ArrowRight, Sparkles } from 'lucide-react';
+import { Calendar, MapPin, ArrowRight, Sparkles, Flame, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const UpcomingLives = ({ lives }) => {
@@ -13,7 +13,8 @@ export const UpcomingLives = ({ lives }) => {
             <h2 className="section-title next-live-header" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '15px' }}>
                 Next Live
                 <span className="prediction-badge">
-                    セトリ予想受付中 🔥
+                    <Flame size={14} />
+                    セトリ予想受付中
                 </span>
             </h2>
 
@@ -24,7 +25,7 @@ export const UpcomingLives = ({ lives }) => {
                         className="upcoming-card"
                         style={{
                             background: 'var(--card-bg)',
-                            borderRadius: '16px',
+                            borderRadius: '8px',
                             border: '1px solid rgba(255,255,255,0.1)',
                             padding: '25px',
                             position: 'relative',
@@ -46,7 +47,8 @@ export const UpcomingLives = ({ lives }) => {
                                 alignItems: 'center',
                                 gap: '6px'
                             }}>
-                                {index === 0 ? '★ NEXT LIVE' : 'UPCOMING'}
+                                {index === 0 && <Star size={14} fill="currentColor" />}
+                                {index === 0 ? 'NEXT LIVE' : 'UPCOMING'}
                             </div>
 
                             <h3 style={{
@@ -94,7 +96,7 @@ export const UpcomingLives = ({ lives }) => {
                                     style={{
                                         padding: '10px',
                                         borderRadius: '8px',
-                                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                                        background: '#2563eb',
                                         border: 'none',
                                         color: '#fff',
                                         fontSize: '0.75rem',
@@ -104,9 +106,8 @@ export const UpcomingLives = ({ lives }) => {
                                         justifyContent: 'center',
                                         gap: '6px',
                                         textDecoration: 'none',
-                                        boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)'
                                     }}
-                                    className="hover:scale-105 transition-all"
+                                    className="hover:bg-blue-700 transition-all"
                                 >
                                     <Sparkles size={14} /> 予想する
 
@@ -117,8 +118,8 @@ export const UpcomingLives = ({ lives }) => {
                                     style={{
                                         padding: '10px',
                                         borderRadius: '8px',
-                                        background: 'rgba(255, 255, 255, 0.3)',
-                                        border: '1px solid rgba(255, 255, 255, 0.6)',
+                                        background: 'rgba(15, 23, 42, 0.86)',
+                                        border: '1px solid rgba(148, 163, 184, 0.35)',
                                         color: '#fff',
                                         fontSize: '0.75rem',
                                         fontWeight: 'bold',
@@ -129,7 +130,7 @@ export const UpcomingLives = ({ lives }) => {
                                         textDecoration: 'none',
                                         transition: 'all 0.2s'
                                     }}
-                                    className="hover:bg-white/40 hover:scale-105 transition-all"
+                                    className="hover:bg-slate-700 transition-all"
                                 >
                                     みんなの予想を見る
 
@@ -149,7 +150,7 @@ export const UpcomingLives = ({ lives }) => {
                     100% { opacity: 1; transform: scale(1); }
                 }
                 .upcoming-card:hover {
-                    transform: translateY(-5px);
+                    transform: translateY(-3px);
                     border-color: rgba(251, 191, 36, 0.3) !important;
                     transition: all 0.3s ease;
                 }
@@ -161,14 +162,12 @@ export const UpcomingLives = ({ lives }) => {
                     flex-wrap: wrap;
                 }
                 .prediction-badge {
-                    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+                    background: #fbbf24;
                     color: #000;
                     padding: 4px 12px;
-                    border-radius: 50px;
+                    border-radius: 6px;
                     font-size: 0.85rem;
                     font-weight: 800;
-                    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
-                    animation: pulse 2s infinite;
                     white-space: nowrap;
                 }
 

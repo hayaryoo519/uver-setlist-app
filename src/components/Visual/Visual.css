@@ -6,7 +6,7 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+    background: #080b15;
     margin-bottom: 20px;
     border-bottom: 2px solid var(--primary-color);
 }
@@ -29,7 +29,6 @@
 
 .text-gold {
     color: var(--primary-color);
-    text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
 }
 
 .text-subtitle {
@@ -74,14 +73,7 @@
 }
 
 .main-visual-bg .glow-effect {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
-    pointer-events: none;
+    display: none;
 }
 
 @keyframes fadeInUp {

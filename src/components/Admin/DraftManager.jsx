@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Trash2, Loader, Sparkles, ArrowRight, FileText, Clock, CheckCircle, XCircle, RefreshCw, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { Plus, Trash2, Loader, Sparkles, ArrowRight, FileText, Clock, CheckCircle, XCircle, RefreshCw, AlertCircle, Image as ImageIcon, ExternalLink, Users, MapPin, ClipboardList } from 'lucide-react';
 import BulkImportModal from './BulkImportModal';
 import { apiClient } from '../../lib/apiClient';
 
@@ -486,7 +486,8 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
                                         .filter(Boolean)
                                         .map((url, i, arr) => (
                                             <a key={url} href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: '#3b82f6', textDecoration: 'none' }}>
-                                                🔗 {arr.length > 1 ? `元投稿 ${i + 1}` : 'リンクを表示'}
+                                                <ExternalLink size={11} style={{ display: 'inline', marginRight: '3px', verticalAlign: '-2px' }} />
+                                                {arr.length > 1 ? `元投稿 ${i + 1}` : 'リンクを表示'}
                                             </a>
                                         ))}
                                     {draft.duplicate_count > 1 && (
@@ -494,7 +495,8 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
                                             fontSize: '10px', background: '#3b82f620', color: '#60a5fa', 
                                             padding: '2px 6px', borderRadius: '4px', border: '1px solid #3b82f640'
                                         }}>
-                                            👥 {draft.duplicate_count} 投稿を統合
+                                            <Users size={10} style={{ display: 'inline', marginRight: '3px', verticalAlign: '-2px' }} />
+                                            {draft.duplicate_count} 投稿を統合
                                         </span>
                                     )}
                                     {draft.official_setlist && (
@@ -508,7 +510,8 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
                                     )}
                                     {draft.live_tour_name && (
                                         <span style={{ fontSize: '12px', color: '#cbd5e1' }}>
-                                            📍 {draft.live_tour_name} ({draft.live_venue})
+                                            <MapPin size={12} style={{ display: 'inline', marginRight: '3px', verticalAlign: '-2px' }} />
+                                            {draft.live_tour_name} ({draft.live_venue})
                                         </span>
                                     )}
                                 </div>
@@ -524,7 +527,8 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
                                                     border: '1px solid #10b98160',
                                                     boxShadow: '0 0 6px #10b98130'
                                                 }}>
-                                                    ✨ High Accuracy
+                                                    <Sparkles size={10} style={{ display: 'inline', marginRight: '3px', verticalAlign: '-2px' }} />
+                                                    High Accuracy
                                                 </span>
                                             ) : (draft.confidence || 0) < 0.5 ? (
                                                 <span style={{
@@ -533,7 +537,8 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
                                                     background: '#ef444420', color: '#ef4444',
                                                     border: '1px solid #ef444460'
                                                 }}>
-                                                    ⚠️ 要確認
+                                                    <AlertCircle size={10} style={{ display: 'inline', marginRight: '3px', verticalAlign: '-2px' }} />
+                                                    要確認
                                                 </span>
                                             ) : (
                                                 <span style={{
@@ -614,7 +619,9 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
                                 {/* 生テキスト */}
                                 <div style={{ flex: '1', minWidth: '200px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                        <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>📝 RAW TEXT</div>
+                                        <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <FileText size={12} /> RAW TEXT
+                                        </div>
                                         {editingDraftId !== draft.id ? (
                                             <button 
                                                 onClick={() => { setEditingDraftId(draft.id); setEditText(draft.raw_text); }}
@@ -665,7 +672,9 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
 
                                 {/* 整形結果 */}
                                 <div style={{ flex: '1', minWidth: '200px' }}>
-                                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: '600' }}>✨ PARSED RESULT</div>
+                                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <ClipboardList size={12} /> PARSED RESULT
+                                    </div>
                                     {draft.parsed_json && draft.parsed_json.length > 0 ? (
                                         <div style={{
                                             background: '#0f172a', padding: '10px', borderRadius: '6px',
@@ -797,7 +806,12 @@ const DraftManager = ({ lives, allSongs, onSetlistImported }) => {
                                     color: (duplicateModalDraft.confidence || 0) >= 0.8 ? '#10b981' : '#f59e0b',
                                     border: '1px solid currentColor'
                                 }}>
-                                    {(duplicateModalDraft.confidence || 0) >= 0.8 ? '✨ High Accuracy' : 'Normal'}
+                                    {(duplicateModalDraft.confidence || 0) >= 0.8 ? (
+                                        <>
+                                            <Sparkles size={10} style={{ display: 'inline', marginRight: '3px', verticalAlign: '-2px' }} />
+                                            High Accuracy
+                                        </>
+                                    ) : 'Normal'}
                                 </span>
                                 <span style={{ fontSize: '13px', fontWeight: 'bold', color: (duplicateModalDraft.confidence || 0) >= 0.8 ? '#10b981' : '#f59e0b' }}>
                                     {Math.round((duplicateModalDraft.confidence || 0) * 100)}%

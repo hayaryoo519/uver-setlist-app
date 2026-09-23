@@ -7,7 +7,15 @@ import { apiClient } from '../../../lib/apiClient';
 import type { Live } from '../../../types/api';
 import SetlistEditor from '../SetlistEditor';
 
-const emptyLiveForm = { tour_name: '', title: '', date: '', venue: '', type: 'ONEMAN', special_note: '' };
+const emptyLiveForm = { tour_name: '', title: '', date: '', venue: '', type: 'ONEMAN', special_note: '', starts_at: '', collect_after: '' };
+
+const toDateTimeLocal = (value?: string | null) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60 * 1000);
+    return local.toISOString().slice(0, 16);
+};
 
 type SetlistStatusFilter = 'ALL' | 'NORMAL' | 'UNKNOWN_SETLIST';
 
@@ -98,6 +106,8 @@ const AdminLivesTab = ({ initialEditId }: { initialEditId?: number }) => {
             venue: live.venue,
             type: live.type || 'ONEMAN',
             special_note: live.special_note || '',
+            starts_at: toDateTimeLocal(live.starts_at),
+            collect_after: toDateTimeLocal(live.collect_after),
         });
         setShowLiveModal(true);
     };
@@ -106,10 +116,15 @@ const AdminLivesTab = ({ initialEditId }: { initialEditId?: number }) => {
     const handleLiveSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
+            const payload = {
+                ...liveFormData,
+                starts_at: liveFormData.starts_at ? new Date(liveFormData.starts_at).toISOString() : null,
+                collect_after: liveFormData.collect_after ? new Date(liveFormData.collect_after).toISOString() : null,
+            };
             if (editingLive) {
-                await apiClient.put(`/api/lives/${editingLive.id}`, liveFormData);
+                await apiClient.put(`/api/lives/${editingLive.id}`, payload);
             } else {
-                await apiClient.post('/api/lives', liveFormData);
+                await apiClient.post('/api/lives', payload);
             }
             invalidateLives();
             setShowLiveModal(false);
@@ -291,6 +306,8 @@ const AdminLivesTab = ({ initialEditId }: { initialEditId?: number }) => {
                                 </select>
                             </div>
                             <div className="form-group"><label>Date</label><input type="date" required value={liveFormData.date} onChange={e => setLiveFormData({ ...liveFormData, date: e.target.value })} /></div>
+                            <div className="form-group"><label>開演日時（任意）</label><input type="datetime-local" value={liveFormData.starts_at} onChange={e => setLiveFormData({ ...liveFormData, starts_at: e.target.value })} /></div>
+                            <div className="form-group"><label>収集開始日時（任意）</label><input type="datetime-local" min={liveFormData.starts_at || undefined} value={liveFormData.collect_after} onChange={e => setLiveFormData({ ...liveFormData, collect_after: e.target.value })} /></div>
                             <div className="form-group">
                                 <label>Venue</label>
                                 <input type="text" required value={liveFormData.venue} onChange={e => {

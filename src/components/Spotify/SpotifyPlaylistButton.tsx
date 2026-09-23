@@ -100,7 +100,7 @@ const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId })
 
     if (status === 'SUCCESS' && result) {
         return (
-            <div className="mt-8 p-6 bg-emerald-500/5 border border-emerald-500/20 rounded-3xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="mt-8 p-6 bg-emerald-500/5 border border-emerald-500/20 rounded-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center gap-3 text-emerald-400 font-black mb-4">
                     <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
                         <Check size={20} />
@@ -189,7 +189,7 @@ const SpotifyPlaylistButton: React.FC<SpotifyPlaylistButtonProps> = ({ liveId })
                     <button
                         onClick={handleCreate}
                         disabled={status === 'CREATING'}
-                        className={`w-full py-5 rounded-3xl bg-gradient-to-r from-[#1DB954] to-[#1ed760] text-black font-black flex items-center justify-center gap-3 transition-all relative overflow-hidden group shadow-lg shadow-[#1DB954]/20
+                        className={`w-full py-5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-black flex items-center justify-center gap-3 transition-all relative overflow-hidden group
                             ${status === 'CREATING' ? 'opacity-70 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-95'}`}
                     >
                         {status === 'CREATING' ? (

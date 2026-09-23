@@ -1,14 +1,14 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Calendar, MapPin } from 'lucide-react';
 
 export const LatestLiveCard = ({ live }) => {
     const location = useLocation();
     if (!live) return null;
     return (
         <div style={{
-            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.05) 100%)',
-            borderRadius: '16px',
+            background: 'rgba(15, 23, 42, 0.76)',
+            borderRadius: '8px',
             padding: '20px',
             border: '1px solid rgba(251, 191, 36, 0.3)',
             marginBottom: '30px',
@@ -41,7 +41,8 @@ export const LatestLiveCard = ({ live }) => {
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', marginBottom: '15px', color: '#cbd5e1' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        📅 <span style={{ fontWeight: 'bold', color: '#fff', fontSize: '1rem' }}>
+                        <Calendar size={16} color="#fbbf24" />
+                        <span style={{ fontWeight: 'bold', color: '#fff', fontSize: '1rem' }}>
                             {(() => {
                                 const d = new Date(live.date);
                                 return isNaN(d.getTime()) ? live.date : d.toLocaleDateString('ja-JP', {
@@ -53,7 +54,8 @@ export const LatestLiveCard = ({ live }) => {
                         </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        📍 <span style={{ fontWeight: '500', color: '#fff', fontSize: '0.9rem' }}>{live.venue}</span>
+                        <MapPin size={16} color="#fbbf24" />
+                        <span style={{ fontWeight: '500', color: '#fff', fontSize: '0.9rem' }}>{live.venue}</span>
                     </div>
                 </div>
 
@@ -74,7 +76,6 @@ export const LatestLiveCard = ({ live }) => {
                             fontWeight: 'bold',
                             fontSize: '0.9rem',
                             transition: 'all 0.2s',
-                            boxShadow: '0 4px 15px rgba(251, 191, 36, 0.3)'
                         }}
                         className="hover:scale-105"
                     >

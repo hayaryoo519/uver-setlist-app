@@ -5,8 +5,8 @@ import { ClipboardList, BarChart2, Music, ArrowRight, Disc } from 'lucide-react'
 const MyPageOnboarding = () => {
     return (
         <div style={{
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-            borderRadius: '16px',
+            background: 'rgba(15, 23, 42, 0.76)',
+            borderRadius: '8px',
             padding: '40px',
             textAlign: 'center',
             border: '1px solid rgba(255,255,255,0.2)',
@@ -54,19 +54,16 @@ const MyPageOnboarding = () => {
                     color: '#000',
                     fontWeight: 'bold',
                     padding: '16px 32px',
-                    borderRadius: '50px',
+                    borderRadius: '8px',
                     textDecoration: 'none',
                     fontSize: '1.1rem',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
-                    boxShadow: '0 4px 15px rgba(255, 215, 0, 0.3)'
+                    transition: 'transform 0.2s'
                 }}
                 onMouseEnter={e => {
                     e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(255, 215, 0, 0.4)';
                 }}
                 onMouseLeave={e => {
                     e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(255, 215, 0, 0.3)';
                 }}
             >
                 ライブ一覧から記録をはじめる <ArrowRight size={20} />
@@ -79,7 +76,7 @@ const FeatureItem = ({ icon, title, desc }) => (
     <div style={{
         background: 'rgba(0,0,0,0.2)',
         padding: '20px',
-        borderRadius: '12px',
+        borderRadius: '8px',
         border: '1px solid rgba(255,255,255,0.05)'
     }}>
         <div style={{ marginBottom: '10px' }}>{icon}</div>

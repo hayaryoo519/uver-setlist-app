@@ -171,6 +171,31 @@ function parseVenueFromTitle(title) {
 }
 
 /**
+ * 一覧タイトルの開場/開演表記から開演日時と収集開始日時を作る。
+ * 通常の「開場/開演」は2番目、昼夜2公演は最後の時刻を採用する。
+ */
+function parsePerformanceTimes(date, title, venue) {
+    const value = stripTags(title);
+    const explicitStart = value.match(/(\d{1,2})[:：](\d{2})\s*開演/);
+    const times = [...value.matchAll(/(\d{1,2})[:：](\d{2})/g)];
+    const start = explicitStart || times.at(-1);
+    if (!start) return { starts_at: null, collect_after: null };
+
+    const hour = Number(start[1]);
+    const minute = Number(start[2]);
+    if (hour > 23 || minute > 59) return { starts_at: null, collect_after: null };
+
+    const offset = /taipei|台北/i.test(`${venue || ''} ${value}`) ? '+08:00' : '+09:00';
+    const startsAt = new Date(`${date}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00${offset}`);
+    if (Number.isNaN(startsAt.getTime())) return { starts_at: null, collect_after: null };
+
+    return {
+        starts_at: startsAt.toISOString(),
+        collect_after: new Date(startsAt.getTime() + 3 * 60 * 60 * 1000).toISOString(),
+    };
+}
+
+/**
  * 公演種別を推定する
  * 一覧の EVENT はフェス等の複数アーティスト公演、TOUR は自身のツアー
  */
@@ -257,15 +282,19 @@ async function findExistingLive(entry, venue) {
     return null;
 }
 
-async function linkOfficialSource(liveId, entry) {
+async function linkOfficialSource(liveId, entry, performanceTimes) {
     await db.query(
         `UPDATE lives
          SET external_source_id = COALESCE(external_source_id, $1),
-             import_metadata = COALESCE(import_metadata, '{}'::jsonb) || $2::jsonb
-         WHERE id = $3`,
+             import_metadata = COALESCE(import_metadata, '{}'::jsonb) || $2::jsonb,
+             starts_at = COALESCE(starts_at, $3),
+             collect_after = COALESCE(collect_after, $4)
+         WHERE id = $5`,
         [
             `${SOURCE_NAME}:${entry.sourceId}`,
             JSON.stringify({ source: SOURCE_NAME, source_url: entry.detailUrl, category: entry.category, linked_at: new Date().toISOString() }),
+            performanceTimes.starts_at,
+            performanceTimes.collect_after,
             liveId,
         ]
     );
@@ -324,7 +353,15 @@ async function importSchedule({ dryRun = false } = {}) {
         try {
             // 既知の公演は詳細ページを取りに行かない。
             // 定常状態では一覧の1リクエストだけで済み、相手サイトへの負荷を抑えられる
-            if (await findLiveBySourceId(entry.sourceId)) {
+            const sourceLiveId = await findLiveBySourceId(entry.sourceId);
+            if (sourceLiveId) {
+                if (!dryRun) {
+                    await linkOfficialSource(
+                        sourceLiveId,
+                        entry,
+                        parsePerformanceTimes(entry.date, entry.title, null)
+                    );
+                }
                 stats.skipped++;
                 continue;
             }
@@ -337,10 +374,11 @@ async function importSchedule({ dryRun = false } = {}) {
                 console.warn(`[Schedule] 詳細ページ取得に失敗: ${entry.detailUrl} (${err.message})`);
             }
             venue ||= parseVenueFromTitle(entry.title);
+            const performanceTimes = parsePerformanceTimes(entry.date, entry.title, venue);
 
             const existingId = await findExistingLive(entry, venue);
             if (existingId) {
-                if (!dryRun) await linkOfficialSource(existingId, entry);
+                if (!dryRun) await linkOfficialSource(existingId, entry, performanceTimes);
                 stats.skipped++;
                 continue;
             }
@@ -353,6 +391,7 @@ async function importSchedule({ dryRun = false } = {}) {
                 tour_name: entry.title,
                 type,
                 external_source_id: `${SOURCE_NAME}:${entry.sourceId}`,
+                ...performanceTimes,
             };
 
             if (dryRun) {
@@ -365,12 +404,13 @@ async function importSchedule({ dryRun = false } = {}) {
             // 同日同会場の昼夜2公演が同じ値を持つため、一意にできない。
             // 重複は上の findLiveBySourceId / findExistingLive で防ぐ。
             const inserted = await db.query(
-                `INSERT INTO lives (date, venue, tour_name, type, setlist_status, external_source_id, import_metadata)
-                 VALUES ($1, $2, $3, $4, 'UNKNOWN_SETLIST', $5, $6)
+                `INSERT INTO lives (date, venue, tour_name, type, setlist_status, external_source_id, import_metadata, starts_at, collect_after)
+                 VALUES ($1, $2, $3, $4, 'UNKNOWN_SETLIST', $5, $6, $7, $8)
                  RETURNING id`,
                 [
                     live.date, live.venue, live.tour_name, live.type, live.external_source_id,
                     JSON.stringify({ source: SOURCE_NAME, source_url: entry.detailUrl, category: entry.category, imported_at: new Date().toISOString() }),
+                    live.starts_at, live.collect_after,
                 ]
             );
 
@@ -427,6 +467,7 @@ module.exports = {
     parseNextMonthUrl,
     parseVenue,
     parseVenueFromTitle,
+    parsePerformanceTimes,
     detectType,
     isSameVenue,
     venueKey,
