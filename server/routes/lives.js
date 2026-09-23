@@ -4,6 +4,25 @@ const { authorize, adminCheck } = require('../middleware/authorization');
 const { normalizeVenueName } = require('../utils/songTranslations');
 const { notifyNewLive } = require('../utils/pushNotification');
 
+function parseOptionalTimestamp(value, fieldName) {
+    if (value === undefined || value === null || value === '') return null;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        const error = new Error(`${fieldName} must be a valid timestamp`);
+        error.statusCode = 400;
+        throw error;
+    }
+    return parsed.toISOString();
+}
+
+function validatePerformanceTimes(startsAt, collectAfter) {
+    if (startsAt && collectAfter && new Date(collectAfter) < new Date(startsAt)) {
+        const error = new Error('collect_after must be after starts_at');
+        error.statusCode = 400;
+        throw error;
+    }
+}
+
 // GET All Lives with Advanced Filters
 router.get('/', async (req, res) => {
     try {
@@ -88,7 +107,7 @@ router.get('/', async (req, res) => {
                 GROUP BY l.id
                 ${havingClause}
             )
-            SELECT l.id, l.tour_name, l.title, l.date::text as date, l.venue, l.type, l.prefecture, l.special_note, l.setlistfm_id, l.setlist_status
+            SELECT l.id, l.tour_name, l.title, l.date::text as date, l.venue, l.type, l.prefecture, l.special_note, l.setlistfm_id, l.setlist_status, l.starts_at, l.collect_after
         `;
 
         if (include_setlists === 'true') {
@@ -143,7 +162,7 @@ router.get('/:id', async (req, res) => {
 
         // 1. Get Live Details with prediction count (excluding soft deleted)
         const liveRes = await db.query(
-            `SELECT id, tour_name, title, date::text as date, venue, type, prefecture, special_note, setlistfm_id, setlist_status, 
+            `SELECT id, tour_name, title, date::text as date, venue, type, prefecture, special_note, setlistfm_id, setlist_status, starts_at, collect_after,
                     (SELECT COUNT(*) FROM predictions p WHERE p.live_id = l.id AND p.deleted_at IS NULL) as prediction_count,
                     (SELECT id FROM predictions p WHERE p.live_id = l.id AND p.user_id = $2 AND p.deleted_at IS NULL LIMIT 1) as my_prediction_id
              FROM lives l WHERE id = $1`, 
@@ -181,6 +200,9 @@ router.get('/:id', async (req, res) => {
 router.post('/', authorize, adminCheck, async (req, res) => {
     try {
         const { tour_name, title, date, venue: rawVenue, type = 'ONEMAN', special_note } = req.body;
+        const startsAt = parseOptionalTimestamp(req.body.starts_at, 'starts_at');
+        const collectAfter = parseOptionalTimestamp(req.body.collect_after, 'collect_after');
+        validatePerformanceTimes(startsAt, collectAfter);
 
         // Normalize venue name (translate English to Japanese if applicable)
         const venue = normalizeVenueName(rawVenue);
@@ -189,8 +211,8 @@ router.post('/', authorize, adminCheck, async (req, res) => {
         console.log(`[Venue Translation] Input: "${rawVenue}" -> Output: "${venue}"${rawVenue !== venue ? ' (TRANSLATED)' : ''}`);
 
         const newLive = await db.query(
-            "INSERT INTO lives (tour_name, title, date, venue, type, special_note) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
-            [tour_name, title, date, venue, type, special_note]
+            "INSERT INTO lives (tour_name, title, date, venue, type, special_note, starts_at, collect_after) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
+            [tour_name, title, date, venue, type, special_note, startsAt, collectAfter]
         );
 
         const createdLive = newLive.rows[0];
@@ -202,7 +224,7 @@ router.post('/', authorize, adminCheck, async (req, res) => {
         });
     } catch (err) {
         console.error(err.message);
-        res.status(500).json({ message: "Server Error: " + err.message });
+        res.status(err.statusCode || 500).json({ message: err.statusCode ? err.message : "Server Error: " + err.message });
     }
 });
 
@@ -211,12 +233,21 @@ router.put('/:id', authorize, adminCheck, async (req, res) => {
     try {
         const { id } = req.params;
         const { tour_name, title, date, venue, type, special_note } = req.body;
+        const hasStartsAt = Object.prototype.hasOwnProperty.call(req.body, 'starts_at');
+        const hasCollectAfter = Object.prototype.hasOwnProperty.call(req.body, 'collect_after');
+        const startsAt = parseOptionalTimestamp(req.body.starts_at, 'starts_at');
+        const collectAfter = parseOptionalTimestamp(req.body.collect_after, 'collect_after');
+        validatePerformanceTimes(startsAt, collectAfter);
 
         console.log(`[UPDATE LIVE] ID: ${id}, Body:`, req.body);
 
         const updateLive = await db.query(
-            "UPDATE lives SET tour_name = $1, title = $2, date = $3, venue = $4, type = $5, special_note = $6 WHERE id = $7 RETURNING *",
-            [tour_name, title, date, venue, type, special_note, id]
+            `UPDATE lives
+             SET tour_name = $1, title = $2, date = $3, venue = $4, type = $5, special_note = $6,
+                 starts_at = CASE WHEN $7 THEN $8 ELSE starts_at END,
+                 collect_after = CASE WHEN $9 THEN $10 ELSE collect_after END
+             WHERE id = $11 RETURNING *`,
+            [tour_name, title, date, venue, type, special_note, hasStartsAt, startsAt, hasCollectAfter, collectAfter, id]
         );
 
         if (updateLive.rows.length === 0) {
@@ -228,7 +259,7 @@ router.put('/:id', authorize, adminCheck, async (req, res) => {
         res.json(updateLive.rows[0]);
     } catch (err) {
         console.error("[UPDATE LIVE ERROR]", err.message);
-        res.status(500).send("Server Error: " + err.message);
+        res.status(err.statusCode || 500).json({ message: err.statusCode ? err.message : "Server Error: " + err.message });
     }
 });
 

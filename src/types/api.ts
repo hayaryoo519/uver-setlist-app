@@ -31,6 +31,8 @@ export interface Live {
   live_date?: string
   setlist_status?: SetlistStatus | null
   setlistfm_id?: string | null
+  starts_at?: string | null
+  collect_after?: string | null
   is_closed?: boolean
   has_predicted?: boolean
   my_prediction_id?: number | string | null
