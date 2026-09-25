@@ -58,6 +58,7 @@ describe('live_monitor', () => {
             await monitor.findTargetLives();
 
             const [sql, params] = db.query.mock.calls[0];
+            expect(sql).toContain('l.date::text AS date');
             expect(sql).toContain("setlist_status IS DISTINCT FROM 'NORMAL'");
             expect(sql).toContain('NOT EXISTS');
             expect(sql).toContain('l.collect_after <= NOW()');

@@ -104,6 +104,18 @@ describe('collector', () => {
         });
     });
 
+    describe('getLive', () => {
+        it('DATE型をタイムゾーン変換しない文字列として取得すること', async () => {
+            xClient.getPosts.mockResolvedValueOnce([makePost()]);
+            db.query.mockResolvedValue({ rows: [{ id: 9999, date: '2026-09-25', type: 'ONEMAN' }] });
+
+            await collector.collect('UVERworld セトリ 日付確認', 9999);
+
+            const liveQuery = db.query.mock.calls.find(([sql]) => sql.includes('FROM lives WHERE id = $1'));
+            expect(liveQuery[0]).toContain('date::text AS date');
+        });
+    });
+
     describe('isPostBeforeLive', () => {
         it('対象公演の前日に投稿されたものを除外すること', () => {
             expect(collector.isPostBeforeLive('2026-09-24T11:53:01Z', {
