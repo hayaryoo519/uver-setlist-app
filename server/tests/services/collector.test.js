@@ -124,6 +124,17 @@ describe('collector', () => {
         });
     });
 
+    describe('getPostTimestamp', () => {
+        it('posted_atがなければXの投稿IDから投稿日時を復元すること', () => {
+            expect(collector.getPostTimestamp({ post_id: '2103090323815834029', posted_at: null }))
+                .toBe('2026-09-24T11:53:01.383Z');
+        });
+
+        it('投稿日時も有効な投稿IDもなければnullを返すこと', () => {
+            expect(collector.getPostTimestamp({ post_id: 'invalid', posted_at: null })).toBeNull();
+        });
+    });
+
     describe('preclassifySetlistPost', () => {
         it('TypeSafe APIキー未設定時は無効として従来処理へ流すこと', async () => {
             await expect(collector.preclassifySetlistPost('本日のセトリ')).resolves.toEqual({
@@ -319,6 +330,21 @@ describe('collector', () => {
                 expect.stringContaining('INSERT INTO raw_setlists'),
                 expect.anything()
             );
+        });
+
+        it('posted_atがなくても投稿IDから前日投稿を判定すること', async () => {
+            collector.getPosts = jest.fn().mockResolvedValue([
+                makePost({ post_id: '2103090323815834029', posted_at: null }),
+            ]);
+            db.query.mockImplementation((sql) => {
+                if (sql.includes('FROM lives')) {
+                    return Promise.resolve({ rows: [{ id: 1717, date: '2026-09-25', venue: 'KT Zepp Yokohama', type: 'LIVEHOUSE' }] });
+                }
+                return Promise.resolve({ rows: [] });
+            });
+
+            await expect(collector.collect('UVERworld セトリ KT Zepp Yokohama', 1717)).resolves.toBe(0);
+            expect(collector.identifySetlist).not.toHaveBeenCalled();
         });
 
         it('ワンマンで曲数が10未満の投稿は候補にしないこと', async () => {
