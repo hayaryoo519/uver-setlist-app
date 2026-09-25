@@ -123,7 +123,7 @@ async function getLive(liveId) {
     let live = null;
     try {
         const result = await db.query(
-            'SELECT id, date, venue, tour_name, type, timezone FROM lives WHERE id = $1',
+            'SELECT id, date::text AS date, venue, tour_name, type, timezone FROM lives WHERE id = $1',
             [liveId]
         );
         live = result.rows[0] ?? null;
