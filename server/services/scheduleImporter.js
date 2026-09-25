@@ -2,6 +2,12 @@ const axios = require('axios');
 const db = require('../db');
 const { normalizeVenueName } = require('../utils/songTranslations');
 const { notifyAdmins } = require('../utils/pushNotification');
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezonePlugin = require('dayjs/plugin/timezone');
+
+dayjs.extend(utc);
+dayjs.extend(timezonePlugin);
 
 /**
  * UVERworld 公式サイトのスケジュールから、出演予定の公演を取り込む。
@@ -174,24 +180,35 @@ function parseVenueFromTitle(title) {
  * 一覧タイトルの開場/開演表記から開演日時と収集開始日時を作る。
  * 通常の「開場/開演」は2番目、昼夜2公演は最後の時刻を採用する。
  */
+function detectTimezone(venue, title = '') {
+    const location = `${venue || ''} ${title}`;
+    if (/taipei|台北|台湾/i.test(location)) return 'Asia/Taipei';
+    if (/韓国|仁川|korea|incheon/i.test(location)) return 'Asia/Seoul';
+    return 'Asia/Tokyo';
+}
+
 function parsePerformanceTimes(date, title, venue) {
     const value = stripTags(title);
+    const timezone = detectTimezone(venue, value);
     const explicitStart = value.match(/(\d{1,2})[:：](\d{2})\s*開演/);
     const times = [...value.matchAll(/(\d{1,2})[:：](\d{2})/g)];
     const start = explicitStart || times.at(-1);
-    if (!start) return { starts_at: null, collect_after: null };
+    if (!start) return { starts_at: null, collect_after: null, timezone };
 
     const hour = Number(start[1]);
     const minute = Number(start[2]);
-    if (hour > 23 || minute > 59) return { starts_at: null, collect_after: null };
+    if (hour > 23 || minute > 59) return { starts_at: null, collect_after: null, timezone };
 
-    const offset = /taipei|台北/i.test(`${venue || ''} ${value}`) ? '+08:00' : '+09:00';
-    const startsAt = new Date(`${date}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00${offset}`);
-    if (Number.isNaN(startsAt.getTime())) return { starts_at: null, collect_after: null };
+    const startsAt = dayjs.tz(
+        `${date} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+        timezone
+    );
+    if (!startsAt.isValid()) return { starts_at: null, collect_after: null, timezone };
 
     return {
         starts_at: startsAt.toISOString(),
-        collect_after: new Date(startsAt.getTime() + 3 * 60 * 60 * 1000).toISOString(),
+        collect_after: startsAt.add(3, 'hour').toISOString(),
+        timezone,
     };
 }
 
@@ -288,13 +305,15 @@ async function linkOfficialSource(liveId, entry, performanceTimes) {
          SET external_source_id = COALESCE(external_source_id, $1),
              import_metadata = COALESCE(import_metadata, '{}'::jsonb) || $2::jsonb,
              starts_at = COALESCE(starts_at, $3),
-             collect_after = COALESCE(collect_after, $4)
-         WHERE id = $5`,
+             collect_after = COALESCE(collect_after, $4),
+             timezone = CASE WHEN timezone = 'Asia/Tokyo' AND $5 <> 'Asia/Tokyo' THEN $5 ELSE timezone END
+         WHERE id = $6`,
         [
             `${SOURCE_NAME}:${entry.sourceId}`,
             JSON.stringify({ source: SOURCE_NAME, source_url: entry.detailUrl, category: entry.category, linked_at: new Date().toISOString() }),
             performanceTimes.starts_at,
             performanceTimes.collect_after,
+            performanceTimes.timezone,
             liveId,
         ]
     );
@@ -404,13 +423,13 @@ async function importSchedule({ dryRun = false } = {}) {
             // 同日同会場の昼夜2公演が同じ値を持つため、一意にできない。
             // 重複は上の findLiveBySourceId / findExistingLive で防ぐ。
             const inserted = await db.query(
-                `INSERT INTO lives (date, venue, tour_name, type, setlist_status, external_source_id, import_metadata, starts_at, collect_after)
-                 VALUES ($1, $2, $3, $4, 'UNKNOWN_SETLIST', $5, $6, $7, $8)
+                `INSERT INTO lives (date, venue, tour_name, type, setlist_status, external_source_id, import_metadata, starts_at, collect_after, timezone)
+                 VALUES ($1, $2, $3, $4, 'UNKNOWN_SETLIST', $5, $6, $7, $8, $9)
                  RETURNING id`,
                 [
                     live.date, live.venue, live.tour_name, live.type, live.external_source_id,
                     JSON.stringify({ source: SOURCE_NAME, source_url: entry.detailUrl, category: entry.category, imported_at: new Date().toISOString() }),
-                    live.starts_at, live.collect_after,
+                    live.starts_at, live.collect_after, live.timezone,
                 ]
             );
 
@@ -468,6 +487,7 @@ module.exports = {
     parseVenue,
     parseVenueFromTitle,
     parsePerformanceTimes,
+    detectTimezone,
     detectType,
     isSameVenue,
     venueKey,
