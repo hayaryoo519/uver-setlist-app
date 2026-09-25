@@ -104,6 +104,26 @@ describe('collector', () => {
         });
     });
 
+    describe('isPostBeforeLive', () => {
+        it('対象公演の前日に投稿されたものを除外すること', () => {
+            expect(collector.isPostBeforeLive('2026-09-24T11:53:01Z', {
+                date: '2026-09-25', venue: 'KT Zepp Yokohama',
+            })).toBe(true);
+        });
+
+        it('公演当日と翌日深夜の投稿は許可すること', () => {
+            const live = { date: '2026-09-25', venue: 'KT Zepp Yokohama' };
+            expect(collector.isPostBeforeLive('2026-09-25T11:00:00Z', live)).toBe(false);
+            expect(collector.isPostBeforeLive('2026-09-25T16:00:00Z', live)).toBe(false);
+        });
+
+        it('台北公演は現地時刻で投稿日を判定すること', () => {
+            expect(collector.isPostBeforeLive('2026-11-20T16:30:00Z', {
+                date: '2026-11-21', venue: 'Zepp New Taipei',
+            })).toBe(false);
+        });
+    });
+
     describe('preclassifySetlistPost', () => {
         it('TypeSafe APIキー未設定時は無効として従来処理へ流すこと', async () => {
             await expect(collector.preclassifySetlistPost('本日のセトリ')).resolves.toEqual({
@@ -281,6 +301,26 @@ describe('collector', () => {
             expect(collector.identifySetlist).not.toHaveBeenCalled();
         });
 
+        it('前日の投稿を連日公演の翌日側へ結び付けないこと', async () => {
+            collector.getPosts = jest.fn().mockResolvedValue([
+                makePost({ posted_at: '2026-09-24T11:53:01Z' }),
+            ]);
+            db.query.mockImplementation((sql) => {
+                if (sql.includes('FROM lives')) {
+                    return Promise.resolve({ rows: [{ id: 1717, date: '2026-09-25', venue: 'KT Zepp Yokohama', type: 'LIVEHOUSE' }] });
+                }
+                return Promise.resolve({ rows: [] });
+            });
+
+            await expect(collector.collect('UVERworld セトリ KT Zepp Yokohama', 1717)).resolves.toBe(0);
+
+            expect(collector.identifySetlist).not.toHaveBeenCalled();
+            expect(db.query).not.toHaveBeenCalledWith(
+                expect.stringContaining('INSERT INTO raw_setlists'),
+                expect.anything()
+            );
+        });
+
         it('ワンマンで曲数が10未満の投稿は候補にしないこと', async () => {
             collector.getPosts = jest.fn().mockResolvedValue([makePost()]);
             collector.identifySetlist.mockResolvedValue({ is_setlist: true, songs: ['CORE PRIDE', 'IMPACT'] });
@@ -398,6 +438,9 @@ describe('collector', () => {
 
             await expect(collector.collect('q5', 1)).resolves.toBe(0);
 
+            const selectCall = db.query.mock.calls.find(([sql]) => sql.includes('SELECT id, duplicate_count'));
+            expect(selectCall[0]).toContain('live_id = $2');
+            expect(selectCall[1][1]).toBe(1);
             const updateCall = db.query.mock.calls.find(([sql]) => sql.includes('UPDATE raw_setlists'));
             expect(updateCall[1][0]).toBe(2); // duplicate_count
             expect(updateCall[1]).toEqual(expect.arrayContaining(['https://x.com/i/status/2', '2']));
