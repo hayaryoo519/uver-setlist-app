@@ -200,6 +200,27 @@ ${parts.join('\n')}
 `;
 }
 
+/**
+ * 対象公演より前の日付に投稿されたセトリを、連日公演へ誤って結び付けない。
+ * 公演後の深夜投稿は許可するため、上限ではなく「公演日より前」だけを除外する。
+ */
+function isPostBeforeLive(postedAt, live) {
+    if (!postedAt || !live?.date) return false;
+
+    const postedDate = new Date(postedAt);
+    if (Number.isNaN(postedDate.getTime())) return false;
+
+    const offsetHours = /taipei|台北/i.test(live.venue || '') ? 8 : 9;
+    const localPostDate = new Date(postedDate.getTime() + offsetHours * 60 * 60 * 1000)
+        .toISOString()
+        .split('T')[0];
+    const liveDate = live.date instanceof Date
+        ? live.date.toISOString().split('T')[0]
+        : String(live.date).split('T')[0];
+
+    return localPostDate < liveDate;
+}
+
 function buildSetlistClassificationState(text, live = null) {
     return {
         task: 'Classify whether this X post should be sent to a slower setlist extraction model.',
@@ -410,6 +431,10 @@ async function collect(query, inputLiveId = null) {
             const inputLive = inputLiveId ? await getLive(inputLiveId) : null;
 
             console.log(`[Collector] Processing post: ${post.post_url || 'no-url'}`);
+            if (inputLive && isPostBeforeLive(post.posted_at, inputLive)) {
+                console.log(`[Collector] Skipping post before target live: ${post.posted_at}`);
+                continue;
+            }
             const preclassification = await module.exports.preclassifySetlistPost(post.text, inputLive);
             if (preclassification.shouldSkip) {
                 console.log(
@@ -455,8 +480,8 @@ async function collect(query, inputLiveId = null) {
 
             // 重複チェック & グルーピング
             const existing = await db.query(
-                'SELECT id, duplicate_count, source_urls, source_post_ids FROM raw_setlists WHERE raw_text_hash = $1',
-                [hash]
+                'SELECT id, duplicate_count, source_urls, source_post_ids FROM raw_setlists WHERE raw_text_hash = $1 AND live_id = $2',
+                [hash, liveId]
             );
 
             if (existing.rows.length > 0) {
@@ -543,6 +568,7 @@ module.exports = {
     matchSong,
     minSongsForType,
     buildLiveContext,
+    isPostBeforeLive,
     MIN_SONG_MATCH_RATE,
     XCollectorAbortError,
     _resetCaches,
