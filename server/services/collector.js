@@ -221,6 +221,20 @@ function isPostBeforeLive(postedAt, live) {
     return localPostDate < liveDate;
 }
 
+function getPostTimestamp(post) {
+    const explicit = new Date(post?.posted_at);
+    if (post?.posted_at && !Number.isNaN(explicit.getTime())) return explicit.toISOString();
+
+    try {
+        if (!post?.post_id || !/^\d+$/.test(String(post.post_id))) return null;
+        const timestamp = (BigInt(post.post_id) >> 22n) + 1288834974657n;
+        const derived = new Date(Number(timestamp));
+        return Number.isNaN(derived.getTime()) ? null : derived.toISOString();
+    } catch {
+        return null;
+    }
+}
+
 function buildSetlistClassificationState(text, live = null) {
     return {
         task: 'Classify whether this X post should be sent to a slower setlist extraction model.',
@@ -431,8 +445,9 @@ async function collect(query, inputLiveId = null) {
             const inputLive = inputLiveId ? await getLive(inputLiveId) : null;
 
             console.log(`[Collector] Processing post: ${post.post_url || 'no-url'}`);
-            if (inputLive && isPostBeforeLive(post.posted_at, inputLive)) {
-                console.log(`[Collector] Skipping post before target live: ${post.posted_at}`);
+            const postTimestamp = getPostTimestamp(post);
+            if (inputLive && isPostBeforeLive(postTimestamp, inputLive)) {
+                console.log(`[Collector] Skipping post before target live: ${postTimestamp}`);
                 continue;
             }
             const preclassification = await module.exports.preclassifySetlistPost(post.text, inputLive);
@@ -569,6 +584,7 @@ module.exports = {
     minSongsForType,
     buildLiveContext,
     isPostBeforeLive,
+    getPostTimestamp,
     MIN_SONG_MATCH_RATE,
     XCollectorAbortError,
     _resetCaches,
