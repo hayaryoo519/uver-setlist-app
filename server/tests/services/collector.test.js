@@ -119,8 +119,14 @@ describe('collector', () => {
 
         it('台北公演は現地時刻で投稿日を判定すること', () => {
             expect(collector.isPostBeforeLive('2026-11-20T16:30:00Z', {
-                date: '2026-11-21', venue: 'Zepp New Taipei',
+                date: '2026-11-21', venue: 'Zepp New Taipei', timezone: 'Asia/Taipei',
             })).toBe(false);
+        });
+
+        it('IANAタイムゾーンで夏時間を考慮すること', () => {
+            const live = { date: '2026-07-01', venue: 'New York', timezone: 'America/New_York' };
+            expect(collector.isPostBeforeLive('2026-07-01T03:30:00Z', live)).toBe(true);
+            expect(collector.isPostBeforeLive('2026-07-01T04:30:00Z', live)).toBe(false);
         });
     });
 

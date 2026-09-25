@@ -3,11 +3,18 @@ const db = require('../db');
 const { authorize, adminCheck } = require('../middleware/authorization');
 const { normalizeVenueName } = require('../utils/songTranslations');
 const { notifyNewLive } = require('../utils/pushNotification');
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezonePlugin = require('dayjs/plugin/timezone');
 
-function parseOptionalTimestamp(value, fieldName) {
+dayjs.extend(utc);
+dayjs.extend(timezonePlugin);
+
+function parseOptionalTimestamp(value, fieldName, timezone = 'Asia/Tokyo') {
     if (value === undefined || value === null || value === '') return null;
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
+    const hasOffset = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value);
+    const parsed = hasOffset ? dayjs(value) : dayjs.tz(value, timezone);
+    if (!parsed.isValid()) {
         const error = new Error(`${fieldName} must be a valid timestamp`);
         error.statusCode = 400;
         throw error;
@@ -18,6 +25,18 @@ function parseOptionalTimestamp(value, fieldName) {
 function validatePerformanceTimes(startsAt, collectAfter) {
     if (startsAt && collectAfter && new Date(collectAfter) < new Date(startsAt)) {
         const error = new Error('collect_after must be after starts_at');
+        error.statusCode = 400;
+        throw error;
+    }
+}
+
+function parseTimezone(value) {
+    const timezone = value || 'Asia/Tokyo';
+    try {
+        new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format();
+        return timezone;
+    } catch {
+        const error = new Error('timezone must be a valid IANA time zone');
         error.statusCode = 400;
         throw error;
     }
@@ -107,7 +126,7 @@ router.get('/', async (req, res) => {
                 GROUP BY l.id
                 ${havingClause}
             )
-            SELECT l.id, l.tour_name, l.title, l.date::text as date, l.venue, l.type, l.prefecture, l.special_note, l.setlistfm_id, l.setlist_status, l.starts_at, l.collect_after
+            SELECT l.id, l.tour_name, l.title, l.date::text as date, l.venue, l.type, l.prefecture, l.special_note, l.setlistfm_id, l.setlist_status, l.starts_at, l.collect_after, l.timezone
         `;
 
         if (include_setlists === 'true') {
@@ -162,7 +181,7 @@ router.get('/:id', async (req, res) => {
 
         // 1. Get Live Details with prediction count (excluding soft deleted)
         const liveRes = await db.query(
-            `SELECT id, tour_name, title, date::text as date, venue, type, prefecture, special_note, setlistfm_id, setlist_status, starts_at, collect_after,
+            `SELECT id, tour_name, title, date::text as date, venue, type, prefecture, special_note, setlistfm_id, setlist_status, starts_at, collect_after, timezone,
                     (SELECT COUNT(*) FROM predictions p WHERE p.live_id = l.id AND p.deleted_at IS NULL) as prediction_count,
                     (SELECT id FROM predictions p WHERE p.live_id = l.id AND p.user_id = $2 AND p.deleted_at IS NULL LIMIT 1) as my_prediction_id
              FROM lives l WHERE id = $1`, 
@@ -200,8 +219,9 @@ router.get('/:id', async (req, res) => {
 router.post('/', authorize, adminCheck, async (req, res) => {
     try {
         const { tour_name, title, date, venue: rawVenue, type = 'ONEMAN', special_note } = req.body;
-        const startsAt = parseOptionalTimestamp(req.body.starts_at, 'starts_at');
-        const collectAfter = parseOptionalTimestamp(req.body.collect_after, 'collect_after');
+        const timezone = parseTimezone(req.body.timezone);
+        const startsAt = parseOptionalTimestamp(req.body.starts_at, 'starts_at', timezone);
+        const collectAfter = parseOptionalTimestamp(req.body.collect_after, 'collect_after', timezone);
         validatePerformanceTimes(startsAt, collectAfter);
 
         // Normalize venue name (translate English to Japanese if applicable)
@@ -211,8 +231,8 @@ router.post('/', authorize, adminCheck, async (req, res) => {
         console.log(`[Venue Translation] Input: "${rawVenue}" -> Output: "${venue}"${rawVenue !== venue ? ' (TRANSLATED)' : ''}`);
 
         const newLive = await db.query(
-            "INSERT INTO lives (tour_name, title, date, venue, type, special_note, starts_at, collect_after) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
-            [tour_name, title, date, venue, type, special_note, startsAt, collectAfter]
+            "INSERT INTO lives (tour_name, title, date, venue, type, special_note, starts_at, collect_after, timezone) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *",
+            [tour_name, title, date, venue, type, special_note, startsAt, collectAfter, timezone]
         );
 
         const createdLive = newLive.rows[0];
@@ -235,8 +255,10 @@ router.put('/:id', authorize, adminCheck, async (req, res) => {
         const { tour_name, title, date, venue, type, special_note } = req.body;
         const hasStartsAt = Object.prototype.hasOwnProperty.call(req.body, 'starts_at');
         const hasCollectAfter = Object.prototype.hasOwnProperty.call(req.body, 'collect_after');
-        const startsAt = parseOptionalTimestamp(req.body.starts_at, 'starts_at');
-        const collectAfter = parseOptionalTimestamp(req.body.collect_after, 'collect_after');
+        const hasTimezone = Object.prototype.hasOwnProperty.call(req.body, 'timezone');
+        const timezone = hasTimezone ? parseTimezone(req.body.timezone) : null;
+        const startsAt = parseOptionalTimestamp(req.body.starts_at, 'starts_at', timezone || 'Asia/Tokyo');
+        const collectAfter = parseOptionalTimestamp(req.body.collect_after, 'collect_after', timezone || 'Asia/Tokyo');
         validatePerformanceTimes(startsAt, collectAfter);
 
         console.log(`[UPDATE LIVE] ID: ${id}, Body:`, req.body);
@@ -245,9 +267,10 @@ router.put('/:id', authorize, adminCheck, async (req, res) => {
             `UPDATE lives
              SET tour_name = $1, title = $2, date = $3, venue = $4, type = $5, special_note = $6,
                  starts_at = CASE WHEN $7 THEN $8 ELSE starts_at END,
-                 collect_after = CASE WHEN $9 THEN $10 ELSE collect_after END
-             WHERE id = $11 RETURNING *`,
-            [tour_name, title, date, venue, type, special_note, hasStartsAt, startsAt, hasCollectAfter, collectAfter, id]
+                 collect_after = CASE WHEN $9 THEN $10 ELSE collect_after END,
+                 timezone = CASE WHEN $11 THEN $12 ELSE timezone END
+             WHERE id = $13 RETURNING *`,
+            [tour_name, title, date, venue, type, special_note, hasStartsAt, startsAt, hasCollectAfter, collectAfter, hasTimezone, timezone, id]
         );
 
         if (updateLive.rows.length === 0) {

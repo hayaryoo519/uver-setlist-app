@@ -7,14 +7,19 @@ import { apiClient } from '../../../lib/apiClient';
 import type { Live } from '../../../types/api';
 import SetlistEditor from '../SetlistEditor';
 
-const emptyLiveForm = { tour_name: '', title: '', date: '', venue: '', type: 'ONEMAN', special_note: '', starts_at: '', collect_after: '' };
+const emptyLiveForm = { tour_name: '', title: '', date: '', venue: '', type: 'ONEMAN', special_note: '', starts_at: '', collect_after: '', timezone: 'Asia/Tokyo' };
 
-const toDateTimeLocal = (value?: string | null) => {
+const toDateTimeLocal = (value?: string | null, timezone = 'Asia/Tokyo') => {
     if (!value) return '';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '';
-    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60 * 1000);
-    return local.toISOString().slice(0, 16);
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(date);
+    const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+    return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}`;
 };
 
 type SetlistStatusFilter = 'ALL' | 'NORMAL' | 'UNKNOWN_SETLIST';
@@ -98,6 +103,7 @@ const AdminLivesTab = ({ initialEditId }: { initialEditId?: number }) => {
 
     const openAddLive = () => { setEditingLive(null); setLiveFormData(emptyLiveForm); setShowLiveModal(true); };
     const openEditLive = (live: Live) => {
+        const timezone = live.timezone || 'Asia/Tokyo';
         setEditingLive(live);
         setLiveFormData({
             tour_name: live.tour_name,
@@ -106,8 +112,9 @@ const AdminLivesTab = ({ initialEditId }: { initialEditId?: number }) => {
             venue: live.venue,
             type: live.type || 'ONEMAN',
             special_note: live.special_note || '',
-            starts_at: toDateTimeLocal(live.starts_at),
-            collect_after: toDateTimeLocal(live.collect_after),
+            starts_at: toDateTimeLocal(live.starts_at, timezone),
+            collect_after: toDateTimeLocal(live.collect_after, timezone),
+            timezone,
         });
         setShowLiveModal(true);
     };
@@ -118,8 +125,8 @@ const AdminLivesTab = ({ initialEditId }: { initialEditId?: number }) => {
         try {
             const payload = {
                 ...liveFormData,
-                starts_at: liveFormData.starts_at ? new Date(liveFormData.starts_at).toISOString() : null,
-                collect_after: liveFormData.collect_after ? new Date(liveFormData.collect_after).toISOString() : null,
+                starts_at: liveFormData.starts_at || null,
+                collect_after: liveFormData.collect_after || null,
             };
             if (editingLive) {
                 await apiClient.put(`/api/lives/${editingLive.id}`, payload);
@@ -308,6 +315,19 @@ const AdminLivesTab = ({ initialEditId }: { initialEditId?: number }) => {
                             <div className="form-group"><label>Date</label><input type="date" required value={liveFormData.date} onChange={e => setLiveFormData({ ...liveFormData, date: e.target.value })} /></div>
                             <div className="form-group"><label>開演日時（任意）</label><input type="datetime-local" value={liveFormData.starts_at} onChange={e => setLiveFormData({ ...liveFormData, starts_at: e.target.value })} /></div>
                             <div className="form-group"><label>収集開始日時（任意）</label><input type="datetime-local" min={liveFormData.starts_at || undefined} value={liveFormData.collect_after} onChange={e => setLiveFormData({ ...liveFormData, collect_after: e.target.value })} /></div>
+                            <div className="form-group">
+                                <label>タイムゾーン</label>
+                                <input type="text" required list="timezone-suggestions" value={liveFormData.timezone} onChange={e => setLiveFormData({ ...liveFormData, timezone: e.target.value })} />
+                                <datalist id="timezone-suggestions">
+                                    <option value="Asia/Tokyo" />
+                                    <option value="Asia/Seoul" />
+                                    <option value="Asia/Taipei" />
+                                    <option value="Asia/Singapore" />
+                                    <option value="Europe/London" />
+                                    <option value="America/Los_Angeles" />
+                                    <option value="America/New_York" />
+                                </datalist>
+                            </div>
                             <div className="form-group">
                                 <label>Venue</label>
                                 <input type="text" required value={liveFormData.venue} onChange={e => {
