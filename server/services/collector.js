@@ -123,7 +123,7 @@ async function getLive(liveId) {
     let live = null;
     try {
         const result = await db.query(
-            'SELECT id, date, venue, tour_name, type FROM lives WHERE id = $1',
+            'SELECT id, date, venue, tour_name, type, timezone FROM lives WHERE id = $1',
             [liveId]
         );
         live = result.rows[0] ?? null;
@@ -210,10 +210,20 @@ function isPostBeforeLive(postedAt, live) {
     const postedDate = new Date(postedAt);
     if (Number.isNaN(postedDate.getTime())) return false;
 
-    const offsetHours = /taipei|台北/i.test(live.venue || '') ? 8 : 9;
-    const localPostDate = new Date(postedDate.getTime() + offsetHours * 60 * 60 * 1000)
-        .toISOString()
-        .split('T')[0];
+    let timezone = live.timezone || 'Asia/Tokyo';
+    try {
+        new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format(postedDate);
+    } catch {
+        timezone = 'Asia/Tokyo';
+    }
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).formatToParts(postedDate);
+    const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+    const localPostDate = `${values.year}-${values.month}-${values.day}`;
     const liveDate = live.date instanceof Date
         ? live.date.toISOString().split('T')[0]
         : String(live.date).split('T')[0];

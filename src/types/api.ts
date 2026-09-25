@@ -33,6 +33,7 @@ export interface Live {
   setlistfm_id?: string | null
   starts_at?: string | null
   collect_after?: string | null
+  timezone?: string
   is_closed?: boolean
   has_predicted?: boolean
   my_prediction_id?: number | string | null

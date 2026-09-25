@@ -152,6 +152,7 @@ describe('scheduleImporter', () => {
             expect(importer.parsePerformanceTimes('2026-09-24', 'KT Zepp Yokohama 17:30/18:30', 'KT Zepp Yokohama')).toEqual({
                 starts_at: '2026-09-24T09:30:00.000Z',
                 collect_after: '2026-09-24T12:30:00.000Z',
+                timezone: 'Asia/Tokyo',
             });
         });
 
@@ -159,6 +160,7 @@ describe('scheduleImporter', () => {
             expect(importer.parsePerformanceTimes('2026-11-21', 'Zepp New Taipei 17:30開場/19:00開演（現地時間）', 'Zepp New Taipei')).toEqual({
                 starts_at: '2026-11-21T11:00:00.000Z',
                 collect_after: '2026-11-21T14:00:00.000Z',
+                timezone: 'Asia/Taipei',
             });
         });
 
@@ -166,6 +168,7 @@ describe('scheduleImporter', () => {
             expect(importer.parsePerformanceTimes('2026-12-25', '日本武道館 day 13:00/14:00 night 18:00/19:00', '日本武道館')).toEqual({
                 starts_at: '2026-12-25T10:00:00.000Z',
                 collect_after: '2026-12-25T13:00:00.000Z',
+                timezone: 'Asia/Tokyo',
             });
         });
 
@@ -173,6 +176,15 @@ describe('scheduleImporter', () => {
             expect(importer.parsePerformanceTimes('2026-08-15', 'RISING SUN ROCK FESTIVAL', '石狩湾新港')).toEqual({
                 starts_at: null,
                 collect_after: null,
+                timezone: 'Asia/Tokyo',
+            });
+        });
+
+        it('韓国公演はAsia/Seoulとして扱うこと', () => {
+            expect(importer.parsePerformanceTimes('2026-10-04', '仁川 17:00/18:00', '韓国・仁川パラダイスシティ')).toEqual({
+                starts_at: '2026-10-04T09:00:00.000Z',
+                collect_after: '2026-10-04T12:00:00.000Z',
+                timezone: 'Asia/Seoul',
             });
         });
     });
