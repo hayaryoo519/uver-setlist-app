@@ -63,7 +63,7 @@ async function findTargetLives() {
     const targetDates = [todayString, yesterdayString];
 
     const result = await db.query(
-        `SELECT l.*
+        `SELECT l.*, l.date::text AS date
          FROM lives l
          WHERE l.date = ANY($1::date[])
            AND (
