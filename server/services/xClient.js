@@ -63,7 +63,7 @@ function decodeEntities(text) {
  * twitter-cli 0.8.5 の実際のフィールド名は camelCase（createdAtISO / screenName /
  * isRetweet）。他バックエンドや将来の変更に備えて snake_case も見る。
  *
- * @returns {{post_id: string, post_url: string, posted_at: string|null, author: string|null, text: string, is_retweet: boolean, raw: object}}
+ * @returns {{post_id: string, post_url: string, posted_at: string|null, author: string|null, author_id: string|null, text: string, is_retweet: boolean, raw: object}}
  */
 function normalizeTwitterPost(tweet) {
     const postId = tweet.id ?? tweet.id_str ?? tweet.rest_id ?? null;
@@ -75,6 +75,7 @@ function normalizeTwitterPost(tweet) {
         tweet.username ??
         null;
     const author = screenName ?? tweet.author?.name ?? null;
+    const authorId = tweet.author?.id ?? tweet.author?.id_str ?? tweet.user?.id_str ?? tweet.user?.id ?? null;
 
     let postUrl = tweet.url ?? tweet.permalink ?? null;
     if (!postUrl && postId) {
@@ -92,6 +93,7 @@ function normalizeTwitterPost(tweet) {
             tweet.timestamp ??
             null,
         author,
+        author_id: authorId != null ? String(authorId) : null,
         text: decodeEntities(tweet.text ?? tweet.full_text ?? tweet.content ?? ''),
         is_retweet: Boolean(tweet.isRetweet ?? tweet.is_retweet ?? tweet.retweeted ?? false),
         raw: tweet,
