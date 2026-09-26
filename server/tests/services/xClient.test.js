@@ -39,7 +39,7 @@ describe('xClient', () => {
                 text: 'UVERworld セトリ',
                 createdAtISO: '2026-08-11T12:45:57+00:00',
                 createdAt: 'Tue Aug 11 12:45:57 +0000 2026',
-                author: { name: '表示名', screenName: 'uver_fan' },
+                author: { id: '12345', name: '表示名', screenName: 'uver_fan' },
                 isRetweet: false,
             });
 
@@ -48,6 +48,7 @@ describe('xClient', () => {
                 post_url: 'https://x.com/uver_fan/status/2086072522588737870',
                 posted_at: '2026-08-11T12:45:57+00:00',
                 author: 'uver_fan',
+                author_id: '12345',
                 text: 'UVERworld セトリ',
                 is_retweet: false,
             });
@@ -92,6 +93,7 @@ describe('xClient', () => {
             const post = normalizeTwitterPost({ id: '1' });
             expect(post.posted_at).toBeNull();
             expect(post.author).toBeNull();
+            expect(post.author_id).toBeNull();
             expect(post.text).toBe('');
         });
     });

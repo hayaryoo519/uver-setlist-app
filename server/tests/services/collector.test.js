@@ -247,6 +247,13 @@ describe('collector', () => {
             expect(many).toBeGreaterThan(single);
         });
 
+        it('公式投稿は信頼度を加点すること', () => {
+            const normal = collector.calculateConfidence(parsed(20, 20), 1, '#セトリ', 'LIVEHOUSE', false);
+            const official = collector.calculateConfidence(parsed(20, 20), 1, '#セトリ', 'LIVEHOUSE', true);
+            expect(official).toBe(0.9);
+            expect(official).toBeGreaterThan(normal);
+        });
+
         it('曲が0件なら0を返すこと', () => {
             expect(collector.calculateConfidence([], 1, '')).toBe(0);
         });
@@ -261,6 +268,16 @@ describe('collector', () => {
             const score = collector.calculateConfidence(parsed(30, 30), 10, '');
             expect(score).toBeGreaterThanOrEqual(0);
             expect(score).toBeLessThanOrEqual(1);
+        });
+    });
+
+    describe('isOfficialSource', () => {
+        it('UVERworld公式の固定ユーザーIDを公式扱いすること', () => {
+            expect(collector.isOfficialSource({ author_id: '150742452', author: 'UVERworld_dR2' })).toBe(true);
+        });
+
+        it('同じハンドル名でもユーザーIDが異なれば公式扱いしないこと', () => {
+            expect(collector.isOfficialSource({ author_id: '999', author: 'UVERworld_dR2' })).toBe(false);
         });
     });
 
@@ -466,6 +483,27 @@ describe('collector', () => {
             );
         });
 
+        it('公式アカウントの投稿は公式フラグと加点を付けて登録すること', async () => {
+            collector.getPosts = jest.fn().mockResolvedValue([makePost({
+                post_id: '1000', post_url: 'https://x.com/UVERworld_dR2/status/1000', author_id: '150742452',
+            })]);
+            collector.identifySetlist.mockResolvedValue({ is_setlist: true, songs: TWELVE_SONGS });
+
+            db.query.mockImplementation((sql) => {
+                if (sql.includes('FROM songs')) return Promise.resolve({ rows: SONGS });
+                if (sql.includes('SELECT id, duplicate_count')) return Promise.resolve({ rows: [] });
+                if (sql.includes('INSERT INTO raw_setlists')) return Promise.resolve({ rows: [{ id: 11 }] });
+                return Promise.resolve({ rows: [] });
+            });
+
+            await collector.collect('official', 1);
+
+            const insertCall = db.query.mock.calls.find(([sql]) => sql.includes('INSERT INTO raw_setlists'));
+            expect(insertCall[0]).toContain('official_setlist');
+            expect(insertCall[1].at(-1)).toBe(true);
+            expect(insertCall[1].at(-2)).toBeGreaterThanOrEqual(0.7);
+        });
+
         it('同一内容の別投稿は duplicate_count を増やし URL を追記すること', async () => {
             collector.getPosts = jest.fn().mockResolvedValue([makePost({ post_id: '2', post_url: 'https://x.com/i/status/2' })]);
             collector.identifySetlist.mockResolvedValue({ is_setlist: true, songs: TWELVE_SONGS });
@@ -510,6 +548,30 @@ describe('collector', () => {
                 expect.stringContaining('UPDATE raw_setlists'),
                 expect.anything()
             );
+        });
+
+        it('登録済みの同一投稿でも公式ソースなら公式フラグへ昇格すること', async () => {
+            collector.getPosts = jest.fn().mockResolvedValue([makePost({
+                post_id: '1', author_id: '150742452', author: 'UVERworld_dR2',
+            })]);
+            collector.identifySetlist.mockResolvedValue({ is_setlist: true, songs: TWELVE_SONGS });
+
+            db.query.mockImplementation((sql) => {
+                if (sql.includes('FROM songs')) return Promise.resolve({ rows: SONGS });
+                if (sql.includes('SELECT id, duplicate_count')) {
+                    return Promise.resolve({ rows: [{
+                        id: 10, duplicate_count: 1, source_urls: [], source_post_ids: ['1'], official_setlist: false,
+                    }] });
+                }
+                return Promise.resolve({ rows: [] });
+            });
+
+            await collector.collect('official-upgrade', 1);
+
+            const updateCall = db.query.mock.calls.find(([sql]) => sql.includes('SET official_setlist = true'));
+            expect(updateCall).toBeDefined();
+            expect(updateCall[1][0]).toBeGreaterThanOrEqual(0.7);
+            expect(updateCall[1][1]).toBe(10);
         });
 
         it('同一ライブ×同一クエリはレート制限でスキップすること', async () => {
