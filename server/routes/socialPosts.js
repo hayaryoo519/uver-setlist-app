@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const crypto = require('crypto');
 const db = require('../db');
+const { createOnThisDayDraft } = require('../services/socialPostDrafts');
 const { authorize, adminCheck } = require('../middleware/authorization');
 
 router.use(authorize);
@@ -26,11 +27,6 @@ function parseXPostUrl(value) {
 
 function lineList(rows, formatter) {
     return rows.map((row, index) => formatter(row, index)).join('\n');
-}
-
-function buildOnThisDay(live, songs) {
-    const years = new Date().getFullYear() - new Date(live.date).getFullYear();
-    return `【今日は${years}年前】\n${new Date(live.date).toLocaleDateString('ja-JP')}、UVERworldは\n${live.venue}でライブを開催しました🎸\n\n📋 その日のセトリ（全${songs.length}曲）\n${lineList(songs.slice(0, 8), (song, i) => `${i + 1}. ${song.title}`)}${songs.length > 8 ? '\n… 続きはこちら👇' : ''}\n${APP_URL}/live/${live.id}\n\n#UVERworld #OnThisDay`;
 }
 
 function buildFrequentRanking(rows, totalLives) {
@@ -60,13 +56,6 @@ function buildDebutAnniversary(song) {
 }
 
 async function generatePost(postType, req) {
-    if (postType === 'on_this_day') {
-        const liveResult = await db.query(`SELECT l.id, l.date, l.venue FROM lives l WHERE TO_CHAR(l.date, 'MM-DD') = TO_CHAR(CURRENT_DATE, 'MM-DD') AND l.date < CURRENT_DATE AND (l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists s WHERE s.live_id = l.id)) ORDER BY l.date DESC LIMIT 1`);
-        if (!liveResult.rows.length) throw Object.assign(new Error('今日は過去ライブの対象データがありません'), { statusCode: 422 });
-        const songs = await db.query('SELECT s.title FROM setlists sl JOIN songs s ON s.id = sl.song_id WHERE sl.live_id = $1 ORDER BY sl.position', [liveResult.rows[0].id]);
-        return { body: buildOnThisDay(liveResult.rows[0], songs.rows), liveId: liveResult.rows[0].id, keyPart: `on_this_day:${new Date().toISOString().slice(0, 10)}` };
-    }
-
     if (postType === 'frequent_ranking') {
         const rows = await db.query(`SELECT s.title, COUNT(*)::int AS cnt FROM setlists sl JOIN songs s ON s.id = sl.song_id JOIN lives l ON l.id = sl.live_id WHERE l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists s2 WHERE s2.live_id = l.id) GROUP BY s.id, s.title ORDER BY cnt DESC, s.title LIMIT 10`);
         const total = await db.query(`SELECT COUNT(DISTINCT l.id)::int AS count FROM lives l WHERE l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists s WHERE s.live_id = l.id)`);
@@ -134,6 +123,11 @@ router.post('/generate', async (req, res) => {
     const postType = String(req.body.postType || '');
     if (!POST_TYPES.has(postType)) return res.status(400).json({ message: '無効な投稿カテゴリです' });
     try {
+        if (postType === 'on_this_day') {
+            const draft = await createOnThisDayDraft({ createdBy: req.user.user_id || req.user.id });
+            if (!draft) return res.status(422).json({ message: '今日は対象データがないか、下書きが作成済みです' });
+            return res.status(201).json(draft);
+        }
         const generated = await generatePost(postType, req);
         const key = crypto.createHash('sha256').update(`x:${generated.keyPart}`).digest('hex');
         const result = await db.query(`INSERT INTO social_posts (platform, post_type, live_id, body, idempotency_key, created_by) VALUES ('x', $1, $2, $3, $4, $5) ON CONFLICT (idempotency_key) DO UPDATE SET body = EXCLUDED.body, updated_at = NOW() RETURNING *`, [postType, generated.liveId || null, generated.body.slice(0, 280), key, req.user.user_id || req.user.id]);
