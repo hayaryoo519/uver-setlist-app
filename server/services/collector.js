@@ -108,6 +108,14 @@ const MIN_SONGS_DEFAULT = 10;
 // UVERworld の曲がこの割合を下回るセトリは対象外とする。
 // 同じフェスに出演した他アーティストのセトリが同一クエリで大量に引っかかるため。
 const MIN_SONG_MATCH_RATE = 0.3;
+const OFFICIAL_X_USER_IDS = new Set([
+    '150742452', // UVERworld Staff (@UVERworld_dR2)
+    ...String(process.env.OFFICIAL_X_USER_IDS || '').split(',').map((id) => id.trim()).filter(Boolean),
+]);
+
+function isOfficialSource(post) {
+    return Boolean(post?.author_id && OFFICIAL_X_USER_IDS.has(String(post.author_id)));
+}
 
 // ライブ情報のキャッシュ（1回の collect 内で同じライブを何度も引かない）
 const liveCache = new Map();
@@ -372,7 +380,7 @@ is_setlist を true にする例:
  * @param {Array} parsedSongs buildParsedSongs() の戻り値
  * @param {string|null} liveType 公演種別。フェス・イベントは曲数の期待値が異なる
  */
-function calculateConfidence(parsedSongs, duplicateCount = 1, rawText = '', liveType = null) {
+function calculateConfidence(parsedSongs, duplicateCount = 1, rawText = '', liveType = null, officialSource = false) {
     const total = parsedSongs.length;
     if (total === 0) return 0;
 
@@ -397,6 +405,9 @@ function calculateConfidence(parsedSongs, duplicateCount = 1, rawText = '', live
     const noiseMatches = rawText.match(/[!?#$%^]/g);
     if (!noiseMatches) score += 0.2;
     else if (noiseMatches.length <= 15) score += 0.1;
+
+    // 公式アカウントはXの固定ユーザーIDで判定する。表示名・ハンドル名は改名や偽装が可能なため使わない。
+    if (officialSource) score += 0.2;
 
     return Math.max(0, Math.min(1, Number(score.toFixed(2))));
 }
@@ -505,7 +516,7 @@ async function collect(query, inputLiveId = null) {
 
             // 重複チェック & グルーピング
             const existing = await db.query(
-                'SELECT id, duplicate_count, source_urls, source_post_ids FROM raw_setlists WHERE raw_text_hash = $1 AND live_id = $2',
+                'SELECT id, duplicate_count, source_urls, source_post_ids, official_setlist FROM raw_setlists WHERE raw_text_hash = $1 AND live_id = $2',
                 [hash, liveId]
             );
 
@@ -515,22 +526,36 @@ async function collect(query, inputLiveId = null) {
 
                 // 別クエリで同じ投稿を再取得した場合はカウントしない
                 if (knownPostIds.includes(post.post_id)) {
+                    if (!draft.official_setlist && isOfficialSource(post)) {
+                        const officialConfidence = calculateConfidence(
+                            parsedSongs, draft.duplicate_count || 1, post.text, liveType, true
+                        );
+                        await db.query(
+                            `UPDATE raw_setlists
+                             SET official_setlist = true, confidence = $1, updated_at = NOW()
+                             WHERE id = $2`,
+                            [officialConfidence, draft.id]
+                        );
+                        console.log(`[Grouping] Upgraded Draft #${draft.id} to official source`);
+                    }
                     console.log(`[Grouping] Post ${post.post_id} already counted in Draft #${draft.id}`);
                     continue;
                 }
 
                 const newCount = (draft.duplicate_count || 1) + 1;
-                const newConfidence = calculateConfidence(parsedSongs, newCount, post.text, liveType);
+                const officialSetlist = Boolean(draft.official_setlist || isOfficialSource(post));
+                const newConfidence = calculateConfidence(parsedSongs, newCount, post.text, liveType, officialSetlist);
 
                 await db.query(
                     `UPDATE raw_setlists
                      SET duplicate_count = $1,
                          confidence = $2,
-                         source_urls = array_append(COALESCE(source_urls, ARRAY[]::TEXT[]), $3),
-                         source_post_ids = array_append(COALESCE(source_post_ids, ARRAY[]::TEXT[]), $4),
+                         official_setlist = $3,
+                         source_urls = array_append(COALESCE(source_urls, ARRAY[]::TEXT[]), $4),
+                         source_post_ids = array_append(COALESCE(source_post_ids, ARRAY[]::TEXT[]), $5),
                          updated_at = NOW()
-                     WHERE id = $5`,
-                    [newCount, newConfidence, post.post_url, post.post_id, draft.id]
+                     WHERE id = $6`,
+                    [newCount, newConfidence, officialSetlist, post.post_url, post.post_id, draft.id]
                 );
                 stats.grouped++;
                 console.log(`[Grouping] Updated Draft #${draft.id} (Count: ${newCount})`);
@@ -538,12 +563,13 @@ async function collect(query, inputLiveId = null) {
             }
 
             // 新規作成
-            const confidence = calculateConfidence(parsedSongs, 1, post.text, liveType);
+            const officialSetlist = isOfficialSource(post);
+            const confidence = calculateConfidence(parsedSongs, 1, post.text, liveType, officialSetlist);
 
             console.log(`[Collector] Creating new draft with live_id=${liveId}`);
             const insertResult = await db.query(
-                `INSERT INTO raw_setlists (live_id, source, raw_text, parsed_json, status, source_url, source_urls, source_post_ids, raw_text_hash, confidence, duplicate_count)
-                 VALUES ($1, 'x', $2, $3, 'pending', $4, $5, $6, $7, $8, 1)
+                `INSERT INTO raw_setlists (live_id, source, raw_text, parsed_json, status, source_url, source_urls, source_post_ids, raw_text_hash, confidence, duplicate_count, official_setlist)
+                 VALUES ($1, 'x', $2, $3, 'pending', $4, $5, $6, $7, $8, 1, $9)
                  RETURNING *`,
                 [
                     liveId,
@@ -554,6 +580,7 @@ async function collect(query, inputLiveId = null) {
                     [post.post_id],
                     hash,
                     confidence,
+                    officialSetlist,
                 ]
             );
 
@@ -594,6 +621,7 @@ module.exports = {
     minSongsForType,
     buildLiveContext,
     isPostBeforeLive,
+    isOfficialSource,
     getPostTimestamp,
     MIN_SONG_MATCH_RATE,
     XCollectorAbortError,
