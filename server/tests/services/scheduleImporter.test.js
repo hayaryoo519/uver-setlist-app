@@ -46,6 +46,31 @@ const DETAIL_HTML = `
     <p class="value">石狩湾新港樽川ふ頭横野外特設ステージ</p>
 </div>`;
 
+const NEWS_LIST_HTML = `
+<ul class="newsList clearfix">
+    <li class="clearfix">
+        <a href="/news/detail/3231">
+            <div class="data"><p class="cate">NEWS</p><p class="date">2026.09.24</p></div>
+            <p class="tit">【LIVE】UVERworld VS シリーズ”UVERworld vs BE:FIRST”開催決定</p>
+        </a>
+    </li>
+    <li class="clearfix">
+        <a href="/news/detail/3229">
+            <div class="data"><p class="cate">NEWS</p><p class="date">2026.09.24</p></div>
+            <p class="tit">開催についてのご案内と注意事項（UVERworld vs BE:FIRST）</p>
+        </a>
+    </li>
+</ul>`;
+
+const NEWS_DETAIL_HTML = `
+<article><div class="txt">
+    <p>12/26 日本武道館にてUVERworld VS シリーズの開催が決定。</p>
+    <p>”UVERworld vs BE:FIRST”</p>
+    <p>2026年12月26日(土) 日本武道館</p>
+    <p>OPEN 17:00 /START 18:00</p>
+    <p>受付期間：2026年10月01日（木）12:00～</p>
+</div></article>`;
+
 describe('scheduleImporter', () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -93,6 +118,65 @@ describe('scheduleImporter', () => {
 
         it('次月リンクがなければ null を返すこと', () => {
             expect(importer.parseNextMonthUrl('<html></html>')).toBeNull();
+        });
+    });
+
+    describe('parseNewsList', () => {
+        it('ライブ発表だけをニュース一覧から抽出すること', () => {
+            expect(importer.parseNewsList(NEWS_LIST_HTML)).toEqual([{
+                sourceId: 'news:3231',
+                publishedDate: '2026-09-24',
+                category: 'NEWS',
+                title: 'UVERworld VS シリーズ”UVERworld vs BE:FIRST”',
+                detailUrl: 'https://www.uverworld.jp/news/detail/3231',
+            }]);
+        });
+    });
+
+    describe('parseNewsDetail', () => {
+        it('公演日・会場・開演時刻をニュース本文から抽出すること', () => {
+            const entry = importer.parseNewsList(NEWS_LIST_HTML)[0];
+            expect(importer.parseNewsDetail(entry, NEWS_DETAIL_HTML)).toEqual(expect.objectContaining({
+                date: '2026-12-26',
+                venue: '日本武道館',
+                performanceTitle: 'UVERworld VS シリーズ”UVERworld vs BE:FIRST” 18:00開演',
+            }));
+        });
+
+        it('UVERworldの出演日が明記されたフェスではその日を優先すること', () => {
+            const entry = { title: 'XMF 2026', publishedDate: '2026-09-10' };
+            const html = `<div class="txt"><p>開催日時 2026年10月03日・04日</p><p>UVERworldの出演は「10月04日」です。</p><p>会場：韓国・仁川パラダイスシティ</p></div>`;
+            expect(importer.parseNewsDetail(entry, html)).toEqual(expect.objectContaining({
+                date: '2026-10-04',
+                venue: '韓国・仁川パラダイスシティ',
+            }));
+        });
+
+        it('公演日が未定のニュースは登録対象にしないこと', () => {
+            expect(importer.parseNewsDetail(
+                { title: 'UVERworld18祭', publishedDate: '2026-09-18' },
+                '<div class="txt"><p>開催が決定しました。詳細は後日発表します。</p></div>'
+            )).toBeNull();
+        });
+
+        it('異体字の日付と時刻が前置された開演表記を扱うこと', () => {
+            const entry = { title: 'YURIN LIVE vol.5', publishedDate: '2026-08-25' };
+            const html = `<div class="txt"><p>2026年10⽉28⽇(水)</p><p>大阪城ホール</p><p>17:30 OPEN / 18:30 START</p><p>会場：大阪城ホール</p></div>`;
+            expect(importer.parseNewsDetail(entry, html)).toEqual(expect.objectContaining({
+                date: '2026-10-28',
+                venue: '大阪城ホール',
+                performanceTitle: 'YURIN LIVE vol.5 18:30開演',
+            }));
+        });
+
+        it('開場/開演表記では開演側の時刻を採用すること', () => {
+            const entry = { title: 'Zepp New Taipei 単独公演', publishedDate: '2026-08-08' };
+            const html = `<div class="txt"><p>日程：2026年11月21日（土）</p><p>開場/開演：17:30開場/19:00開演</p><p>会場：Zepp New Taipei</p></div>`;
+            expect(importer.parseNewsDetail(entry, html)).toEqual(expect.objectContaining({
+                date: '2026-11-21',
+                venue: 'Zepp New Taipei',
+                performanceTitle: 'Zepp New Taipei 単独公演 19:00開演',
+            }));
         });
     });
 
@@ -282,7 +366,54 @@ describe('scheduleImporter', () => {
 
             const detailCalls = axios.get.mock.calls.filter(([url]) => url.includes('/detail/'));
             expect(detailCalls).toHaveLength(0);
-            expect(axios.get).toHaveBeenCalledTimes(1); // 一覧のみ
+            expect(axios.get).toHaveBeenCalledTimes(2); // スケジュール一覧とニュース一覧
+        });
+
+        it('スケジュール一覧に未掲載のニュース発表を追加すること', async () => {
+            axios.get.mockImplementation((url) => {
+                if (url.endsWith('/news/')) return Promise.resolve({ data: NEWS_LIST_HTML });
+                if (url.includes('/news/detail/')) return Promise.resolve({ data: NEWS_DETAIL_HTML });
+                return Promise.resolve({ data: LIST_HTML });
+            });
+            db.query.mockImplementation((sql) => {
+                if (sql.includes('INSERT INTO lives')) return Promise.resolve({ rows: [{ id: 900 }] });
+                return Promise.resolve({ rows: [] });
+            });
+
+            const stats = await importer.importSchedule();
+
+            expect(stats.fetched).toBe(3);
+            expect(stats.created).toBe(3);
+            const newsInsert = db.query.mock.calls.find(
+                ([sql, params]) => sql.includes('INSERT INTO lives') && params?.includes('uverworld.jp:news:3231')
+            );
+            expect(newsInsert[1]).toEqual(expect.arrayContaining([
+                '2026-12-26',
+                '日本武道館',
+                'uverworld.jp:news:3231',
+                '2026-12-26T09:00:00.000Z',
+            ]));
+        });
+
+        it('ニュース発表と同じ公演が手動登録済みなら二重登録しないこと', async () => {
+            axios.get.mockImplementation((url) => {
+                if (url.endsWith('/news/')) return Promise.resolve({ data: NEWS_LIST_HTML });
+                if (url.includes('/news/detail/')) return Promise.resolve({ data: NEWS_DETAIL_HTML });
+                return Promise.resolve({ data: '<html></html>' });
+            });
+            db.query.mockImplementation((sql) => {
+                if (sql.includes('external_source_id = $1')) return Promise.resolve({ rows: [] });
+                if (sql.includes('SELECT id, venue, tour_name FROM lives')) {
+                    return Promise.resolve({ rows: [{ id: 1754, venue: '日本武道館', tour_name: 'UVERworld vs BE:FIRST' }] });
+                }
+                return Promise.resolve({ rows: [] });
+            });
+
+            const stats = await importer.importSchedule();
+
+            expect(stats.created).toBe(0);
+            expect(stats.skipped).toBe(1);
+            expect(db.query).not.toHaveBeenCalledWith(expect.stringContaining('INSERT INTO lives'), expect.anything());
         });
 
         // HTML構造が変わるとパースが黙って0件になるため、異常として記録する
