@@ -32,6 +32,7 @@ dayjs.extend(timezonePlugin);
 
 const BASE_URL = 'https://www.uverworld.jp';
 const LIST_URL = `${BASE_URL}/schedule/list/`;
+const NEWS_URL = `${BASE_URL}/news/`;
 const SOURCE_NAME = 'uverworld.jp';
 const REQUEST_TIMEOUT_MS = 15 * 1000;
 const DETAIL_INTERVAL_MS = 1000; // 詳細ページの連続取得を避ける
@@ -40,6 +41,8 @@ const USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, l
 
 // 一覧のカテゴリ。ライブ関連のみ取り込み、TICKET/RELEASE/TV 等は対象外
 const LIVE_CATEGORIES = new Set(['TOUR', 'EVENT']);
+const LIVE_NEWS_TITLE = /(【(?:LIVE|フェス|ライブ|LIVE・対バン)】|出演決定|公演開催決定|VS シリーズ.*開催決定)/i;
+const EXCLUDED_NEWS_TITLE = /(開催についてのご案内|グッズ|チケット|放送|配信)/;
 
 async function logToDb(level, message, details = null) {
     try {
@@ -120,6 +123,99 @@ function parseNextMonthUrl(html) {
     const year = Number(match[1]);
     const month = Number(match[2]);
     return `${BASE_URL}/schedule/list/${year}/${String(month).padStart(2, '0')}/`;
+}
+
+/**
+ * ニュース一覧から、公演発表と思われる記事だけを抽出する。
+ * 公演日はニュース公開日ではなく、詳細本文から別途取得する。
+ */
+function parseNewsList(html) {
+    const entries = [];
+    const itemRe = /<li[^>]*class="[^"]*clearfix[^"]*"[^>]*>[\s\S]*?<\/li>/g;
+
+    for (const block of html.match(itemRe) || []) {
+        const idMatch = block.match(/href="\/news\/detail\/(\d+)"/);
+        const titleMatch = block.match(/<p class="tit">([\s\S]*?)<\/p>/);
+        const publishedMatch = block.match(/<p class="date">(\d{4})\.(\d{2})\.(\d{2})<\/p>/);
+        if (!idMatch || !titleMatch || !publishedMatch) continue;
+
+        const title = stripTags(titleMatch[1]);
+        if (!LIVE_NEWS_TITLE.test(title) || EXCLUDED_NEWS_TITLE.test(title)) continue;
+
+        entries.push({
+            sourceId: `news:${idMatch[1]}`,
+            publishedDate: `${publishedMatch[1]}-${publishedMatch[2]}-${publishedMatch[3]}`,
+            category: /フェス|festival/i.test(title) ? 'NEWS_FESTIVAL' : 'NEWS',
+            title: title.replace(/^【[^】]+】\s*/, '').replace(/(?:出演|開催)決定.*$/, '').trim(),
+            detailUrl: `${BASE_URL}/news/detail/${idMatch[1]}`,
+        });
+    }
+    return entries;
+}
+
+function parseNewsEventDate(text, publishedDate) {
+    const publishedYear = Number((publishedDate || '').slice(0, 4));
+    const appearance = text.match(/UVERworldの出演(?:日)?は[^\d]{0,15}(\d{1,2})月(\d{1,2})日/i);
+    if (appearance && publishedYear) {
+        return `${publishedYear}-${appearance[1].padStart(2, '0')}-${appearance[2].padStart(2, '0')}`;
+    }
+
+    const fullDate = text.match(/(20\d{2})年\s*(\d{1,2})月\s*(\d{1,2})日/)
+        || text.match(/(20\d{2})[./-](\d{1,2})[./-](\d{1,2})/);
+    if (!fullDate) return null;
+    return `${fullDate[1]}-${fullDate[2].padStart(2, '0')}-${fullDate[3].padStart(2, '0')}`;
+}
+
+function parseNewsVenue(text, date) {
+    const labelled = text.match(/(?:会場|開催地|場所)\s*[：:]?\s*([^\n]{2,80})/i);
+    if (labelled) return labelled[1].trim();
+
+    const [year, month, day] = date.split('-').map(Number);
+    const datePattern = new RegExp(
+        `(?:${year}年\\s*)?${month}月\\s*${day}日(?:\\([^)]*\\)|（[^）]*）)?\\s*([^\\n]{2,60}?)(?=\\s*(?:\\d{1,2}[:：]|OPEN|開場|START|開演|$))`,
+        'i'
+    );
+    const afterDate = text.match(datePattern);
+    if (afterDate) return afterDate[1].trim();
+
+    const shortDate = text.match(new RegExp(`${month}\/${day}\\s+([^\\n]{2,60}?)にて`, 'i'));
+    return shortDate ? shortDate[1].trim() : null;
+}
+
+/**
+ * ニュース本文から公演日・会場・開演時刻を取り出す。
+ * 日付が確定できない予告記事は登録対象にしない。
+ */
+function parseNewsDetail(entry, html) {
+    const articleMatch = (html || '').match(/<div class="txt">([\s\S]*?)<\/div>/i);
+    if (!articleMatch) return null;
+
+    const text = articleMatch[1]
+        .replace(/<br\s*\/?\s*>/gi, '\n')
+        .replace(/<\/p>/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/⽉/g, '月')
+        .replace(/⽇/g, '日')
+        .replace(/[ \t]+/g, ' ')
+        .trim();
+    const date = parseNewsEventDate(text, entry.publishedDate);
+    if (!date) return null;
+
+    const venue = parseNewsVenue(text, date);
+    const start = text.match(/(\d{1,2})[:：](\d{2})\s*開演/i)
+        || text.match(/(\d{1,2})[:：](\d{2})\s*START/i)
+        || text.match(/START\s*[：:]?\s*(\d{1,2})[:：](\d{2})/i)
+        || text.match(/開演\s*[：:]\s*(\d{1,2})[:：](\d{2})/i);
+    const performanceTitle = start ? `${entry.title} ${start[1]}:${start[2]}開演` : entry.title;
+
+    return {
+        ...entry,
+        date,
+        venue,
+        performanceTitle,
+    };
 }
 
 // 会場欄に紛れ込みやすい別項目。ここまでを会場名として切り出す
@@ -218,6 +314,8 @@ function parsePerformanceTimes(date, title, venue) {
  */
 function detectType(category, venue) {
     if (category === 'EVENT') return 'FESTIVAL';
+    if (category === 'NEWS_FESTIVAL') return 'FESTIVAL';
+    if (category === 'NEWS') return 'EVENT';
 
     const v = (venue || '').toLowerCase();
     if (v.includes('ドーム') || v.includes('dome')) return 'ARENA';
@@ -343,6 +441,20 @@ async function importSchedule({ dryRun = false } = {}) {
 
         // 同じ公演が月一覧の境界で重複して返っても1回だけ処理する。
         entries = [...new Map(entries.map((entry) => [entry.sourceId, entry])).values()];
+
+        const newsHtml = await fetchHtml(NEWS_URL);
+        for (const newsEntry of parseNewsList(newsHtml)) {
+            try {
+                await sleep(DETAIL_INTERVAL_MS);
+                const parsed = parseNewsDetail(newsEntry, await fetchHtml(newsEntry.detailUrl));
+                if (parsed) entries.push(parsed);
+            } catch (err) {
+                stats.errors++;
+                console.warn(`[Schedule] ニュース詳細取得に失敗: ${newsEntry.detailUrl} (${err.message})`);
+            }
+        }
+
+        entries = [...new Map(entries.map((entry) => [entry.sourceId, entry])).values()];
     } catch (err) {
         stats.errors++;
         await logToDb('error', 'Schedule import failed', { error: err.message });
@@ -385,15 +497,17 @@ async function importSchedule({ dryRun = false } = {}) {
                 continue;
             }
 
-            let venue = null;
-            try {
-                await sleep(DETAIL_INTERVAL_MS);
-                venue = parseVenue(await fetchHtml(entry.detailUrl));
-            } catch (err) {
-                console.warn(`[Schedule] 詳細ページ取得に失敗: ${entry.detailUrl} (${err.message})`);
+            let venue = entry.venue || null;
+            if (!entry.sourceId.startsWith('news:')) {
+                try {
+                    await sleep(DETAIL_INTERVAL_MS);
+                    venue = parseVenue(await fetchHtml(entry.detailUrl));
+                } catch (err) {
+                    console.warn(`[Schedule] 詳細ページ取得に失敗: ${entry.detailUrl} (${err.message})`);
+                }
             }
             venue ||= parseVenueFromTitle(entry.title);
-            const performanceTimes = parsePerformanceTimes(entry.date, entry.title, venue);
+            const performanceTimes = parsePerformanceTimes(entry.date, entry.performanceTitle || entry.title, venue);
 
             const existingId = await findExistingLive(entry, venue);
             if (existingId) {
@@ -484,6 +598,8 @@ module.exports = {
     startScheduleImport,
     parseScheduleList,
     parseNextMonthUrl,
+    parseNewsList,
+    parseNewsDetail,
     parseVenue,
     parseVenueFromTitle,
     parsePerformanceTimes,
@@ -492,5 +608,6 @@ module.exports = {
     isSameVenue,
     venueKey,
     LIST_URL,
+    NEWS_URL,
     SOURCE_NAME,
 };
