@@ -49,6 +49,9 @@ COPY --from=builder /app/server ./server
 # server 専用の依存関係をインストール
 RUN cd server && npm ci --omit=dev
 
+# Windows由来の改行でも収集CLIのshebangをLinuxで実行できるようにする。
+RUN sed -i 's/\r$//' /app/server/scripts/twitter-search.py
+
 EXPOSE 8000
 
 CMD ["node", "server/index.js"]
