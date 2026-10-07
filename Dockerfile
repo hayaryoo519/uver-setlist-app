@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-slim AS builder
+FROM node:24-bookworm-slim AS builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ ENV NODE_ENV=${NODE_ENV}
 RUN npm run build
 
 # Runner stage
-FROM node:20-slim
+FROM node:24-bookworm-slim
 
 WORKDIR /app
 
