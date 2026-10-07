@@ -14,7 +14,7 @@ jobs:
           cd ~/apps/uver-setlist-app/server
 
           # 1. 現在の.envをバックアップ（サーバー固有の設定を守るため）
-          cp .env .env.backup
+          install -m 600 .env .env.backup
 
           # 2. mainに含まれるリリースのコミットを取得（配備中のmain更新に追従しない）
           git fetch origin main
@@ -23,7 +23,7 @@ jobs:
           git reset --hard "$GITHUB_SHA"
 
           # 3. バックアップから.envを復元
-          cp .env.backup .env
+          install -m 600 .env.backup .env
 
           # 4. バックエンド依存関係のインストール
           npm ci
