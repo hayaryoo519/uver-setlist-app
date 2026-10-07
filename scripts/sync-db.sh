@@ -52,7 +52,7 @@ createdb "$STAGING_DB_NAME"
 
 log_info "Importing data from ${BACKUP_FILE}..."
 # 圧縮ファイルを解凍しながら pg_restore
-zcat "$BACKUP_FILE" | pg_restore --no-owner --no-privileges -d "$STAGING_DB_NAME" || {
+zcat "$BACKUP_FILE" | pg_restore --exit-on-error --single-transaction --no-owner --no-privileges -d "$STAGING_DB_NAME" || {
     log_error "Import failed. Dropping inconsistent database to prevent raw data exposure."
     dropdb --if-exists "$STAGING_DB_NAME"
     exit 1
@@ -60,7 +60,7 @@ zcat "$BACKUP_FILE" | pg_restore --no-owner --no-privileges -d "$STAGING_DB_NAME
 
 # 5. 匿名化処理 (Anonymization)
 log_info "Executing anonymization queries for privacy..."
-psql -d "$STAGING_DB_NAME" <<EOF
+if ! psql -X --set=ON_ERROR_STOP=1 --single-transaction --file=- -d "$STAGING_DB_NAME" <<EOF
 -- ユーザー情報の匿名化
 UPDATE users SET 
     email = 'dummy_' || id || '@example.com',
@@ -82,7 +82,7 @@ UPDATE corrections SET
     admin_note = NULL;
 EOF
 
-if [ $? -ne 0 ]; then
+then
     log_error "Anonymization failed. Dropping database for safety."
     dropdb --if-exists "$STAGING_DB_NAME"
     exit 1
