@@ -8,8 +8,11 @@
 
 ```bash
 # 手動実行する場合
-BACKUP_DIR=./backups ./scripts/backup-db.sh
+./scripts/backup-db.sh
 ```
+
+`BACKUP_DIR`を省略した場合は、リポジトリ直下の`backups/`へ保存されます。
+別の保存先を使う場合のみ`BACKUP_DIR=/path/to/backups`を指定してください。
 
 - **出力先**: `backups/backup_YYYYMMDD_HHMMSS.dump.gz`
 - **自動実行**: Production Actions はマイグレーション直前に同じバックアップを取得します。

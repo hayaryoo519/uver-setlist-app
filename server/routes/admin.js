@@ -7,8 +7,8 @@ const fs = require('fs');
 router.use(authorize);
 router.use(adminCheck);
 
-const BACKUP_DIR = process.env.BACKUP_DIR || '/var/backups/postgres';
 const BACKUP_SCRIPT = path.join(__dirname, '../../scripts/backup-db.sh');
+const BACKUP_DIR = process.env.BACKUP_DIR || path.join(path.dirname(BACKUP_SCRIPT), '../backups');
 
 // バックアップファイル一覧取得
 router.get('/backups', (req, res) => {
@@ -50,7 +50,7 @@ router.post('/backup', (req, res) => {
     console.log('[admin/backup] Starting DB backup triggered by admin');
 
     const proc = spawn('bash', [BACKUP_SCRIPT], {
-        env: { ...process.env },
+        env: { ...process.env, BACKUP_DIR },
         timeout: 10 * 60 * 1000, // 10分タイムアウト
     });
 

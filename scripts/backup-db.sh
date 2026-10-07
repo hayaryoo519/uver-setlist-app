@@ -14,7 +14,7 @@ fi
 umask 077
 
 # 設定（環境変数で上書き可能）
-BACKUP_DIR="${BACKUP_DIR:-/var/backups/postgres}"
+BACKUP_DIR="${BACKUP_DIR:-${SCRIPT_DIR}/../backups}"
 DB_NAME="${DB_NAME:-uver_setlist_prod}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/backup_${TIMESTAMP}.dump"
