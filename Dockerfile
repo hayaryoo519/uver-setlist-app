@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-slim AS builder
+FROM node:24-bookworm-slim AS builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ ENV NODE_ENV=${NODE_ENV}
 RUN npm run build
 
 # Runner stage
-FROM node:20-slim
+FROM node:24-bookworm-slim
 
 WORKDIR /app
 
@@ -48,6 +48,16 @@ COPY --from=builder /app/server ./server
 
 # server 専用の依存関係をインストール
 RUN cd server && npm ci --omit=dev
+
+# Windows由来の改行でも収集CLIのshebangをLinuxで実行できるようにする。
+RUN sed -i 's/\r$//' /app/server/scripts/twitter-search.py
+
+# 実行ユーザーが書き込むディレクトリだけを許可する。
+RUN mkdir -p /app/server/uploads /var/backups/postgres \
+    && chown node:node /app/server/uploads /var/backups/postgres \
+    && chmod 700 /var/backups/postgres
+
+USER node
 
 EXPOSE 8000
 
