@@ -1,5 +1,9 @@
 services:
   app-staging:
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     build:
       context: .
       args:
