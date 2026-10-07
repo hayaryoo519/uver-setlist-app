@@ -222,6 +222,9 @@ sudo systemctl status uver-setlist
 ## 🛠️ 5. メンテナンス・運用手順
 
 ### 検証環境 (Staging) の更新手順
+`app-staging` は `cap_drop: [ALL]` と `no-new-privileges:true` で実行し、不要なLinux権限と実行ファイル経由の権限昇格を制限します。通常起動と `docker compose run` によるマイグレーションの両方に適用されます。DBコンテナには適用しません。
+反映時はアプリコンテナが再作成され、一時的に接続が切れます。起動、画像アップロード、収集CLI、マイグレーションを確認してください。復旧時はこの2設定を戻してアプリを再作成します。
+
 検証サーバーで最新コードを反映する際の手動手順です。通常は `dev` push による `deploy-staging.yml` が、ビルド、マイグレーション、起動、`/api/ping` ヘルスチェックまで自動実行します。
 
 ```bash
