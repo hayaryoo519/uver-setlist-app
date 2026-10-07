@@ -10,14 +10,17 @@ jobs:
     steps:
       - name: Deploy to Production Server
         run: |
+          set -euo pipefail
           cd ~/apps/uver-setlist-app/server
 
           # 1. 現在の.envをバックアップ（サーバー固有の設定を守るため）
           install -m 600 .env .env.backup
 
-          # 2. 最新コードを強制的に取得
+          # 2. mainに含まれるリリースのコミットを取得（配備中のmain更新に追従しない）
           git fetch origin main
-          git reset --hard origin/main
+          git fetch origin "$GITHUB_SHA"
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          git reset --hard "$GITHUB_SHA"
 
           # 3. バックアップから.envを復元
           install -m 600 .env.backup .env
