@@ -13,14 +13,14 @@ jobs:
           cd ~/apps/uver-setlist-app/server
 
           # 1. 現在の.envをバックアップ（サーバー固有の設定を守るため）
-          cp .env .env.backup
+          install -m 600 .env .env.backup
 
           # 2. 最新コードを強制的に取得
           git fetch origin main
           git reset --hard origin/main
 
           # 3. バックアップから.envを復元
-          cp .env.backup .env
+          install -m 600 .env.backup .env
 
           # 4. バックエンド依存関係のインストール
           npm ci

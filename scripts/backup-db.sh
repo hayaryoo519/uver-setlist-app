@@ -10,6 +10,9 @@ else
     exit 1
 fi
 
+# DBダンプとチェックサムは実行ユーザーだけが読める権限で作成する。
+umask 077
+
 # 設定（環境変数で上書き可能）
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/postgres}"
 DB_NAME="${DB_NAME:-uver_setlist_prod}"
