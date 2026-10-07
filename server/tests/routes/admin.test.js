@@ -1,5 +1,7 @@
 const request = require('supertest');
 const express = require('express');
+const path = require('path');
+const { EventEmitter } = require('events');
 const { spawn } = require('child_process');
 
 jest.mock('child_process', () => ({
@@ -36,5 +38,28 @@ describe('POST /api/admin/backup', () => {
         expect(res.statusCode).toBe(403);
         expect(res.body.message).toBe('バックアップは本番環境でのみ実行できます');
         expect(spawn).not.toHaveBeenCalled();
+    });
+
+    it('本番DBでは書き込み可能なアプリ配下の保存先をスクリプトへ渡す', async () => {
+        process.env.DB_NAME = 'uver_setlist_prod';
+        const proc = new EventEmitter();
+        proc.stdout = new EventEmitter();
+        proc.stderr = new EventEmitter();
+        spawn.mockImplementation(() => {
+            process.nextTick(() => {
+                proc.stdout.emit('data', '[INFO] backup_20261008_120000.dump.gz');
+                proc.emit('close', 0);
+            });
+            return proc;
+        });
+
+        const res = await request(app).post('/api/admin/backup').send({});
+
+        expect(res.statusCode).toBe(200);
+        expect(spawn).toHaveBeenCalledWith('bash', [expect.stringContaining('scripts/backup-db.sh')], expect.objectContaining({
+            env: expect.objectContaining({
+                BACKUP_DIR: path.resolve(__dirname, '../../../backups'),
+            }),
+        }));
     });
 });
