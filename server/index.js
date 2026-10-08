@@ -54,10 +54,7 @@ app.use(helmet({
 app.use(express.json());
 
 // Request logging middleware
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    next();
-});
+app.use(require('./middleware/requestLogging'));
 
 app.get('/api/ping', (req, res) => res.send('pong'));
 
@@ -95,7 +92,7 @@ app.get(/^(?!\/api).+/, (req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-    console.error('Server Error:', err);
+    console.error('Server Error: request handling failed');
     res.status(500).json({
         message: 'Internal Server Error',
         error: err.message,
