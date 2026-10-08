@@ -30,37 +30,29 @@ if [ ! -f "$BACKUP_FILE" ]; then
     exit 1
 fi
 
-# 2. リカバリ設定
-# 異常終了時にメンテナンスモード解除などを確実に行うための trap
-# (実際のメンテナンスモード切替コマンドは環境に合わせて実装)
+# 2. 復元SQLは秘密値を含むため、本人だけが読める一時ファイルへ出力する。
+umask 077
+SYNC_SQL=$(mktemp)
 cleanup() {
-    log_info "Cleaning up and disabling maintenance mode (if enabled)..."
-    # ここにメンテナンス解除コマンドを記述
+    rm -f -- "$SYNC_SQL"
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 log_info "Starting DB sync process to ${STAGING_DB_NAME}..."
 
-# 3. メンテナンスモード開始 (仮想)
-log_info "Switching Staging environment to Maintenance Mode..."
-# 例: ssh staging-server "touch /tmp/maintenance.lock"
-
-# 4. DB再初期化とインポート
-log_info "Dropping and creating Staging DB: ${STAGING_DB_NAME}..."
-dropdb --if-exists "$STAGING_DB_NAME" || log_warn "Failed to drop DB (maybe in use)"
-createdb "$STAGING_DB_NAME"
-
-log_info "Importing data from ${BACKUP_FILE}..."
-# 圧縮ファイルを解凍しながら pg_restore
-zcat "$BACKUP_FILE" | pg_restore --exit-on-error --single-transaction --no-owner --no-privileges -d "$STAGING_DB_NAME" || {
-    log_error "Import failed. Dropping inconsistent database to prevent raw data exposure."
-    dropdb --if-exists "$STAGING_DB_NAME"
+# 3. DBを変更する前に復元SQLを完成させ、生成失敗時は既存DBを維持する。
+if ! zcat "$BACKUP_FILE" | pg_restore --exit-on-error --no-owner --no-privileges --file=- > "$SYNC_SQL"; then
+    log_error "Restore SQL generation failed. Existing Staging database is unchanged."
     exit 1
-}
+fi
 
-# 5. 匿名化処理 (Anonymization)
-log_info "Executing anonymization queries for privacy..."
-if ! psql -X --set=ON_ERROR_STOP=1 --single-transaction --file=- -d "$STAGING_DB_NAME" <<EOF
+# 4. 復元と匿名化を同じトランザクションで実行するため、SQLを連結する。
+cat >> "$SYNC_SQL" <<EOF
+-- pg_restoreが空にした検索パスを、匿名化対象のpublicスキーマへ戻す。
+SET search_path = pg_catalog, public;
+
 -- ユーザー情報の匿名化
 UPDATE users SET 
     email = 'dummy_' || id || '@example.com',
@@ -95,8 +87,15 @@ UPDATE corrections SET
     admin_note = NULL;
 EOF
 
-then
-    log_error "Anonymization failed. Dropping database for safety."
+# 5. 再作成は確実に成功した場合のみ先へ進む（接続中なら停止する）。
+log_info "Dropping and creating Staging DB: ${STAGING_DB_NAME}..."
+dropdb --if-exists "$STAGING_DB_NAME"
+createdb "$STAGING_DB_NAME"
+
+# 6. 別の接続へ未加工データを公開せず、匿名化まで成功してからコミットする。
+log_info "Executing restore and anonymization in one transaction..."
+if ! psql -X --set=ON_ERROR_STOP=1 --single-transaction --file="$SYNC_SQL" -d "$STAGING_DB_NAME"; then
+    log_error "Restore or anonymization failed. Dropping database for safety."
     dropdb --if-exists "$STAGING_DB_NAME"
     exit 1
 fi
