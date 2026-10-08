@@ -48,7 +48,7 @@ router.post('/register', async (req, res) => {
         });
 
     } catch (err) {
-        console.error("Register Error:", err);
+        console.error("Register Error: registration failed");
         res.status(500).json({ message: "サーバーエラーが発生しました" });
     }
 });
@@ -77,7 +77,7 @@ router.post('/verify-email', async (req, res) => {
         res.json({ token: jwtToken, user: { id: user.rows[0].id, username: user.rows[0].username, email: user.rows[0].email, role: user.rows[0].role } });
 
     } catch (err) {
-        console.error("Verification Error:", err);
+        console.error("Verification Error: email verification failed");
         res.status(500).json({ message: "サーバーエラーが発生しました" });
     }
 });
@@ -94,7 +94,7 @@ router.post('/login', loginLimiter, async (req, res) => {
                 INSERT INTO security_logs (event_type, message, user_email, ip_address)
                 VALUES ($1, $2, $3, $4)
             `, ['login_failed', 'ユーザーが存在しません', email, req.ip]).catch(err => {
-                console.error('Failed to log security event:', err);
+                console.error('Failed to log security event');
             });
 
             return res.status(401).json({ message: "メールアドレスまたはパスワードが間違っています" });
@@ -115,7 +115,7 @@ router.post('/login', loginLimiter, async (req, res) => {
                 INSERT INTO security_logs (event_type, message, user_email, ip_address)
                 VALUES ($1, $2, $3, $4)
             `, ['login_failed', 'パスワード不一致', email, req.ip]).catch(err => {
-                console.error('Failed to log security event:', err);
+                console.error('Failed to log security event');
             });
 
             return res.status(401).json({ message: "メールアドレスまたはパスワードが間違っています" });
@@ -126,7 +126,7 @@ router.post('/login', loginLimiter, async (req, res) => {
             INSERT INTO security_logs (event_type, message, user_email, ip_address)
             VALUES ($1, $2, $3, $4)
         `, ['login_success', 'ログイン成功', email, req.ip]).catch(err => {
-            console.error('Failed to log security event:', err);
+            console.error('Failed to log security event');
         });
 
         const token = jwt.sign(
@@ -136,14 +136,14 @@ router.post('/login', loginLimiter, async (req, res) => {
         );
         res.json({ token, user: { id: user.rows[0].id, username: user.rows[0].username, email: user.rows[0].email, role: user.rows[0].role } });
     } catch (err) {
-        console.error("Login Error:", err);
+        console.error("Login Error: authentication processing failed");
 
         // Log system error
         await db.query(`
             INSERT INTO security_logs (event_type, message, details)
             VALUES ($1, $2, $3)
-        `, ['error', 'ログイン処理中のエラー', JSON.stringify({ error: err.message })]).catch(e => {
-            console.error('Failed to log error:', e);
+        `, ['error', 'ログイン処理中のエラー', JSON.stringify({ error: 'Authentication processing failed' })]).catch(e => {
+            console.error('Failed to log error');
         });
 
         res.status(500).json({ message: "Internal Server Error" });
@@ -174,7 +174,7 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
 
         res.json({ message: "パスワード再設定用のメールを送信しました。メールをご確認ください。" });
     } catch (err) {
-        console.error("Forgot Password Error:", err);
+        console.error("Forgot Password Error: reset email processing failed");
         res.status(500).json({ message: "サーバーエラーが発生しました" });
     }
 });
@@ -206,7 +206,7 @@ router.post('/reset-password', resetLimiter, async (req, res) => {
 
         res.json({ message: "パスワードの再設定が完了しました。新しいパスワードでログインしてください。" });
     } catch (err) {
-        console.error("Reset Password Error:", err);
+        console.error("Reset Password Error: password reset failed");
         res.status(500).json({ message: "サーバーエラーが発生しました" });
     }
 });

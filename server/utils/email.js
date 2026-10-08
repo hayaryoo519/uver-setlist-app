@@ -13,14 +13,11 @@ const transporter = nodemailer.createTransport({
 const getAppUrl = () => process.env.APP_URL || 'http://localhost:5173';
 
 const sendVerificationEmail = async (email, token) => {
-    // For dev: if credentials are dummy, log the link
+    // Missing/dummy credentials skip delivery without exposing the verification link.
     const appUrl = getAppUrl();
     
     if (!process.env.EMAIL_USER || process.env.EMAIL_USER.includes('your_email')) {
-        console.log('====================================================');
-        console.log(`[EMAIL MOCK] Verification Link for ${email}:`);
-        console.log(`${appUrl}/verify-email?token=${token}`);
-        console.log('====================================================');
+        console.log('[EMAIL MOCK] Verification email skipped: email credentials are not configured');
         return;
     }
 
@@ -55,9 +52,9 @@ const sendVerificationEmail = async (email, token) => {
 
     try {
         await transporter.sendMail(mailOptions);
-        console.log(`Verification email sent to ${email}`);
+        console.log('Verification email sent');
     } catch (error) {
-        console.error('Email send error:', error);
+        console.error('Verification email send failed');
         throw error;
     }
 };
@@ -65,12 +62,9 @@ const sendVerificationEmail = async (email, token) => {
 const sendPasswordResetEmail = async (email, token) => {
     const appUrl = getAppUrl();
     
-    // For dev: if credentials are dummy, log the link
+    // Missing/dummy credentials skip delivery without exposing the reset link.
     if (!process.env.EMAIL_USER || process.env.EMAIL_USER.includes('your_email')) {
-        console.log('====================================================');
-        console.log(`[EMAIL MOCK] Password Reset Link for ${email}:`);
-        console.log(`${appUrl}/reset-password?token=${token}`);
-        console.log('====================================================');
+        console.log('[EMAIL MOCK] Password reset email skipped: email credentials are not configured');
         return;
     }
 
@@ -105,9 +99,9 @@ const sendPasswordResetEmail = async (email, token) => {
 
     try {
         await transporter.sendMail(mailOptions);
-        console.log(`Password reset email sent to ${email}`);
+        console.log('Password reset email sent');
     } catch (error) {
-        console.error('Email send error:', error);
+        console.error('Password reset email send failed');
         throw error;
     }
 };
