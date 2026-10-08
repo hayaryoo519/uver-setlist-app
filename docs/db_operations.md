@@ -130,9 +130,57 @@ docker compose exec app-staging npm run migrate
 4. 成功後、同じStagingディレクトリで `docker compose run --rm app-staging node server/scripts/migrate.js` を実行します。失敗時は停止を維持します。
 5. 本番と異なるStaging専用のJWT署名鍵で、同期前のStagingセッションを失効させます。ユーザーIDを再利用するため、以前のJWTを新しい検証アカウントへ結び付けないことを再開条件にします。DBのユーザー削除だけでJWTが失効したとは扱いません。鍵の値はログやIssueへ貼りません。
 6. 下記の専用CLIで独立した検証アカウントを準備します。本番アカウント・パスワード・固定の共有パスワードをコピーしません。`server/scripts/seed_local.js` はライブ/セットリストも初期化するため、この同期後のStagingでは実行しません。JWT鍵更新と旧セッション拒否の実確認が済むまでは実データ同期を再開しません。
-7. ここまで成功した後にだけ `docker compose up -d app-staging` を実行し、`curl --fail http://127.0.0.1:9001/api/ping` と公開画面・DB接続・検証アカウントのログイン/認可を確認します。
+7. ここまで成功した後にだけ `docker compose up -d app-staging` を実行し、`curl --fail http://127.0.0.1:9001/api/ping` と公開画面・DB接続・検証アカウントのログイン/認可を確認します。起動後の実APIでも同期前のJWTが403、新しいJWTが認証を通ることを確認します。
 
 同期スクリプトはCompose・プロキシを自動操作しません。停止中は通常画面の代わりに接続エラーとなることがあるため、必要なメンテナンス告知は事前に設定します。実データ同期の再開前には、匿名化対象とStaging専用設定の残件も確認します。
+
+### StagingのJWT鍵更新
+
+Composeが読む設定は `~/apps/uver-setlist-staging/.env` の `JWT_SECRET` です。本番の `~/apps/uver-setlist-app/server/.env` は変更しません。デプロイとの重複を避け、旧設定とアップロード画像を公開ディレクトリ外の700ディレクトリ/600ファイルへ退避します。旧設定の退避ファイルにも秘密値があるため、IssueやCIへ添付しません。
+
+Stagingアプリを停止した状態で、次の処理で鍵だけを更新します。曖昧な定義や複数定義、シンボリックリンク、保護されていない設定ファイルは更新を拒否します。
+
+```bash
+cd ~/apps/uver-setlist-staging
+python3 - <<'PY'
+import os, pathlib, re, secrets, stat, tempfile
+path = pathlib.Path('.env')
+assert path.is_file() and not path.is_symlink()
+assert path.stat().st_uid == os.getuid()
+assert stat.S_IMODE(path.stat().st_mode) == 0o600
+original = path.read_bytes()
+pattern = r'(?m)^(?:export[ \t]+)?JWT_SECRET[ \t]*=[^\r\n]*$'
+text = original.decode()
+definitions = re.findall(pattern, text)
+assert len(definitions) == 1
+assert re.fullmatch(r'(?:export[ \t]+)?JWT_SECRET[ \t]*=[ \t]*[A-Za-z0-9_-]+[ \t]*', definitions[0])
+updated = re.sub(pattern, 'JWT_SECRET=' + secrets.token_hex(64), text)
+fd, temporary = tempfile.mkstemp(prefix='.env.jwt-', dir='.')
+try:
+    with os.fdopen(fd, 'wb') as stream:
+        stream.write(updated.encode())
+        stream.flush()
+        os.fsync(stream.fileno())
+    assert path.read_bytes() == original
+    os.replace(temporary, path)
+finally:
+    if os.path.exists(temporary):
+        os.unlink(temporary)
+PY
+```
+
+引用符付き/複数行など、この処理が拒否する設定はdotenvの実際の読み取り結果を非公開で確認してから別途対応します。鍵・JWTそのものをstdoutへ出しません。停止中は新しい鍵で旧JWTの署名検証が失敗することを確認し、手順6へ進みます。`docker compose restart` は変更後の環境変数を取り込まないため、再開時は `docker compose up -d --no-deps --force-recreate app-staging` を使います。現在のuploadsはコンテナ内にあるため、再作成後に退避画像を復元して内容の一致を確認します。
+
+再開後は秘密値を表示しない検証処理で、次を再開条件にします。既存ユーザーのデータを読む代わりに、存在しない検証用ユーザーID（例: -2147483648）を使った短寿命のJWTで `GET /api/users/me/attended_lives` を呼びます。
+
+- 更新前のStaging鍵で署名したJWT: 403、無効なトークンの応答。
+- 本番鍵で署名した同じ架空ユーザーのJWT: Stagingで403。鍵の比較も一致/不一致だけを記録。
+- 新しいStaging鍵で署名したJWT: 200、空配列。DB接続と認証を確認し、ユーザー作成やDB書き込みはしません。
+- 稼働コンテナの鍵と設定ファイルの鍵が一致し、本番鍵と不一致。設定ファイル600、画像の内容一致、ヘルスチェック成功。
+
+失敗時は再開完了と扱わず、Stagingを停止して非公開の診断を確認します。旧鍵をそのまま戻すと旧JWTも再び有効になるため、復旧でも新しい鍵を使います。更新はStagingの全ログインを失効させます。本番のセッションは失効させません。
+
+2026-10-08に実Stagingで鍵更新・コンテナ再作成・画像4ファイルの復元を実施し、上記の旧JWT/本番署名JWT拒否、新JWT受け入れ、設定600、ヘルスチェックを確認しました。更新前も本番と異なる鍵でした。本番設定・DBは変更せず、実データ同期と検証アカウントの作成も実行していません。外部連携設定・公開自由入力・ファイル/ログ保護などの残件は引き続き同期再開条件です。
 
 ### 同期後の専用検証アカウント作成（Linuxサーバー）
 
