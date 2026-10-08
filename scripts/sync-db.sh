@@ -53,18 +53,8 @@ cat >> "$SYNC_SQL" <<EOF
 -- pg_restoreが空にした検索パスを、匿名化対象のpublicスキーマへ戻す。
 SET search_path = pg_catalog, public;
 
--- ユーザー情報の匿名化
-UPDATE users SET 
-    email = 'dummy_' || id || '@example.com',
-    username = 'user_' || id,
-    password = 'anonymized_hash',
-    verification_token = NULL,
-    reset_password_token = NULL,
-    reset_password_expires = NULL;
-
 -- セキュリティログ、プッシュ通知設定、生ログのクリア
 TRUNCATE TABLE security_logs CASCADE;
-TRUNCATE TABLE push_subscriptions CASCADE;
 TRUNCATE TABLE collector_logs CASCADE;
 
 -- 本番の個人活動・自由入力・外部連携情報を検証環境へ残さない。
@@ -72,7 +62,7 @@ TRUNCATE TABLE collector_logs CASCADE;
 DO \$\$
 DECLARE
     private_table TEXT;
-    private_tables TEXT[] := ARRAY[]::TEXT[];
+    private_tables TEXT[] := ARRAY['public.users', 'public.corrections', 'public.push_subscriptions'];
 BEGIN
     FOREACH private_table IN ARRAY ARRAY[
         'user_spotify_tokens', 'user_google_tokens', 'playlist_history',
@@ -83,15 +73,13 @@ BEGIN
             private_tables := array_append(private_tables, format('public.%I', private_table));
         END IF;
     END LOOP;
-    -- 予想と子テーブルは、外部キーの制約を保ったまま一括でクリアする。
+    -- usersと参照テーブルを一括クリアし、本番由来の連番も残さない。
     IF cardinality(private_tables) > 0 THEN
-        EXECUTE 'TRUNCATE TABLE ' || array_to_string(private_tables, ', ');
+        EXECUTE 'TRUNCATE TABLE ' || array_to_string(private_tables, ', ') || ' RESTART IDENTITY';
     END IF;
 END;
 \$\$;
 
--- ライブ名等の自由入力と申請者・審査者の関連も残さない。
-TRUNCATE TABLE corrections;
 EOF
 
 # 5. 再作成は確実に成功した場合のみ先へ進む（接続中なら停止する）。
