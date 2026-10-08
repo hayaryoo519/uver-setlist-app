@@ -67,24 +67,31 @@ TRUNCATE TABLE security_logs CASCADE;
 TRUNCATE TABLE push_subscriptions CASCADE;
 TRUNCATE TABLE collector_logs CASCADE;
 
--- 本番の外部連携情報を検証環境へ残さない（連携導入前のバックアップにも対応）
+-- 本番の個人活動・自由入力・外部連携情報を検証環境へ残さない。
+-- 古いバックアップは存在するテーブルのみを処理する。
 DO \$\$
 DECLARE
-    integration_table TEXT;
+    private_table TEXT;
+    private_tables TEXT[] := ARRAY[]::TEXT[];
 BEGIN
-    FOREACH integration_table IN ARRAY ARRAY['user_spotify_tokens', 'user_google_tokens', 'playlist_history'] LOOP
-        IF to_regclass('public.' || integration_table) IS NOT NULL THEN
-            EXECUTE format('TRUNCATE TABLE public.%I', integration_table);
+    FOREACH private_table IN ARRAY ARRAY[
+        'user_spotify_tokens', 'user_google_tokens', 'playlist_history',
+        'attendance', 'user_follows', 'predictions', 'prediction_songs',
+        'prediction_likes', 'raw_setlists', 'social_posts'
+    ] LOOP
+        IF to_regclass('public.' || private_table) IS NOT NULL THEN
+            private_tables := array_append(private_tables, format('public.%I', private_table));
         END IF;
     END LOOP;
+    -- 予想と子テーブルは、外部キーの制約を保ったまま一括でクリアする。
+    IF cardinality(private_tables) > 0 THEN
+        EXECUTE 'TRUNCATE TABLE ' || array_to_string(private_tables, ', ');
+    END IF;
 END;
 \$\$;
 
--- 修正申請の自由入力・提案内容を匿名化
-UPDATE corrections SET
-    description = '（非公開）',
-    suggested_data = NULL,
-    admin_note = NULL;
+-- ライブ名等の自由入力と申請者・審査者の関連も残さない。
+TRUNCATE TABLE corrections;
 EOF
 
 # 5. 再作成は確実に成功した場合のみ先へ進む（接続中なら停止する）。
