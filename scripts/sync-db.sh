@@ -75,6 +75,19 @@ TRUNCATE TABLE security_logs CASCADE;
 TRUNCATE TABLE push_subscriptions CASCADE;
 TRUNCATE TABLE collector_logs CASCADE;
 
+-- 本番の外部連携情報を検証環境へ残さない（連携導入前のバックアップにも対応）
+DO \$\$
+DECLARE
+    integration_table TEXT;
+BEGIN
+    FOREACH integration_table IN ARRAY ARRAY['user_spotify_tokens', 'user_google_tokens', 'playlist_history'] LOOP
+        IF to_regclass('public.' || integration_table) IS NOT NULL THEN
+            EXECUTE format('TRUNCATE TABLE public.%I', integration_table);
+        END IF;
+    END LOOP;
+END;
+\$\$;
+
 -- 修正申請の自由入力・提案内容を匿名化
 UPDATE corrections SET
     description = '（非公開）',
