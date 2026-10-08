@@ -129,10 +129,30 @@ docker compose exec app-staging npm run migrate
 3. Staging接続情報で同期スクリプトを実行します。終了コードが0でなければアプリを停止したまま、残存DB・一時SQL・非公開の診断を確認します。成功した扱いで再開しません。
 4. 成功後、同じStagingディレクトリで `docker compose run --rm app-staging node server/scripts/migrate.js` を実行します。失敗時は停止を維持します。
 5. 本番と異なるStaging専用のJWT署名鍵で、同期前のStagingセッションを失効させます。ユーザーIDを再利用するため、以前のJWTを新しい検証アカウントへ結び付けないことを再開条件にします。DBのユーザー削除だけでJWTが失効したとは扱いません。鍵の値はログやIssueへ貼りません。
-6. 独立した検証アカウントだけを、非公開の資格情報管理とトランザクションを使って準備します。本番アカウント・パスワード・固定の共有パスワードをコピーしません。`server/scripts/seed_local.js` はライブ/セットリストも初期化するため、この同期後のStagingでは実行しません。専用アカウント作成手段と失効確認の整備までは実データ同期を再開しません。
+6. 下記の専用CLIで独立した検証アカウントを準備します。本番アカウント・パスワード・固定の共有パスワードをコピーしません。`server/scripts/seed_local.js` はライブ/セットリストも初期化するため、この同期後のStagingでは実行しません。JWT鍵更新と旧セッション拒否の実確認が済むまでは実データ同期を再開しません。
 7. ここまで成功した後にだけ `docker compose up -d app-staging` を実行し、`curl --fail http://127.0.0.1:9001/api/ping` と公開画面・DB接続・検証アカウントのログイン/認可を確認します。
 
 同期スクリプトはCompose・プロキシを自動操作しません。停止中は通常画面の代わりに接続エラーとなることがあるため、必要なメンテナンス告知は事前に設定します。実データ同期の再開前には、匿名化対象とStaging専用設定の残件も確認します。
+
+### 同期後の専用検証アカウント作成（Linuxサーバー）
+
+同期・migration・旧セッション失効の確認後、アプリを停止したままStagingディレクトリで実行します。ホストの実行ユーザーとコンテナのnodeユーザーはUID1000が一致する構成です。
+
+```bash
+cd ~/apps/uver-setlist-staging
+mkdir -p "$HOME/.local/state"
+staging_credentials_dir=$(mktemp -d "$HOME/.local/state/uver-staging-accounts.XXXXXX")
+docker compose run --rm -e APP_ENV=staging \
+  --volume "$staging_credentials_dir:/run/staging-accounts" \
+  app-staging node server/scripts/create_staging_accounts.js \
+  /run/staging-accounts/accounts.json
+```
+
+CLIは明示的なStaging設定と実接続先DB名を確認し、usersが空の場合だけadmin/userを1名ずつトランザクションで作成します。ユーザー名/メールは架空、パスワードは各アカウントごとの乱数、保存はbcrypt。メール送信・外部連携・カタログ変更は行いません。
+
+資格情報はホスト側の `$staging_credentials_dir/accounts.json`（ディレクトリ700/ファイル600）に保存されます。stdoutやIssueへパスワードを出さず、担当者が非公開の方法で利用します。認証済み・プロフィール非公開の検証アカウントです。既存ユーザーがいる場合、出力先が既存の場合、保護ディレクトリでない場合は失敗し、既存のユーザー/ファイルを上書きしません。成功を確認したら手順7の起動・ログイン/認可確認へ進みます。
+
+COMMIT時の接続エラーは成立したか不明な場合があるため、資格情報ファイルを保持します。終了コードが非ゼロならアプリを停止したまま、DBの件数と非公開ファイルの状態を確認し、既存ユーザーを消して無条件に再実行しないでください。このCLI自体はJWT鍵を更新せず、旧トークンも失効させません。
 
 ---
 
