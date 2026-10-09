@@ -78,7 +78,7 @@ function decrypt(encryptedText) {
 function signState(userId) {
     if (!ENCRYPTION_KEY) throw new Error('ENCRYPTION_KEY is not set in environment variables');
     if (!userId || userId === 'undefined') {
-        console.error('[AUTH] signState called with missing or invalid userId:', userId);
+        console.error('[AUTH] signState called with missing or invalid userId');
         throw new Error('Valid userId is required for signing state');
     }
     const nonce = crypto.randomBytes(8).toString('hex');

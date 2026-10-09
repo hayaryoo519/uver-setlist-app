@@ -36,7 +36,7 @@ class SpotifyService {
             const refreshToken = decrypt(refresh_token_encrypted);
             return await this.refreshAccessToken(refreshToken);
         } catch (err) {
-            console.error('[Spotify] Token refresh failed:', err.message);
+            console.error('[Spotify] Token refresh failed');
             // リフレッシュトークンが無効な場合、連携を解除してユーザーに再連携を促す
             await db.query('DELETE FROM user_spotify_tokens WHERE user_id = $1', [this.userId]);
             throw new Error('Spotify session expired. Please re-link your account.');

@@ -68,7 +68,7 @@ async function verifyStoredYoutubeRefreshToken(userId, oauth2Client) {
     } catch (err) {
         if (isGoogleAuthRevokedError(err)) {
             await db.query('DELETE FROM user_google_tokens WHERE user_id = $1', [userId]);
-            console.warn('[YouTube] Stored refresh token is no longer valid during callback:', { userId });
+            console.warn('[YouTube] Stored refresh token is no longer valid during callback');
             return false;
         }
         throw err;
@@ -76,7 +76,7 @@ async function verifyStoredYoutubeRefreshToken(userId, oauth2Client) {
 }
 
 async function handleYoutubeRouteError(res, userId, err, context) {
-    console.error(`[YouTube] ${context}:`, err.message);
+    console.error(`[YouTube] ${context}`);
 
     if (userId && isGoogleAuthRevokedError(err)) {
         await db.query('DELETE FROM user_google_tokens WHERE user_id = $1', [userId]);
@@ -111,7 +111,7 @@ router.get('/auth-url', authorize, (req, res) => {
     try {
         const userId = req.user.user_id || req.user.id;
         if (!userId || userId === 'undefined') {
-            console.error('[AUTH] signState called with missing or invalid userId:', userId);
+            console.error('[AUTH] signState called with missing or invalid userId');
             return res.status(401).json({ message: 'User identification failed' });
         }
 
@@ -124,7 +124,7 @@ router.get('/auth-url', authorize, (req, res) => {
         });
         res.json({ url });
     } catch (err) {
-        console.error('[YouTube] auth-url error:', err.message);
+        console.error('[YouTube] auth-url generation failed');
         res.status(500).json({ message: 'Failed to generate auth URL' });
     }
 });
@@ -180,7 +180,7 @@ router.get('/callback', async (req, res) => {
         } else {
             const hasValidStoredRefreshToken = await verifyStoredYoutubeRefreshToken(userId, oauth2Client);
             if (!hasValidStoredRefreshToken) {
-                console.warn('[YouTube] refresh_token missing and no valid existing token row:', { userId });
+                console.warn('[YouTube] refresh_token missing and no valid existing token row');
                 return res.status(400).send(renderYoutubeCallbackPage({
                     success: false,
                     message: YOUTUBE_REFRESH_TOKEN_MESSAGE
@@ -197,7 +197,7 @@ router.get('/callback', async (req, res) => {
             );
 
             if (updateResult.rowCount === 0) {
-                console.warn('[YouTube] refresh_token missing and no existing token row:', { userId });
+                console.warn('[YouTube] refresh_token missing and no existing token row');
                 return res.status(400).send(renderYoutubeCallbackPage({
                     success: false,
                     message: YOUTUBE_REFRESH_TOKEN_MESSAGE
@@ -210,7 +210,7 @@ router.get('/callback', async (req, res) => {
             message: 'アプリに戻ると連携状態が更新されます。'
         }));
     } catch (err) {
-        console.error('[YouTube] Callback Error:', err.message);
+        console.error('[YouTube] Callback failed');
         res.status(500).send(renderYoutubeCallbackPage({
             success: false,
             message: 'YouTube連携中にエラーが発生しました。再度お試しください。'
@@ -291,7 +291,7 @@ router.post('/create-playlist', authorize, async (req, res) => {
                     if (isGoogleAuthRevokedError(searchErr)) {
                         return handleYoutubeRouteError(res, userId, searchErr, 'Create Playlist Search Error');
                     }
-                    console.warn(`[YouTube] Search error for "${song.title}":`, searchErr.message);
+                    console.warn('[YouTube] Track search failed');
                 }
             }
 
@@ -328,7 +328,7 @@ router.post('/create-playlist', authorize, async (req, res) => {
                 if (isGoogleAuthRevokedError(addErr)) {
                     return handleYoutubeRouteError(res, userId, addErr, 'Create Playlist Add Video Error');
                 }
-                console.error(`[YouTube] Failed to add video ${vid} to playlist:`, addErr.message);
+                console.error('[YouTube] Add video to playlist failed');
                 failedToAddSongs.push(videoIdToTitle[vid] || vid);
             }
         }
@@ -435,7 +435,7 @@ router.post('/auto-map-batch', authorize, async (req, res) => {
                 if (isGoogleAuthRevokedError(err)) {
                     return handleYoutubeRouteError(res, userId, err, 'Auto Map Batch Error');
                 }
-                console.error(`[YouTube Bulk] Error for song ID ${id}:`, err.message);
+                console.error('[YouTube Bulk] Track mapping failed');
                 results.failed++;
             }
             // Rate limiting (Search API is expensive, but for admin it's fine with small delay)
