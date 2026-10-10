@@ -85,6 +85,8 @@ describe('POST /api/admin/backup', () => {
             expect(res.body.success).toBe(false);
             expect(res.body.message).toBeTruthy();
             expect(res.text).not.toContain(marker);
+            expect(JSON.stringify(errorLog.mock.calls)).not.toContain(marker);
+            expect(errorLog.mock.calls.length).toBe(1);
         } finally {
             errorLog.mockRestore();
         }

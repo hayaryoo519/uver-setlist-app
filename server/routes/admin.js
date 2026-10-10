@@ -32,7 +32,7 @@ router.get('/backups', (req, res) => {
 
         res.json({ backups: files });
     } catch (err) {
-        console.error('[admin/backups] Error:', err.message);
+        console.error('[admin/backups] Listing failed');
         res.status(500).json({ message: 'バックアップ一覧の取得に失敗しました' });
     }
 });
@@ -55,25 +55,25 @@ router.post('/backup', (req, res) => {
     });
 
     let stdout = '';
-    let stderr = '';
     proc.stdout.on('data', d => { stdout += d.toString(); });
-    proc.stderr.on('data', d => { stderr += d.toString(); });
+    // Drain stderr without retaining credentials or database diagnostics.
+    proc.stderr.on('data', () => {});
 
     proc.on('close', code => {
         if (code === 0) {
             // 完了したファイル名をログから取得
             const match = stdout.match(/backup_[\d_]+\.dump(?:\.gz)?/);
             const filename = match ? match[0] : null;
-            console.log('[admin/backup] Backup completed:', filename);
+            console.log('[admin/backup] Backup completed');
             res.json({ success: true, filename, message: 'バックアップが完了しました' });
         } else {
-            console.error('[admin/backup] Backup failed. stderr:', stderr);
+            console.error('[admin/backup] Backup failed');
             res.status(500).json({ success: false, message: 'バックアップに失敗しました', detail: 'バックアップ処理に失敗しました' });
         }
     });
 
     proc.on('error', err => {
-        console.error('[admin/backup] Process error:', err.message);
+        console.error('[admin/backup] Process failed');
         res.status(500).json({ success: false, message: 'スクリプト実行エラー' });
     });
 });
