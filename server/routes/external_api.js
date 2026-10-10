@@ -28,7 +28,7 @@ router.get('/setlistfm/search', authorize, adminCheck, async (req, res) => {
             tourName: req.query.keyword || undefined,
             p: req.query.page || 1
         };
-        console.log("Searching SetlistFM with params:", params);
+        console.log('[external/setlistfm] Search started');
 
         const response = await axios.get(`${SETLIST_FM_API_URL}/search/setlists`, {
             params,
@@ -38,25 +38,13 @@ router.get('/setlistfm/search', authorize, adminCheck, async (req, res) => {
             }
         });
 
-        if (response.data.setlist) {
-            const dec28 = response.data.setlist.find(s => s.eventDate === '28-12-2024');
-            if (dec28) {
-                console.log("DEBUG 12/28 DATA:", JSON.stringify({
-                    tour: dec28.tour,
-                    info: dec28.info,
-                    venue: dec28.venue,
-                    sets: dec28.sets
-                }, null, 2));
-            }
-        }
-
-        console.log(`SetlistFM Response: ${response.status} - Found ${response.data.setlist ? response.data.setlist.length : 0} items`);
+        console.log('[external/setlistfm] Search completed');
 
         res.json(response.data);
     } catch (err) {
-        console.error('setlist.fm API Error:', err.response?.data || err.message);
+        console.error('[external/setlistfm] Search failed');
         const status = err.response?.status || 500;
-        const message = err.response?.data?.message || 'Error communicating with setlist.fm';
+        const message = 'Error communicating with setlist.fm';
         res.status(status).json({ message });
     }
 });
@@ -80,7 +68,7 @@ router.get('/setlistfm/setlist/:id', authorize, adminCheck, async (req, res) => 
 
         res.json(response.data);
     } catch (err) {
-        console.error('setlist.fm Detail API Error:', err.response?.data || err.message);
+        console.error('[external/setlistfm] Detail fetch failed');
         const status = err.response?.status || 500;
         res.status(status).json({ message: 'Error fetching setlist details' });
     }
@@ -124,7 +112,7 @@ router.post('/schedule/import', authorize, adminCheck, async (req, res) => {
             ...stats,
         });
     } catch (err) {
-        console.error('スケジュール取り込みエラー:', err);
+        console.error('[external/schedule] Import failed');
         res.status(500).json({ message: 'スケジュールの取り込みに失敗しました', error: 'Internal Server Error' });
     }
 });

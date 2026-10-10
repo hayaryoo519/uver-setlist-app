@@ -167,7 +167,7 @@ router.get('/', async (req, res) => {
 
         res.json(normalizedRows);
     } catch (err) {
-        console.error('API Error:', err);
+        console.error('[lives] Listing failed');
         res.status(500).json({ message: "Server Error", error: 'Internal Server Error' });
     }
 });
@@ -210,7 +210,7 @@ router.get('/:id', async (req, res) => {
             has_predicted: !!live.my_prediction_id
         });
     } catch (err) {
-        console.error(err.message);
+        console.error('[lives] Detail fetch failed');
         res.status(500).json({ message: "Server Error" });
     }
 });
@@ -227,9 +227,6 @@ router.post('/', authorize, adminCheck, async (req, res) => {
         // Normalize venue name (translate English to Japanese if applicable)
         const venue = normalizeVenueName(rawVenue);
 
-        // DEBUG: Log venue translation attempt
-        console.log(`[Venue Translation] Input: "${rawVenue}" -> Output: "${venue}"${rawVenue !== venue ? ' (TRANSLATED)' : ''}`);
-
         const newLive = await db.query(
             "INSERT INTO lives (tour_name, title, date, venue, type, special_note, starts_at, collect_after, timezone) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *",
             [tour_name, title, date, venue, type, special_note, startsAt, collectAfter, timezone]
@@ -240,10 +237,10 @@ router.post('/', authorize, adminCheck, async (req, res) => {
 
         // プッシュ通知を非同期で送信（レスポンスをブロックしない）
         notifyNewLive(createdLive).catch(err => {
-            console.error('Push notification error:', err);
+            console.error('[lives] New live notification failed');
         });
     } catch (err) {
-        console.error(err.message);
+        console.error('[lives] Create failed');
         res.status(err.statusCode || 500).json({ message: err.statusCode >= 400 && err.statusCode < 500 ? err.message : "Server Error" });
     }
 });
@@ -261,7 +258,7 @@ router.put('/:id', authorize, adminCheck, async (req, res) => {
         const collectAfter = parseOptionalTimestamp(req.body.collect_after, 'collect_after', timezone || 'Asia/Tokyo');
         validatePerformanceTimes(startsAt, collectAfter);
 
-        console.log(`[UPDATE LIVE] ID: ${id}, Body:`, req.body);
+        console.log('[lives] Update started');
 
         const updateLive = await db.query(
             `UPDATE lives
@@ -274,14 +271,14 @@ router.put('/:id', authorize, adminCheck, async (req, res) => {
         );
 
         if (updateLive.rows.length === 0) {
-            console.warn(`[UPDATE LIVE] Live not found: ${id}`);
+            console.warn('[lives] Update target not found');
             return res.status(404).json("Live not found");
         }
 
-        console.log("Live updated successfully:", updateLive.rows[0]);
+        console.log('[lives] Update completed');
         res.json(updateLive.rows[0]);
     } catch (err) {
-        console.error("[UPDATE LIVE ERROR]", err.message);
+        console.error('[lives] Update failed');
         res.status(err.statusCode || 500).json({ message: err.statusCode >= 400 && err.statusCode < 500 ? err.message : "Server Error" });
     }
 });
@@ -319,7 +316,7 @@ router.put('/:id/setlist', authorize, adminCheck, async (req, res) => {
         res.json({ message: "Setlist updated" });
     } catch (err) {
         await db.query("ROLLBACK");
-        console.error(err.message);
+        console.error('[lives] Setlist update failed');
         res.status(500).send("Server Error");
     }
 });
@@ -371,7 +368,7 @@ router.post('/:id/import-setlist', authorize, adminCheck, async (req, res) => {
 
     } catch (err) {
         await db.query("ROLLBACK");
-        console.error("Import Setlist Error:", err);
+        console.error('[lives] Setlist import failed');
         res.status(500).json({ message: "Failed to import setlist" });
     }
 });
@@ -389,7 +386,7 @@ router.post('/batch-delete', authorize, adminCheck, async (req, res) => {
 
         res.json({ message: "Lives deleted", count: result.rowCount });
     } catch (err) {
-        console.error("Batch delete error:", err.message);
+        console.error('[lives] Batch delete failed');
         res.status(500).send("Server Error");
     }
 });
@@ -406,7 +403,7 @@ router.delete('/:id', authorize, adminCheck, async (req, res) => {
 
         res.json("Live deleted");
     } catch (err) {
-        console.error(err.message);
+        console.error('[lives] Delete failed');
         res.status(500).send("Server Error");
     }
 });
