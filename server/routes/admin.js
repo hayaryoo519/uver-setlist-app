@@ -68,13 +68,13 @@ router.post('/backup', (req, res) => {
             res.json({ success: true, filename, message: 'バックアップが完了しました' });
         } else {
             console.error('[admin/backup] Backup failed. stderr:', stderr);
-            res.status(500).json({ success: false, message: 'バックアップに失敗しました', detail: stderr.slice(-500) });
+            res.status(500).json({ success: false, message: 'バックアップに失敗しました', detail: 'バックアップ処理に失敗しました' });
         }
     });
 
     proc.on('error', err => {
         console.error('[admin/backup] Process error:', err.message);
-        res.status(500).json({ success: false, message: `スクリプト実行エラー: ${err.message}` });
+        res.status(500).json({ success: false, message: 'スクリプト実行エラー' });
     });
 });
 

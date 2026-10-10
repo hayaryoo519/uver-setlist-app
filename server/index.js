@@ -91,14 +91,7 @@ app.get(/^(?!\/api).+/, (req, res) => {
 });
 
 // Global error handler
-app.use((err, req, res, next) => {
-    console.error('Server Error: request handling failed');
-    res.status(500).json({
-        message: 'Internal Server Error',
-        error: err.message,
-        stack: process.env.NODE_ENV === 'production' ? null : err.stack
-    });
-});
+app.use(require('./middleware/errorHandler'));
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

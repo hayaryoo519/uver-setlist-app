@@ -251,7 +251,7 @@ router.post('/upload', authorize, adminCheck, upload.single('image'), async (req
         });
     } catch (err) {
         console.error('画像OCRエラー:', err);
-        res.status(500).json({ message: 'OCR処理に失敗しました', error: err.message });
+        res.status(500).json({ message: 'OCR処理に失敗しました', error: 'Internal Server Error' });
     }
 });
 
@@ -284,7 +284,7 @@ router.post('/', authorize, adminCheck, async (req, res) => {
         res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error('ドラフト作成エラー:', err);
-        res.status(500).json({ message: 'サーバーエラー', error: err.message });
+        res.status(500).json({ message: 'サーバーエラー', error: 'Internal Server Error' });
     }
 });
 
@@ -311,7 +311,7 @@ router.get('/', authorize, adminCheck, async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         console.error('ドラフト一覧取得エラー:', err);
-        res.status(500).json({ message: 'サーバーエラー', error: err.message });
+        res.status(500).json({ message: 'サーバーエラー', error: 'Internal Server Error' });
     }
 });
 
@@ -334,7 +334,7 @@ router.get('/:id', authorize, adminCheck, async (req, res) => {
         res.json(result.rows[0]);
     } catch (err) {
         console.error('ドラフト詳細取得エラー:', err);
-        res.status(500).json({ message: 'サーバーエラー', error: err.message });
+        res.status(500).json({ message: 'サーバーエラー', error: 'Internal Server Error' });
     }
 });
 
@@ -399,7 +399,7 @@ router.patch('/:id', authorize, adminCheck, async (req, res) => {
         res.json(result.rows[0]);
     } catch (err) {
         console.error('ドラフト更新エラー:', err);
-        res.status(500).json({ message: 'サーバーエラー', error: err.message });
+        res.status(500).json({ message: 'サーバーエラー', error: 'Internal Server Error' });
     }
 });
 
@@ -419,7 +419,7 @@ router.delete('/:id', authorize, adminCheck, async (req, res) => {
         res.json({ message: 'ドラフトを削除しました', id: result.rows[0].id });
     } catch (err) {
         console.error('ドラフト削除エラー:', err);
-        res.status(500).json({ message: 'サーバーエラー', error: err.message });
+        res.status(500).json({ message: 'サーバーエラー', error: 'Internal Server Error' });
     }
 });
 
@@ -498,7 +498,7 @@ router.post('/:id/parse', authorize, adminCheck, async (req, res) => {
             return res.status(500).json({ message: 'OpenAI APIキーが設定されていないか無効です' });
         }
 
-        res.status(500).json({ message: 'GPT整形に失敗しました', error: err.message });
+        res.status(500).json({ message: 'GPT整形に失敗しました', error: 'Internal Server Error' });
     }
 });
 
@@ -602,7 +602,7 @@ router.post('/:id/commit', authorize, adminCheck, async (req, res) => {
     } catch (err) {
         await client.query('ROLLBACK');
         console.error('Commit エラー:', err);
-        res.status(500).json({ message: '確定処理に失敗しました', error: err.message });
+        res.status(500).json({ message: '確定処理に失敗しました', error: 'Internal Server Error' });
     } finally {
         client.release();
     }

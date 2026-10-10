@@ -125,7 +125,7 @@ router.post('/schedule/import', authorize, adminCheck, async (req, res) => {
         });
     } catch (err) {
         console.error('スケジュール取り込みエラー:', err);
-        res.status(500).json({ message: 'スケジュールの取り込みに失敗しました', error: err.message });
+        res.status(500).json({ message: 'スケジュールの取り込みに失敗しました', error: 'Internal Server Error' });
     }
 });
 

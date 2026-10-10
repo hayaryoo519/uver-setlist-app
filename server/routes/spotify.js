@@ -4,6 +4,12 @@ const SpotifyService = require('../services/spotifyService');
 const db = require('../db');
 const { encrypt, signState, verifyState } = require('../utils/encryption');
 const axios = require('axios');
+const publicErrors = new Set([
+    'Spotify integration not linked for this user',
+    'Spotify session expired. Please re-link your account.'
+]);
+const getPublicErrorMessage = err => publicErrors.has(err.message)
+    ? err.message : 'Spotify連携の処理に失敗しました。再度お試しください。';
 
 /**
  * Spotify認証URL取得
@@ -115,7 +121,7 @@ router.get('/status', authorize, async (req, res) => {
         );
         res.json({ linked: result.rows.length > 0 });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: getPublicErrorMessage(err) });
     }
 });
 
@@ -219,7 +225,7 @@ router.post('/create-playlist', authorize, async (req, res) => {
 
     } catch (err) {
         console.error('[Spotify] Create playlist failed');
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: getPublicErrorMessage(err) });
     }
 });
 
@@ -241,7 +247,7 @@ router.get('/history/:liveId', authorize, async (req, res) => {
             createdAt: r.created_at
         })));
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: getPublicErrorMessage(err) });
     }
 });
 
@@ -266,7 +272,7 @@ router.post('/auto-map-song', authorize, async (req, res) => {
         }
         res.json({ success: false, message: 'No match found' });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: getPublicErrorMessage(err) });
     }
 });
 
@@ -310,7 +316,7 @@ router.post('/auto-map-batch', authorize, async (req, res) => {
 
         res.json({ success: true, results });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: getPublicErrorMessage(err) });
     }
 });
 
