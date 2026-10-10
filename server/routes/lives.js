@@ -168,7 +168,7 @@ router.get('/', async (req, res) => {
         res.json(normalizedRows);
     } catch (err) {
         console.error('API Error:', err);
-        res.status(500).json({ message: "Server Error", error: err.message });
+        res.status(500).json({ message: "Server Error", error: 'Internal Server Error' });
     }
 });
 
@@ -244,7 +244,7 @@ router.post('/', authorize, adminCheck, async (req, res) => {
         });
     } catch (err) {
         console.error(err.message);
-        res.status(err.statusCode || 500).json({ message: err.statusCode ? err.message : "Server Error: " + err.message });
+        res.status(err.statusCode || 500).json({ message: err.statusCode >= 400 && err.statusCode < 500 ? err.message : "Server Error" });
     }
 });
 
@@ -282,7 +282,7 @@ router.put('/:id', authorize, adminCheck, async (req, res) => {
         res.json(updateLive.rows[0]);
     } catch (err) {
         console.error("[UPDATE LIVE ERROR]", err.message);
-        res.status(err.statusCode || 500).json({ message: err.statusCode ? err.message : "Server Error: " + err.message });
+        res.status(err.statusCode || 500).json({ message: err.statusCode >= 400 && err.statusCode < 500 ? err.message : "Server Error" });
     }
 });
 

@@ -86,7 +86,7 @@ async function handleYoutubeRouteError(res, userId, err, context) {
         });
     }
 
-    return res.status(500).json({ message: err.message });
+    return res.status(500).json({ message: 'YouTube連携の処理に失敗しました。再度お試しください。' });
 }
 
 
@@ -230,7 +230,7 @@ router.get('/status', authorize, async (req, res) => {
         );
         res.json({ linked: result.rows.length > 0 });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: 'YouTube連携の処理に失敗しました。再度お試しください。' });
     }
 });
 
@@ -370,7 +370,7 @@ router.get('/history/:liveId', authorize, async (req, res) => {
             createdAt: r.created_at
         })));
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: 'YouTube連携の処理に失敗しました。再度お試しください。' });
     }
 });
 

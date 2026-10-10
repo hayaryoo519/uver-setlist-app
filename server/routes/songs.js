@@ -44,7 +44,7 @@ router.get('/', async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         console.error('API Error:', err);
-        res.status(500).json({ message: 'Server Error', error: err.message });
+        res.status(500).json({ message: 'Server Error', error: 'Internal Server Error' });
     }
 });
 
@@ -353,7 +353,7 @@ router.get('/:id/performance-timeline', async (req, res) => {
         });
     } catch (err) {
         console.error('[performance-timeline] Error:', err.message);
-        res.status(500).json({ message: 'Server Error', error: err.message });
+        res.status(500).json({ message: 'Server Error', error: 'Internal Server Error' });
     }
 });
 

@@ -134,7 +134,7 @@ router.get('/song-image/:songTitle', async (req, res) => {
         });
     } catch (err) {
         console.error('[iTunes] API Error:', err.message);
-        res.status(500).json({ message: 'iTunes API Error', error: err.message });
+        res.status(500).json({ message: 'iTunes API Error', error: 'Internal Server Error' });
     }
 });
 
@@ -176,7 +176,7 @@ router.get('/album-image/:albumTitle', async (req, res) => {
         });
     } catch (err) {
         console.error('[iTunes] Album API Error:', err.message);
-        res.status(500).json({ message: 'iTunes Album API Error', error: err.message });
+        res.status(500).json({ message: 'iTunes Album API Error', error: 'Internal Server Error' });
     }
 });
 
@@ -231,7 +231,7 @@ router.get('/batch', async (req, res) => {
         res.json(results);
     } catch (err) {
         console.error('[iTunes] Batch API Error:', err.message);
-        res.status(500).json({ message: 'iTunes Batch API Error', error: err.message });
+        res.status(500).json({ message: 'iTunes Batch API Error', error: 'Internal Server Error' });
     }
 });
 

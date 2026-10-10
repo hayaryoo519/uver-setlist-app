@@ -132,7 +132,7 @@ router.post('/generate', async (req, res) => {
         const key = crypto.createHash('sha256').update(`x:${generated.keyPart}`).digest('hex');
         const result = await db.query(`INSERT INTO social_posts (platform, post_type, live_id, body, idempotency_key, created_by) VALUES ('x', $1, $2, $3, $4, $5) ON CONFLICT (idempotency_key) DO UPDATE SET body = EXCLUDED.body, updated_at = NOW() RETURNING *`, [postType, generated.liveId || null, generated.body.slice(0, 280), key, req.user.user_id || req.user.id]);
         res.status(201).json(result.rows[0]);
-    } catch (err) { console.error('[social-posts] generate error:', err); res.status(err.statusCode || 500).json({ message: err.statusCode ? err.message : '投稿候補の生成に失敗しました' }); }
+    } catch (err) { console.error('[social-posts] generate error:', err); res.status(err.statusCode || 500).json({ message: err.statusCode >= 400 && err.statusCode < 500 ? err.message : '投稿候補の生成に失敗しました' }); }
 });
 
 router.patch('/:id', async (req, res) => {

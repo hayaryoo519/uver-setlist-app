@@ -29,17 +29,17 @@ router.post('/csv', authorize, adminCheck, upload.single('file'), async (req, re
                     await processCSVData(results, res);
                 } catch (err) {
                     console.error('CSV Processing Error:', err);
-                    res.status(500).json({ message: 'Error processing CSV', error: err.message });
+                    res.status(500).json({ message: 'Error processing CSV', error: 'Internal Server Error' });
                 }
             })
             .on('error', (err) => {
                 console.error('CSV Parse Error:', err);
-                res.status(500).json({ message: 'Error parsing CSV', error: err.message });
+                res.status(500).json({ message: 'Error parsing CSV', error: 'Internal Server Error' });
             });
 
     } catch (err) {
         console.error('Import Error:', err);
-        res.status(500).json({ message: 'Server Error', error: err.message });
+        res.status(500).json({ message: 'Server Error', error: 'Internal Server Error' });
     }
 });
 

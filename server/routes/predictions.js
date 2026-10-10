@@ -31,7 +31,7 @@ router.get('/lives', async (req, res) => {
         res.json(livesWithStatus);
     } catch (err) {
         console.error('Fetch predictable lives error:', err);
-        res.status(500).json({ message: 'Server Error', error: err.message, stack: err.stack });
+        res.status(500).json({ message: 'Server Error', error: 'Internal Server Error', stack: null });
     }
 });
 
@@ -121,7 +121,7 @@ const fetchPredictions = async (req, res) => {
         res.json(resultsWithStatus);
     } catch (err) {
         console.error('Fetch predictions error:', err);
-        res.status(500).json({ message: 'Server Error', error: err.message, stack: err.stack });
+        res.status(500).json({ message: 'Server Error', error: 'Internal Server Error', stack: null });
     }
 };
 
