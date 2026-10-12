@@ -25,7 +25,7 @@ router.get('/recent', async (req, res) => {
 
         res.json({ logs: result.rows });
     } catch (err) {
-        console.error('Error fetching recent logs:', err);
+        console.error('[logs] Recent logs fetch failed');
         res.status(500).json({ message: 'ログの取得に失敗しました' });
     }
 });
@@ -45,7 +45,7 @@ router.get('/collector', async (req, res) => {
         `, [limit]);
         res.json({ logs: result.rows });
     } catch (err) {
-        console.error('Error fetching collector logs:', err);
+        console.error('[logs] Collector logs fetch failed');
         res.status(500).json({ message: '収集ログの取得に失敗しました' });
     }
 });
@@ -116,7 +116,7 @@ router.get('/analysis', async (req, res) => {
             totalLogs: parseInt(totalLogs.rows[0].count)
         });
     } catch (err) {
-        console.error('Error fetching analysis data:', err);
+        console.error('[logs] Analysis fetch failed');
         res.status(500).json({ message: '分析データの取得に失敗しました' });
     }
 });
@@ -157,7 +157,7 @@ router.get('/security', async (req, res) => {
             limit,
         });
     } catch (err) {
-        console.error('Error fetching security logs:', err);
+        console.error('[logs] Security logs fetch failed');
         res.status(500).json({ message: 'セキュリティログの取得に失敗しました' });
     }
 });
@@ -178,7 +178,7 @@ router.delete('/cleanup', async (req, res) => {
             deletedCount: result.rowCount
         });
     } catch (err) {
-        console.error('Error cleaning up logs:', err);
+        console.error('[logs] Cleanup failed');
         res.status(500).json({ message: 'ログの削除に失敗しました' });
     }
 });

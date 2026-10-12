@@ -22,7 +22,7 @@ router.get('/', authorize, adminCheck, async (req, res) => {
         );
         res.json(allUsers.rows);
     } catch (err) {
-        console.error(err.message);
+        console.error('[users] Listing failed');
         res.status(500).send("Server Error");
     }
 });
@@ -50,7 +50,7 @@ router.put('/:id/role', authorize, adminCheck, async (req, res) => {
 
         res.json("User role updated");
     } catch (err) {
-        console.error(err.message);
+        console.error('[users] Role update failed');
         res.status(500).send("Server Error");
     }
 });
@@ -76,7 +76,7 @@ router.delete('/:id', authorize, adminCheck, async (req, res) => {
 
         res.json("User deleted");
     } catch (err) {
-        console.error(err.message);
+        console.error('[users] Delete failed');
         res.status(500).send("Server Error");
     }
 });
@@ -95,7 +95,7 @@ router.patch('/:id/restore', authorize, adminCheck, async (req, res) => {
 
         res.json(result.rows[0]);
     } catch (err) {
-        console.error(err.message);
+        console.error('[users] Restore failed');
         res.status(500).send("Server Error");
     }
 });
@@ -137,7 +137,7 @@ router.get('/me/attended_lives', authorize, async (req, res) => {
 
         res.json(livesWithSetlists);
     } catch (err) {
-        console.error('[GET ATTENDED] Error:', err.message);
+        console.error('[users] Attendance listing failed');
         res.status(500).send("Server Error");
     }
 });
@@ -148,7 +148,7 @@ router.post('/me/attended_lives', authorize, async (req, res) => {
         const currentUserId = req.user.user_id;
         const { liveId } = req.body;
 
-        console.log('[ATTENDANCE] POST request received:', { currentUserId, liveId, bodyType: typeof liveId });
+        console.log('[ATTENDANCE] Add requested');
 
         if (!liveId) {
             console.log('[ATTENDANCE] Error: liveId is missing');
@@ -177,7 +177,7 @@ router.post('/me/attended_lives', authorize, async (req, res) => {
         console.log('[ATTENDANCE] Successfully added');
         res.json("Added to attendance list");
     } catch (err) {
-        console.error('[ATTENDANCE] Error:', err.message);
+        console.error('[ATTENDANCE] Add failed');
         res.status(500).send("Server Error");
     }
 });
@@ -199,7 +199,7 @@ router.delete('/me/attended_lives/:liveId', authorize, async (req, res) => {
 
         res.json("Removed from attendance list");
     } catch (err) {
-        console.error(err.message);
+        console.error('[users] Attendance removal failed');
         res.status(500).send("Server Error");
     }
 });
@@ -302,7 +302,7 @@ router.put('/me', authorize, async (req, res) => {
 
         res.json(updateResult.rows[0]);
     } catch (err) {
-        console.error(err.message);
+        console.error('[users] Profile update failed');
         res.status(500).send("Server Error");
     }
 });
@@ -341,7 +341,7 @@ router.get('/:id/profile', async (req, res) => {
         }
         res.json(result.rows[0]);
     } catch (err) {
-        console.error('User profile error:', err.message);
+        console.error('[users] Public profile fetch failed');
         res.status(500).send('Server Error');
     }
 });
@@ -390,7 +390,7 @@ router.get('/:id/attended_lives', async (req, res) => {
 
         res.json(livesWithSetlists);
     } catch (err) {
-        console.error('Public attended lives error:', err.message);
+        console.error('[users] Public attendance listing failed');
         res.status(500).send('Server Error');
     }
 });
@@ -436,7 +436,7 @@ router.get('/:id/predictions', async (req, res) => {
 
         res.json(result.rows);
     } catch (err) {
-        console.error('User predictions error:', err.message);
+        console.error('[users] Predictions listing failed');
         res.status(500).send('Server Error');
     }
 });
@@ -457,7 +457,7 @@ router.delete('/me', authorize, async (req, res) => {
 
         res.json("Account deleted successfully");
     } catch (err) {
-        console.error(err.message);
+        console.error('[users] Account deletion failed');
         res.status(500).send("Server Error");
     }
 });

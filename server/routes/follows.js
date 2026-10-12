@@ -52,7 +52,7 @@ router.post('/:userId', authorize, async (req, res) => {
             return res.json({ following: true });
         }
     } catch (err) {
-        console.error('Toggle follow error:', err.message);
+        console.error('[follows] Toggle failed');
         res.status(500).send('Server Error');
     }
 });
@@ -73,7 +73,7 @@ router.delete('/:userId', authorize, async (req, res) => {
         );
         res.json({ following: false });
     } catch (err) {
-        console.error('Unfollow error:', err.message);
+        console.error('[follows] Removal failed');
         res.status(500).send('Server Error');
     }
 });
@@ -91,7 +91,7 @@ router.get('/my/followers', authorize, async (req, res) => {
         `, [userId]);
         res.json(result.rows);
     } catch (err) {
-        console.error('My followers error:', err.message);
+        console.error('[follows] Followers listing failed');
         res.status(500).send('Server Error');
     }
 });
@@ -109,7 +109,7 @@ router.get('/my/following', authorize, async (req, res) => {
         `, [userId]);
         res.json(result.rows);
     } catch (err) {
-        console.error('My following error:', err.message);
+        console.error('[follows] Following listing failed');
         res.status(500).send('Server Error');
     }
 });
@@ -126,7 +126,7 @@ router.get('/my/stats', authorize, async (req, res) => {
         `, [userId]);
         res.json(result.rows[0]);
     } catch (err) {
-        console.error('My follow stats error:', err.message);
+        console.error('[follows] Own stats fetch failed');
         res.status(500).send('Server Error');
     }
 });
@@ -155,7 +155,7 @@ router.get('/stats/:userId', async (req, res) => {
         `, [userId, currentUserId]);
         res.json(result.rows[0]);
     } catch (err) {
-        console.error('Follow stats error:', err.message);
+        console.error('[follows] Public stats fetch failed');
         res.status(500).send('Server Error');
     }
 });
