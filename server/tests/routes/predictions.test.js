@@ -7,6 +7,7 @@ jest.mock('../../middleware/authorization', () => ({
 const request = require('supertest');
 const express = require('express');
 const db = require('../../db');
+const { getOptionalUserId } = require('../../middleware/authorization');
 const app = express();
 app.use(express.json());
 app.use('/api/predictions', require('../../routes/predictions'));
@@ -18,6 +19,7 @@ describe('予想APIのログ保護と既存動作', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        getOptionalUserId.mockResolvedValue(27);
         errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
         client = { query: jest.fn(), release: jest.fn() };
         db.pool = { connect: jest.fn().mockResolvedValue(client) };
@@ -59,6 +61,42 @@ describe('予想APIのログ保護と既存動作', () => {
         expect(res.statusCode).toBe(403);
         expect(client.query).toHaveBeenCalledTimes(1);
         expect(client.release).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['/me', '/me?mine=false', '/me?mine=true'])('%s は必ず本人に絞り、直近ライブだけに限定しない', async path => {
+        db.query.mockResolvedValueOnce({ rows: [{ id: 5, user_id: 27, live_date: '2999-01-01' }] });
+        const res = await request(app).get(`/api/predictions${path}`);
+        expect(res.statusCode).toBe(200);
+        expect(db.query).toHaveBeenCalledTimes(1);
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining('AND p.user_id = $2'), [27, 27]);
+        expect(res.body[0].user_id).toBe(27);
+    });
+
+    it('本人別名APIでもライブ指定と新しい順を維持する', async () => {
+        db.query.mockResolvedValueOnce({ rows: [] });
+        const res = await request(app).get('/api/predictions/me?live_id=7&sort=new&mine=false');
+        expect(res.statusCode).toBe(200);
+        const [sql, params] = db.query.mock.calls[0];
+        expect(sql).toContain('p.live_id = $2 AND p.user_id = $3');
+        expect(sql).toContain('ORDER BY p.created_at DESC');
+        expect(params).toEqual([27, '7', 27]);
+    });
+
+    it('従来のmine=trueも本人条件を維持する', async () => {
+        db.query.mockResolvedValueOnce({ rows: [] });
+        const res = await request(app).get('/api/predictions?mine=true');
+        expect(res.statusCode).toBe(200);
+        expect(db.query).toHaveBeenCalledTimes(1);
+        expect(db.query).toHaveBeenCalledWith(expect.stringContaining('AND p.user_id = $2'), [27, 27]);
+    });
+
+    it('公開一覧には本人条件を追加しない', async () => {
+        db.query.mockResolvedValueOnce({ rows: [] });
+        const res = await request(app).get('/api/predictions?live_id=7&mine=false');
+        expect(res.statusCode).toBe(200);
+        const [sql, params] = db.query.mock.calls[0];
+        expect(sql).not.toContain('AND p.user_id =');
+        expect(params).toEqual([27, '7']);
     });
 
     it('予想削除の所有者条件を維持する', async () => {

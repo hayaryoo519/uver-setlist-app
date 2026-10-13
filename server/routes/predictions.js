@@ -37,9 +37,10 @@ router.get('/lives', async (req, res) => {
 // 1. GET All Predictions (Ranking & My Page Alias)
 // Query params: live_id, sort (popular | new), mine (true)
 // Logic for fetching predictions
-const fetchPredictions = async (req, res) => {
+const fetchPredictions = async (req, res, mineOnly = false) => {
     try {
-        let { live_id, sort, mine } = req.query;
+        let { live_id, sort } = req.query;
+        const mine = mineOnly ? 'true' : req.query.mine;
         const currentUserId = await getOptionalUserId(req);
 
         // 1. If live_id is not provided, and we are not explicitly requesting 'mine', find the most recent/upcoming live
@@ -124,12 +125,11 @@ const fetchPredictions = async (req, res) => {
     }
 };
 
-router.get('/', fetchPredictions);
+router.get('/', (req, res) => fetchPredictions(req, res));
 
 // Alias for My Page
 router.get('/me', authorize, (req, res) => {
-    req.query.mine = 'true';
-    fetchPredictions(req, res);
+    fetchPredictions(req, res, true);
 });
 
 // 2. GET Single Prediction Detail
