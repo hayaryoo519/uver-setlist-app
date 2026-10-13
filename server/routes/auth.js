@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
 
-const crypto = require('crypto');
+const { hashToken, createToken } = require('../utils/authTokens');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/email');
 const { loginLimiter, resetLimiter, registerLimiter, verificationLimiter, resetConfirmationLimiter } = require('../middleware/rateLimiter');
 const { isValidEmail, isValidUsername, isValidLoginPassword, isValidToken, newPasswordError } = require('../utils/authValidation');
@@ -36,20 +36,20 @@ router.post('/register', registerLimiter, async (req, res) => {
         const bcryptPassword = await bcrypt.hash(password, salt);
 
         // 3. Generate verification token
-        const verificationToken = crypto.randomBytes(32).toString('hex');
+        const verification = createToken(24 * 60 * 60 * 1000);
 
         // 4. Insert into DB (is_verified default false)
         const isPublic = is_public !== false;
         const newUser = await db.query(
-            "INSERT INTO users (username, email, password, is_verified, verification_token, is_public) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (email) DO NOTHING RETURNING id",
-            [username, email, bcryptPassword, false, verificationToken, isPublic]
+            "INSERT INTO users (username, email, password, is_verified, verification_token_hash, verification_token_expires, is_public) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (email) DO NOTHING RETURNING id",
+            [username, email, bcryptPassword, false, verification.hash, verification.expires, isPublic]
         );
 
         // Delivery latency and failures must not reveal whether the address exists.
         res.json(registrationResponse);
         if (newUser.rows.length > 0) {
             try {
-                await sendVerificationEmail(email, verificationToken);
+                await sendVerificationEmail(email, verification.token);
             } catch (err) {
                 console.error('Register Error: verification email delivery failed');
             }
@@ -67,14 +67,15 @@ router.post('/verify-email', verificationLimiter, async (req, res) => {
         const { token } = req.body || {};
         if (!isValidToken(token)) return res.status(400).json({ message: '無効なトークンです' });
 
-        const user = await db.query("SELECT * FROM users WHERE verification_token = $1", [token]);
+        // Consume once, even when two requests arrive before either has completed.
+        const user = await db.query(
+            "UPDATE users SET is_verified = TRUE, verification_token = NULL, verification_token_hash = NULL, verification_token_expires = NULL WHERE (verification_token_hash = $1 OR (verification_token_hash IS NULL AND verification_token = $2)) AND verification_token_expires > $3 AND is_verified = FALSE AND deleted_at IS NULL RETURNING id, username, email, role, session_version",
+            [hashToken(token), token, Date.now()]
+        );
 
         if (user.rows.length === 0) {
             return res.status(400).json({ message: "無効なトークンです" });
         }
-
-        // Update user to verified
-        await db.query("UPDATE users SET is_verified = TRUE, verification_token = NULL WHERE id = $1", [user.rows[0].id]);
 
         // Generate Login Token
         const jwtToken = jwt.sign(
@@ -173,15 +174,14 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
             return;
         }
 
-        const token = crypto.randomBytes(32).toString('hex');
-        const expires = Date.now() + 3600000; // 1 hour
+        const reset = createToken(3600000); // 1 hour
 
-        await db.query(
-            "UPDATE users SET reset_password_token = $1, reset_password_expires = $2 WHERE id = $3",
-            [token, expires, user.rows[0].id]
+        const updated = await db.query(
+            "UPDATE users SET reset_password_token = NULL, reset_password_token_hash = $1, reset_password_expires = $2 WHERE id = $3 AND deleted_at IS NULL RETURNING id",
+            [reset.hash, reset.expires, user.rows[0].id]
         );
 
-        await sendPasswordResetEmail(email, token);
+        if (updated.rows.length > 0) await sendPasswordResetEmail(email, reset.token);
 
     } catch (err) {
         console.error("Forgot Password Error: reset email processing failed");
@@ -197,8 +197,8 @@ router.post('/reset-password', resetConfirmationLimiter, async (req, res) => {
         if (passwordError) return res.status(400).json({ message: passwordError });
 
         const user = await db.query(
-            "SELECT * FROM users WHERE reset_password_token = $1 AND reset_password_expires > $2 AND deleted_at IS NULL",
-            [token, Date.now()]
+            "SELECT * FROM users WHERE (reset_password_token_hash = $1 OR (reset_password_token_hash IS NULL AND reset_password_token = $2)) AND reset_password_expires > $3 AND deleted_at IS NULL",
+            [hashToken(token), token, Date.now()]
         );
 
         if (user.rows.length === 0) {
@@ -212,8 +212,8 @@ router.post('/reset-password', resetConfirmationLimiter, async (req, res) => {
 
         // Atomically consume the reset token and revoke all previous sessions.
         const updated = await db.query(
-            "UPDATE users SET password = $1, reset_password_token = NULL, reset_password_expires = NULL, session_version = session_version + 1 WHERE id = $2 AND reset_password_token = $3 AND reset_password_expires > $4 AND deleted_at IS NULL RETURNING id",
-            [bcryptPassword, user.rows[0].id, token, Date.now()]
+            "UPDATE users SET password = $1, reset_password_token = NULL, reset_password_token_hash = NULL, reset_password_expires = NULL, session_version = session_version + 1 WHERE id = $2 AND (reset_password_token_hash = $3 OR (reset_password_token_hash IS NULL AND reset_password_token = $4)) AND reset_password_expires > $5 AND deleted_at IS NULL RETURNING id",
+            [bcryptPassword, user.rows[0].id, hashToken(token), token, Date.now()]
         );
         if (updated.rowCount === 0) {
             return res.status(400).json({ message: "無効または期限切れのトークンです。再度手続きを行ってください。" });

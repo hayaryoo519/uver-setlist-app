@@ -64,8 +64,10 @@ describe('credential changes revoke old JWTs', () => {
         expect(res.status).toBe(200);
         for (const signed of [token(), token(0)]) expect((await request(app).get('/protected').set('token', signed)).status).toBe(403);
         const update = db.query.mock.calls.find(([sql]) => sql.startsWith('UPDATE users SET password'));
-        expect(update[0]).toContain('reset_password_token = $3 AND reset_password_expires > $4 AND deleted_at IS NULL');
-        expect(update[1].slice(0, 3)).toEqual(['new-hash', 1, 'fake-reset']);
+        expect(update[0]).toContain('reset_password_token_hash = $3 OR (reset_password_token_hash IS NULL AND reset_password_token = $4)');
+        expect(update[0]).toContain('reset_password_expires > $5 AND deleted_at IS NULL');
+        expect(update[1].slice(0, 2)).toEqual(['new-hash', 1]);
+        expect(update[1][3]).toBe('fake-reset');
     });
     it('rejects an already consumed or expired reset during the update', async () => {
         updateAllowed = false;
@@ -85,6 +87,7 @@ describe('credential changes revoke old JWTs', () => {
         expect((await request(app).get('/protected').set('token', token(0))).status).toBe(403);
         const update = db.query.mock.calls.find(([sql]) => sql.startsWith('UPDATE users SET'));
         expect(update[0]).toContain('reset_password_token = NULL');
+        expect(update[0]).toContain('reset_password_token_hash = NULL');
         expect(update[0]).toContain('AND session_version = $3 AND deleted_at IS NULL');
         expect(update[1]).toEqual(['new-hash', 1, 0]);
     });

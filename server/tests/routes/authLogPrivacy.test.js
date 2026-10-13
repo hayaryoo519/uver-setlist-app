@@ -56,7 +56,7 @@ describe('Authentication error log privacy', () => {
 
     it.each(['register', 'forgot-password'])('does not log SMTP errors propagated through %s', async route => {
         db.query.mockResolvedValueOnce({ rows: [{ id: 1 }] })
-            .mockResolvedValue({ rows: [] });
+            .mockResolvedValue({ rows: [{ id: 1 }] });
         sendVerificationEmail.mockRejectedValue(failure);
         sendPasswordResetEmail.mockRejectedValue(failure);
         expect((await request(app).post(`/api/auth/${route}`).send({

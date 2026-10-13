@@ -37,7 +37,7 @@ const sendVerificationEmail = async (email, token) => {
                     </a>
                 </div>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
-                <p style="font-size: 0.9rem;">認証コードの有効期限が切れた場合、お手数ですが再度登録手続きをお願いいたします。</p>
+                <p style="font-size: 0.9rem;">この認証リンクの有効期限は24時間です。</p>
                 <p style="font-size: 0.9rem;">このメールはご本人様確認のため、UVERworld Setlist Archiveにご登録いただいたメールアドレス宛にお送りしております。心当たりがない場合、お手数ですがこのメールは削除ください。</p>
                 <p style="font-size: 0.9rem; color: #666;">
                     このメールアドレスは配信専用です。ご返信頂いてもご返答が出来ません。ご了承ください。<br /><br />

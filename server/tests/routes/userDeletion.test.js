@@ -36,7 +36,7 @@ describe('self-deletion and administrator deletion routing', () => {
         expect(res.status).toBe(200);
         expect(res.body).toBe('Account deleted successfully');
         expect(db.query).toHaveBeenCalledWith(
-            'UPDATE users SET deleted_at = NOW(), session_version = session_version + 1, reset_password_token = NULL, reset_password_expires = NULL WHERE id = $1 AND deleted_at IS NULL RETURNING id', [1]
+            'UPDATE users SET deleted_at = NOW(), session_version = session_version + 1, reset_password_token = NULL, reset_password_token_hash = NULL, reset_password_expires = NULL, verification_token = NULL, verification_token_hash = NULL, verification_token_expires = NULL WHERE id = $1 AND deleted_at IS NULL RETURNING id', [1]
         );
         expect(db.query.mock.calls.length).toBe(2);
     });
