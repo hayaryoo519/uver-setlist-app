@@ -88,6 +88,25 @@ describe('current account authorization and signed optional identity', () => {
         expect(res.status).toBe(401);
         expect(db.query.mock.calls.every(([sql]) => sql.startsWith('SELECT id, role, session_version FROM users'))).toBe(true);
     });
+
+    it.each(['missing', 'forged', 'expired', 'deleted', 'revoked'])('rejects the private prediction alias with %s authentication', async mode => {
+        if (mode === 'deleted') account = null;
+        if (mode === 'revoked') account.session_version = 1;
+        const signed = mode === 'forged' ? token(undefined, 'wrong-key')
+            : mode === 'expired' ? token(undefined, key, { expiresIn: -1 }) : token();
+        const req = request(app).get('/predictions/me?mine=false');
+        const res = await (mode === 'missing' ? req : req.set('token', signed));
+        expect(res.status).toBe(403);
+        expect(db.query.mock.calls.every(([sql]) => sql.startsWith('SELECT id, role, session_version FROM users'))).toBe(true);
+    });
+
+    it('the private prediction alias filters the signed current account', async () => {
+        const res = await request(app).get('/predictions/me?mine=false').set('token', token());
+        expect(res.status).toBe(200);
+        const listing = db.query.mock.calls.find(([sql]) => sql.includes('FROM predictions p'));
+        expect(listing[0]).toContain('AND p.user_id = $2');
+        expect(listing[1]).toEqual([1, 1]);
+    });
     it('does not expose soft-deleted songs to a stale admin JWT', async () => {
         const res = await request(app).get('/songs?include_deleted=true').set('token', token());
         expect(res.status).toBe(403);
