@@ -11,11 +11,19 @@ describe('self-deletion and administrator deletion routing', () => {
     const originalSecret = process.env.JWT_SECRET;
     const key = 'isolated-user-deletion-test-key';
     const token = role => jwt.sign({ user_id: 1, role }, key);
+    let account, mutation, failure;
     beforeEach(() => {
         jest.clearAllMocks();
         process.env.JWT_SECRET = key;
         for (const method of ['log', 'warn', 'error']) jest.spyOn(console, method).mockImplementation(() => {});
-        db.query.mockResolvedValue({ rowCount: 1, rows: [{ id: 1 }] });
+        account = { id: 1, role: 'user' };
+        mutation = { rowCount: 1, rows: [{ id: 1 }] };
+        failure = null;
+        db.query.mockImplementation(async sql => {
+            if (sql.startsWith('SELECT id, role FROM users')) return { rows: [account] };
+            if (failure) throw failure;
+            return mutation;
+        });
     });
     afterEach(() => {
         jest.restoreAllMocks();
@@ -23,13 +31,14 @@ describe('self-deletion and administrator deletion routing', () => {
         else process.env.JWT_SECRET = originalSecret;
     });
     it.each(['user', 'admin'])('allows %s to delete only their own account via /me', async role => {
+        account.role = role;
         const res = await request(app).delete('/users/me').set('token', token(role)).send({ user_id: 2 });
         expect(res.status).toBe(200);
         expect(res.body).toBe('Account deleted successfully');
         expect(db.query).toHaveBeenCalledWith(
             'UPDATE users SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING id', [1]
         );
-        expect(db.query.mock.calls.length).toBe(1);
+        expect(db.query.mock.calls.length).toBe(2);
     });
     it.each(['', 'invalid-token'])('rejects missing or invalid authentication before DB access (%s)', async value => {
         const res = await request(app).delete('/users/me').set('token', value);
@@ -37,14 +46,14 @@ describe('self-deletion and administrator deletion routing', () => {
         expect(db.query.mock.calls.length).toBe(0);
     });
     it('returns 404 when the own account is missing or already deleted', async () => {
-        db.query.mockResolvedValue({ rowCount: 0, rows: [] });
+        mutation = { rowCount: 0, rows: [] };
         const res = await request(app).delete('/users/me').set('token', token('user'));
         expect(res.status).toBe(404);
         expect(res.body).toBe('User not found');
     });
     it('hides database failure details', async () => {
         const marker = 'private-delete-email@example.invalid';
-        db.query.mockRejectedValue(new Error(marker));
+        failure = new Error(marker);
         const res = await request(app).delete('/users/me').set('token', token('user'));
         expect(res.status).toBe(500);
         expect(res.text).toBe('Server Error');
@@ -54,17 +63,20 @@ describe('self-deletion and administrator deletion routing', () => {
     it('rejects ordinary users deleting another account', async () => {
         const res = await request(app).delete('/users/2').set('token', token('user'));
         expect(res.status).toBe(403);
-        expect(db.query.mock.calls.length).toBe(0);
+        expect(db.query.mock.calls.length).toBe(1);
+        expect(db.query.mock.calls[0][0]).toMatch(/^SELECT/);
     });
     it('preserves administrator deletion of another account', async () => {
+        account.role = 'admin';
         const res = await request(app).delete('/users/2').set('token', token('admin'));
         expect(res.status).toBe(200);
         expect(res.body).toBe('User deleted');
-        expect(db.query.mock.calls[0][1]).toEqual(['2']);
+        expect(db.query.mock.calls[1][1]).toEqual(['2']);
     });
     it('keeps the administrator own-ID deletion guard', async () => {
+        account.role = 'admin';
         const res = await request(app).delete('/users/1').set('token', token('admin'));
         expect(res.status).toBe(400);
-        expect(db.query.mock.calls.length).toBe(0);
+        expect(db.query.mock.calls.length).toBe(1);
     });
 });

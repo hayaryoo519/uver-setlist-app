@@ -1,18 +1,6 @@
 const router = require('express').Router();
 const db = require('../db');
-const { authorize, adminCheck } = require('../middleware/authorization');
-const jwt = require('jsonwebtoken');
-
-const getOptionalUserId = (req) => {
-    const token = req.header('token');
-    if (!token) return null;
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        return decoded.user_id;
-    } catch {
-        return null;
-    }
-};
+const { authorize, adminCheck, getOptionalUserId } = require('../middleware/authorization');
 
 // GET all users (Protected: Admin Only)
 router.get('/', authorize, adminCheck, async (req, res) => {
@@ -332,13 +320,14 @@ router.put('/me', authorize, async (req, res) => {
 // GET /api/users/:id/profile — 公開プロフィール（認証任意）
 router.get('/:id/profile', async (req, res) => {
     const userId        = parseInt(req.params.id, 10);
-    const currentUserId = getOptionalUserId(req);
+    let currentUserId;
 
     if (isNaN(userId)) {
         return res.status(400).json({ message: '無効なユーザーIDです' });
     }
 
     try {
+        currentUserId = await getOptionalUserId(req);
         const result = await db.query(`
             SELECT
                 u.id,
@@ -420,13 +409,14 @@ router.get('/:id/attended_lives', async (req, res) => {
 // GET /api/users/:id/predictions — ユーザーの予想一覧（常に公開）
 router.get('/:id/predictions', async (req, res) => {
     const userId = parseInt(req.params.id, 10);
-    const currentUserId = getOptionalUserId(req);
+    let currentUserId;
 
     if (isNaN(userId)) {
         return res.status(400).json({ message: '無効なユーザーIDです' });
     }
 
     try {
+        currentUserId = await getOptionalUserId(req);
         const result = await db.query(`
             SELECT
                 p.id,
