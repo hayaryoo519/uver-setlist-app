@@ -15,6 +15,10 @@ if (!process.env.JWT_SECRET) {
     process.exit(1);
 }
 
+// Availability remains independent of email readiness; release checks verify it separately.
+try { require('./utils/emailConfiguration').getEmailConfiguration(); }
+catch (err) { console.error('Email delivery configuration invalid'); }
+
 // CORS: ALLOWED_ORIGINS 環境変数でドメインを制限（未設定時は全許可）
 const allowedOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())

@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
+const { getEmailConfiguration } = require('./emailConfiguration');
 
 const transporter = nodemailer.createTransport({
     service: process.env.EMAIL_SERVICE || 'gmail',
@@ -9,14 +10,20 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-// Get base URL from environment variable (production) or default to localhost (development)
-const getAppUrl = () => process.env.APP_URL || 'http://localhost:5173';
+const getDeliveryConfiguration = () => {
+    try { return getEmailConfiguration(); }
+    catch (err) {
+        console.error('Email delivery configuration invalid');
+        throw err;
+    }
+};
 
 const sendVerificationEmail = async (email, token) => {
     // Missing/dummy credentials skip delivery without exposing the verification link.
-    const appUrl = getAppUrl();
+    const configuration = getDeliveryConfiguration();
+    const appUrl = configuration.appUrl;
     
-    if (!process.env.EMAIL_USER || process.env.EMAIL_USER.includes('your_email')) {
+    if (!configuration.enabled) {
         console.log('[EMAIL MOCK] Verification email skipped: email credentials are not configured');
         return;
     }
@@ -61,10 +68,11 @@ const sendVerificationEmail = async (email, token) => {
 };
 
 const sendPasswordResetEmail = async (email, token) => {
-    const appUrl = getAppUrl();
+    const configuration = getDeliveryConfiguration();
+    const appUrl = configuration.appUrl;
     
     // Missing/dummy credentials skip delivery without exposing the reset link.
-    if (!process.env.EMAIL_USER || process.env.EMAIL_USER.includes('your_email')) {
+    if (!configuration.enabled) {
         console.log('[EMAIL MOCK] Password reset email skipped: email credentials are not configured');
         return;
     }
@@ -108,7 +116,8 @@ const sendPasswordResetEmail = async (email, token) => {
 };
 
 const sendEmailChangeConfirmation = async (email, token) => {
-    if (!process.env.EMAIL_USER || process.env.EMAIL_USER.includes('your_email')) {
+    const configuration = getDeliveryConfiguration();
+    if (!configuration.enabled) {
         console.log('[EMAIL MOCK] Email change confirmation skipped: email credentials are not configured');
         return;
     }
@@ -117,7 +126,7 @@ const sendEmailChangeConfirmation = async (email, token) => {
             from: process.env.EMAIL_USER,
             to: email,
             subject: '【UVERworld SETLIST Archive】メールアドレス変更の確認',
-            html: `<p>メールアドレス変更の依頼を受け付けました。</p><p><a href="${getAppUrl()}/confirm-email-change?token=${token}">メールアドレスの変更を確認する</a></p><p>有効期限は1時間です。確認が完了するまで現在のメールアドレスは変更されません。確認後は新しいメールアドレスで再度ログインしてください。</p><p>心当たりがない場合はこのメールを削除してください。</p>`
+            html: `<p>メールアドレス変更の依頼を受け付けました。</p><p><a href="${configuration.appUrl}/confirm-email-change?token=${token}">メールアドレスの変更を確認する</a></p><p>有効期限は1時間です。確認が完了するまで現在のメールアドレスは変更されません。確認後は新しいメールアドレスで再度ログインしてください。</p><p>心当たりがない場合はこのメールを削除してください。</p>`
         });
         console.log('Email change confirmation sent');
     } catch (err) {
@@ -126,4 +135,10 @@ const sendEmailChangeConfirmation = async (email, token) => {
     }
 };
 
-module.exports = { sendVerificationEmail, sendPasswordResetEmail, sendEmailChangeConfirmation };
+const verifyEmailConnection = async () => {
+    const configuration = getDeliveryConfiguration();
+    if (!configuration.enabled) throw new Error('Email delivery is disabled');
+    await transporter.verify();
+};
+
+module.exports = { sendVerificationEmail, sendPasswordResetEmail, sendEmailChangeConfirmation, verifyEmailConnection };
