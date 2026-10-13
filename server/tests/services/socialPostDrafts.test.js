@@ -1,7 +1,7 @@
 jest.mock('../../db');
 
 const db = require('../../db');
-const { createOnThisDayDraft, jstDateParts } = require('../../services/socialPostDrafts');
+const { createOnThisDayDraft, jstDateParts, runDailyDraftGeneration } = require('../../services/socialPostDrafts');
 
 describe('socialPostDrafts', () => {
     beforeEach(() => jest.clearAllMocks());
@@ -28,5 +28,16 @@ describe('socialPostDrafts', () => {
         db.query.mockResolvedValueOnce({ rows: [] });
         await expect(createOnThisDayDraft()).resolves.toBeNull();
         expect(db.query).toHaveBeenCalledTimes(1);
+    });
+
+    it('定期生成の失敗を固定ログにして処理を止めない', async () => {
+        const marker = 'private-daily@example.invalid Bearer fixture-token';
+        const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        try {
+            db.query.mockRejectedValueOnce(new Error(marker));
+            await expect(runDailyDraftGeneration()).resolves.toBeUndefined();
+            expect(spy).toHaveBeenCalledWith('[SocialPosts] Daily draft generation failed: details suppressed');
+            expect(JSON.stringify(spy.mock.calls)).not.toContain(marker);
+        } finally { spy.mockRestore(); }
     });
 });
