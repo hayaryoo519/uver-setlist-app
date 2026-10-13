@@ -8,7 +8,7 @@ const app = express(); app.use(express.json()); app.use('/auth', require('../../
 
 describe('actual auth limiters and independent reset quotas', () => {
     it.each([
-        ['/register', 5], ['/verify-email', 5], ['/login', 5], ['/forgot-password', 3], ['/reset-password', 3]
+        ['/register', 5], ['/verify-email', 5], ['/login', 5], ['/forgot-password', 3], ['/reset-password', 3], ['/resend-verification', 3]
     ])('limits invalid requests to %s independently', async (path, limit) => {
         for (let index = 0; index < limit; index++) {
             expect((await request(app).post('/auth' + path).send({})).status).toBe(400);

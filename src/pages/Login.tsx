@@ -41,6 +41,7 @@ const Login = () => {
     return (
         <AuthLayout title="ログイン" subtitle="UVERworld Setlist Archive へようこそ">
             {error && <div className="auth-error-message">{error}</div>}
+            <Link to="/verify-email" className="auth-link">認証メールが届かない・期限が切れた場合</Link>
             
             <form onSubmit={handleSubmit}>
                 <div className="auth-input-group">

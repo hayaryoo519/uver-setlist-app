@@ -46,4 +46,12 @@ const resetConfirmationLimiter = rateLimit({
     legacyHeaders: false,
 });
 
-module.exports = { loginLimiter, resetLimiter, registerLimiter, verificationLimiter, resetConfirmationLimiter };
+const verificationResendLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 3,
+    message: { message: '認証メールの再送回数が多すぎます。1時間後にお試しください。' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+module.exports = { loginLimiter, resetLimiter, registerLimiter, verificationLimiter, resetConfirmationLimiter, verificationResendLimiter };

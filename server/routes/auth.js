@@ -5,7 +5,7 @@ const db = require('../db');
 
 const { hashToken, createToken } = require('../utils/authTokens');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/email');
-const { loginLimiter, resetLimiter, registerLimiter, verificationLimiter, resetConfirmationLimiter } = require('../middleware/rateLimiter');
+const { loginLimiter, resetLimiter, registerLimiter, verificationLimiter, resetConfirmationLimiter, verificationResendLimiter } = require('../middleware/rateLimiter');
 const { isValidEmail, isValidUsername, isValidLoginPassword, isValidToken, newPasswordError } = require('../utils/authValidation');
 
 const registrationResponse = {
@@ -13,6 +13,7 @@ const registrationResponse = {
     requireVerification: true
 };
 const resetRequestResponse = { message: '入力したメールアドレスに対応するアカウントがある場合、パスワード再設定用のメールが届きます。' };
+const verificationLifetimeMs = 24 * 60 * 60 * 1000;
 // A valid cost-10 hash keeps unknown-user attempts on the same bcrypt path.
 const dummyPasswordHash = '$2b$10$fFGx1Y4tcVNfQ9S0sTibwuSFDE1jwadFRu2KfHTdtHALo.duP1WvK';
 
@@ -36,7 +37,7 @@ router.post('/register', registerLimiter, async (req, res) => {
         const bcryptPassword = await bcrypt.hash(password, salt);
 
         // 3. Generate verification token
-        const verification = createToken(24 * 60 * 60 * 1000);
+        const verification = createToken(verificationLifetimeMs);
 
         // 4. Insert into DB (is_verified default false)
         const isPublic = is_public !== false;
@@ -58,6 +59,24 @@ router.post('/register', registerLimiter, async (req, res) => {
     } catch (err) {
         console.error("Register Error: registration failed");
         res.status(500).json({ message: "サーバーエラーが発生しました" });
+    }
+});
+
+// Resend without disclosing account state or replacing existing credentials.
+router.post('/resend-verification', verificationResendLimiter, async (req, res) => {
+    const { email } = req.body || {};
+    if (!isValidEmail(email)) return res.status(400).json({ message: '有効なメールアドレスを入力してください' });
+    res.json({ message: '未認証のアカウントがある場合、認証メールが届きます。直前に依頼した場合は1分以上待って再度お試しください。' });
+    try {
+        const verification = createToken(verificationLifetimeMs);
+        // Tokens always expire 24 hours after issuance; the expiry encodes the last issuance time.
+        const updated = await db.query(
+            "UPDATE users SET verification_token = NULL, verification_token_hash = $1, verification_token_expires = $2 WHERE email = $3 AND is_verified = FALSE AND deleted_at IS NULL AND (verification_token_expires IS NULL OR verification_token_expires <= $4) RETURNING email",
+            [verification.hash, verification.expires, email, verification.expires - 60000]
+        );
+        if (updated.rows.length > 0) await sendVerificationEmail(updated.rows[0].email, verification.token);
+    } catch (err) {
+        console.error('Verification Resend Error: email processing failed');
     }
 });
 
