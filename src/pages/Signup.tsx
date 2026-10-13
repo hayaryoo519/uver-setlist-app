@@ -35,7 +35,7 @@ const Signup = () => {
             const result = await register(username, email, password, isPublic);
             if (result.success) {
                 if (result.requireVerification) {
-                    showToast('登録完了！認証メールを送信しました。', 'info');
+                    showToast('登録を受け付けました。メールをご確認ください。', 'info');
                     setVerificationSent(true);
                 } else {
                     showToast('アカウントを作成しました', 'success');
@@ -54,15 +54,16 @@ const Signup = () => {
 
     if (verificationSent) {
         return (
-            <AuthLayout title="メールを確認してください" subtitle="認証用リンクを送信しました">
+            <AuthLayout title="メールを確認してください" subtitle="登録を受け付けました">
                 <div style={{ textAlign: 'center', padding: '10px 0' }}>
                     <div className="auth-success-icon-wrapper">
                         <CheckCircle size={44} color="var(--lp-gold)" />
                     </div>
-                    <h3 style={{ color: '#fff', marginBottom: '16px', fontSize: '1.5rem', fontWeight: '800' }}>送信完了</h3>
+                    <h3 style={{ color: '#fff', marginBottom: '16px', fontSize: '1.5rem', fontWeight: '800' }}>受付完了</h3>
                     <p style={{ color: 'var(--lp-slate-400)', lineHeight: '1.8', marginBottom: '32px', fontSize: '1rem' }}>
-                        <strong className="text-gold">{email}</strong> 宛にメールを送信しました。<br />
-                        記載されたリンクをクリックして、<br />アカウント登録を完了してください。
+                        <strong className="text-gold">{email}</strong> で登録可能な場合、認証メールが届きます。<br />
+                        届いたメールのリンクから、アカウント登録を完了してください。<br />
+                        登録済みの場合は <Link to="/login" className="auth-link">ログイン</Link> または <Link to="/forgot-password" className="auth-link">パスワード再設定</Link> をお試しください。
                     </p>
                     <div style={{ fontSize: '0.9rem', color: 'var(--lp-slate-500)', background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
                         メールが届かない場合は、迷惑メールフォルダをご確認ください。<br />

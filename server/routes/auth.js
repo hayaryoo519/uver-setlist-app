@@ -8,6 +8,14 @@ const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/emai
 const { loginLimiter, resetLimiter, registerLimiter, verificationLimiter, resetConfirmationLimiter } = require('../middleware/rateLimiter');
 const { isValidEmail, isValidUsername, isValidLoginPassword, isValidToken, newPasswordError } = require('../utils/authValidation');
 
+const registrationResponse = {
+    message: '登録を受け付けました。登録可能な場合は認証メールが届きます。登録済みの場合はログインまたはパスワード再設定をお試しください。',
+    requireVerification: true
+};
+const resetRequestResponse = { message: '入力したメールアドレスに対応するアカウントがある場合、パスワード再設定用のメールが届きます。' };
+// A valid cost-10 hash keeps unknown-user attempts on the same bcrypt path.
+const dummyPasswordHash = '$2b$10$fFGx1Y4tcVNfQ9S0sTibwuSFDE1jwadFRu2KfHTdtHALo.duP1WvK';
+
 // Register API
 router.post('/register', registerLimiter, async (req, res) => {
     try {
@@ -22,13 +30,7 @@ router.post('/register', registerLimiter, async (req, res) => {
         if (passwordError) return res.status(400).json({ message: passwordError });
         if (is_public !== undefined && typeof is_public !== 'boolean') return res.status(400).json({ message: '公開設定が不正です' });
 
-        // 2. Check if user exists
-        const userCheck = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (userCheck.rows.length > 0) {
-            return res.status(400).json({ message: "このメールアドレスは既に登録されています" });
-        }
-
-        // 2. Hash password
+        // Hash every valid request, including an already registered address.
         const saltRound = 10;
         const salt = await bcrypt.genSalt(saltRound);
         const bcryptPassword = await bcrypt.hash(password, salt);
@@ -39,18 +41,19 @@ router.post('/register', registerLimiter, async (req, res) => {
         // 4. Insert into DB (is_verified default false)
         const isPublic = is_public !== false;
         const newUser = await db.query(
-            "INSERT INTO users (username, email, password, is_verified, verification_token, is_public) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+            "INSERT INTO users (username, email, password, is_verified, verification_token, is_public) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (email) DO NOTHING RETURNING id",
             [username, email, bcryptPassword, false, verificationToken, isPublic]
         );
 
-        // 5. Send Verification Email
-        await sendVerificationEmail(email, verificationToken);
-
-        // Don't return token yet, require verification
-        res.json({
-            message: "登録が完了しました。メールを確認して認証を行ってください。",
-            requireVerification: true
-        });
+        // Delivery latency and failures must not reveal whether the address exists.
+        res.json(registrationResponse);
+        if (newUser.rows.length > 0) {
+            try {
+                await sendVerificationEmail(email, verificationToken);
+            } catch (err) {
+                console.error('Register Error: verification email delivery failed');
+            }
+        }
 
     } catch (err) {
         console.error("Register Error: registration failed");
@@ -94,6 +97,7 @@ router.post('/login', loginLimiter, async (req, res) => {
         const { email, password } = req.body || {};
         if (!isValidEmail(email) || !isValidLoginPassword(password)) return res.status(400).json({ message: 'メールアドレスとパスワードを正しく入力してください' });
         const user = await db.query("SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL", [email]);
+        const validPassword = await bcrypt.compare(password, user.rows[0]?.password || dummyPasswordHash);
 
         if (user.rows.length === 0) {
             // Log failed login attempt - user not found
@@ -107,15 +111,6 @@ router.post('/login', loginLimiter, async (req, res) => {
             return res.status(401).json({ message: "メールアドレスまたはパスワードが間違っています" });
         }
 
-        // Check if verified
-        if (user.rows[0].is_verified === false) {
-            return res.status(401).json({
-                message: "メールアドレスが認証されていません。メールを確認してください。",
-                requireVerification: true
-            });
-        }
-
-        const validPassword = await bcrypt.compare(password, user.rows[0].password);
         if (!validPassword) {
             // Log failed login attempt - invalid password
             await db.query(`
@@ -126,6 +121,14 @@ router.post('/login', loginLimiter, async (req, res) => {
             });
 
             return res.status(401).json({ message: "メールアドレスまたはパスワードが間違っています" });
+        }
+
+        // This account-specific guidance is safe only after checking the password.
+        if (user.rows[0].is_verified === false) {
+            return res.status(401).json({
+                message: "メールアドレスが認証されていません。メールを確認してください。",
+                requireVerification: true
+            });
         }
 
         // ログイン成功をセキュリティログに記録
@@ -159,15 +162,15 @@ router.post('/login', loginLimiter, async (req, res) => {
 
 // Forgot Password API
 router.post('/forgot-password', resetLimiter, async (req, res) => {
+    const { email } = req.body || {};
+    if (!isValidEmail(email)) return res.status(400).json({ message: '有効なメールアドレスを入力してください' });
+    // Accept before account lookup, so lookup and SMTP timing cannot identify users.
+    res.json(resetRequestResponse);
     try {
-        const { email } = req.body || {};
-        if (!isValidEmail(email)) return res.status(400).json({ message: '有効なメールアドレスを入力してください' });
         const user = await db.query('SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL', [email]);
 
         if (user.rows.length === 0) {
-            // For security, don't reveal if user exists. 
-            // Just return success message.
-            return res.json({ message: "パスワード再設定用のメールを送信しました。メールをご確認ください。" });
+            return;
         }
 
         const token = crypto.randomBytes(32).toString('hex');
@@ -180,10 +183,8 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
 
         await sendPasswordResetEmail(email, token);
 
-        res.json({ message: "パスワード再設定用のメールを送信しました。メールをご確認ください。" });
     } catch (err) {
         console.error("Forgot Password Error: reset email processing failed");
-        res.status(500).json({ message: "サーバーエラーが発生しました" });
     }
 });
 

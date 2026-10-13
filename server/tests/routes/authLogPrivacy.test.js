@@ -44,7 +44,7 @@ describe('Authentication error log privacy', () => {
         const res = await request(app).post(`/api/auth/${route}`).send({
             username: 'test-user', email: marker, password: marker, token: marker
         });
-        expect(res.status).toBe(500);
+        expect(res.status).toBe(route === 'forgot-password' ? 200 : 500);
         expect(JSON.stringify(error.mock.calls)).not.toContain(marker);
         expect(error).toHaveBeenCalled();
         if (route === 'login') {
@@ -55,13 +55,13 @@ describe('Authentication error log privacy', () => {
     });
 
     it.each(['register', 'forgot-password'])('does not log SMTP errors propagated through %s', async route => {
-        db.query.mockResolvedValueOnce({ rows: route === 'register' ? [] : [{ id: 1 }] })
+        db.query.mockResolvedValueOnce({ rows: [{ id: 1 }] })
             .mockResolvedValue({ rows: [] });
         sendVerificationEmail.mockRejectedValue(failure);
         sendPasswordResetEmail.mockRejectedValue(failure);
         expect((await request(app).post(`/api/auth/${route}`).send({
             username: 'test-user', email: marker, password: marker
-        })).status).toBe(500);
+        })).status).toBe(200);
         expect(JSON.stringify(error.mock.calls)).not.toContain(marker);
         expect(error).toHaveBeenCalled();
     });
