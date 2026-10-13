@@ -18,7 +18,7 @@ async function searchITunesTrack(songTitle) {
     const response = await fetch(url);
 
     if (!response.ok) {
-        console.error(`[iTunes] 検索エラー: ${response.status} for "${songTitle}"`);
+        console.error(`[iTunes] 検索エラー: ${response.status}`);
         return null;
     }
 
@@ -26,7 +26,7 @@ async function searchITunesTrack(songTitle) {
     const tracks = data.results || [];
 
     if (tracks.length === 0) {
-        console.log(`[iTunes] "${songTitle}" の検索結果なし`);
+        console.log('[iTunes] 検索結果なし');
         return null;
     }
 
@@ -133,7 +133,7 @@ router.get('/song-image/:songTitle', async (req, res) => {
             source: 'itunes',
         });
     } catch (err) {
-        console.error('[iTunes] API Error:', err.message);
+        console.error('[iTunes] API Error: details suppressed');
         res.status(500).json({ message: 'iTunes API Error', error: 'Internal Server Error' });
     }
 });
@@ -167,7 +167,7 @@ router.get('/album-image/:albumTitle', async (req, res) => {
                 [albumTitle, result.image_url]
             );
         } catch (dbErr) {
-            console.warn('[iTunes] Failed to store album image in album_cache:', dbErr.message);
+            console.warn('[iTunes] Failed to store album image in album_cache: details suppressed');
         }
 
         res.json({
@@ -175,7 +175,7 @@ router.get('/album-image/:albumTitle', async (req, res) => {
             source: 'itunes_album'
         });
     } catch (err) {
-        console.error('[iTunes] Album API Error:', err.message);
+        console.error('[iTunes] Album API Error: details suppressed');
         res.status(500).json({ message: 'iTunes Album API Error', error: 'Internal Server Error' });
     }
 });
@@ -220,7 +220,7 @@ router.get('/batch', async (req, res) => {
                     results[title] = { image_url: null, source: 'not_found' };
                 }
             } catch (apiErr) {
-                console.error(`[iTunes] "${title}" の取得に失敗:`, apiErr.message);
+                console.error('[iTunes] 曲情報の取得に失敗: details suppressed');
                 results[title] = { image_url: null, source: 'error' };
             }
 
@@ -230,7 +230,7 @@ router.get('/batch', async (req, res) => {
 
         res.json(results);
     } catch (err) {
-        console.error('[iTunes] Batch API Error:', err.message);
+        console.error('[iTunes] Batch API Error: details suppressed');
         res.status(500).json({ message: 'iTunes Batch API Error', error: 'Internal Server Error' });
     }
 });
