@@ -67,7 +67,7 @@ const Signup = () => {
                     </p>
                     <div style={{ fontSize: '0.9rem', color: 'var(--lp-slate-500)', background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
                         メールが届かない場合は、迷惑メールフォルダをご確認ください。<br />
-                        または <a href="#" onClick={(e) => { e.preventDefault(); window.location.reload(); }} className="auth-link">再登録</a> をお試しください。
+                        未認証の場合は <Link to="/verify-email" className="auth-link">認証メールの再送</Link> をお試しください。
                     </div>
                 </div>
             </AuthLayout>
