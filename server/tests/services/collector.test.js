@@ -55,6 +55,57 @@ describe('collector', () => {
         jest.restoreAllMocks();
     });
 
+    describe('収集ログの機密情報保護', () => {
+        const marker = 'private-collector@example.invalid Bearer fixture-token';
+        const privateLogs = () => db.query.mock.calls.filter(([sql]) => sql.includes('INSERT INTO collector_logs'));
+
+        it('取得失敗は件数を残し、検索語・例外詳細を保存しない', async () => {
+            xClient.getPosts.mockRejectedValueOnce(new Error(marker));
+            db.query.mockResolvedValue({ rows: [] });
+            expect(await collector.collect(marker, 7)).toBe(0);
+            const logs = privateLogs();
+            expect(logs).toHaveLength(1);
+            expect(JSON.stringify(logs)).not.toContain(marker);
+            expect(JSON.parse(logs[0][1][2])).toMatchObject({ liveId: 7, errors: 1, fetched: 0 });
+        });
+
+        it('中断エラーを維持し、DBログへ例外詳細を保存しない', async () => {
+            xClient.getPosts.mockRejectedValueOnce(new XCollectorAbortError(marker));
+            db.query.mockResolvedValue({ rows: [] });
+            await expect(collector.collect(marker, 7)).rejects.toThrow(XCollectorAbortError);
+            expect(JSON.stringify(privateLogs())).not.toContain(marker);
+            expect(privateLogs()[0][1][0]).toBe('warn');
+        });
+
+        it('DBログ保存失敗でも詳細をコンソールに出さない', async () => {
+            const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+            xClient.getPosts.mockRejectedValueOnce(new Error(marker));
+            db.query.mockRejectedValueOnce(new Error(marker));
+            expect(await collector.collect(marker, 7)).toBe(0);
+            expect(spy).toHaveBeenCalledWith('Failed to write collector log to DB: details suppressed');
+            expect(JSON.stringify(spy.mock.calls)).not.toContain(marker);
+        });
+
+        it('事前分類失敗の本文や例外詳細を保存せずGPTへ継続する', async () => {
+            process.env.TYPESAFE_API_KEY = 'fixture-key';
+            jest.spyOn(systemOne, 'askChoice').mockRejectedValueOnce(new Error(marker));
+            db.query.mockResolvedValue({ rows: [] });
+            expect(await collector.preclassifySetlistPost(marker)).toMatchObject({ enabled: true, shouldSkip: false, error: 'details suppressed' });
+            expect(JSON.stringify(privateLogs())).not.toContain(marker);
+        });
+
+        it('投稿URLと検索語を進捗・レート制限ログへ出さない', async () => {
+            const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+            xClient.getPosts.mockResolvedValueOnce([makePost({ post_url: marker, text: marker, is_retweet: true })]);
+            db.query.mockResolvedValue({ rows: [] });
+            expect(await collector.collect(marker)).toBe(0);
+            expect(await collector.collect(marker)).toBe(0);
+            expect(JSON.stringify(spy.mock.calls)).not.toContain(marker);
+            expect(JSON.stringify(privateLogs())).not.toContain(marker);
+            expect(spy).toHaveBeenCalledWith('[Collector] Skipping retweet');
+        });
+    });
+
     describe('matchSong', () => {
         const songs = [
             { id: 1, title: 'CORE PRIDE', normalizedTitle: 'core pride', fuzzyKey: 'COREPRIDE' },
@@ -203,7 +254,7 @@ describe('collector', () => {
             expect(result).toMatchObject({
                 enabled: true,
                 shouldSkip: false,
-                error: 'typesafe down',
+                error: 'details suppressed',
             });
             expect(db.query).toHaveBeenCalledWith(
                 expect.stringContaining('INSERT INTO collector_logs'),
