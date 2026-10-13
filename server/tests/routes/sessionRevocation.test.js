@@ -1,7 +1,7 @@
 jest.mock('../../db', () => ({ query: jest.fn() }));
 jest.mock('bcrypt', () => ({ compare: jest.fn(), hash: jest.fn(), genSalt: jest.fn() }));
 jest.mock('../../utils/email', () => ({ sendVerificationEmail: jest.fn(), sendPasswordResetEmail: jest.fn() }));
-jest.mock('../../middleware/rateLimiter', () => ({ loginLimiter: (req, res, next) => next(), resetLimiter: (req, res, next) => next(), registerLimiter: (req, res, next) => next(), verificationLimiter: (req, res, next) => next(), resetConfirmationLimiter: (req, res, next) => next(), verificationResendLimiter: (req, res, next) => next() }));
+jest.mock('../../middleware/rateLimiter', () => ({ loginLimiter: (req, res, next) => next(), resetLimiter: (req, res, next) => next(), registerLimiter: (req, res, next) => next(), verificationLimiter: (req, res, next) => next(), resetConfirmationLimiter: (req, res, next) => next(), verificationResendLimiter: (req, res, next) => next(), profileUpdateLimiter: (req, res, next) => next() }));
 const express = require('express');
 const request = require('supertest');
 const jwt = require('jsonwebtoken');

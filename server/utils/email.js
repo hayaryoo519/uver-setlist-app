@@ -107,4 +107,23 @@ const sendPasswordResetEmail = async (email, token) => {
     }
 };
 
-module.exports = { sendVerificationEmail, sendPasswordResetEmail };
+const sendEmailChangeConfirmation = async (email, token) => {
+    if (!process.env.EMAIL_USER || process.env.EMAIL_USER.includes('your_email')) {
+        console.log('[EMAIL MOCK] Email change confirmation skipped: email credentials are not configured');
+        return;
+    }
+    try {
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: '【UVERworld SETLIST Archive】メールアドレス変更の確認',
+            html: `<p>メールアドレス変更の依頼を受け付けました。</p><p><a href="${getAppUrl()}/confirm-email-change?token=${token}">メールアドレスの変更を確認する</a></p><p>有効期限は1時間です。確認が完了するまで現在のメールアドレスは変更されません。確認後は新しいメールアドレスで再度ログインしてください。</p><p>心当たりがない場合はこのメールを削除してください。</p>`
+        });
+        console.log('Email change confirmation sent');
+    } catch (err) {
+        console.error('Email change confirmation send failed');
+        throw err;
+    }
+};
+
+module.exports = { sendVerificationEmail, sendPasswordResetEmail, sendEmailChangeConfirmation };

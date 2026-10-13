@@ -166,14 +166,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const updateUser = async (updatedData: Record<string, unknown>): Promise<AuthResult> => {
         try {
-            const data = await apiClient.put<AuthUser>('/api/users/me', updatedData);
+            const data = await apiClient.put<AuthUser & { emailChangeRequested?: boolean; message?: string }>('/api/users/me', updatedData);
             if (updatedData.password) {
                 logout();
-                return { success: true, message: 'パスワードを変更しました。新しいパスワードで再度ログインしてください。' };
+                return { success: true, message: data.emailChangeRequested ? 'パスワードを変更しました。現在のメールアドレスで再度ログインし、変更先メールの確認も完了してください。' : 'パスワードを変更しました。新しいパスワードで再度ログインしてください。' };
             }
-            localStorage.setItem('user', JSON.stringify(data));
-            setCurrentUser(data);
-            return { success: true };
+            const { emailChangeRequested, message, ...user } = data;
+            localStorage.setItem('user', JSON.stringify(user));
+            setCurrentUser(user);
+            return { success: true, ...(emailChangeRequested ? { message } : {}) };
         } catch (error) {
             console.error("Update error:", error);
             return { success: false, message: (error as Error).message };

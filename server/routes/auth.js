@@ -111,6 +111,24 @@ router.post('/verify-email', verificationLimiter, async (req, res) => {
     }
 });
 
+// Confirm the destination before replacing the login address and revoking sessions.
+router.post('/confirm-email-change', verificationLimiter, async (req, res) => {
+    const { token } = req.body || {};
+    if (!isValidToken(token)) return res.status(400).json({ message: '無効または期限切れのリンクです' });
+    try {
+        const updated = await db.query(
+            "UPDATE users AS account SET email = pending_email, is_verified = TRUE, pending_email = NULL, email_change_token_hash = NULL, email_change_token_expires = NULL, email_change_session_version = NULL, verification_token = NULL, verification_token_hash = NULL, verification_token_expires = NULL, reset_password_token = NULL, reset_password_token_hash = NULL, reset_password_expires = NULL, session_version = session_version + 1 WHERE email_change_token_hash = $1 AND email_change_token_expires > $2 AND email_change_session_version = session_version AND pending_email IS NOT NULL AND deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM users other WHERE other.email = account.pending_email AND other.id != account.id) RETURNING id",
+            [hashToken(token), Date.now()]
+        );
+        if (updated.rows.length === 0) return res.status(400).json({ message: '無効または期限切れのリンクです' });
+        res.json({ message: 'メールアドレスを変更しました。新しいメールアドレスでログインしてください。' });
+    } catch (err) {
+        if (err.code === '23505') return res.status(400).json({ message: '無効または期限切れのリンクです' });
+        console.error('Email Change Confirmation Error: confirmation failed');
+        res.status(500).json({ message: 'サーバーエラーが発生しました' });
+    }
+});
+
 // Login API
 router.post('/login', loginLimiter, async (req, res) => {
     try {
@@ -231,7 +249,7 @@ router.post('/reset-password', resetConfirmationLimiter, async (req, res) => {
 
         // Atomically consume the reset token and revoke all previous sessions.
         const updated = await db.query(
-            "UPDATE users SET password = $1, reset_password_token = NULL, reset_password_token_hash = NULL, reset_password_expires = NULL, session_version = session_version + 1 WHERE id = $2 AND (reset_password_token_hash = $3 OR (reset_password_token_hash IS NULL AND reset_password_token = $4)) AND reset_password_expires > $5 AND deleted_at IS NULL RETURNING id",
+            "UPDATE users SET password = $1, reset_password_token = NULL, reset_password_token_hash = NULL, reset_password_expires = NULL, pending_email = NULL, email_change_token_hash = NULL, email_change_token_expires = NULL, email_change_session_version = NULL, session_version = session_version + 1 WHERE id = $2 AND (reset_password_token_hash = $3 OR (reset_password_token_hash IS NULL AND reset_password_token = $4)) AND reset_password_expires > $5 AND deleted_at IS NULL RETURNING id",
             [bcryptPassword, user.rows[0].id, hashToken(token), token, Date.now()]
         );
         if (updated.rowCount === 0) {

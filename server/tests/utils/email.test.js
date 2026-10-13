@@ -4,7 +4,7 @@ jest.mock('nodemailer', () => ({
 }));
 jest.mock('dotenv', () => ({ config: jest.fn() }));
 
-const { sendVerificationEmail, sendPasswordResetEmail } = require('../../utils/email');
+const { sendVerificationEmail, sendPasswordResetEmail, sendEmailChangeConfirmation } = require('../../utils/email');
 
 describe('Email log privacy', () => {
     const marker = 'private-email-token-marker';
@@ -50,7 +50,8 @@ describe('Email log privacy', () => {
 
     it.each([
         ['verification', sendVerificationEmail, '/verify-email'],
-        ['reset', sendPasswordResetEmail, '/reset-password']
+        ['reset', sendPasswordResetEmail, '/reset-password'],
+        ['email-change', sendEmailChangeConfirmation, '/confirm-email-change']
     ])('preserves the %s email destination and link without logging them', async (kind, send, route) => {
         process.env.EMAIL_USER = 'sender@example.invalid';
         mockSendMail.mockResolvedValue({ accepted: [recipient] });
@@ -63,7 +64,7 @@ describe('Email log privacy', () => {
     });
 
     it.each([
-        ['verification', sendVerificationEmail], ['reset', sendPasswordResetEmail]
+        ['verification', sendVerificationEmail], ['reset', sendPasswordResetEmail], ['email-change', sendEmailChangeConfirmation]
     ])('propagates %s SMTP errors without logging their message or properties', async (kind, send) => {
         process.env.EMAIL_USER = 'sender@example.invalid';
         const failure = Object.assign(new Error(marker), { response: marker, envelope: { to: [recipient] }, command: marker });
