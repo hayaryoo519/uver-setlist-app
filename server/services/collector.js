@@ -32,7 +32,7 @@ async function logToDb(level, message, details = null) {
             [level, message, details ? JSON.stringify(details) : null]
         );
     } catch (err) {
-        console.error('Failed to write collector log to DB:', err);
+        console.error('Failed to write collector log to DB: details suppressed');
     }
 }
 
@@ -85,7 +85,7 @@ async function buildParsedSongs(titles) {
     try {
         songs = await loadSongs();
     } catch (err) {
-        console.warn('[Collector] 曲マスタの取得に失敗しました:', err.message);
+        console.warn('[Collector] 曲マスタの取得に失敗しました: details suppressed');
     }
 
     return titles.map((title, index) => {
@@ -136,7 +136,7 @@ async function getLive(liveId) {
         );
         live = result.rows[0] ?? null;
     } catch (err) {
-        console.warn('[Collector] ライブ情報の取得に失敗しました:', err.message);
+        console.warn('[Collector] ライブ情報の取得に失敗しました: details suppressed');
     }
     liveCache.set(liveId, live);
     return live;
@@ -172,7 +172,7 @@ async function estimateLiveId(text, postDate) {
             }
         }
     } catch (err) {
-        console.error('Live ID estimation error:', err);
+        console.error('Live ID estimation error: details suppressed');
     }
     return null;
 }
@@ -311,10 +311,9 @@ async function preclassifySetlistPost(text, live = null) {
         };
     } catch (err) {
         await logToDb('warn', 'System One preclassification failed', {
-            error: err.message,
-            text: text.substring(0, 100),
+            error: 'details suppressed',
         });
-        return { enabled: true, shouldSkip: false, error: err.message };
+        return { enabled: true, shouldSkip: false, error: 'details suppressed' };
     }
 }
 
@@ -361,7 +360,7 @@ is_setlist を true にする例:
             songs: Array.isArray(parsed.songs) ? parsed.songs : [],
         };
     } catch (err) {
-        await logToDb('error', 'GPT identification failed', { error: err.message, text: text.substring(0, 100) });
+        await logToDb('error', 'GPT identification failed', { error: 'details suppressed' });
         return { is_setlist: false, songs: [] };
     }
 }
@@ -424,16 +423,16 @@ async function collect(query, inputLiveId = null) {
     const cacheKey = `${inputLiveId ?? 'any'}::${query}`;
     if (lastRunCache.has(cacheKey) && (now - lastRunCache.get(cacheKey) < RATE_LIMIT_MS)) {
         const elapsedMin = Math.round((now - lastRunCache.get(cacheKey)) / 60000);
-        console.log(`[Rate Limit] Skipping collection for ${cacheKey}`);
+        console.log(`[Rate Limit] Skipping collection`);
         // 黙って return すると記録が残らず、収集が回っていないことに気付けない
         await logToDb('info', 'X collection skipped (rate limit)', {
-            query, liveId: inputLiveId, elapsedMin,
+            liveId: Number.isInteger(inputLiveId) ? inputLiveId : null, elapsedMin,
         });
         return 0;
     }
     lastRunCache.set(cacheKey, now);
 
-    const stats = { query, liveId: inputLiveId, fetched: 0, candidates: 0, lowMatch: 0, created: 0, grouped: 0, errors: 0 };
+    const stats = { liveId: Number.isInteger(inputLiveId) ? inputLiveId : null, fetched: 0, candidates: 0, lowMatch: 0, created: 0, grouped: 0, errors: 0 };
 
     let posts;
     try {
@@ -444,7 +443,7 @@ async function collect(query, inputLiveId = null) {
         await logToDb(
             err instanceof XCollectorAbortError ? 'warn' : 'error',
             'X post fetch failed',
-            { ...stats, error: err.message }
+            { ...stats, error: 'details suppressed' }
         );
         // レート制限・認証エラーは呼び出し側で収集全体を打ち切らせる
         if (err instanceof XCollectorAbortError) throw err;
@@ -458,14 +457,14 @@ async function collect(query, inputLiveId = null) {
         try {
             // リツイートは本文が原投稿と同一なため、複数投稿一致の加点を水増ししてしまう
             if (post.is_retweet) {
-                console.log(`[Collector] Skipping retweet: ${post.post_url || 'no-url'}`);
+                console.log('[Collector] Skipping retweet');
                 continue;
             }
 
             // 対象ライブが分かっていれば、その公演のセトリかを GPT にも判定させる
             const inputLive = inputLiveId ? await getLive(inputLiveId) : null;
 
-            console.log(`[Collector] Processing post: ${post.post_url || 'no-url'}`);
+            console.log('[Collector] Processing post');
             const postTimestamp = getPostTimestamp(post);
             if (inputLive && isPostBeforeLive(postTimestamp, inputLive)) {
                 console.log(`[Collector] Skipping post before target live: ${postTimestamp}`);
@@ -538,7 +537,7 @@ async function collect(query, inputLiveId = null) {
                         );
                         console.log(`[Grouping] Upgraded Draft #${draft.id} to official source`);
                     }
-                    console.log(`[Grouping] Post ${post.post_id} already counted in Draft #${draft.id}`);
+                    console.log(`[Grouping] Post already counted in Draft #${draft.id}`);
                     continue;
                 }
 
@@ -590,8 +589,8 @@ async function collect(query, inputLiveId = null) {
             stats.created++;
         } catch (postErr) {
             stats.errors++;
-            console.error(`[Collector] Post processing error:`, postErr);
-            await logToDb('error', 'Post processing error', { error: postErr.message, url: post.post_url });
+            console.error('[Collector] Post processing error: details suppressed');
+            await logToDb('error', 'Post processing error', { error: 'details suppressed' });
         }
     }
 
