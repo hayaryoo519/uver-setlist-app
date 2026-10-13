@@ -63,8 +63,13 @@ function Settings() {
 
         const res = await updateUser(payload);
         if (res.success) {
-            setMessage({ text: '設定を更新しました', type: 'success' });
             setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+            if (isPasswordChanged) {
+                alert(res.message || 'パスワードを変更しました。再度ログインしてください。');
+                navigate('/login');
+                return;
+            }
+            setMessage({ text: '設定を更新しました', type: 'success' });
         } else {
             setMessage({ text: res.message || '更新に失敗しました', type: 'error' });
         }

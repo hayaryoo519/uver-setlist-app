@@ -12,17 +12,20 @@ const getCurrentUser = async token => {
         return null;
     }
     if (!Number.isInteger(payload.user_id) || payload.user_id <= 0) return null;
+    const tokenVersion = payload.session_version === undefined ? 0 : payload.session_version;
+    if (!Number.isInteger(tokenVersion) || tokenVersion < 0) return null;
 
     let result;
     try {
-        result = await db.query('SELECT id, role FROM users WHERE id = $1 AND deleted_at IS NULL', [payload.user_id]);
+        result = await db.query('SELECT id, role, session_version FROM users WHERE id = $1 AND deleted_at IS NULL', [payload.user_id]);
     } catch (_) {
         console.error('[AUTH ERROR] Account lookup failed');
         // Optional-auth routes also receive a fixed error without DB diagnostics.
         throw new Error('Account verification failed');
     }
     if (result.rows.length !== 1) return null;
-    return { ...payload, user_id: result.rows[0].id, role: result.rows[0].role };
+    if (result.rows[0].session_version !== tokenVersion) return null;
+    return { ...payload, user_id: result.rows[0].id, role: result.rows[0].role, session_version: tokenVersion };
 };
 
 const getOptionalUserId = async req => (await getCurrentUser(req.header('token')))?.user_id ?? null;

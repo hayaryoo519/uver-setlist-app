@@ -16,11 +16,11 @@ describe('self-deletion and administrator deletion routing', () => {
         jest.clearAllMocks();
         process.env.JWT_SECRET = key;
         for (const method of ['log', 'warn', 'error']) jest.spyOn(console, method).mockImplementation(() => {});
-        account = { id: 1, role: 'user' };
+        account = { id: 1, role: 'user', session_version: 0 };
         mutation = { rowCount: 1, rows: [{ id: 1 }] };
         failure = null;
         db.query.mockImplementation(async sql => {
-            if (sql.startsWith('SELECT id, role FROM users')) return { rows: [account] };
+            if (sql.startsWith('SELECT id, role, session_version FROM users')) return { rows: [account] };
             if (failure) throw failure;
             return mutation;
         });
@@ -36,7 +36,7 @@ describe('self-deletion and administrator deletion routing', () => {
         expect(res.status).toBe(200);
         expect(res.body).toBe('Account deleted successfully');
         expect(db.query).toHaveBeenCalledWith(
-            'UPDATE users SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING id', [1]
+            'UPDATE users SET deleted_at = NOW(), session_version = session_version + 1, reset_password_token = NULL, reset_password_expires = NULL WHERE id = $1 AND deleted_at IS NULL RETURNING id', [1]
         );
         expect(db.query.mock.calls.length).toBe(2);
     });

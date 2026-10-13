@@ -32,7 +32,7 @@ function subscribe(token) {
 describe('POST /api/push/subscribe', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        db.query.mockResolvedValue({ rows: [{ id: 27, role: 'admin' }] });
+        db.query.mockResolvedValue({ rows: [{ id: 27, role: 'admin', session_version: 0 }] });
     });
 
     // JWT は { user_id, role } で発行される。

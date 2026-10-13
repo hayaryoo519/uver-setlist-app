@@ -14,7 +14,7 @@ describe('Request and authorization log privacy', () => {
 
     beforeEach(() => {
         process.env.JWT_SECRET = 'isolated-log-test-secret';
-        db.query.mockResolvedValue({ rows: [{ id: 1, role: 'user' }] });
+        db.query.mockResolvedValue({ rows: [{ id: 1, role: 'user', session_version: 0 }] });
         log = jest.spyOn(console, 'log').mockImplementation(() => {});
         warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
         error = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -68,7 +68,7 @@ describe('Request and authorization log privacy', () => {
         const adminToken = jwt.sign({ user_id: 1, role: 'admin', private_claim: marker }, process.env.JWT_SECRET);
         expect((await request(app).post('/protected').set('token', userToken)).status).toBe(200);
         expect((await request(app).get('/admin').set('token', userToken)).status).toBe(403);
-        db.query.mockResolvedValue({ rows: [{ id: 1, role: 'admin' }] });
+        db.query.mockResolvedValue({ rows: [{ id: 1, role: 'admin', session_version: 0 }] });
         expect((await request(app).get('/admin').set('token', adminToken)).status).toBe(200);
         expect(warn).toHaveBeenCalledWith('[ADMIN CHECK] Access denied');
         expect(output()).not.toContain(marker);
