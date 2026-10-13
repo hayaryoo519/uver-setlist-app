@@ -1,7 +1,8 @@
 jest.mock('../../db');
 jest.mock('../../middleware/authorization', () => ({
     authorize: (req, res, next) => { req.user = { user_id: 1, role: 'admin' }; next(); },
-    adminCheck: (req, res, next) => next()
+    adminCheck: (req, res, next) => next(),
+    getOptionalUserId: async () => null
 }));
 const express = require('express');
 const request = require('supertest');

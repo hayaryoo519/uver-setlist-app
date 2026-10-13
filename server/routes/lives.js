@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const db = require('../db');
-const { authorize, adminCheck } = require('../middleware/authorization');
+const { authorize, adminCheck, getOptionalUserId } = require('../middleware/authorization');
 const { normalizeVenueName } = require('../utils/songTranslations');
 const { notifyNewLive } = require('../utils/pushNotification');
 const dayjs = require('dayjs');
@@ -176,7 +176,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const currentUserId = req.header('token') ? require('jsonwebtoken').decode(req.header('token'))?.user_id : null;
+        const currentUserId = await getOptionalUserId(req);
         const { isLiveClosed } = require('../utils/date');
 
         // 1. Get Live Details with prediction count (excluding soft deleted)

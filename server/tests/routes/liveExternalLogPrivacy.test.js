@@ -2,7 +2,8 @@ jest.mock('../../db');
 jest.mock('axios');
 jest.mock('../../middleware/authorization', () => ({
     authorize: (req, res, next) => { req.user = { user_id: 1, role: 'admin' }; next(); },
-    adminCheck: (req, res, next) => next()
+    adminCheck: (req, res, next) => next(),
+    getOptionalUserId: async () => null
 }));
 jest.mock('../../utils/pushNotification', () => ({ notifyNewLive: jest.fn() }));
 jest.mock('../../services/scheduleImporter', () => ({ importSchedule: jest.fn() }));

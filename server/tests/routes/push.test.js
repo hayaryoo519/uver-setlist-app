@@ -11,6 +11,7 @@ jest.mock('../../utils/pushNotification', () => ({
 const request = require('supertest');
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const db = require('../../db');
 const { saveSubscription } = require('../../utils/pushNotification');
 const pushRouter = require('../../routes/push');
 
@@ -31,6 +32,7 @@ function subscribe(token) {
 describe('POST /api/push/subscribe', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        db.query.mockResolvedValue({ rows: [{ id: 27, role: 'admin' }] });
     });
 
     // JWT は { user_id, role } で発行される。

@@ -1,7 +1,6 @@
 const router = require('express').Router();
 const db = require('../db');
-const jwt = require('jsonwebtoken');
-const { authorize, adminCheck } = require('../middleware/authorization');
+const { authorize, adminCheck, getCurrentUser } = require('../middleware/authorization');
 const { normalizeSongTitle } = require('../utils/songTranslations');
 
 // GET All Songs (for search/autocomplete)
@@ -12,13 +11,7 @@ router.get('/', async (req, res) => {
 
         let isAdmin = false;
         if (include_deleted === 'true') {
-            try {
-                const token = req.header('token');
-                if (token) {
-                    const payload = jwt.verify(token, process.env.JWT_SECRET);
-                    isAdmin = payload.role === 'admin';
-                }
-            } catch (_) { /* 無効なトークンは非管理者として扱う */ }
+            isAdmin = (await getCurrentUser(req.header('token')))?.role === 'admin';
             if (!isAdmin) {
                 return res.status(403).json({ message: 'アクセス拒否：管理者権限が必要です' });
             }

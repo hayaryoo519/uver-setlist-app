@@ -1,13 +1,12 @@
 const router = require('express').Router();
 const db = require('../db');
-const { authorize } = require('../middleware/authorization');
+const { authorize, getOptionalUserId } = require('../middleware/authorization');
 const { isLiveClosed } = require('../utils/date');
-const jwt = require('jsonwebtoken');
 
 // 0. GET Predictable Lives (Portal)
 router.get('/lives', async (req, res) => {
     try {
-        const currentUserId = req.header('token') ? (jwt.decode(req.header('token'))?.user_id || null) : null;
+        const currentUserId = await getOptionalUserId(req);
         
         const result = await db.query(`
             SELECT 
@@ -41,7 +40,7 @@ router.get('/lives', async (req, res) => {
 const fetchPredictions = async (req, res) => {
     try {
         let { live_id, sort, mine } = req.query;
-        const currentUserId = req.header('token') ? (jwt.decode(req.header('token'))?.user_id || null) : null;
+        const currentUserId = await getOptionalUserId(req);
 
         // 1. If live_id is not provided, and we are not explicitly requesting 'mine', find the most recent/upcoming live
         if (!live_id && mine !== 'true') {
@@ -137,7 +136,7 @@ router.get('/me', authorize, (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const currentUserId = req.header('token') ? (jwt.decode(req.header('token'))?.user_id || null) : null;
+        const currentUserId = await getOptionalUserId(req);
 
         const predResult = await db.query(`
             SELECT 

@@ -1,19 +1,6 @@
 const router = require('express').Router();
 const db = require('../db');
-const { authorize } = require('../middleware/authorization');
-const jwt = require('jsonwebtoken');
-
-// 共通: トークンがあれば currentUserId を取得（任意認証）
-const getOptionalUserId = (req) => {
-    const token = req.header('token');
-    if (!token) return null;
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        return decoded.user_id;
-    } catch {
-        return null;
-    }
-};
+const { authorize, getOptionalUserId } = require('../middleware/authorization');
 
 // POST /api/follows/:userId — フォロー/アンフォロー トグル
 router.post('/:userId', authorize, async (req, res) => {
@@ -134,13 +121,14 @@ router.get('/my/stats', authorize, async (req, res) => {
 // GET /api/follows/stats/:userId — 特定ユーザーのフォロー統計（認証任意）
 router.get('/stats/:userId', async (req, res) => {
     const userId        = parseInt(req.params.userId, 10);
-    const currentUserId = getOptionalUserId(req);
+    let currentUserId;
 
     if (isNaN(userId)) {
         return res.status(400).json({ message: '無効なユーザーIDです' });
     }
 
     try {
+        currentUserId = await getOptionalUserId(req);
         const result = await db.query(`
             SELECT
                 (SELECT COUNT(*) FROM user_follows WHERE follower_id  = $1)::int AS following_count,

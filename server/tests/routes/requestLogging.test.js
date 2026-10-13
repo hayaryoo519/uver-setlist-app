@@ -1,5 +1,7 @@
 const express = require('express');
 const request = require('supertest');
+jest.mock('../../db', () => ({ query: jest.fn() }));
+const db = require('../../db');
 const jwt = require('jsonwebtoken');
 const requestLogging = require('../../middleware/requestLogging');
 const { authorize, adminCheck } = require('../../middleware/authorization');
@@ -12,6 +14,7 @@ describe('Request and authorization log privacy', () => {
 
     beforeEach(() => {
         process.env.JWT_SECRET = 'isolated-log-test-secret';
+        db.query.mockResolvedValue({ rows: [{ id: 1, role: 'user' }] });
         log = jest.spyOn(console, 'log').mockImplementation(() => {});
         warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
         error = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -61,10 +64,11 @@ describe('Request and authorization log privacy', () => {
     });
 
     it('preserves valid user/admin authorization without logging JWT claims', async () => {
-        const userToken = jwt.sign({ user_id: marker, role: marker }, process.env.JWT_SECRET);
-        const adminToken = jwt.sign({ user_id: marker, role: 'admin' }, process.env.JWT_SECRET);
+        const userToken = jwt.sign({ user_id: 1, role: marker, private_claim: marker }, process.env.JWT_SECRET);
+        const adminToken = jwt.sign({ user_id: 1, role: 'admin', private_claim: marker }, process.env.JWT_SECRET);
         expect((await request(app).post('/protected').set('token', userToken)).status).toBe(200);
         expect((await request(app).get('/admin').set('token', userToken)).status).toBe(403);
+        db.query.mockResolvedValue({ rows: [{ id: 1, role: 'admin' }] });
         expect((await request(app).get('/admin').set('token', adminToken)).status).toBe(200);
         expect(warn).toHaveBeenCalledWith('[ADMIN CHECK] Access denied');
         expect(output()).not.toContain(marker);
