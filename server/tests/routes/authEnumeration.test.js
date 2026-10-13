@@ -97,6 +97,7 @@ describe('authentication account enumeration protection', () => {
     it('keeps reset responses identical for missing accounts, SMTP failures and DB failures', async () => {
         const missing = await request(app).post('/auth/forgot-password').send({ email: input.email });
         db.query.mockResolvedValueOnce({ rows: [{ id: 1 }] });
+        db.query.mockResolvedValueOnce({ rows: [{ id: 1 }] });
         sendPasswordResetEmail.mockRejectedValue(new Error('private-reset-marker'));
         const deliveryFailure = await request(app).post('/auth/forgot-password').send({ email: input.email });
         db.query.mockRejectedValueOnce(new Error('private-db-marker'));

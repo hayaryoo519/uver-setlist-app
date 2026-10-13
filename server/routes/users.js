@@ -51,7 +51,7 @@ router.delete('/me', authorize, async (req, res) => {
         const currentUserId = req.user.user_id;
 
         const result = await db.query(
-            "UPDATE users SET deleted_at = NOW(), session_version = session_version + 1, reset_password_token = NULL, reset_password_expires = NULL WHERE id = $1 AND deleted_at IS NULL RETURNING id",
+            "UPDATE users SET deleted_at = NOW(), session_version = session_version + 1, reset_password_token = NULL, reset_password_token_hash = NULL, reset_password_expires = NULL, verification_token = NULL, verification_token_hash = NULL, verification_token_expires = NULL WHERE id = $1 AND deleted_at IS NULL RETURNING id",
             [currentUserId]
         );
 
@@ -77,7 +77,7 @@ router.delete('/:id', authorize, adminCheck, async (req, res) => {
         }
 
         const result = await db.query(
-            "UPDATE users SET deleted_at = NOW(), session_version = session_version + 1, reset_password_token = NULL, reset_password_expires = NULL WHERE id = $1 AND deleted_at IS NULL RETURNING id",
+            "UPDATE users SET deleted_at = NOW(), session_version = session_version + 1, reset_password_token = NULL, reset_password_token_hash = NULL, reset_password_expires = NULL, verification_token = NULL, verification_token_hash = NULL, verification_token_expires = NULL WHERE id = $1 AND deleted_at IS NULL RETURNING id",
             [targetUserId]
         );
 
@@ -96,7 +96,7 @@ router.delete('/:id', authorize, adminCheck, async (req, res) => {
 router.patch('/:id/restore', authorize, adminCheck, async (req, res) => {
     try {
         const result = await db.query(
-            "UPDATE users SET deleted_at = NULL, session_version = session_version + 1, reset_password_token = NULL, reset_password_expires = NULL WHERE id = $1 AND deleted_at IS NOT NULL RETURNING id, username, email, role",
+            "UPDATE users SET deleted_at = NULL, session_version = session_version + 1, reset_password_token = NULL, reset_password_token_hash = NULL, reset_password_expires = NULL, verification_token = NULL, verification_token_hash = NULL, verification_token_expires = NULL WHERE id = $1 AND deleted_at IS NOT NULL RETURNING id, username, email, role",
             [req.params.id]
         );
 
@@ -296,7 +296,7 @@ router.put('/me', authorize, async (req, res) => {
             updates.push(`password = $${idx++}`);
             values.push(newPasswordHash);
             updates.push('session_version = session_version + 1');
-            updates.push('reset_password_token = NULL', 'reset_password_expires = NULL');
+            updates.push('reset_password_token = NULL', 'reset_password_token_hash = NULL', 'reset_password_expires = NULL');
         }
         if (req.body.is_public !== undefined) {
             updates.push(`is_public = $${idx++}`);
