@@ -55,6 +55,28 @@ router.put('/:id/role', authorize, adminCheck, async (req, res) => {
     }
 });
 
+// DELETE current user account — 論理削除（30日後に完全削除を想定）
+// Register /me before /:id so self-deletion does not require an admin role.
+router.delete('/me', authorize, async (req, res) => {
+    try {
+        const currentUserId = req.user.user_id;
+
+        const result = await db.query(
+            "UPDATE users SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING id",
+            [currentUserId]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json("User not found");
+        }
+
+        res.json("Account deleted successfully");
+    } catch (err) {
+        console.error('[users] Account deletion failed');
+        res.status(500).send("Server Error");
+    }
+});
+
 // DELETE User (Admin only) — 論理削除
 router.delete('/:id', authorize, adminCheck, async (req, res) => {
     try {
@@ -438,27 +460,6 @@ router.get('/:id/predictions', async (req, res) => {
     } catch (err) {
         console.error('[users] Predictions listing failed');
         res.status(500).send('Server Error');
-    }
-});
-
-// DELETE current user account — 論理削除（30日後に完全削除を想定）
-router.delete('/me', authorize, async (req, res) => {
-    try {
-        const currentUserId = req.user.user_id;
-
-        const result = await db.query(
-            "UPDATE users SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING id",
-            [currentUserId]
-        );
-
-        if (result.rowCount === 0) {
-            return res.status(404).json("User not found");
-        }
-
-        res.json("Account deleted successfully");
-    } catch (err) {
-        console.error('[users] Account deletion failed');
-        res.status(500).send("Server Error");
     }
 });
 
