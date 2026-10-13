@@ -69,7 +69,7 @@ router.post('/verify-email', async (req, res) => {
 
         // Generate Login Token
         const jwtToken = jwt.sign(
-            { user_id: user.rows[0].id, role: user.rows[0].role },
+            { user_id: user.rows[0].id, role: user.rows[0].role, session_version: user.rows[0].session_version },
             process.env.JWT_SECRET,
             { expiresIn: "1h" }
         );
@@ -130,7 +130,7 @@ router.post('/login', loginLimiter, async (req, res) => {
         });
 
         const token = jwt.sign(
-            { user_id: user.rows[0].id, role: user.rows[0].role },
+            { user_id: user.rows[0].id, role: user.rows[0].role, session_version: user.rows[0].session_version },
             process.env.JWT_SECRET,
             { expiresIn: "1h" }
         );
@@ -185,7 +185,7 @@ router.post('/reset-password', resetLimiter, async (req, res) => {
         const { token, password } = req.body;
 
         const user = await db.query(
-            "SELECT * FROM users WHERE reset_password_token = $1 AND reset_password_expires > $2",
+            "SELECT * FROM users WHERE reset_password_token = $1 AND reset_password_expires > $2 AND deleted_at IS NULL",
             [token, Date.now()]
         );
 
@@ -198,11 +198,14 @@ router.post('/reset-password', resetLimiter, async (req, res) => {
         const salt = await bcrypt.genSalt(saltRound);
         const bcryptPassword = await bcrypt.hash(password, salt);
 
-        // Update password and clear token
-        await db.query(
-            "UPDATE users SET password = $1, reset_password_token = NULL, reset_password_expires = NULL WHERE id = $2",
-            [bcryptPassword, user.rows[0].id]
+        // Atomically consume the reset token and revoke all previous sessions.
+        const updated = await db.query(
+            "UPDATE users SET password = $1, reset_password_token = NULL, reset_password_expires = NULL, session_version = session_version + 1 WHERE id = $2 AND reset_password_token = $3 AND reset_password_expires > $4 AND deleted_at IS NULL RETURNING id",
+            [bcryptPassword, user.rows[0].id, token, Date.now()]
         );
+        if (updated.rowCount === 0) {
+            return res.status(400).json({ message: "無効または期限切れのトークンです。再度手続きを行ってください。" });
+        }
 
         res.json({ message: "パスワードの再設定が完了しました。新しいパスワードでログインしてください。" });
     } catch (err) {

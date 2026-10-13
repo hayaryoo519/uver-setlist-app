@@ -28,7 +28,7 @@ router.put('/:id/role', authorize, adminCheck, async (req, res) => {
         }
 
         const updateKey = await db.query(
-            "UPDATE users SET role = $1 WHERE id = $2 RETURNING *",
+            "UPDATE users SET role = $1, session_version = session_version + 1 WHERE id = $2 RETURNING *",
             [role, targetUserId]
         );
 
@@ -50,7 +50,7 @@ router.delete('/me', authorize, async (req, res) => {
         const currentUserId = req.user.user_id;
 
         const result = await db.query(
-            "UPDATE users SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING id",
+            "UPDATE users SET deleted_at = NOW(), session_version = session_version + 1, reset_password_token = NULL, reset_password_expires = NULL WHERE id = $1 AND deleted_at IS NULL RETURNING id",
             [currentUserId]
         );
 
@@ -76,7 +76,7 @@ router.delete('/:id', authorize, adminCheck, async (req, res) => {
         }
 
         const result = await db.query(
-            "UPDATE users SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING id",
+            "UPDATE users SET deleted_at = NOW(), session_version = session_version + 1, reset_password_token = NULL, reset_password_expires = NULL WHERE id = $1 AND deleted_at IS NULL RETURNING id",
             [targetUserId]
         );
 
@@ -95,7 +95,7 @@ router.delete('/:id', authorize, adminCheck, async (req, res) => {
 router.patch('/:id/restore', authorize, adminCheck, async (req, res) => {
     try {
         const result = await db.query(
-            "UPDATE users SET deleted_at = NULL WHERE id = $1 AND deleted_at IS NOT NULL RETURNING id, username, email, role",
+            "UPDATE users SET deleted_at = NULL, session_version = session_version + 1, reset_password_token = NULL, reset_password_expires = NULL WHERE id = $1 AND deleted_at IS NOT NULL RETURNING id, username, email, role",
             [req.params.id]
         );
 
@@ -295,6 +295,8 @@ router.put('/me', authorize, async (req, res) => {
         if (newPasswordHash) {
             updates.push(`password = $${idx++}`);
             values.push(newPasswordHash);
+            updates.push('session_version = session_version + 1');
+            updates.push('reset_password_token = NULL', 'reset_password_expires = NULL');
         }
         if (req.body.is_public !== undefined) {
             updates.push(`is_public = $${idx++}`);
@@ -305,10 +307,13 @@ router.put('/me', authorize, async (req, res) => {
             return res.json({ message: "No changes requested" });
         }
 
-        values.push(currentUserId);
-        const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} RETURNING id, username, email, role, is_public`;
+        values.push(currentUserId, req.user.session_version);
+        const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} AND session_version = $${idx + 1} AND deleted_at IS NULL RETURNING id, username, email, role, is_public`;
 
         const updateResult = await db.query(sql, values);
+        if (updateResult.rows.length === 0) {
+            return res.status(403).json({ message: '認証されていません：無効なトークンです' });
+        }
 
         res.json(updateResult.rows[0]);
     } catch (err) {

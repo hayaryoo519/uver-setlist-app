@@ -1,6 +1,6 @@
 jest.mock('../../db');
 jest.mock('../../middleware/authorization', () => ({
-    authorize: (req, res, next) => { req.user = { user_id: 1, role: 'admin' }; next(); },
+    authorize: (req, res, next) => { req.user = { user_id: 1, role: 'admin', session_version: 0 }; next(); },
     adminCheck: (req, res, next) => next(),
     getOptionalUserId: async () => null
 }));

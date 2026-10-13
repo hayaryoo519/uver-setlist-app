@@ -167,6 +167,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const updateUser = async (updatedData: Record<string, unknown>): Promise<AuthResult> => {
         try {
             const data = await apiClient.put<AuthUser>('/api/users/me', updatedData);
+            if (updatedData.password) {
+                logout();
+                return { success: true, message: 'パスワードを変更しました。新しいパスワードで再度ログインしてください。' };
+            }
             localStorage.setItem('user', JSON.stringify(data));
             setCurrentUser(data);
             return { success: true };

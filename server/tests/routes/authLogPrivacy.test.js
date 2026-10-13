@@ -66,11 +66,11 @@ describe('Authentication error log privacy', () => {
     });
 
     it('preserves successful login when the security audit insert fails without logging its error details', async () => {
-        db.query.mockResolvedValueOnce({ rows: [{ id: 1, username: 'test-user', email: marker, role: 'user', password: 'hash', is_verified: true }] })
+        db.query.mockResolvedValueOnce({ rows: [{ id: 1, username: 'test-user', email: marker, role: 'user', password: 'hash', is_verified: true, session_version: 0 }] })
             .mockRejectedValueOnce(failure);
         const res = await request(app).post('/api/auth/login').send({ email: marker, password: marker });
         expect(res.status).toBe(200);
-        expect(jwt.verify(res.body.token, process.env.JWT_SECRET)).toMatchObject({ user_id: 1, role: 'user' });
+        expect(jwt.verify(res.body.token, process.env.JWT_SECRET)).toMatchObject({ user_id: 1, role: 'user', session_version: 0 });
         expect(res.body.user.email).toBe(marker);
         expect(error).toHaveBeenCalledWith('Failed to log security event');
         expect(JSON.stringify(error.mock.calls)).not.toContain(marker);

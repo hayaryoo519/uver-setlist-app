@@ -21,11 +21,11 @@ describe('current account authorization and signed optional identity', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         process.env.JWT_SECRET = key;
-        account = { id: 1, role: 'user' };
+        account = { id: 1, role: 'user', session_version: 0 };
         lookupFailure = false;
         for (const method of ['log', 'warn', 'error']) jest.spyOn(console, method).mockImplementation(() => {});
         db.query.mockImplementation(async (sql, params) => {
-            if (sql.startsWith('SELECT id, role FROM users')) {
+            if (sql.startsWith('SELECT id, role, session_version FROM users')) {
                 if (lookupFailure) throw new Error(marker);
                 expect(sql).toContain('deleted_at IS NULL');
                 expect(params).toEqual([1]);
@@ -86,7 +86,7 @@ describe('current account authorization and signed optional identity', () => {
         const signed = mode === 'expired' ? token(undefined, key, { expiresIn: -1 }) : token();
         const res = await request(app).get('/predictions?mine=true').set('token', signed);
         expect(res.status).toBe(401);
-        expect(db.query.mock.calls.every(([sql]) => sql.startsWith('SELECT id, role FROM users'))).toBe(true);
+        expect(db.query.mock.calls.every(([sql]) => sql.startsWith('SELECT id, role, session_version FROM users'))).toBe(true);
     });
     it('does not expose soft-deleted songs to a stale admin JWT', async () => {
         const res = await request(app).get('/songs?include_deleted=true').set('token', token());
