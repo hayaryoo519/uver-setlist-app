@@ -29,7 +29,7 @@ router.get('/lives', async (req, res) => {
 
         res.json(livesWithStatus);
     } catch (err) {
-        console.error('Fetch predictable lives error:', err);
+        console.error('Fetch predictable lives error: details suppressed');
         res.status(500).json({ message: 'Server Error', error: 'Internal Server Error', stack: null });
     }
 });
@@ -119,7 +119,7 @@ const fetchPredictions = async (req, res) => {
 
         res.json(resultsWithStatus);
     } catch (err) {
-        console.error('Fetch predictions error:', err);
+        console.error('Fetch predictions error: details suppressed');
         res.status(500).json({ message: 'Server Error', error: 'Internal Server Error', stack: null });
     }
 };
@@ -173,7 +173,7 @@ router.get('/:id', async (req, res) => {
             songs: songsResult.rows
         });
     } catch (err) {
-        console.error('Fetch prediction detail error:', err.message);
+        console.error('Fetch prediction detail error: details suppressed');
         res.status(500).send('Server Error');
     }
 });
@@ -248,7 +248,7 @@ router.post('/', authorize, async (req, res) => {
                 prediction_id: existing.rows[0]?.id,
             });
         }
-        console.error('Create prediction error:', err.message);
+        console.error('Create prediction error: details suppressed');
         res.status(500).send('Server Error');
     } finally {
         client.release();
@@ -300,7 +300,7 @@ router.put('/:id', authorize, async (req, res) => {
         res.json(updated.rows[0]);
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error('Update prediction error:', err.message);
+        console.error('Update prediction error: details suppressed');
         res.status(500).send('Server Error');
     } finally {
         client.release();
@@ -325,7 +325,7 @@ router.delete('/:id', authorize, async (req, res) => {
 
         res.status(200).json({ message: 'Prediction deleted successfully' });
     } catch (err) {
-        console.error('Delete prediction error:', err.message);
+        console.error('Delete prediction error: details suppressed');
         res.status(500).send('Server Error');
     }
 });
@@ -358,7 +358,7 @@ router.post('/:id/like', authorize, async (req, res) => {
 
         res.json({ liked });
     } catch (err) {
-        console.error('Toggle like error:', err.message);
+        console.error('Toggle like error: details suppressed');
         res.status(500).send('Server Error');
     }
 });
