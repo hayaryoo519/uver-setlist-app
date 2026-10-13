@@ -3,7 +3,8 @@ jest.mock('../../utils/email', () => ({
     sendVerificationEmail: jest.fn(), sendPasswordResetEmail: jest.fn()
 }));
 jest.mock('../../middleware/rateLimiter', () => ({
-    loginLimiter: (req, res, next) => next(), resetLimiter: (req, res, next) => next()
+    loginLimiter: (req, res, next) => next(), resetLimiter: (req, res, next) => next(),
+    registerLimiter: (req, res, next) => next(), verificationLimiter: (req, res, next) => next(), resetConfirmationLimiter: (req, res, next) => next()
 }));
 jest.mock('bcrypt', () => ({ genSalt: jest.fn(), hash: jest.fn(), compare: jest.fn() }));
 const request = require('supertest');

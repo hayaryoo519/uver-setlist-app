@@ -5,17 +5,22 @@ const db = require('../db');
 
 const crypto = require('crypto');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/email');
-const { loginLimiter, resetLimiter } = require('../middleware/rateLimiter');
+const { loginLimiter, resetLimiter, registerLimiter, verificationLimiter, resetConfirmationLimiter } = require('../middleware/rateLimiter');
+const { isValidEmail, isValidUsername, isValidLoginPassword, isValidToken, newPasswordError } = require('../utils/authValidation');
 
 // Register API
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimiter, async (req, res) => {
     try {
-        const { username, email, password, is_public } = req.body;
+        const { username, email, password, is_public } = req.body || {};
 
         // 1. Validate input
-        if (!username || username.trim().length < 2 || username.length > 30) {
+        if (!isValidUsername(username)) {
             return res.status(400).json({ message: "ユーザー名は2文字以上30文字以内で入力してください" });
         }
+        if (!isValidEmail(email)) return res.status(400).json({ message: '有効なメールアドレスを入力してください' });
+        const passwordError = newPasswordError(password);
+        if (passwordError) return res.status(400).json({ message: passwordError });
+        if (is_public !== undefined && typeof is_public !== 'boolean') return res.status(400).json({ message: '公開設定が不正です' });
 
         // 2. Check if user exists
         const userCheck = await db.query('SELECT * FROM users WHERE email = $1', [email]);
@@ -54,9 +59,10 @@ router.post('/register', async (req, res) => {
 });
 
 // Verify Email API
-router.post('/verify-email', async (req, res) => {
+router.post('/verify-email', verificationLimiter, async (req, res) => {
     try {
-        const { token } = req.body;
+        const { token } = req.body || {};
+        if (!isValidToken(token)) return res.status(400).json({ message: '無効なトークンです' });
 
         const user = await db.query("SELECT * FROM users WHERE verification_token = $1", [token]);
 
@@ -85,7 +91,8 @@ router.post('/verify-email', async (req, res) => {
 // Login API
 router.post('/login', loginLimiter, async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password } = req.body || {};
+        if (!isValidEmail(email) || !isValidLoginPassword(password)) return res.status(400).json({ message: 'メールアドレスとパスワードを正しく入力してください' });
         const user = await db.query("SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL", [email]);
 
         if (user.rows.length === 0) {
@@ -153,8 +160,9 @@ router.post('/login', loginLimiter, async (req, res) => {
 // Forgot Password API
 router.post('/forgot-password', resetLimiter, async (req, res) => {
     try {
-        const { email } = req.body;
-        const user = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        const { email } = req.body || {};
+        if (!isValidEmail(email)) return res.status(400).json({ message: '有効なメールアドレスを入力してください' });
+        const user = await db.query('SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL', [email]);
 
         if (user.rows.length === 0) {
             // For security, don't reveal if user exists. 
@@ -180,9 +188,12 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
 });
 
 // Reset Password API
-router.post('/reset-password', resetLimiter, async (req, res) => {
+router.post('/reset-password', resetConfirmationLimiter, async (req, res) => {
     try {
-        const { token, password } = req.body;
+        const { token, password } = req.body || {};
+        if (!isValidToken(token)) return res.status(400).json({ message: '無効なトークンです' });
+        const passwordError = newPasswordError(password);
+        if (passwordError) return res.status(400).json({ message: passwordError });
 
         const user = await db.query(
             "SELECT * FROM users WHERE reset_password_token = $1 AND reset_password_expires > $2 AND deleted_at IS NULL",

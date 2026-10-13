@@ -16,7 +16,34 @@ const resetLimiter = rateLimit({
     max: 3, // Limit each IP to 3 reset requests per hour
     message: {
         message: "パスワードリセットの回数が多すぎます。1時間後にお試しください。"
-    }
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
 });
 
-module.exports = { loginLimiter, resetLimiter };
+const registerLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { message: '登録の試行回数が多すぎます。15分後にお試しください。' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const verificationLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { message: 'メール認証の試行回数が多すぎます。15分後にお試しください。' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+// Email requests and confirmation attempts must not consume each other's quota.
+const resetConfirmationLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 3,
+    message: { message: 'パスワードリセットの回数が多すぎます。1時間後にお試しください。' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+module.exports = { loginLimiter, resetLimiter, registerLimiter, verificationLimiter, resetConfirmationLimiter };

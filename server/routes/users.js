@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const db = require('../db');
 const { authorize, adminCheck, getOptionalUserId } = require('../middleware/authorization');
+const { isValidEmail, isValidUsername, isValidLoginPassword, newPasswordError } = require('../utils/authValidation');
 
 // GET all users (Protected: Admin Only)
 router.get('/', authorize, adminCheck, async (req, res) => {
@@ -218,15 +219,22 @@ router.delete('/me/attended_lives/:liveId', authorize, async (req, res) => {
 router.put('/me', authorize, async (req, res) => {
     try {
         const currentUserId = req.user.user_id;
-        const { username, email, password, currentPassword } = req.body;
+        const { username, email, password, currentPassword } = req.body || {};
         const bcrypt = require('bcrypt');
 
         // Validate username if provided
         if (username !== undefined) {
-            if (username.trim().length < 2 || username.length > 30) {
+            if (!isValidUsername(username)) {
                 return res.status(400).json({ message: "ユーザー名は2文字以上30文字以内で入力してください" });
             }
         }
+        if (email !== undefined && !isValidEmail(email)) return res.status(400).json({ message: '有効なメールアドレスを入力してください' });
+        if (password !== undefined && password !== '') {
+            const passwordError = newPasswordError(password);
+            if (passwordError) return res.status(400).json({ message: passwordError });
+            if (!isValidLoginPassword(currentPassword)) return res.status(400).json({ message: '現在のパスワードを入力してください' });
+        }
+        if (req.body?.is_public !== undefined && typeof req.body.is_public !== 'boolean') return res.status(400).json({ message: '公開設定が不正です' });
 
         // Optional: Check if email is already taken by ANOTHER user
         if (email) {
@@ -240,14 +248,6 @@ router.put('/me', authorize, async (req, res) => {
 
         // Handle Password Update
         if (password) {
-            if (password.length < 6) {
-                return res.status(400).json({ message: "パスワードは6文字以上で設定してください" });
-            }
-
-            if (!currentPassword) {
-                return res.status(400).json({ message: "現在のパスワードを入力してください" });
-            }
-
             // Get current user password
             const userResult = await db.query("SELECT password FROM users WHERE id = $1", [currentUserId]);
             if (userResult.rows.length === 0) return res.status(404).json({ message: "User not found" });
