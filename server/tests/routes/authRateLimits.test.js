@@ -20,3 +20,12 @@ describe('actual auth limiters and independent reset quotas', () => {
         expect(db.query.mock.calls.length).toBe(0);
     });
 });
+
+it('limits profile credential guesses per authorized account independently', async () => {
+    const profile = express();
+    profile.post('/profile', (req, res, next) => { req.user = { user_id: req.get('fixture-user') }; next(); },
+        require('../../middleware/rateLimiter').profileUpdateLimiter, (req, res) => res.send('ok'));
+    for (let index = 0; index < 10; index++) expect((await request(profile).post('/profile').set('fixture-user', '1')).status).toBe(200);
+    expect((await request(profile).post('/profile').set('fixture-user', '1')).status).toBe(429);
+    expect((await request(profile).post('/profile').set('fixture-user', '2')).status).toBe(200);
+});

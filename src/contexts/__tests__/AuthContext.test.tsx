@@ -69,4 +69,15 @@ describe('profile and password update sessions', () => {
     expect(result.current.currentUser?.id).toBe(1)
     expect(localStorage.getItem('token')).toBe(storedToken)
   })
+  it('keeps the old address and session while returning the confirmation instruction', async () => {
+    vi.spyOn(apiClient, 'put').mockResolvedValue({ ...user, emailChangeRequested: true, message: '確認が済むまで現在のメールアドレスを使ってください。' })
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider })
+    await waitFor(() => expect(result.current.currentUser?.id).toBe(1))
+    let response
+    await act(async () => { response = await result.current.updateUser({ email: 'new@example.invalid', currentPassword: 'fixture-password' }) })
+    expect(response).toMatchObject({ success: true, message: expect.stringContaining('確認が済むまで') })
+    expect(result.current.currentUser?.email).toBe(user.email)
+    expect(JSON.parse(localStorage.getItem('user')!)).toEqual(user)
+    expect(localStorage.getItem('token')).toBe(storedToken)
+  })
 })

@@ -2,6 +2,9 @@ const router = require('express').Router();
 const db = require('../db');
 const { authorize, adminCheck, getOptionalUserId } = require('../middleware/authorization');
 const { isValidEmail, isValidUsername, isValidLoginPassword, newPasswordError } = require('../utils/authValidation');
+const { createToken } = require('../utils/authTokens');
+const { sendEmailChangeConfirmation } = require('../utils/email');
+const { profileUpdateLimiter } = require('../middleware/rateLimiter');
 
 // GET all users (Protected: Admin Only)
 router.get('/', authorize, adminCheck, async (req, res) => {
@@ -51,7 +54,7 @@ router.delete('/me', authorize, async (req, res) => {
         const currentUserId = req.user.user_id;
 
         const result = await db.query(
-            "UPDATE users SET deleted_at = NOW(), session_version = session_version + 1, reset_password_token = NULL, reset_password_token_hash = NULL, reset_password_expires = NULL, verification_token = NULL, verification_token_hash = NULL, verification_token_expires = NULL WHERE id = $1 AND deleted_at IS NULL RETURNING id",
+            "UPDATE users SET deleted_at = NOW(), session_version = session_version + 1, reset_password_token = NULL, reset_password_token_hash = NULL, reset_password_expires = NULL, verification_token = NULL, verification_token_hash = NULL, verification_token_expires = NULL, pending_email = NULL, email_change_token_hash = NULL, email_change_token_expires = NULL, email_change_session_version = NULL WHERE id = $1 AND deleted_at IS NULL RETURNING id",
             [currentUserId]
         );
 
@@ -77,7 +80,7 @@ router.delete('/:id', authorize, adminCheck, async (req, res) => {
         }
 
         const result = await db.query(
-            "UPDATE users SET deleted_at = NOW(), session_version = session_version + 1, reset_password_token = NULL, reset_password_token_hash = NULL, reset_password_expires = NULL, verification_token = NULL, verification_token_hash = NULL, verification_token_expires = NULL WHERE id = $1 AND deleted_at IS NULL RETURNING id",
+            "UPDATE users SET deleted_at = NOW(), session_version = session_version + 1, reset_password_token = NULL, reset_password_token_hash = NULL, reset_password_expires = NULL, verification_token = NULL, verification_token_hash = NULL, verification_token_expires = NULL, pending_email = NULL, email_change_token_hash = NULL, email_change_token_expires = NULL, email_change_session_version = NULL WHERE id = $1 AND deleted_at IS NULL RETURNING id",
             [targetUserId]
         );
 
@@ -96,7 +99,7 @@ router.delete('/:id', authorize, adminCheck, async (req, res) => {
 router.patch('/:id/restore', authorize, adminCheck, async (req, res) => {
     try {
         const result = await db.query(
-            "UPDATE users SET deleted_at = NULL, session_version = session_version + 1, reset_password_token = NULL, reset_password_token_hash = NULL, reset_password_expires = NULL, verification_token = NULL, verification_token_hash = NULL, verification_token_expires = NULL WHERE id = $1 AND deleted_at IS NOT NULL RETURNING id, username, email, role",
+            "UPDATE users SET deleted_at = NULL, session_version = session_version + 1, reset_password_token = NULL, reset_password_token_hash = NULL, reset_password_expires = NULL, verification_token = NULL, verification_token_hash = NULL, verification_token_expires = NULL, pending_email = NULL, email_change_token_hash = NULL, email_change_token_expires = NULL, email_change_session_version = NULL WHERE id = $1 AND deleted_at IS NOT NULL RETURNING id, username, email, role",
             [req.params.id]
         );
 
@@ -216,7 +219,7 @@ router.delete('/me/attended_lives/:liveId', authorize, async (req, res) => {
 });
 
 // UPDATE current user profile (username/email/password)
-router.put('/me', authorize, async (req, res) => {
+router.put('/me', authorize, profileUpdateLimiter, async (req, res) => {
     try {
         const currentUserId = req.user.user_id;
         const { username, email, password, currentPassword } = req.body || {};
@@ -236,50 +239,31 @@ router.put('/me', authorize, async (req, res) => {
         }
         if (req.body?.is_public !== undefined && typeof req.body.is_public !== 'boolean') return res.status(400).json({ message: '公開設定が不正です' });
 
-        // Optional: Check if email is already taken by ANOTHER user
-        if (email) {
-            const emailCheck = await db.query("SELECT * FROM users WHERE email = $1 AND id != $2", [email, currentUserId]);
-            if (emailCheck.rows.length > 0) {
-                return res.status(400).json({ message: "このメールアドレスは既に他のユーザーに使用されています" });
+        let newPasswordHash = null;
+        let isEmailChanging = false;
+        let emailChange = null;
+
+        // An unchanged email is part of the existing settings payload and needs no reauthentication.
+        if (password || email !== undefined) {
+            const userResult = await db.query("SELECT password, email FROM users WHERE id = $1 AND deleted_at IS NULL", [currentUserId]);
+            if (userResult.rows.length === 0) return res.status(404).json({ message: "User not found" });
+            isEmailChanging = email !== undefined && email !== userResult.rows[0].email;
+            if (password || isEmailChanging) {
+                if (!isValidLoginPassword(currentPassword)) return res.status(400).json({ message: '現在のパスワードを入力してください' });
+                const validPassword = await bcrypt.compare(currentPassword, userResult.rows[0].password);
+                if (!validPassword) return res.status(400).json({ message: "現在のパスワードが間違っています" });
             }
         }
-
-        let newPasswordHash = null;
-
-        // Handle Password Update
         if (password) {
-            // Get current user password
-            const userResult = await db.query("SELECT password FROM users WHERE id = $1", [currentUserId]);
-            if (userResult.rows.length === 0) return res.status(404).json({ message: "User not found" });
-
-            const validPassword = await bcrypt.compare(currentPassword, userResult.rows[0].password);
-            if (!validPassword) {
-                return res.status(400).json({ message: "現在のパスワードが間違っています" });
-            }
-
             const salt = await bcrypt.genSalt(10);
             newPasswordHash = await bcrypt.hash(password, salt);
         }
-
-        // Dynamic Update Query
-        let query = "UPDATE users SET username = COALESCE($1, username), email = COALESCE($2, email)";
-        const params = [username, email, currentUserId];
-
-        if (newPasswordHash) {
-            query += ", password = $" + (params.length + 1); // $4
-            params.push(newPasswordHash); // index 3
+        if (isEmailChanging) {
+            const emailCheck = await db.query('SELECT id FROM users WHERE email = $1 AND id != $2', [email, currentUserId]);
+            // Use the same response even when the destination is unavailable.
+            emailChange = { ...createToken(3600000), available: emailCheck.rows.length === 0 };
         }
 
-        query += " WHERE id = $" + (newPasswordHash ? 3 : 3) + " RETURNING id, username, email, role";
-
-        // Wait, if I push to params, the index shifts.
-        // param 1: username, param 2: email, param 3: currentUserId.
-        // If password added:
-        // params becomes [username, email, currentUserId, newPasswordHash]
-        // WHERE id should be $3.
-        // SET password = $4.
-
-        // Re-construct cleaner query building
         const updates = [];
         const values = [];
         let idx = 1;
@@ -288,15 +272,22 @@ router.put('/me', authorize, async (req, res) => {
             updates.push(`username = $${idx++}`);
             values.push(username);
         }
-        if (email !== undefined) {
-            updates.push(`email = $${idx++}`);
-            values.push(email);
-        }
         if (newPasswordHash) {
             updates.push(`password = $${idx++}`);
             values.push(newPasswordHash);
             updates.push('session_version = session_version + 1');
             updates.push('reset_password_token = NULL', 'reset_password_token_hash = NULL', 'reset_password_expires = NULL');
+            if (!isEmailChanging) updates.push('pending_email = NULL', 'email_change_token_hash = NULL', 'email_change_token_expires = NULL', 'email_change_session_version = NULL');
+        }
+        if (emailChange) {
+            for (const [field, value] of [
+                ['pending_email', emailChange.available ? email : null],
+                ['email_change_token_hash', emailChange.available ? emailChange.hash : null],
+                ['email_change_token_expires', emailChange.expires],
+                ['email_change_session_version', req.user.session_version + (newPasswordHash ? 1 : 0)]
+            ]) {
+                updates.push(`${field} = $${idx++}`); values.push(value);
+            }
         }
         if (req.body.is_public !== undefined) {
             updates.push(`is_public = $${idx++}`);
@@ -308,14 +299,28 @@ router.put('/me', authorize, async (req, res) => {
         }
 
         values.push(currentUserId, req.user.session_version);
-        const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} AND session_version = $${idx + 1} AND deleted_at IS NULL RETURNING id, username, email, role, is_public`;
+        let sql = `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} AND session_version = $${idx + 1} AND deleted_at IS NULL`;
+        if (emailChange) {
+            values.push(emailChange.expires - 60000);
+            sql += ` AND (email_change_token_expires IS NULL OR email_change_token_expires <= $${idx + 2})`;
+        }
+        sql += ' RETURNING id, username, email, role, is_public';
 
         const updateResult = await db.query(sql, values);
         if (updateResult.rows.length === 0) {
-            return res.status(403).json({ message: '認証されていません：無効なトークンです' });
+            return isEmailChanging
+                ? res.status(409).json({ message: '更新状態が変わりました。認証を確認し、1分以上待って再度お試しください。' })
+                : res.status(403).json({ message: '認証されていません：無効なトークンです' });
         }
 
-        res.json(updateResult.rows[0]);
+        res.json({ ...updateResult.rows[0], ...(isEmailChanging ? {
+            emailChangeRequested: true,
+            message: '変更を受け付けました。変更可能な場合は確認メールが届きます。確認が完了するまで現在のメールアドレスを使ってください。'
+        } : {}) });
+        if (emailChange?.available) {
+            try { await sendEmailChangeConfirmation(email, emailChange.token); }
+            catch (err) { console.error('[users] Email change confirmation delivery failed'); }
+        }
     } catch (err) {
         console.error('[users] Profile update failed');
         res.status(500).send("Server Error");

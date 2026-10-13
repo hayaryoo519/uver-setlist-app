@@ -54,4 +54,14 @@ const verificationResendLimiter = rateLimit({
     legacyHeaders: false,
 });
 
-module.exports = { loginLimiter, resetLimiter, registerLimiter, verificationLimiter, resetConfirmationLimiter, verificationResendLimiter };
+// Runs after authorization; credential guesses cannot bypass the limit by changing IP.
+const profileUpdateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    keyGenerator: req => String(req.user.user_id),
+    message: { message: '設定更新の回数が多すぎます。15分後にお試しください。' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+module.exports = { loginLimiter, resetLimiter, registerLimiter, verificationLimiter, resetConfirmationLimiter, verificationResendLimiter, profileUpdateLimiter };

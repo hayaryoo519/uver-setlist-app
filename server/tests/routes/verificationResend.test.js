@@ -2,7 +2,7 @@ jest.mock('../../db', () => ({ query: jest.fn() }));
 jest.mock('../../utils/email', () => ({ sendVerificationEmail: jest.fn(), sendPasswordResetEmail: jest.fn() }));
 jest.mock('../../middleware/rateLimiter', () => {
     const pass = (req, res, next) => next();
-    return { loginLimiter: pass, resetLimiter: pass, registerLimiter: pass, verificationLimiter: pass, resetConfirmationLimiter: pass, verificationResendLimiter: pass };
+    return { loginLimiter: pass, resetLimiter: pass, registerLimiter: pass, verificationLimiter: pass, resetConfirmationLimiter: pass, verificationResendLimiter: pass, profileUpdateLimiter: pass };
 });
 const express = require('express');
 const request = require('supertest');
