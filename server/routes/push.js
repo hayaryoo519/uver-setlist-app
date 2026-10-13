@@ -43,7 +43,7 @@ router.post('/subscribe', authMiddleware, async (req, res) => {
         const result = await saveSubscription(req.userId, subscription);
         res.status(201).json({ message: '購読を登録しました', id: result.id });
     } catch (error) {
-        console.error('Subscribe error:', error);
+        console.error('Subscribe error: details suppressed');
         res.status(500).json({ error: '購読の登録に失敗しました' });
     }
 });
@@ -62,7 +62,7 @@ router.post('/unsubscribe', async (req, res) => {
         await removeSubscription(endpoint);
         res.json({ message: '購読を解除しました' });
     } catch (error) {
-        console.error('Unsubscribe error:', error);
+        console.error('Unsubscribe error: details suppressed');
         res.status(500).json({ error: '購読の解除に失敗しました' });
     }
 });
@@ -85,7 +85,7 @@ router.post('/notify-live', authorize, adminCheck, async (req, res) => {
             details: pushResult
         });
     } catch (err) {
-        console.error(err.message);
+        console.error('Live notification error: details suppressed');
         res.status(500).json({ message: "Server Error" });
     }
 });
