@@ -7,7 +7,8 @@ const authorize = async (req, res, next) => {
         const jwtToken = req.header("token");
 
         if (!jwtToken) {
-            console.warn("[AUTH] No token provided. Headers:", req.headers);
+            // Cookie/Authorization等の資格情報を失敗ログへ出さない。
+            console.warn("[AUTH] No token provided.");
             return res.status(403).json({ message: "認証されていません：トークンがありません" });
         }
 
