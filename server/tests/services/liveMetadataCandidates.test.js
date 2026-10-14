@@ -118,6 +118,35 @@ describe('共通の取得候補生成・保存', () => {
         expect(merged.tags).toEqual(['christmas', 'vs']);
     });
 
+    it('タグ省略だけの候補保存はタグなしを明示せず、明示空配列だけを保持する', () => {
+        const omitted = mergeCandidateSources({}, { countryCode: 'JP' });
+        expect(omitted).not.toHaveProperty('tags');
+        const explicit = mergeCandidateSources(omitted, { tags: [] });
+        expect(explicit.tags).toEqual([]);
+        expect(mergeCandidateSources(explicit, { countryCode: 'KR' }).tags).toEqual([]);
+    });
+
+    it('出典IDをクリアしても省略更新は同じsnapshotを更新する', () => {
+        const initial = mergeCandidateSources({}, { sourceId: 'setlistfm:1', tags: ['mens'] });
+        const cleared = mergeCandidateSources(initial, { sourceId: null });
+        const updated = mergeCandidateSources(cleared, { tags: [] });
+        expect(updated.tags).toEqual([]);
+        expect(Object.keys(updated.sources)).toEqual(['setlistfm:1']);
+        expect(updated.sources['setlistfm:1']).toMatchObject({ sourceId: null, tags: [] });
+    });
+
+    it('複数取得元でも出典IDクリア後の更新先は優先snapshotで、他の原文/候補は保持する', () => {
+        const initial = mergeCandidateSources(
+            mergeCandidateSources({}, { sourceId: 'setlistfm:1', tags: ['mens'], original: { info: 'original' } }),
+            { sourceId: 'uverworld.jp:1', tags: ['birthday'] },
+        );
+        const updated = mergeCandidateSources(mergeCandidateSources(initial, { sourceId: null }), { tags: [] });
+        expect(updated.tags).toEqual(['mens']);
+        expect(Object.keys(updated.sources)).toHaveLength(2);
+        expect(updated.sources['uverworld.jp:1']).toMatchObject({ sourceId: null, tags: [] });
+        expect(updated.sources['setlistfm:1']).toEqual(initial.sources['setlistfm:1']);
+    });
+
     it('特殊な出典IDでもプロトタイプを書き換えない', () => {
         const merged = mergeCandidateSources({}, { sourceId: '__proto__', tags: ['vs'] });
         expect(Object.prototype.hasOwnProperty.call(merged.sources, '__proto__')).toBe(true);

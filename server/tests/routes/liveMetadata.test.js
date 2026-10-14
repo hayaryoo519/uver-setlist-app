@@ -15,18 +15,20 @@ app.use(express.json());
 app.use('/api/lives/:id/metadata', require('../../routes/liveMetadata'));
 let client;
 let stored;
+let live;
 
 beforeEach(() => {
     jest.clearAllMocks();
+    live = { id: 42, title: 'Fixture live', tour_name: null, special_note: null };
     stored = { live_id: 42, candidates: { tags: ['mens', 'birthday'], countryCode: 'KR' }, overrides: {}, revision: 3 };
     client = { query: jest.fn(), release: jest.fn() };
     client.query.mockImplementation(async sql => {
-        if (sql.startsWith('SELECT id FROM lives')) return { rows: [{ id: 42 }] };
+        if (/^SELECT id(?:, title, tour_name, special_note)? FROM lives/.test(sql)) return { rows: [live] };
         if (sql.startsWith('SELECT * FROM live_metadata')) return { rows: [stored] };
         return { rows: [] };
     });
     db.pool.connect.mockResolvedValue(client);
-    db.query.mockImplementation(async () => ({ rows: [stored] }));
+    db.query.mockImplementation(async () => ({ rows: [{ ...live, ...stored }] }));
 });
 const patch = (value, path = '') => request(app).patch(`/api/lives/42/metadata${path}`)
     .set('token', 'admin').send({ revision: 3, patch: value });
@@ -63,6 +65,41 @@ describe('ライブ追加情報専用API', () => {
         expect(res.status).toBe(200);
         expect(res.body.effective.country).toEqual({ code: null, status: 'unreviewed' });
         expect(res.body.effective.tags).not.toContain('overseas');
+    });
+
+    it('候補タグ未保存の管理GETは公開と同じ名称fallbackを使い、候補そのものは変更しない', async () => {
+        live.title = 'Birthday Live'; stored.candidates = { countryCode: 'JP' };
+        const res = await request(app).get('/api/lives/42/metadata').set('token', 'admin');
+        expect(res.status).toBe(200);
+        expect(res.body.effective.tags).toEqual(['birthday']);
+        expect(res.body.candidates).toEqual({ countryCode: 'JP' });
+        expect(res.body).not.toHaveProperty('title');
+    });
+
+    it.each([{ country: { code: 'JP' } }, { tagOverrides: null }])('無関係な手動保存/タグreset後も公開と同じ名称fallbackを返す %j', async value => {
+        live.title = 'Birthday Live'; stored.candidates = {};
+        if ('tagOverrides' in value) stored.overrides = { tagOverrides: { add: [], remove: ['birthday'] } };
+        const res = await patch(value);
+        expect(res.status).toBe(200);
+        expect(res.body.effective.tags).toEqual(['birthday']);
+        expect(saved().candidates).toEqual({});
+    });
+
+    it('国候補だけの保存で名称由来タグを消さず、明示タグ空配列だけがfallbackを抑制する', async () => {
+        live.title = 'Birthday Live'; stored.candidates = {};
+        const omitted = await patch({ countryCode: 'JP' }, '/candidates');
+        expect(omitted.status).toBe(200);
+        expect(omitted.body.effective.tags).toEqual(['birthday']);
+        expect(saved().candidates).not.toHaveProperty('tags');
+        const explicit = await patch({ tags: [] }, '/candidates');
+        expect(explicit.status).toBe(200);
+        expect(explicit.body.effective.tags).toEqual([]);
+    });
+
+    it('明示空タグの管理GETと手動保存でも名称fallbackを復活させない', async () => {
+        live.title = 'Birthday Live'; stored.candidates = { tags: [] };
+        expect((await request(app).get('/api/lives/42/metadata').set('token', 'admin')).body.effective.tags).toEqual([]);
+        expect((await patch({ country: { code: 'JP' } })).body.effective.tags).toEqual([]);
     });
 
     it('手動確定した開催国から海外属性を導出し、更新履歴も同時保存する', async () => {
@@ -133,7 +170,7 @@ describe('ライブ追加情報専用API', () => {
     });
 
     it('新規属性行をrevision 0から作成し、原文も保存する', async () => {
-        client.query.mockImplementation(async sql => ({ rows: sql.startsWith('SELECT id FROM lives') ? [{ id: 42 }] : [] }));
+        client.query.mockImplementation(async sql => ({ rows: /^SELECT id(?:, title, tour_name, special_note)? FROM lives/.test(sql) ? [live] : [] }));
         const res = await request(app).patch('/api/lives/42/metadata/candidates').set('token', 'admin').send({
             revision: 0, patch: { tags: ['vs'], sourceId: 'fixture', original: { info: 'UVERworld vs Fixture Artist' }, ruleVersion: 1 },
         });

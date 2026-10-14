@@ -105,19 +105,23 @@ function mergeCandidateSources(current = {}, patch = {}) {
     if (!current.sources && Object.keys(current).length) {
         sources[current.sourceId || 'legacy'] = { ...current };
     }
-    const key = patch.sourceId || current.sourceId || 'legacy';
+    const priority = key => key.startsWith('uverworld.jp:') ? 0 : key.startsWith('setlistfm:') ? 1 : 2;
+    const orderedKeys = () => Object.keys(sources).sort((a, b) => priority(a) - priority(b) || a.localeCompare(b));
+    // nullableなsourceIdではなく、保持されたsnapshotのキーで省略更新先を決める。
+    const key = patch.sourceId || orderedKeys()[0] || 'legacy';
     sources[key] = { ...(sources[key] || {}), ...patch };
     if (Object.keys(sources).length > 16 || Buffer.byteLength(JSON.stringify(sources)) > 262144) {
         bad('Too many metadata sources or source data exceeds 256KB');
     }
-    const priority = key => key.startsWith('uverworld.jp:') ? 0 : key.startsWith('setlistfm:') ? 1 : 2;
-    const ordered = Object.keys(sources).sort((a, b) => priority(a) - priority(b) || a.localeCompare(b));
+    const ordered = orderedKeys();
     const primary = sources[ordered[0]] || {};
     const tags = new Set(ordered.flatMap(key => sources[key].tags || []));
     const members = new Set(ordered.flatMap(key => sources[key].memberIds || []));
     return {
         ...primary,
-        tags: TAGS.filter(tag => tags.has(tag)),
+        // タグ省略は旧公演の名称fallbackを維持。明示tags: []だけがそれを抑制する。
+        ...(ordered.some(key => Object.prototype.hasOwnProperty.call(sources[key], 'tags'))
+            ? { tags: TAGS.filter(tag => tags.has(tag)) } : {}),
         memberIds: MEMBERS.filter(member => members.has(member)),
         // 国不明の公式情報で、他の取得元の国候補を消さない。
         countryCode: ordered.map(key => sources[key].countryCode).find(Boolean) || null,

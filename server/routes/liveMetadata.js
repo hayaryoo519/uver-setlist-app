@@ -1,7 +1,8 @@
 const router = require('express').Router({ mergeParams: true });
 const db = require('../db');
 const { authorize, adminCheck } = require('../middleware/authorization');
-const { validateCandidates, validateManual, mergeManual, mergeCandidateSources, effectiveMetadata } = require('../utils/liveMetadata');
+const { validateCandidates, validateManual, mergeManual, mergeCandidateSources } = require('../utils/liveMetadata');
+const { effectiveLiveMetadata } = require('../services/liveMetadataProjection');
 
 router.use(authorize, adminCheck);
 router.use((req, res, next) => {
@@ -23,20 +24,21 @@ async function artistsFor(items, connection = db, lock = false) {
     return result.rows;
 }
 
-const response = row => ({
+const response = (row, live) => ({
     ...row,
-    effective: effectiveMetadata(row.candidates, row.overrides),
+    effective: effectiveLiveMetadata(live, row.candidates, row.overrides),
 });
 
 router.get('/', async (req, res) => {
     try {
         const result = await db.query(
-            `SELECT l.id AS live_id, COALESCE(m.candidates, '{}'::jsonb) AS candidates,
+            `SELECT l.id AS live_id, l.title, l.tour_name, l.special_note, COALESCE(m.candidates, '{}'::jsonb) AS candidates,
                     COALESCE(m.overrides, '{}'::jsonb) AS overrides, COALESCE(m.revision, 0) AS revision
              FROM lives l LEFT JOIN live_metadata m ON m.live_id = l.id WHERE l.id = $1`, [req.params.id],
         );
         if (!result.rows.length) return res.status(404).json({ message: 'Live not found' });
-        const payload = response(result.rows[0]);
+        const { title, tour_name, special_note, ...metadata } = result.rows[0];
+        const payload = response(metadata, { title, tour_name, special_note });
         payload.artists = await artistsFor(payload.effective.participants.items);
         res.json(payload);
     } catch (err) {
@@ -56,7 +58,7 @@ function update(operation) {
             client = await db.pool.connect();
             await client.query('BEGIN');
             // 公演行のロックで属性行の初回作成も直列化。ライブやセトリ自体は更新しない。
-            const live = await client.query('SELECT id FROM lives WHERE id = $1 FOR UPDATE', [req.params.id]);
+            const live = await client.query('SELECT id, title, tour_name, special_note FROM lives WHERE id = $1 FOR UPDATE', [req.params.id]);
             if (!live.rows.length) {
                 await client.query('ROLLBACK');
                 return res.status(404).json({ message: 'Live not found' });
@@ -73,7 +75,7 @@ function update(operation) {
                 overrides: operation === 'manual' ? mergeManual(before.overrides, validated) : before.overrides,
                 revision: revision + 1,
             };
-            const payload = response(after); // 整合性を保存前に検証する。
+            const payload = response(after, live.rows[0]); // 公開と同じ有効値で保存前の整合性を検証する。
             payload.artists = await artistsFor(payload.effective.participants.items, client, true);
             await client.query(
                 `INSERT INTO live_metadata (live_id, candidates, overrides, revision)
