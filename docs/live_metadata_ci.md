@@ -1,7 +1,7 @@
 # 追加情報検証のCI
 
 `.github/workflows/test.yml` に `test-live-metadata-integration` ジョブを追加。
-既存のpush(main/dev)・pull_request(main/dev)イベントで実行する。変更は未コミット/未pushで、GitHub Actions上の実行結果はまだ確認していない。
+既存のpush(main/dev)・pull_request(main/dev)イベントで実行する。CI構成はローカルcommit `898cefb0` に含む。未pushで、GitHub Actions上の実行結果はまだ確認していない。
 
 ## 実行内容
 
