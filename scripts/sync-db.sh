@@ -12,6 +12,18 @@ fi
 
 # 設定
 STAGING_DB_NAME="${STAGING_DB_NAME:-uver_setlist_staging}"
+# DB名をlibpq接続文字列やCLIオプションとして解釈させない。
+if [[ ! "$STAGING_DB_NAME" =~ ^[A-Za-z_][A-Za-z0-9_]{0,62}$ ]]; then
+    log_error "STAGING_DB_NAME must be a simple SQL identifier, not a connection string."
+    exit 1
+fi
+if [[ ! "${PGHOST:-}" =~ ^[A-Za-z0-9._:-]+$ ]] || [[ ! "${PGPORT:-}" =~ ^[0-9]{1,5}$ ]] || (( 10#$PGPORT < 1 || 10#$PGPORT > 65535 )); then
+    log_error "Set explicit PGHOST (single TCP host) and PGPORT before syncing."
+    exit 1
+fi
+# ガードで確認した接続先を、別のlibpq設定から暗黙に変更させない。
+unset PGSERVICE PGSERVICEFILE PGHOSTADDR
+export PGPORT=$((10#$PGPORT))
 export PGDATABASE="$STAGING_DB_NAME"
 BACKUP_FILE="${1:-}" # コマンドライン引数からバックアップファイルを指定
 
@@ -30,62 +42,61 @@ if [ ! -f "$BACKUP_FILE" ]; then
     exit 1
 fi
 
-# 2. リカバリ設定
-# 異常終了時にメンテナンスモード解除などを確実に行うための trap
-# (実際のメンテナンスモード切替コマンドは環境に合わせて実装)
-cleanup() {
-    log_info "Cleaning up and disabling maintenance mode (if enabled)..."
-    # ここにメンテナンス解除コマンドを記述
-}
-trap cleanup EXIT INT TERM
-
-log_info "Starting DB sync process to ${STAGING_DB_NAME}..."
-
-# 3. メンテナンスモード開始 (仮想)
-log_info "Switching Staging environment to Maintenance Mode..."
-# 例: ssh staging-server "touch /tmp/maintenance.lock"
-
-# 4. DB再初期化とインポート
-log_info "Dropping and creating Staging DB: ${STAGING_DB_NAME}..."
-dropdb --if-exists "$STAGING_DB_NAME" || log_warn "Failed to drop DB (maybe in use)"
-createdb "$STAGING_DB_NAME"
-
-log_info "Importing data from ${BACKUP_FILE}..."
-# 圧縮ファイルを解凍しながら pg_restore
-zcat "$BACKUP_FILE" | pg_restore --no-owner --no-privileges -d "$STAGING_DB_NAME" || {
-    log_error "Import failed. Dropping inconsistent database to prevent raw data exposure."
-    dropdb --if-exists "$STAGING_DB_NAME"
+# 復元と匿名化の間は生データが存在する。公開停止とバックグラウンド処理停止を必須にする。
+# この確認はサービスを自動停止しない。失敗時も自動再開しない。
+if [ "${STAGING_OFFLINE_ACK:-}" != "1" ]; then
+    log_error "Stop Staging access and background workers first; set STAGING_OFFLINE_ACK=1 to confirm."
     exit 1
-}
-
-# 5. 匿名化処理 (Anonymization)
-log_info "Executing anonymization queries for privacy..."
-psql -d "$STAGING_DB_NAME" <<EOF
--- ユーザー情報の匿名化
-UPDATE users SET 
-    email = 'dummy_' || id || '@example.com',
-    username = 'user_' || id,
-    password = 'anonymized_hash',
-    verification_token = NULL,
-    reset_password_token = NULL,
-    reset_password_expires = NULL;
-
--- セキュリティログ、プッシュ通知設定、生ログのクリア
-TRUNCATE TABLE security_logs CASCADE;
-TRUNCATE TABLE push_subscriptions CASCADE;
-TRUNCATE TABLE collector_logs CASCADE;
-
--- 修正申請の自由入力・提案内容を匿名化
-UPDATE corrections SET
-    description = '（非公開）',
-    suggested_data = NULL,
-    admin_note = NULL;
-EOF
-
-if [ $? -ne 0 ]; then
-    log_error "Anonymization failed. Dropping database for safety."
-    dropdb --if-exists "$STAGING_DB_NAME"
+fi
+ANONYMIZATION_SQL="${SCRIPT_DIR}/sync/anonymize.sql"
+if [ ! -f "$ANONYMIZATION_SQL" ]; then
+    log_error "Anonymization SQL not found. Sync aborted before database changes."
     exit 1
 fi
 
-log_info "Sync and Anonymization successfully completed."
+# set -eやシグナルでも未匿名化DBを放置しない。解除/サービス再開は運用者が成功確認後に行う。
+database_created=false
+sync_completed=false
+cleanup() {
+    local status=$?
+    trap - EXIT INT TERM
+    if [ "$database_created" = true ] && [ "$sync_completed" != true ]; then
+        log_error "Sync incomplete. Dropping database to prevent raw data exposure."
+        if ! dropdb --if-exists --force "$STAGING_DB_NAME"; then
+            log_error "SAFETY CLEANUP FAILED: raw data may remain. Keep Staging offline and remove the database manually."
+        fi
+    fi
+    log_info "Staging services/access are not restarted by this script."
+    exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+log_info "Starting DB sync process to ${STAGING_DB_NAME} (Staging must remain offline)..."
+
+# DB再初期化。削除できない既存DBへの上書きは行わない。
+if ! dropdb --if-exists "$STAGING_DB_NAME"; then
+    log_error "Could not drop Staging DB. Stop all connections before retrying."
+    exit 1
+fi
+if ! createdb "$STAGING_DB_NAME"; then
+    log_error "Could not create Staging DB."
+    exit 1
+fi
+database_created=true
+
+log_info "Importing data from ${BACKUP_FILE}..."
+if ! zcat "$BACKUP_FILE" | pg_restore --exit-on-error --single-transaction --no-owner --no-privileges -d "$STAGING_DB_NAME"; then
+    log_error "Import failed."
+    exit 1
+fi
+
+# SQLエラーで必ず失敗させる。既存のpsqlrcは読まず、全匿名化を単一トランザクションで適用する。
+log_info "Executing anonymization queries for privacy..."
+if ! psql -X --set=ON_ERROR_STOP=1 --single-transaction -d "$STAGING_DB_NAME" -f "$ANONYMIZATION_SQL"; then
+    log_error "Anonymization failed."
+    exit 1
+fi
+sync_completed=true
+log_info "Sync and Anonymization successfully completed. Run migrations before reopening Staging."

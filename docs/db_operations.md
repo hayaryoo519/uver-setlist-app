@@ -66,9 +66,14 @@ Production Actions の自動バックアップでディスクを圧迫しない�
 本番のバックアップファイルを、検証環境の PostgreSQL コンテナに流し込みます。
 
 ### 実行コマンド
-本番環境のディレクトリ（スクリプトがある場所）で、環境変数を指定して実行します。
+検証DBへ接続できる管理端末/検証サーバーで実行します。先にStagingの公開アクセスと全ワーカーを停止してください。DBコンテナは稼働させたままにします。本番DBに接続するコマンドではありません。
 
 ```bash
+# Stagingサーバー上。別プロセス/cron等の収集ワーカーも停止する。
+docker compose stop app-staging
+
+APP_ENV=staging \
+STAGING_OFFLINE_ACK=1 \
 STAGING_DB_NAME=uver_setlist_staging \
 PGHOST=127.0.0.1 \
 PGPORT=54325 \
@@ -79,12 +84,24 @@ PGPASSWORD=postgres \
 
 ### 注意点・工夫したポイント
 - **所有者エラーの回避**: `pg_restore` に `--no-owner --no-privileges` を使用しているため、本番（`<server-user>`）と検証（`postgres`）でユーザー名が異なっていても同期可能です。
-- **TCP接続の強制**: `PGHOST=127.0.0.1` を指定することで、Dockerのポートマッピング経由での接続を確実にします。
+- **TCP接続の強制**: 単一の `PGHOST` と `PGPORT` の明示が必須です。`PGHOST=127.0.0.1` を指定することで、Dockerのポートマッピング経由で接続します。DB名に接続URI/接続文字列は使えません。PGSERVICE/PGSERVICEFILE/PGHOSTADDRによる接続先上書きも無効化します。
 - **別端末からの接続**: 検証DBのホスト公開はIPv4 localhost限定です。直接LAN接続せず、SSHトンネル経由で接続してください。コンテナ内からは従来どおり `db-staging:5432` を使います。
 - **自動匿名化**: 同期完了後、以下の処理が自動で実行されます。
   - `users` テーブルのメールアドレス・ユーザー名・パスワード・検証/リセットトークンのダミー化。
   - `corrections` テーブルの自由入力・提案内容・管理者メモの匿名化。
   - `security_logs`, `push_subscriptions`, `collector_logs` 等の機密テーブルのクリア。
+  - `live_metadata` は既知の公開タグ/手動確定値だけを保持し、原文・取得元スナップショット・候補・分類検討メモ・未知JSONキーを除去。
+  - `live_metadata_history`, `live_artist_history` は変更前後の原文/メモ・管理者IDを含むため全件削除。
+  - `user_spotify_tokens`, `user_google_tokens`, `playlist_history` の外部資格情報/個人履歴を全件削除。
+  - `raw_setlists`, `social_posts` の非公開下書き・承認済みを含む送信キュー/投稿履歴を全件削除し、`lives.import_metadata` をNULL化。公開公演名/特記事項やセトリは保持。
+  - 任意テーブルがない旧バックアップは扱えますが、存在するテーブルの処理失敗は隠しません。他テーブル/今後の追加項目の機密情報監査が完了したことを意味しません。
+  - 公開用のアーティスト辞書/確認済み関連、空タグと未保存、確認済みなし、revisionは保持。
+- **失敗時保護**: 復元・匿名化はエラー停止/単一トランザクションで実行し、失敗やINT/TERMで同期先DBを安全削除します。削除も失敗した場合は生データ残存の警告を出します。`dropdb --force` 対応のPostgreSQL 13以降のクライアントが必要です。
+- **機密の扱い**: 元のダンプには除外前のデータが含まれます。ダンプと操作ログを保護し、SQLエラー等の全量ログを公開しないでください。
+- **成功確認前に再開しない**: このスクリプトは公開停止/再開を自動実行しません。強制終了/OS停止等では削除trapも実行できないため、中断後は公開停止を維持して状態を確認してください。
+- **旧バックアップ**: 030/031以前で新テーブルが存在しない場合は、そのテーブルだけをスキップします。同期後にマイグレーションを適用します。
+
+詳細な保存/除外方針と、既存DBを使わないPostgreSQL実検証は [追加情報のDB検証](./live_metadata_db_verification.md) を参照。匿名化SQLを本番DBへ直接実行しないでください。
 
 ---
 
@@ -95,16 +112,17 @@ PGPASSWORD=postgres \
 
 ```bash
 # 検証環境のディレクトリ（~/apps/uver-setlist-staging）で実行
-docker compose exec app-staging npm run migrate
+docker compose run --rm app-staging node server/scripts/migrate.js
 ```
 
 - **重要**: これを行わないと、新機能（例: `predictions` テーブルなど）にアクセスする際に API が 500/404 エラーを返します。
+- 匿名化成功とマイグレーションを確認した後に `docker compose start app-staging` 等で再開します。起動後のAPIヘルスチェックと、除外対象のデータが残っていないことを確認してください。
 
 ---
 
 ## 4. メンテナンスモード
 
-現時点の `scripts/sync-db.sh` は、メンテナンスモード切替用の `trap` とログ出力のみを持ち、実際のアクセス制限や告知表示は未実装です。同期中に外部アクセスを止める必要がある場合は、事前に Staging 側の公開停止・Basic認証・メンテナンス表示などを別途設定してください。
+`scripts/sync-db.sh` は実際のアクセス制限やサービス停止/再開を自動実行しません。公開アクセスとバックグラウンド処理を停止したことを示す `STAGING_OFFLINE_ACK=1` が必須です。Basic認証だけでは、認証済み利用者やワーカーから復元直後の生データを読めるため十分ではありません。事前にアプリ停止/公開遮断と全ワーカー停止を実施し、匿名化・マイグレーション成功後に再開してください。終了trapは未完了の同期DB削除に用います。
 
 ---
 
