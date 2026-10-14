@@ -1,7 +1,8 @@
 # 追加情報検証のCI
 
 `.github/workflows/test.yml` に `test-live-metadata-integration` ジョブを追加。
-既存のpush(main/dev)・pull_request(main/dev)イベントで実行する。CI構成はローカルcommit `898cefb0` に含む。未pushで、GitHub Actions上の実行結果はまだ確認していない。
+既存のpush(main/dev)・pull_request(main/dev)イベントで実行する。CI構成はcommit `898cefb0` に含む。dev向け[Draft PR #242](https://github.com/hayaryoo519/uver-setlist-app/pull/242)を公開済み。
+SHA `c571fa2f` の[Actions run 38571130062](https://github.com/hayaryoo519/uver-setlist-app/actions/runs/38571130062)で全3ジョブ成功を確認した。backendはLinuxのadmin suite込み726 tests/56 suites、frontendも成功。
 
 ## 実行内容
 
@@ -13,7 +14,9 @@
 - 最小の旧schemaでの使い捨てDB試験7項目。
 - `npm run test:metadata-db --prefix server -- --worker --built-worker`：実認証/API/SQL＋実Worker transport/更新＋本番生成物の更新を同じ所有クラスタで順に確認。
 
-統合コマンドはWindows/PostgreSQL 18で**22項目成功**。PG16/Ubuntuでの結果はCI実行後に確認する。
+最新dev統合後の統合コマンドはWindows/PostgreSQL 18とCIのUbuntu/PostgreSQL 16.15で**23項目成功**。旧schema試験7項目、型チェック、合成browser18ケースもCIで成功。
+初回CIのserver-only環境ではPlaywrightのトップレベルrequire/mock解決が失敗したため、ブラウザ実行時の遅延読み込みとvirtual mockへ変更。root node_modulesなしのsnapshotでもbackend722件成功（Windows依存admin suite除外）。
+PostgreSQL起動はUnixの既定ソケット場所に依存しないTCP専用に変更し、合成データ投入前の起動診断だけを出す。Windowsでは従来の起動オプションを維持する。
 PG16を選んだ理由はリポジトリのdocker-compose.yml/docker-compose.local.ymlがpostgres:16-alpineを指定しているため。UbuntuのPG16とAlpineの実配備設定が同一という意味ではない。
 
 ## 隔離
@@ -35,7 +38,7 @@ PG16を選んだ理由はリポジトリのdocker-compose.yml/docker-compose.loc
 
 ## 残件
 
-- PR/push後の実Actions結果、PG16/Ubuntu/Chromiumの挙動を確認。
+- 候補SHA変更時は最新headのActions結果を再確認。c571fa2fの成功を未検証の変更へ流用しない。
 - 実Stagingのschema/設定差分、実購読/Push配送/OSクリック/過去の本番JS等。
 - CI成功だけでリリース承認やデプロイ完了と扱わない。mainマージ後も本番はGitHub Release publishが別途必要。
 

@@ -32,10 +32,18 @@ fresh npm ci（root legacy-peer-deps/server通常）で最新lockfileを使用�
 SQL生成/同一transaction/失敗cleanupは偽クライアントのshell試験、匿名化・rollbackは所有PostgreSQLの実SQL試験。本物のdumpからsync-db.shを一貫実行する試験までは未実施。
 本番生成物のlarge chunk warningは継続。
 
+## 公開PRとCI
+
+featureブランチをpushし、dev向け[Draft PR #242](https://github.com/hayaryoo519/uver-setlist-app/pull/242)を作成。
+`c571fa2f`の[Actions](https://github.com/hayaryoo519/uver-setlist-app/actions/runs/38571130062)で全3ジョブ成功。
+Ubuntu/Node24/PostgreSQL16.15でbackend726件（admin suite込み）、合成browser18ケース、旧schema7項目、実認証/Worker/本番生成物23項目を確認。
+初回CIのserver-onlyブラウザ依存とPG起動を修正した。詳細は[CI記録](./live_metadata_ci.md)。
+
 ## 残件
 
 - npm ci時点のaudit指摘：root17（low1/moderate7/high9）、server25（moderate21/high4）。直接依存のdevパッチは維持したが全指摘解消とは扱わない。audit fix --forceは実行していない。
-- PG16/Ubuntu/Node24のActions結果、公開前のindex/source差分・文書確認。
+- [独立AIレビュー](./live_metadata_independent_review.md)の3指摘は44e71a59で修正済み。追加8テストを含むbackend730、frontend229、所有PG18統合23は成功。別の新規Codexによる44e71a59のフォローアップ静的レビューで3件解消を確認。最新head CIは[PR checks](https://github.com/hayaryoo519/uver-setlist-app/pull/242/checks)を参照。
+- 人間のレビュー/配備判断、[Staging受け入れ計画](./live_metadata_staging_acceptance.md)の承認と実環境確認。
 - 全機密監査/実同期/実環境schema/実Push配送/OSクリック/旧配備bundleは未確認。
 
-push/PR作成/既存Stagingや本番の接続・変更・配信・デプロイは実施していない。
+feature push/Draft PR作成は実施済み。devへのmerge/push、既存Stagingや本番の接続・変更・配信・デプロイ、Release公開は実施していない。

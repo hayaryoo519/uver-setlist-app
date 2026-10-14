@@ -1,6 +1,16 @@
 # Issue #109 差分レビュー・PR準備
 
-## 状態
+## 現在の状態
+
+- dev向け[Draft PR #242](https://github.com/hayaryoo519/uver-setlist-app/pull/242)を公開済み。同期保護・機能・検証を目的別commitとして同じPRでレビューする。
+- `c571fa2f`の[Actions](https://github.com/hayaryoo519/uver-setlist-app/actions/runs/38571130062)で全3ジョブ成功。PG16.15/Ubuntu/Node24でbackend726件（Linuxのadmin suite込み）、合成browser18、旧schema7項目、統合23項目。
+- 既存環境操作、dev merge/push、Release公開は未実施。Draft/CI成功は配備承認ではない。
+- [独立AI静的レビュー](./live_metadata_independent_review.md)の3指摘を44e71a59で修正し、8回帰テストを追加。backend730/frontend229/所有PG18統合23は成功。別の新規Codexによる44e71a59のフォローアップ静的レビューで3件解消を確認。最新head CIは[PR checks](https://github.com/hayaryoo519/uver-setlist-app/pull/242/checks)で確認する。
+- 人間のレビュー/配備判断と[Staging受け入れ計画](./live_metadata_staging_acceptance.md)の承認・実確認は残る。共演候補の自動抽出等が未完了なのでIssue #109を自動closeしない。
+
+## 公開前の準備記録（履歴）
+
+以下の未push/Actions未確認という記載・草案・チェックリストは、公開前の各段階を記録したもの。現在の状態は上記と[CI記録](./live_metadata_ci.md)を参照する。
 
 現在の作業ブランチ：`hayaryoo519/feature-issue-109-continue`。
 棚卸し時点でtracked変更33ファイル＋新規77ファイル。下記の準備文書は棚卸し後の追加なので、その数に含まない。
