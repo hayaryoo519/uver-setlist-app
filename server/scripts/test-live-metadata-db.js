@@ -74,7 +74,7 @@ async function main() {
     if (fullSchema) {
         // migrate.jsは.envを読むため呼ばない。SQL一式をテスト所有のPoolだけで適用する。
         const migrationDir = path.join(root, 'server/migrations');
-        const files = fs.readdirSync(migrationDir).filter(name => /^\d+_.*\.sql$/.test(name) && Number(name.split('_')[0]) < 30)
+        const files = fs.readdirSync(migrationDir).filter(name => /^\d+_.*\.sql$/.test(name) && Number(name.split('_')[0]) < 33)
             .sort((a, b) => Number(a.split('_')[0]) - Number(b.split('_')[0]));
         const migrationClient = await pool.connect();
         try {
@@ -88,7 +88,7 @@ async function main() {
                 }
             }
         } finally { migrationClient.release(); }
-        passed(`Complete checked-in legacy schema: ${files.length} migrations (000–029)`);
+        passed(`Complete checked-in prerequisite schema: ${files.length} migrations before 033`);
         await pool.query(`
             INSERT INTO users (id, email, username, password, verification_token, reset_password_token, reset_password_expires)
                 VALUES (1, 'fixture@example.invalid', 'PRIVATE_SENTINEL', 'PRIVATE_SENTINEL', 'PRIVATE_SENTINEL', 'PRIVATE_SENTINEL', 123);
@@ -127,7 +127,7 @@ async function main() {
         INSERT INTO corrections(description, suggested_data, admin_note) VALUES ('PRIVATE_SENTINEL', '{"private":"PRIVATE_SENTINEL"}', 'PRIVATE_SENTINEL');
     `);
     }
-    anonymize(); // 030/031がないバックアップをSQLが扱えることも実DBで確認。
+    anonymize(); // 033/034がないバックアップをSQLが扱えることも実DBで確認。
     if (fullSchema) {
         for (const table of ['user_spotify_tokens', 'user_google_tokens', 'playlist_history', 'raw_setlists', 'social_posts']) {
             assert.equal((await pool.query(`SELECT * FROM ${table}`)).rowCount, 0, `${table} must not be copied into verification DBs`);
@@ -137,11 +137,11 @@ async function main() {
     }
     passed('Legacy schema without metadata: anonymization succeeds');
     for (let repeat = 0; repeat < 2; repeat++) {
-        for (const filename of ['030_live_metadata.sql', '031_live_artists.sql']) {
+        for (const filename of ['033_live_metadata.sql', '034_live_artists.sql']) {
             await pool.query(fs.readFileSync(path.join(root, 'server/migrations', filename), 'utf8'));
         }
     }
-    passed('030/031 migrations apply and can be reapplied to the fixture');
+    passed('033/034 migrations apply and can be reapplied to the fixture');
     await pool.query("INSERT INTO live_artists(id, name, normalized_name, aliases, normalized_aliases) VALUES (10, 'Fixture Artist', 'fixture artist', ARRAY['ＦＡ'], ARRAY['fa'])");
     await pool.query("INSERT INTO live_collaborators VALUES (1, 10, 'co_headliner'), (1, 10, 'guest')");
     const overrides = {

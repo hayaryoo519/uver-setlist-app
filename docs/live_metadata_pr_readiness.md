@@ -12,7 +12,7 @@ push/PR作成/既存環境接続/適用/配信/デプロイは未実施。
 
 ## 一次レビューの確認範囲
 
-- 030/031は新規・追加型。既存マイグレーションは編集していない。
+- 033/034（改番前030/031）は新規・追加型。既存環境へ適用済みのマイグレーションは編集していない。
 - メタデータ/辞書/reviewルートは管理者認可付き。通常の公演更新とメタデータ更新は分離。
 - revision・公演行ロック・監査履歴・関連更新は同一トランザクション。artist参照をロックし、release/rollback経路も確認。
 - 候補保存は手動overrideを書き換えず、同一候補ではrevisionを増やさない。
@@ -52,7 +52,7 @@ push/PR作成/既存環境接続/適用/配信/デプロイは未実施。
 
 ### B. Issue #109 機能本体＋関連する通知/認証復帰
 
-対象：030/031、metadata/artist/reviewのroutes/services/utils、lives/収集経路の接続、UI/types/hooks、通知/認証復帰、対応単体テストと機能doc、tsconfig。
+対象：033/034、metadata/artist/reviewのroutes/services/utils、lives/収集経路の接続、UI/types/hooks、通知/認証復帰、対応単体テストと機能doc、tsconfig。
 共通ファイルは差分単位を確認してステージする。認証ヘッダログ除去は小さな独立fix commitとして扱える。
 共演自動抽出等はfollow-upとして明記し、完了範囲を合意する。
 
@@ -74,12 +74,12 @@ Issue #109の固定タグ判定、取得元別候補・手動確定、海外/生
 
 ### DB変更
 
-030/031の追加型マイグレーション。既存schema/公演/セトリを破壊する変更なし。
+033/034の追加型マイグレーション。既存schema/公演/セトリを破壊する変更なし。
 未適用の実環境では配備前に正式migrate経路で適用が必要。テストは全migration SQL直接適用で、migrate runnerのtracking/lock検証ではない。
 
 ### 検証
 
-フロント214、バックエンド364（Windows依存admin suiteはローカル除外）。
+フロント214、バックエンド366（Windows依存admin suiteはローカル除外）。
 合成browser18ケース。所有PG18/実bcrypt/JWT/API/Chromium/Worker/本番Workbox更新の統合コマンド22項目。
 型チェック/差分チェック成功。既存のlarge chunk warningあり。
 CIにはPG16/Ubuntuを追加したが、Actionsでの実行結果はPR作成後に確認する。
@@ -100,6 +100,19 @@ CIにはPG16/Ubuntuを追加したが、Actionsでの実行結果はPR作成後�
 - snapshot/合成reportをtempから削除。実JWTやブラウザストレージは保存しない。既存DBには接続していない。
 - Actions/PG16/Node24/Linux結果は未確認。
 
+## 最新dev確認で見つかった公開前ブロッカー
+
+origin/dev `37110394` をfetchして確認。今回のベースe389c326以降にセッション失効・トークンhash/期限・pending email・ログ保護・依存更新が入っていた。
+mainベースの履歴には本件外のproduction workflow変更も含む。5commitだけをdevへ載せ替えようとしたが、同期script/docで競合し、rebaseをabortして元へ戻した。
+元の履歴はローカル `backup/issue-109-before-dev-base` に保持。リモートにはpushしていない。
+
+- devには030_users_session_version/031_users_auth_token_hashes/032_users_pending_email_changeが存在。未配備のfeature SQLは内容を変えず033/034へ改番。
+- 最新devの認可は現在のusers.role/session_version/deleted_atをDB照合する。旧JWTのみのfixture結果を統合後の認可検証とは扱わない。
+- token hash/期限・pending_email等の新しい機密列を同期匿名化で除去する必要がある。既存devの同期保護を失わないよう統合する。
+- 最新devのログ保護/認証画面/依存パッチも保持し、最新lockfileで依存を入れ直して再検証する。
+- 改番後は旧ベース（前提SQL29ファイル）でDB9項目、backend366/33 suites成功。最新devの認証030〜032を含む統合結果ではない。
+- 改番だけでは最新dev統合完了ではない。統合後の全試験・差分確認までpush/Draft PRを保留する。
+
 ## PRへ進む条件
 
 - [x] 主要な収集/UI差分の一次・二次レビューと指摘修正（独立レビュー完了ではない）。
@@ -110,6 +123,6 @@ CIにはPG16/Ubuntuを追加したが、Actionsでの実行結果はPR作成後�
 - [ ] 公開PRの範囲・baseと、分割PRの場合の文書リンク/依存順を最終確認。
 - [ ] featureブランチのpushとdev向けDraft PRを作成（devへ直接pushしない）。
 - [ ] CI成功、PG16/Linux結果、レビュー指摘の解消。
-- [ ] merge前にStaging自動デプロイの影響と030/031適用手順を確認。
+- [ ] merge前にStaging自動デプロイの影響と033/034適用手順を確認。
 
 devへのmerge/pushはStaging配備を起動する。CI成功/Draft PR作成を、Staging受け入れや本番リリース完了と扱わない。

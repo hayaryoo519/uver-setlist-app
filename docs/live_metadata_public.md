@@ -2,7 +2,7 @@
 
 状態：公開一覧/詳細APIと一覧/詳細画面への有効情報反映を実装済み。
 共演者の保存・編集・検索も実装済み（[共演者仕様](./live_collaborators.md)）。使い捨てPostgreSQL 18で同期匿名化後の公開情報保持・実API SQLを検証済み（[DB検証](./live_metadata_db_verification.md)）。合成APIでPC/モバイルの[実ブラウザ検証](./live_metadata_browser_verification.md)も完了。実Staging/実環境結合確認は未実施。
-030/031マイグレーション適用が必要。管理操作は [追加情報レビュー](./live_metadata_admin_review.md) を参照。
+033/034マイグレーション適用が必要。管理操作は [追加情報レビュー](./live_metadata_admin_review.md) を参照。
 
 ## 公開API
 

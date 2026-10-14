@@ -1,7 +1,7 @@
 # 共演者辞書・公演の共演情報（Issue #109）
 
 状態：辞書API、共演者の保存/管理編集、公開表示/検索を実装。
-使い捨てPostgreSQL 18で030/031・FK/検索/同時更新/再取得/同期匿名化を検証済み（[DB検証](./live_metadata_db_verification.md)）。辞書登録/名称修正/別名検索は合成APIでPC/モバイルの[実ブラウザ検証](./live_metadata_browser_verification.md)も完了。実Stagingへの適用と実環境の結合確認は未実施。
+使い捨てPostgreSQL 18で旧番号030/031のSQL内容・FK/検索/同時更新/再取得/同期匿名化を検証済み。未配備のため033/034へ改番（[DB検証](./live_metadata_db_verification.md)）。辞書登録/名称修正/別名検索は合成APIでPC/モバイルの[実ブラウザ検証](./live_metadata_browser_verification.md)も完了。実Stagingへの適用と実環境の結合確認は未実施。
 取得テキストから共演者を自動確定・自動登録する処理はない。
 
 ## 分類と表記ゆれ
@@ -26,7 +26,7 @@
 
 ## 保存構造
 
-`server/migrations/031_live_artists.sql` を追加（030に続けて通常手順で適用する）。
+`server/migrations/034_live_artists.sql` を追加（033に続けて通常手順で適用する）。
 
 - live_artists：正式名、検索キー、別名と別名検索キー、revision。
 - live_collaborators：公演/アーティスト/役割の関連。FKで未登録IDを防ぐ。
@@ -125,7 +125,7 @@ PATCH /api/lives/:id/metadata のpatchにparticipantsを追加。
 辞書権限/表記ゆれ/重複/競合/履歴、役割/未登録ID/重複/関連保存失敗、再取得時保持、公開投影/一括取得、管理操作、同一項目検索などをモックで検証した。
 
 残件：
-- 030/031の適用・FK/配列検索/ロック動作は使い捨てPostgreSQL 18で検証済み。実Stagingと同じバージョン/完全schemaでも確認する。
+- 033/034のSQL内容（改番前030/031）の適用・FK/配列検索/ロック動作は使い捨てPostgreSQL 18で検証済み。実Stagingと同じバージョン/完全schemaでも確認する。
 - 実ブラウザで辞書作成→公演関連保存→公開検索、辞書変更、競合の確認。
 - 実装済みの[管理一覧レビュー・通知導線](./live_metadata_review_queue.md)の実機確認。
 - 新しい履歴の管理者情報/管理メモの同期除外は実装・合成fixture検証済み。実同期前に公開/ワーカー停止・他の機密情報監査を行う。

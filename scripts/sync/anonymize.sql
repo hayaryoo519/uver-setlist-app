@@ -45,7 +45,7 @@ LANGUAGE sql IMMUTABLE AS $tags$
                   '"christmas"'::jsonb, '"anniversary"'::jsonb, '"vs"'::jsonb);
 $tags$;
 
--- 030/031より古いバックアップも扱う。存在する新テーブルの処理失敗は隠さない。
+-- 033/034導入前のバックアップも扱う。存在する新テーブルの処理失敗は隠さない。
 DO $sanitize_metadata$
 BEGIN
     IF to_regclass('public.live_metadata') IS NOT NULL THEN

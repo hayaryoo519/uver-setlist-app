@@ -1,7 +1,7 @@
 # 管理画面のライブ追加情報レビュー
 
 状態：管理画面の公演一覧から追加情報専用APIへの読込・編集・保存を接続済み。
-使い捨てPostgreSQL 18で030/031・実API SQL/同時更新を検証済み（[DB検証](./live_metadata_db_verification.md)）。合成APIでPC/モバイルの見た目/操作も[実ブラウザ検証](./live_metadata_browser_verification.md)で確認済み。実Stagingへの適用・実環境結合・実Web Push確認は未実施。
+使い捨てPostgreSQL 18で改番前030/031のSQL内容・実API SQL/同時更新を検証済み（未配備の033/034へ改番）（[DB検証](./live_metadata_db_verification.md)）。合成APIでPC/モバイルの見た目/操作も[実ブラウザ検証](./live_metadata_browser_verification.md)で確認済み。実Stagingへの適用・実環境結合・実Web Push確認は未実施。
 公開一覧/詳細/検索への反映は接続済み（[公開表示・検索](./live_metadata_public.md)）。共演者辞書・編集も接続済み（[共演者仕様](./live_collaborators.md)）。
 管理一覧の件数・未確認/不一致/分類検討フィルター・通知からの入口も接続済み（[レビュー導線](./live_metadata_review_queue.md)）。
 API契約・取得元の合成ルールは [追加情報API](./live_metadata_api.md) を参照。
@@ -94,4 +94,4 @@ API契約・取得元の合成ルールは [追加情報API](./live_metadata_api
 4. 実装済みの管理一覧の未確認/不一致/分類検討フィルターと通知からの導線を実環境で検証する。
 5. 検証DBでマイグレーション・再取得・同時編集・レビュー操作を確認する。
 
-DB同期保護/実ブラウザ検証追加後の最新検証：合成APIのChromium PC/モバイル18ケース、フロント214テスト、既知のadminパス依存スイートを除いたバックエンド32スイート364テスト成功。使い捨てPostgreSQL 18では最小schema 7項目/リポジトリ全schema SQL 9項目/実認証付き全schema 13項目/実APIへPC・モバイルを接続した15項目/所有Workerの実通知API・message経路・旧→新protocol切替を含む19項目/実Workbox本番生成物2版の更新16項目/Worker＋本番生成物の統合コマンド22項目成功し、同期除外・匿名化を検証済み。通知ハンドラも [12テスト](./live_metadata_push_verification.md) で確認済み。型チェック・本番ビルド・シェル構文・差分チェック成功。実Staging適用/実環境結合/実Web Push確認は未実施。実ブラウザの対象範囲・残件は [検証記録](./live_metadata_browser_verification.md) を参照。[CIジョブ](./live_metadata_ci.md) も追加済みだが、Actions/PG16での実行結果は未確認。差分の一次レビュー・修正指摘・PR分割案は [PR準備](./live_metadata_pr_readiness.md) を参照。
+DB同期保護/実ブラウザ検証追加後の最新検証：合成APIのChromium PC/モバイル18ケース、フロント214テスト、既知のadminパス依存スイートを除いたバックエンド33スイート366テスト成功。使い捨てPostgreSQL 18では最小schema 7項目/リポジトリ全schema SQL 9項目/実認証付き全schema 13項目/実APIへPC・モバイルを接続した15項目/所有Workerの実通知API・message経路・旧→新protocol切替を含む19項目/実Workbox本番生成物2版の更新16項目/Worker＋本番生成物の統合コマンド22項目成功し、同期除外・匿名化を検証済み。通知ハンドラも [12テスト](./live_metadata_push_verification.md) で確認済み。型チェック・本番ビルド・シェル構文・差分チェック成功。実Staging適用/実環境結合/実Web Push確認は未実施。実ブラウザの対象範囲・残件は [検証記録](./live_metadata_browser_verification.md) を参照。[CIジョブ](./live_metadata_ci.md) も追加済みだが、Actions/PG16での実行結果は未確認。差分の一次レビュー・修正指摘・PR分割案は [PR準備](./live_metadata_pr_readiness.md) を参照。公開前のfetchで最新devの認証/同期変更と番号030〜032を確認し、未配備SQLを033/034へ改番。改番後の旧ベースSQL9項目は成功したが、最新devとの統合は未完了のためpush/PRは保留。

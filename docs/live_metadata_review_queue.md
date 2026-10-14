@@ -1,7 +1,7 @@
 # 管理一覧の追加情報レビュー導線（Issue #109）
 
 状態：管理者専用一覧API、管理一覧の件数/理由表示・絞り込み、追加情報への通知リンクを実装。
-使い捨てPostgreSQL 18で030/031と実API SQL・同時更新を検証済み（[DB検証](./live_metadata_db_verification.md)）。合成APIでPC/モバイルの[実ブラウザ検証](./live_metadata_browser_verification.md)も完了。実Staging適用と実Web Push確認は未実施。
+使い捨てPostgreSQL 18で改番前030/031のSQL内容と実API SQL・同時更新を検証済み（未配備の033/034へ改番）（[DB検証](./live_metadata_db_verification.md)）。合成APIでPC/モバイルの[実ブラウザ検証](./live_metadata_browser_verification.md)も完了。実Staging適用と実Web Push確認は未実施。
 
 ## 管理者専用API
 
@@ -28,7 +28,7 @@ GET /api/lives/metadata-review
 - 公開一覧/詳細にレビュー情報は追加しない。
 - 取得失敗は500とし、空配列や0件に偽装しない。
 - 読取専用でrevisionや履歴を変更しない。
-- 新しいマイグレーションは追加しない（保存層には既存の030/031が必要）。
+- 新しいマイグレーションは追加しない（保存層には033/034が必要）。
 
 ## 未確認の判定
 

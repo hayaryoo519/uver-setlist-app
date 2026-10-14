@@ -3,7 +3,7 @@
 > 全体設計は [ライブ属性・追加情報の設計案](./live_metadata_design.md)、公開契約は [公開表示・検索](./live_metadata_public.md) を参照。アコースティックは除去済み。[共演者の辞書・編集・検索](./live_collaborators.md)も接続済み。
 
 ライブ一覧で、自動候補に手動追加/除外を適用した属性を検索できる。
-保存には `030_live_metadata.sql`、共演者には `031_live_artists.sql` のマイグレーションが必要。使い捨てPostgreSQLで検証済み（[DB検証](./live_metadata_db_verification.md)）。既存のStaging/本番DBへの適用は未実施。
+保存には `033_live_metadata.sql`、共演者には `034_live_artists.sql` のマイグレーションが必要。使い捨てPostgreSQLで検証済み（[DB検証](./live_metadata_db_verification.md)）。既存のStaging/本番DBへの適用は未実施。
 
 ## 生成タイミング
 

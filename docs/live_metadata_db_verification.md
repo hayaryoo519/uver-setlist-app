@@ -3,7 +3,7 @@
 ## 実装した同期方針
 
 `scripts/sync-db.sh` は `scripts/sync/anonymize.sql` を、psqlrc無効・ON_ERROR_STOP・単一トランザクションで実行する。
-従来のユーザー/修正申請匿名化・機密ログ削除に、030/031のデータの扱いを追加した。
+従来のユーザー/修正申請匿名化・機密ログ削除に、033/034（改番前030/031）のデータの扱いを追加した。
 
 | データ | 同期後 |
 |---|---|
@@ -25,7 +25,7 @@
 辞書は管理者が登録する公開名称/別名を扱う前提。未関連辞書も維持するが、辞書変更履歴は持ち出さない。
 正式な公演名・既存の公開特記事項は従来どおり保持する。ここを一括消去するものではない。
 
-030/031より古いバックアップでは、存在しない新テーブルだけスキップする。
+033/034導入前のバックアップでは、存在しない新テーブルだけスキップする。
 存在するテーブルの処理失敗は隠さない。新しい公開フィールド/タグを追加した場合は、同期ホワイトリストと公開情報保持のテストも更新する。
 
 ## 失敗時と運用条件
@@ -58,7 +58,7 @@ npm run test:metadata-db --prefix server
 # Windowsでbinを明示する例（Git Bash）
 PG_BIN='C:/Program Files/PostgreSQL/18/bin' npm run test:metadata-db --prefix server
 
-# チェックインされた000〜031の全schema SQLを使う合成fixture
+# チェックインされた前提schema SQL＋033/034を使う合成fixture
 PG_BIN='C:/Program Files/PostgreSQL/18/bin' npm run test:metadata-db --prefix server -- --full-schema
 
 # 全schema + 実bcrypt/JWT/認可/ログインlimiterでの実API検証
@@ -80,8 +80,8 @@ Windowsではpg_ctlのstdioを継承させず、daemonにパイプが残るこ�
 
 ### PostgreSQL 18.0（Windows）で成功した7チェックポイント
 
-1. 030/031なしの旧schemaでも匿名化SQLが成功。
-2. 最小のusers/lives依存schemaに030/031を適用し、再適用も可能。
+1. 033/034なしの旧schemaでも匿名化SQLが成功。
+2. 最小のusers/lives依存schemaに033/034を適用し、再適用も可能。
 3. 原文・管理メモ・未知JSONキー・両履歴を除去し、公開情報/辞書/関連/空タグ/確認済みなしを保持。
 4. 実際のSQLエラーでpsqlが非0終了し、先行した匿名化も全てロールバック。
 5. 実APIのSQLを実行：同時PATCHで200/409、Unicode別名検索、辞書更新、レビュー一覧取得。
@@ -91,7 +91,7 @@ Windowsではpg_ctlのstdioを継承させず、daemonにパイプが残るこ�
 標準/--full-schemaモードのHTTP認可はfixture専用に差し替える。`--real-auth` では下記のとおり実認証も接続する。いずれも本番設定の結合テストではない。
 標準モードの基盤schemaは合成fixtureに必要な最小限。`--full-schema` モードも追加し、PostgreSQL 18.0（Windows）で**9チェックポイント成功**。
 
-- 000〜029の存在する29ファイルを番号順・1ファイル1トランザクションで適用し、その上で030/031を適用/再適用。
+- 改番前の検証では000〜029の29ファイル＋旧030/031を適用/再適用。runnerは現在、033より前のチェックイン済みSQLを番号順・1ファイル1トランザクションで適用してから033/034を適用する。最新devの認証030〜032との統合後の結果はまだ確認していない。
 - 完全schemaのNOT NULL/FK/型制約を使い、同じ公開情報保持・実API SQL・同時更新・再取得を検証。
 - 合成OAuth資格情報/外部プレイリスト履歴/非公開下書き/承認済み投稿キュー/import_metadataが同期後に残らない。
 - 後続SQL失敗時は、先行したOAuth/投稿キュー削除もロールバックされる。
@@ -132,7 +132,7 @@ JWTやパスワード/鍵をログへ出さない。併せて実authorizeのト�
 
 ## 残件
 
-- 実Staging/本番への030/031適用は未実施。
+- 実Staging/本番への033/034適用は未実施。旧番号030/031も実環境へは適用していない。
 - 本番と同じPostgreSQLバージョン/実schema差分・構成での確認（リポジトリの全schema SQLは合成データで検証済み）。
 - 実環境でのAPI/認証/DB/ブラウザ結合確認（所有DBでの対象API結合と合成APIのPC/モバイル操作は検証済み）。
 - 実Web Push配送/OSクリックからの遷移確認（模擬ハンドラ試験に加え、[所有Workerの実通知API/message経路・旧→新protocol切替](./live_metadata_native_worker_verification.md) は19項目成功）。
