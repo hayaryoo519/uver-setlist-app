@@ -74,6 +74,13 @@ const NEWS_DETAIL_HTML = `
 describe('scheduleImporter', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        db.pool.connect.mockResolvedValue({
+            query: jest.fn(async (sql, params) => {
+                if (sql === 'SELECT id FROM lives WHERE id = $1 FOR UPDATE') return { rows: [{ id: params[0] }] };
+                return db.query(sql, params);
+            }),
+            release: jest.fn(),
+        });
     });
 
     describe('parseScheduleList', () => {
@@ -489,6 +496,7 @@ describe('scheduleImporter', () => {
             expect(notifyAdmins).toHaveBeenCalledTimes(1);
             expect(notifyAdmins.mock.calls[0][0].title).toContain('2件');
             expect(notifyAdmins.mock.calls[0][0].body).toContain('RISING SUN ROCK FESTIVAL');
+            expect(notifyAdmins.mock.calls[0][0].url).toBe('/admin?tab=lives&review=unconfirmed');
         });
 
         it('追加が0件なら通知しないこと', async () => {
@@ -540,6 +548,7 @@ describe('scheduleImporter', () => {
                 if (sql.includes('SELECT id, venue, tour_name FROM lives')) {
                     return Promise.resolve({ rows: [{ id: 99, venue: null, tour_name: 'RISING SUN ROCK FESTIVAL 2026 in EZO' }] });
                 }
+                if (sql.includes('INSERT INTO lives')) return Promise.resolve({ rows: [{ id: 900 }] });
                 return Promise.resolve({ rows: [] });
             });
 
@@ -584,6 +593,63 @@ describe('scheduleImporter', () => {
             expect(stats.created).toBe(2);
             const insert = db.query.mock.calls.find(([sql]) => sql.includes('INSERT INTO lives'));
             expect(insert[1][1]).toBe(''); // 会場は空
+        });
+
+        it('新規公演と公式原文候補を同一トランザクションで保存すること', async () => {
+            db.query.mockImplementation(async sql => ({ rows: sql.includes('INSERT INTO lives') ? [{ id: 900 }] : [] }));
+            const stats = await importer.importSchedule();
+            expect(stats.created).toBe(2);
+            const meta = db.query.mock.calls.find(([sql]) => sql.includes('INSERT INTO live_metadata ('));
+            const candidates = JSON.parse(meta[1][1]);
+            expect(candidates.sourceId).toBe('uverworld.jp:3186');
+            expect(candidates.sources['uverworld.jp:3186'].original.title).toBe('RISING SUN ROCK FESTIVAL 2026 in EZO');
+            expect(candidates.countryCode).toBeNull();
+            expect(db.query.mock.calls.filter(([sql]) => sql === 'COMMIT')).toHaveLength(2);
+            expect(db.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO live_metadata_history'), expect.any(Array));
+        });
+
+        it('登録済み公演も公式候補を更新し、手動設定とsetlist.fm原文を保持すること', async () => {
+            db.query.mockImplementation(async sql => {
+                if (sql.includes('external_source_id = $1')) return { rows: [{ id: 1 }] };
+                if (sql.startsWith('SELECT * FROM live_metadata')) return { rows: [{ live_id: 1,
+                    candidates: { sourceId: 'setlistfm:1', tags: ['birthday'], countryCode: 'KR', original: { info: '生誕祭' } },
+                    overrides: { country: { code: 'JP' } }, revision: 2,
+                }] };
+                return { rows: [] };
+            });
+            const stats = await importer.importSchedule();
+            expect(stats.skipped).toBe(2);
+            const meta = db.query.mock.calls.find(([sql]) => sql.includes('INSERT INTO live_metadata ('));
+            const candidates = JSON.parse(meta[1][1]);
+            expect(candidates.sources['setlistfm:1'].original.info).toBe('生誕祭');
+            expect(candidates.countryCode).toBe('KR');
+            expect(JSON.parse(meta[1][2])).toEqual({ country: { code: 'JP' } });
+            expect(meta[0]).not.toContain('overrides = EXCLUDED.overrides');
+            expect(axios.get.mock.calls.filter(([url]) => url.includes('/detail/'))).toHaveLength(0);
+        });
+
+        it('候補保存失敗は公演追加もロールバックし、新規追加通知をしないこと', async () => {
+            db.query.mockImplementation(async sql => {
+                if (sql.includes('INSERT INTO lives')) return { rows: [{ id: 900 }] };
+                if (sql.includes('INSERT INTO live_metadata (')) throw new Error('fixture metadata failure');
+                return { rows: [] };
+            });
+            const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+            try {
+                const stats = await importer.importSchedule();
+                expect(stats.created).toBe(0);
+                expect(stats.errors).toBe(2);
+                expect(db.query.mock.calls.filter(([sql]) => sql === 'ROLLBACK')).toHaveLength(2);
+                expect(db.query.mock.calls.some(([sql]) => sql === 'COMMIT')).toBe(false);
+                expect(notifyAdmins).not.toHaveBeenCalled();
+            } finally { log.mockRestore(); }
+        });
+
+        it('dryRunでは属性保存の接続やトランザクションも開始しないこと', async () => {
+            db.query.mockResolvedValue({ rows: [] });
+            await importer.importSchedule({ dryRun: true });
+            expect(db.pool.connect).not.toHaveBeenCalled();
+            expect(db.query.mock.calls.some(([sql]) => sql.includes('INSERT INTO live_metadata'))).toBe(false);
         });
 
         it('一覧の取得に失敗したら例外を投げること', async () => {

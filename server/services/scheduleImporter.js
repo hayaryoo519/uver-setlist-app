@@ -2,6 +2,7 @@ const axios = require('axios');
 const db = require('../db');
 const { normalizeVenueName } = require('../utils/songTranslations');
 const { notifyAdmins } = require('../utils/pushNotification');
+const { buildOfficialCandidates, saveMetadataCandidates } = require('./liveMetadataCandidates');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezonePlugin = require('dayjs/plugin/timezone');
@@ -397,24 +398,43 @@ async function findExistingLive(entry, venue) {
     return null;
 }
 
-async function linkOfficialSource(liveId, entry, performanceTimes) {
-    await db.query(
-        `UPDATE lives
-         SET external_source_id = COALESCE(external_source_id, $1),
-             import_metadata = COALESCE(import_metadata, '{}'::jsonb) || $2::jsonb,
-             starts_at = COALESCE(starts_at, $3),
-             collect_after = COALESCE(collect_after, $4),
-             timezone = CASE WHEN timezone = 'Asia/Tokyo' AND $5 <> 'Asia/Tokyo' THEN $5 ELSE timezone END
-         WHERE id = $6`,
-        [
-            `${SOURCE_NAME}:${entry.sourceId}`,
-            JSON.stringify({ source: SOURCE_NAME, source_url: entry.detailUrl, category: entry.category, linked_at: new Date().toISOString() }),
-            performanceTimes.starts_at,
-            performanceTimes.collect_after,
-            performanceTimes.timezone,
-            liveId,
-        ]
-    );
+async function metadataTransaction(action) {
+    const client = await db.pool.connect();
+    try {
+        await client.query('BEGIN');
+        const result = await action(client);
+        await client.query('COMMIT');
+        return result;
+    } catch (err) {
+        try { await client.query('ROLLBACK'); } catch { /* 元のエラーを維持 */ }
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+async function linkOfficialSource(liveId, entry, performanceTimes, venue = null) {
+    await metadataTransaction(async client => {
+        // 属性の公演行ロックを先に取り、出典/時刻の関連付けも同じトランザクションで処理する。
+        await saveMetadataCandidates(client, liveId, buildOfficialCandidates(entry, venue));
+        await client.query(
+            `UPDATE lives
+             SET external_source_id = COALESCE(external_source_id, $1),
+                 import_metadata = COALESCE(import_metadata, '{}'::jsonb) || $2::jsonb,
+                 starts_at = COALESCE(starts_at, $3),
+                 collect_after = COALESCE(collect_after, $4),
+                 timezone = CASE WHEN timezone = 'Asia/Tokyo' AND $5 <> 'Asia/Tokyo' THEN $5 ELSE timezone END
+             WHERE id = $6`,
+            [
+                `${SOURCE_NAME}:${entry.sourceId}`,
+                JSON.stringify({ source: SOURCE_NAME, source_url: entry.detailUrl, category: entry.category, linked_at: new Date().toISOString() }),
+                performanceTimes.starts_at,
+                performanceTimes.collect_after,
+                performanceTimes.timezone,
+                liveId,
+            ]
+        );
+    });
 }
 
 /**
@@ -511,7 +531,7 @@ async function importSchedule({ dryRun = false } = {}) {
 
             const existingId = await findExistingLive(entry, venue);
             if (existingId) {
-                if (!dryRun) await linkOfficialSource(existingId, entry, performanceTimes);
+                if (!dryRun) await linkOfficialSource(existingId, entry, performanceTimes, venue);
                 stats.skipped++;
                 continue;
             }
@@ -536,16 +556,20 @@ async function importSchedule({ dryRun = false } = {}) {
             // 本番では既に別用途（日付+会場+ツアー名のハッシュ）で使われており、
             // 同日同会場の昼夜2公演が同じ値を持つため、一意にできない。
             // 重複は上の findLiveBySourceId / findExistingLive で防ぐ。
-            const inserted = await db.query(
-                `INSERT INTO lives (date, venue, tour_name, type, setlist_status, external_source_id, import_metadata, starts_at, collect_after, timezone)
-                 VALUES ($1, $2, $3, $4, 'UNKNOWN_SETLIST', $5, $6, $7, $8, $9)
-                 RETURNING id`,
-                [
-                    live.date, live.venue, live.tour_name, live.type, live.external_source_id,
-                    JSON.stringify({ source: SOURCE_NAME, source_url: entry.detailUrl, category: entry.category, imported_at: new Date().toISOString() }),
-                    live.starts_at, live.collect_after, live.timezone,
-                ]
-            );
+            const inserted = await metadataTransaction(async client => {
+                const result = await client.query(
+                    `INSERT INTO lives (date, venue, tour_name, type, setlist_status, external_source_id, import_metadata, starts_at, collect_after, timezone)
+                     VALUES ($1, $2, $3, $4, 'UNKNOWN_SETLIST', $5, $6, $7, $8, $9)
+                     RETURNING id`,
+                    [
+                        live.date, live.venue, live.tour_name, live.type, live.external_source_id,
+                        JSON.stringify({ source: SOURCE_NAME, source_url: entry.detailUrl, category: entry.category, imported_at: new Date().toISOString() }),
+                        live.starts_at, live.collect_after, live.timezone,
+                    ]
+                );
+                await saveMetadataCandidates(client, result.rows[0].id, buildOfficialCandidates(entry, venue));
+                return result;
+            });
 
             stats.created++;
             stats.created_lives.push({ id: inserted.rows[0].id, ...live });
@@ -576,7 +600,7 @@ async function importSchedule({ dryRun = false } = {}) {
         await notifyAdmins({
             title: `新しい公演を${stats.created}件追加しました`,
             body: lines.join('\n'),
-            url: '/admin',
+            url: '/admin?tab=lives&review=unconfirmed',
             type: 'schedule_imported',
         });
     }

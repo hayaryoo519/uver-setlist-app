@@ -64,6 +64,7 @@ app.get('/api/ping', (req, res) => res.send('pong'));
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/lives', require('./routes/lives'));
+app.use('/api/live-artists', require('./routes/liveArtists'));
 app.use('/api/songs', require('./routes/songs'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/import', require('./routes/import'));

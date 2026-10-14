@@ -8,6 +8,7 @@ import { useAdminUsers } from '../hooks/queries/useAdminUsers';
 import { useAdminCorrections } from '../hooks/queries/useAdminCorrections';
 
 import '../components/Admin/AdminPage.css';
+import { parseMetadataReviewLink } from '../utils/liveMetadataReview';
 import AdminLivesTab from '../components/Admin/tabs/AdminLivesTab';
 import AdminSongsTab from '../components/Admin/tabs/AdminSongsTab';
 import AdminUsersTab from '../components/Admin/tabs/AdminUsersTab';
@@ -31,8 +32,29 @@ const AdminPage = () => {
     const queryParams = new URLSearchParams(location.search);
     const initialTab = (queryParams.get('tab') || (location.pathname === '/admin/drafts' ? 'drafts' : null)) as TabId | null;
     const editId = queryParams.get('edit');
+    const metadataReviewLink = parseMetadataReviewLink(queryParams);
 
     const [activeTab, setActiveTab] = useState<TabId>(initialTab || 'lives');
+    const [metadataNotificationRevision, setMetadataNotificationRevision] = useState(0);
+
+    useEffect(() => {
+        if ((currentUser as any)?.role !== 'admin' || !navigator.serviceWorker) return;
+        const serviceWorker = navigator.serviceWorker;
+        const receive = (event: MessageEvent) => {
+            if (event.origin !== window.location.origin || event.data?.type !== 'metadata-review-notification' || typeof event.data.url !== 'string') return;
+            try {
+                const target = new URL(event.data.url, window.location.origin);
+                const current = new URL(location.pathname + location.search + location.hash, window.location.origin);
+                const link = parseMetadataReviewLink(target.searchParams);
+                // URLが残っていても、別タブの編集を通知でアンマウントしない。
+                if (activeTab !== 'lives' || target.href !== current.href || target.pathname !== '/admin' || target.searchParams.get('tab') !== 'lives' ||
+                    (!link.initialMetadataId && link.initialReviewFilter !== 'UNCONFIRMED')) return;
+                setMetadataNotificationRevision(value => value + 1);
+            } catch { /* 不正な通知は編集状態に影響させない。 */ }
+        };
+        serviceWorker.addEventListener('message', receive);
+        return () => serviceWorker.removeEventListener('message', receive);
+    }, [(currentUser as any)?.role, location.pathname, location.search, location.hash, activeTab]);
 
     useEffect(() => {
         if (initialTab) setActiveTab(initialTab);
@@ -134,7 +156,7 @@ const AdminPage = () => {
             </div>
 
             <div className="content-area">
-                {activeTab === 'lives' && <AdminLivesTab initialEditId={editId ? parseInt(editId, 10) : undefined} />}
+                {activeTab === 'lives' && <AdminLivesTab initialEditId={editId ? parseInt(editId, 10) : undefined} {...metadataReviewLink} metadataNotificationRevision={metadataNotificationRevision} />}
                 {activeTab === 'songs' && <AdminSongsTab />}
                 {activeTab === 'users' && <AdminUsersTab />}
                 {activeTab === 'import' && <AdminImportTab />}

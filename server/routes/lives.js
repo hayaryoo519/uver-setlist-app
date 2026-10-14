@@ -3,6 +3,8 @@ const db = require('../db');
 const { authorize, adminCheck } = require('../middleware/authorization');
 const { normalizeVenueName } = require('../utils/songTranslations');
 const { notifyNewLive } = require('../utils/pushNotification');
+const { buildSetlistCandidates, saveMetadataCandidates } = require('../services/liveMetadataCandidates');
+const { attachPublicLiveMetadata } = require('../services/publicLiveMetadata');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezonePlugin = require('dayjs/plugin/timezone');
@@ -41,6 +43,10 @@ function parseTimezone(value) {
         throw error;
     }
 }
+
+// 属性候補/手動設定は既存の公演・セトリ更新から分離する。
+router.use('/metadata-review', require('./liveMetadataReview'));
+router.use('/:id/metadata', require('./liveMetadata'));
 
 // GET All Lives with Advanced Filters
 router.get('/', async (req, res) => {
@@ -165,7 +171,7 @@ router.get('/', async (req, res) => {
             venue: normalizeVenueName(row.venue)
         }));
 
-        res.json(normalizedRows);
+        res.json(await attachPublicLiveMetadata(normalizedRows));
     } catch (err) {
         console.error('API Error:', err);
         res.status(500).json({ message: "Server Error", error: err.message });
@@ -189,7 +195,7 @@ router.get('/:id', async (req, res) => {
         );
         if (liveRes.rows.length === 0) return res.status(404).json("Live not found");
         
-        const live = liveRes.rows[0];
+        const [live] = await attachPublicLiveMetadata(liveRes.rows);
         const is_closed = isLiveClosed(live.date);
 
         // 2. Get Setlist with Song Details
@@ -230,10 +236,40 @@ router.post('/', authorize, adminCheck, async (req, res) => {
         // DEBUG: Log venue translation attempt
         console.log(`[Venue Translation] Input: "${rawVenue}" -> Output: "${venue}"${rawVenue !== venue ? ' (TRANSLATED)' : ''}`);
 
-        const newLive = await db.query(
-            "INSERT INTO lives (tour_name, title, date, venue, type, special_note, starts_at, collect_after, timezone) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *",
-            [tour_name, title, date, venue, type, special_note, startsAt, collectAfter, timezone]
-        );
+        const values = [tour_name, title, date, venue, type, special_note, startsAt, collectAfter, timezone];
+        const sql = "INSERT INTO lives (tour_name, title, date, venue, type, special_note, starts_at, collect_after, timezone) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *";
+        let newLive;
+        if (req.body.metadata_source !== undefined) {
+            const source = req.body.metadata_source;
+            if (!source || source.type !== 'setlistfm' || Object.keys(source).some(key => !['type', 'original'].includes(key))) {
+                return res.status(400).json({ message: 'Invalid metadata_source' });
+            }
+            const candidates = buildSetlistCandidates(source.original);
+            if (!source.original.id || !/^\d{2}-\d{2}-\d{4}$/.test(source.original.eventDate || '') ||
+                source.original.eventDate.split('-').reverse().join('-') !== date) {
+                return res.status(400).json({ message: 'Setlist source ID and matching event date are required' });
+            }
+            const client = await db.pool.connect();
+            try {
+                await client.query('BEGIN');
+                newLive = await client.query(
+                    `INSERT INTO lives (tour_name, title, date, venue, type, special_note, starts_at, collect_after, timezone, setlistfm_id)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+                    [...values, source.original.id],
+                );
+                await saveMetadataCandidates(client, newLive.rows[0].id, candidates, req.user.user_id);
+                await client.query('COMMIT');
+            } catch (err) {
+                try { await client.query('ROLLBACK'); } catch { /* 元のエラーを維持 */ }
+                if (err.code === '23505') { err.statusCode = 409; err.message = 'Live already imported'; }
+                throw err;
+            } finally {
+                client.release();
+            }
+        } else {
+            // 旧クライアントの通常追加は従来の契約を維持する。
+            newLive = await db.query(sql, values);
+        }
 
         const createdLive = newLive.rows[0];
         res.json(createdLive);

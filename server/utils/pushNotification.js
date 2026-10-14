@@ -104,7 +104,7 @@ async function notifyNewLive(live) {
     return notifyAdmins({
         title: '🎸 新しいライブ情報！',
         body: `${live.title || live.tour_name || 'ライブ'} (${dateStr})`,
-        url: `/live/${live.id}`,
+        url: `/admin?tab=lives&metadata=${live.id}`,
         type: 'new_live',
     });
 }
