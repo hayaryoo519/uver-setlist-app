@@ -2,7 +2,6 @@
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const jwt = require('jsonwebtoken');
-const { chromium, devices, expect } = require('@playwright/test');
 const { buildSetlistCandidates, saveMetadataCandidates } = require('../services/liveMetadataCandidates');
 
 async function verifyMetadataBrowser({ root, temp, pool, httpServer, freePort, passed, workerVerification = false }) {
@@ -13,6 +12,7 @@ async function verifyMetadataBrowser({ root, temp, pool, httpServer, freePort, p
     assert(httpServer?.listening, 'Require the in-process fixture HTTP server');
     const address = httpServer.address();
     assert.equal(address.address, '127.0.0.1', 'Fixture API must be loopback-only');
+    const { chromium, devices, expect } = require('@playwright/test');
     const apiUrl = `http://127.0.0.1:${address.port}`;
     const { createServer } = await import('vite');
     const previousApiUrl = process.env.VITE_API_URL;

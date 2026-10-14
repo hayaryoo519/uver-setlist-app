@@ -1,4 +1,3 @@
-jest.mock('@playwright/test', () => ({ expect: jest.fn() }));
 const { fixtureWorkerPlugin, instrumentWorkerSource } = require('../../scripts/verify-live-metadata-worker');
 const fs = require('node:fs');
 const path = require('node:path');

@@ -1,4 +1,4 @@
-jest.mock('@playwright/test', () => ({ chromium: {}, devices: {}, expect: jest.fn() }));
+jest.mock('@playwright/test', () => ({ chromium: {}, devices: {}, expect: jest.fn() }), { virtual: true });
 const path = require('node:path');
 const os = require('node:os');
 const { verifyBuiltWorker } = require('../../scripts/verify-built-metadata-worker');

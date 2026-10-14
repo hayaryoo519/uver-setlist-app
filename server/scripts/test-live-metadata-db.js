@@ -63,7 +63,7 @@ async function main() {
     console.log(`Disposable fixture cluster: ${data}`);
     run('initdb', ['-D', data, '-U', 'metadata_fixture', '--auth=trust', '--encoding=UTF8', '--locale=C', '--no-instructions']);
     startAttempted = true;
-    run('pg_ctl', ['-D', data, '-l', path.join(temp, 'postgres.log'), '-w', '-t', '25', '-o', `-h 127.0.0.1 -p ${port}`, 'start']);
+    run('pg_ctl', ['-D', data, '-l', path.join(temp, 'postgres.log'), '-w', '-t', '25', '-o', `-h 127.0.0.1 -p ${port}${process.platform === 'win32' ? '' : " -c unix_socket_directories=''"}`, 'start']);
     connection = { host: '127.0.0.1', port, user: 'metadata_fixture', database: 'postgres', password: 'fixture-only', ssl: false, options: '-c search_path=public', connectionTimeoutMillis: 5000 };
     pool = new Pool(connection);
     const setting = await pool.query("SELECT current_setting('data_directory') AS directory, version() AS version");
@@ -285,7 +285,13 @@ async function cleanup() {
     fs.rmSync(temp, { recursive: true, force: true });
 }
 main().catch(error => {
-    console.error(`Fixture DB verification failed: ${error.message}`); process.exitCode = 1;
+    console.error(`Fixture DB verification failed: ${error.message}`);
+    // 起動前は合成データも投入されていない。OS依存のstartup原因だけを安全に出す。
+    const startupLog = path.join(temp, 'postgres.log');
+    if (!pool && fs.existsSync(startupLog)) {
+        for (const line of fs.readFileSync(startupLog, 'utf8').split('\n').filter(line => /FATAL:|PANIC:|could not/.test(line)).slice(-5)) console.error(line);
+    }
+    process.exitCode = 1;
 }).finally(() => cleanup().catch(error => {
     console.error(`Fixture cleanup failed: ${error.message}. Disposable files remain at ${temp}`); process.exitCode = 1;
 }));

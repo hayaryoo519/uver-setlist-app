@@ -1,5 +1,5 @@
 // DB/ブラウザとも偽物。接続先検証がVite起動や環境変更より前に走ることを確認。
-jest.mock('@playwright/test', () => ({ chromium: { launch: jest.fn() }, devices: {}, expect: jest.fn() }));
+jest.mock('@playwright/test', () => ({ chromium: { launch: jest.fn() }, devices: {}, expect: jest.fn() }), { virtual: true });
 const path = require('node:path');
 const os = require('node:os');
 const { verifyMetadataBrowser } = require('../../scripts/verify-live-metadata-browser');

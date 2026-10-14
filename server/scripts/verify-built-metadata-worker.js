@@ -3,7 +3,6 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const express = require('express');
-const { chromium, devices, expect } = require('@playwright/test');
 const { instrumentWorkerSource } = require('./verify-live-metadata-worker');
 
 async function verifyBuiltWorker({ root, temp, pool, app, httpServer, passed }) {
@@ -12,6 +11,7 @@ async function verifyBuiltWorker({ root, temp, pool, app, httpServer, passed }) 
     assert.equal(normalize((await pool.query("SELECT current_setting('data_directory') AS directory")).rows[0].directory), normalize(path.join(temp, 'data')));
     assert(httpServer?.listening && httpServer.listeners('request').includes(app), 'Require in-process fixture Express server');
     const address = httpServer.address(); assert.equal(address.address, '127.0.0.1', 'Fixture server must be loopback-only');
+    const { chromium, devices, expect } = require('@playwright/test');
     const origin = `http://127.0.0.1:${address.port}`;
     const cwd = process.cwd(); const previousApi = process.env.VITE_API_URL; const previousMode = process.env.NODE_ENV;
     process.chdir(root); process.env.VITE_API_URL = origin; process.env.NODE_ENV = 'production';

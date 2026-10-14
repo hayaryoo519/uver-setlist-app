@@ -1,6 +1,5 @@
 // 専用Viteでだけ配信する制御wrapper。Push配送/OSクリックを偽装して完了扱いしない。
 const assert = require('node:assert/strict');
-const { expect } = require('@playwright/test');
 const WORKER_PATH = '/__fixture-notification-worker.js';
 const WORKER_SOURCE = `
 const handlers = {};
@@ -59,6 +58,7 @@ function fixtureWorkerPlugin() {
 }
 
 async function verifyWorkerReviewMessages({ page, context, origin, target, note, profile, passed }) {
+    const { expect } = require('@playwright/test');
     await context.grantPermissions(['notifications'], { origin });
     await page.goto(origin + target);
     assert.equal(await page.evaluate(() => Notification.permission), 'granted', 'Native page notification permission');
