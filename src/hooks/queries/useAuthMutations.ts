@@ -18,3 +18,9 @@ export const useVerifyEmail = () =>
     mutationFn: (token: string) =>
       apiClient.post('/api/auth/verify-email', { token }),
   })
+
+export const useResendVerification = () =>
+  useMutation({
+    mutationFn: (email: string) =>
+      apiClient.post<{ message: string }>('/api/auth/resend-verification', { email }),
+  })

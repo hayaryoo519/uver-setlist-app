@@ -79,8 +79,8 @@ Issue #109の固定タグ判定、取得元別候補・手動確定、海外/生
 
 ### 検証
 
-フロント214、バックエンド366（Windows依存admin suiteはローカル除外）。
-合成browser18ケース。所有PG18/実bcrypt/JWT/API/Chromium/Worker/本番Workbox更新の統合コマンド22項目。
+最新dev統合後はフロント229、バックエンド722（Windows依存admin suiteはローカル除外）。
+合成browser18ケース。所有PG18/実bcrypt/JWT/API/Chromium/Worker/本番Workbox更新の統合コマンド23項目。
 型チェック/差分チェック成功。既存のlarge chunk warningあり。
 CIにはPG16/Ubuntuを追加したが、Actionsでの実行結果はPR作成後に確認する。
 
@@ -111,7 +111,8 @@ mainベースの履歴には本件外のproduction workflow変更も含む。5co
 - token hash/期限・pending_email等の新しい機密列を同期匿名化で除去する必要がある。既存devの同期保護を失わないよう統合する。
 - 最新devのログ保護/認証画面/依存パッチも保持し、最新lockfileで依存を入れ直して再検証する。
 - 改番後は旧ベース（前提SQL29ファイル）でDB9項目、backend366/33 suites成功。最新devの認証030〜032を含む統合結果ではない。
-- 改番だけでは最新dev統合完了ではない。統合後の全試験・差分確認までpush/Draft PRを保留する。
+- その後origin/dev 37110394をmergeし、4競合を解消。最新認証/同期/依存patchを維持してfresh npm ci後に再検証。backend722、frontend229、browser18、実認証14/Worker＋本番生成物23成功（[統合記録](./live_metadata_dev_integration.md)）。
+- 公開前の最終差分確認/Actionsはまだなのでpush/Draft PRは保留。
 
 ## PRへ進む条件
 
@@ -120,7 +121,8 @@ mainベースの履歴には本件外のproduction workflow変更も含む。5co
 - [x] B/Cのcommit範囲確定とコードの整合確認。
 - [x] indexだけをarchiveして独立snapshotで機能本体の単体/型チェックを確認。
 - [x] 完全snapshotで単体/型/合成browser/実API・SQL・Worker・本番生成物を再確認。
-- [ ] 公開PRの範囲・baseと、分割PRの場合の文書リンク/依存順を最終確認。
+- [x] origin/dev 37110394を統合し、最新認可/同期/依存patchを保持して再検証。
+- [ ] 公開PRの範囲・baseと、文書リンク/差分を最終確認。
 - [ ] featureブランチのpushとdev向けDraft PRを作成（devへ直接pushしない）。
 - [ ] CI成功、PG16/Linux結果、レビュー指摘の解消。
 - [ ] merge前にStaging自動デプロイの影響と033/034適用手順を確認。

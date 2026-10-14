@@ -125,6 +125,12 @@ JWTやパスワード/鍵をログへ出さない。併せて実authorizeのト�
 `--real-auth` 単体は **実認証＋Express API＋SQL** の検証。さらに `--browser` でPC/モバイルを実APIへ接続し、PostgreSQL 18＋Chromiumで**15項目成功**。対象API/補助fixture/隔離/残件は [実APIブラウザ結合検証](./live_metadata_integrated_browser_verification.md) を参照。
 別の [合成APIブラウザ試験](./live_metadata_auth_verification.md) と区別して記録する。
 
+## 最新dev統合後の確認
+
+[統合記録](./live_metadata_dev_integration.md)：前提000〜032の32ファイル＋033/034、実認証14/Worker＋本番生成物23項目成功。
+匿名化はdevの全user行削除を維持し、関連と追加情報履歴も同じTRUNCATEで処理。検証actorは削除後に新しい架空データで用意する。
+同期scriptはprivate SQL事前生成＋復元/匿名化を同一transactionへ統合。以下の旧検証段階の「userダミー化/復元後に別匿名化」は現方式ではない。
+
 ## 継続検証
 
 [CIジョブ](./live_metadata_ci.md) でPG16/Ubuntuに接続する使い捨て試験を追加。既存DBやアプリ用secretsは使わない。

@@ -215,6 +215,23 @@ describe('live_monitor', () => {
             expect(notifyAdmins.mock.calls[0][0].body).toContain('Cookie');
         });
 
+        it('中断エラー詳細をログや通知に含めず残りの検索を止める', async () => {
+            const marker = 'private-monitor@example.invalid Bearer fixture-token';
+            const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+            try {
+                jest.useFakeTimers().setSystemTime(new Date('2026-08-12T11:00:00Z'));
+                db.query.mockResolvedValue({ rows: [{ id: 7, date: '2026-08-12', venue: '会場', tour_name: '公演' }] });
+                const { XCollectorAbortError } = require('../../services/xClient');
+                collector.collect.mockRejectedValueOnce(new XCollectorAbortError(marker));
+                await monitor.monitor();
+                expect(collector.collect).toHaveBeenCalledTimes(1);
+                expect(notifyAdmins).toHaveBeenCalledTimes(1);
+                expect(JSON.stringify(notifyAdmins.mock.calls)).not.toContain(marker);
+                expect(JSON.stringify(spy.mock.calls)).not.toContain(marker);
+                expect(notifyAdmins.mock.calls[0][0].type).toBe('x_collection_aborted');
+            } finally { spy.mockRestore(); }
+        });
+
         it('レート制限エラーを検知したら残りのクエリを実行しないこと', async () => {
             jest.useFakeTimers().setSystemTime(new Date('2026-08-12T11:00:00Z'));
             db.query.mockResolvedValue({

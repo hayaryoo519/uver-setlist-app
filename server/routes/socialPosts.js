@@ -13,6 +13,14 @@ const POST_TYPES = new Set([
     'song_history', 'longest_absence', 'debut_anniversary',
 ]);
 
+// ここで作る入力・対象データのエラーだけを利用者へ返す。
+class PostGenerationError extends Error {
+    constructor(message, statusCode) {
+        super(message);
+        this.statusCode = statusCode;
+    }
+}
+
 function parseXPostUrl(value) {
     try {
         const url = new URL(String(value || '').trim());
@@ -59,13 +67,13 @@ async function generatePost(postType, req) {
     if (postType === 'frequent_ranking') {
         const rows = await db.query(`SELECT s.title, COUNT(*)::int AS cnt FROM setlists sl JOIN songs s ON s.id = sl.song_id JOIN lives l ON l.id = sl.live_id WHERE l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists s2 WHERE s2.live_id = l.id) GROUP BY s.id, s.title ORDER BY cnt DESC, s.title LIMIT 10`);
         const total = await db.query(`SELECT COUNT(DISTINCT l.id)::int AS count FROM lives l WHERE l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists s WHERE s.live_id = l.id)`);
-        if (!rows.rows.length) throw Object.assign(new Error('ランキング対象のデータがありません'), { statusCode: 422 });
+        if (!rows.rows.length) throw new PostGenerationError('ランキング対象のデータがありません', 422);
         return { body: buildFrequentRanking(rows.rows, total.rows[0].count), keyPart: `frequent_ranking:${new Date().toISOString().slice(0, 10)}` };
     }
 
     if (postType === 'rare_song') {
         const rows = await db.query(`SELECT s.title, COUNT(*)::int AS play_count, MIN(l.date)::text AS first_played FROM setlists sl JOIN songs s ON s.id = sl.song_id JOIN lives l ON l.id = sl.live_id WHERE l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists s2 WHERE s2.live_id = l.id) GROUP BY s.id, s.title HAVING COUNT(*) BETWEEN 1 AND 3 ORDER BY play_count ASC, first_played DESC LIMIT 10`);
-        if (!rows.rows.length) throw Object.assign(new Error('レア曲の対象データがありません'), { statusCode: 422 });
+        if (!rows.rows.length) throw new PostGenerationError('レア曲の対象データがありません', 422);
         return { body: buildRareSongs(rows.rows), keyPart: `rare_song:${new Date().toISOString().slice(0, 10)}` };
     }
 
@@ -74,35 +82,35 @@ async function generatePost(postType, req) {
         const summer = month >= 6 && month <= 8;
         const months = summer ? [7, 8] : [12, 1, 2];
         const rows = await db.query(`SELECT s.title, COUNT(*)::int AS cnt FROM setlists sl JOIN songs s ON s.id = sl.song_id JOIN lives l ON l.id = sl.live_id WHERE EXTRACT(MONTH FROM l.date) = ANY($1::int[]) GROUP BY s.id, s.title ORDER BY cnt DESC, s.title LIMIT 5`, [months]);
-        if (!rows.rows.length) throw Object.assign(new Error('季節ネタの対象データがありません'), { statusCode: 422 });
+        if (!rows.rows.length) throw new PostGenerationError('季節ネタの対象データがありません', 422);
         return { body: buildSeasonal(rows.rows, summer ? 'summer' : 'winter'), keyPart: `seasonal:${summer ? 'summer' : 'winter'}:${new Date().getFullYear()}` };
     }
 
     if (postType === 'song_history') {
         const result = await db.query(`SELECT s.id, s.title, MIN(l.date)::text AS first_date, MAX(l.date)::text AS last_date, COUNT(DISTINCT l.id)::int AS total_count, (CURRENT_DATE - MAX(l.date)::date)::int AS days_since_last FROM songs s JOIN setlists sl ON sl.song_id = s.id JOIN lives l ON l.id = sl.live_id WHERE l.date <= CURRENT_DATE AND (l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists s2 WHERE s2.live_id = l.id)) GROUP BY s.id, s.title ORDER BY RANDOM() LIMIT 1`);
-        if (!result.rows.length) throw Object.assign(new Error('楽曲履歴の対象データがありません'), { statusCode: 422 });
+        if (!result.rows.length) throw new PostGenerationError('楽曲履歴の対象データがありません', 422);
         const song = result.rows[0];
         return { body: buildSongHistory(song), keyPart: `song_history:${song.id}:${new Date().toISOString().slice(0, 10)}` };
     }
 
     if (postType === 'longest_absence') {
         const result = await db.query(`SELECT s.id, s.title, MAX(l.date)::text AS last_date, (CURRENT_DATE - MAX(l.date)::date)::int AS days_since FROM songs s JOIN setlists sl ON sl.song_id = s.id JOIN lives l ON l.id = sl.live_id WHERE l.date <= CURRENT_DATE AND (l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists s2 WHERE s2.live_id = l.id)) GROUP BY s.id, s.title HAVING MAX(l.date) < CURRENT_DATE - INTERVAL '2 years' ORDER BY days_since DESC, s.title LIMIT 5`);
-        if (!result.rows.length) throw Object.assign(new Error('最長未披露ランキングの対象データがありません'), { statusCode: 422 });
+        if (!result.rows.length) throw new PostGenerationError('最長未披露ランキングの対象データがありません', 422);
         return { body: buildLongestAbsence(result.rows), keyPart: `longest_absence:${new Date().toISOString().slice(0, 10)}` };
     }
 
     if (postType === 'debut_anniversary') {
         const result = await db.query(`SELECT s.id, s.title, MIN(l.date)::text AS first_date, COUNT(DISTINCT l.id)::int AS total_count, EXTRACT(YEAR FROM AGE(CURRENT_DATE, MIN(l.date)))::int AS years_ago FROM songs s JOIN setlists sl ON sl.song_id = s.id JOIN lives l ON l.id = sl.live_id WHERE l.date <= CURRENT_DATE AND (l.setlist_status = 'NORMAL' OR EXISTS (SELECT 1 FROM setlists s2 WHERE s2.live_id = l.id)) GROUP BY s.id, s.title HAVING EXTRACT(MONTH FROM MIN(l.date)) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM MIN(l.date)) = EXTRACT(DAY FROM CURRENT_DATE) AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, MIN(l.date))) > 0 ORDER BY first_date LIMIT 1`);
-        if (!result.rows.length) throw Object.assign(new Error('今日は初披露記念日の対象曲がありません'), { statusCode: 422 });
+        if (!result.rows.length) throw new PostGenerationError('今日は初披露記念日の対象曲がありません', 422);
         const song = result.rows[0];
         return { body: buildDebutAnniversary(song), keyPart: `debut_anniversary:${song.id}:${new Date().toISOString().slice(0, 10)}` };
     }
 
     const tourName = String(req.body.tourName || '').trim();
-    if (!tourName) throw Object.assign(new Error('ツアー名を指定してください'), { statusCode: 400 });
+    if (!tourName) throw new PostGenerationError('ツアー名を指定してください', 400);
     const rows = await db.query(`SELECT s.title, COUNT(*)::int AS cnt FROM setlists sl JOIN songs s ON s.id = sl.song_id JOIN lives l ON l.id = sl.live_id WHERE l.tour_name = $1 GROUP BY s.id, s.title ORDER BY cnt DESC, s.title LIMIT 5`, [tourName]);
     const total = await db.query('SELECT COUNT(*)::int AS count FROM lives WHERE tour_name = $1', [tourName]);
-    if (!rows.rows.length) throw Object.assign(new Error('指定ツアーのセトリがありません'), { statusCode: 422 });
+    if (!rows.rows.length) throw new PostGenerationError('指定ツアーのセトリがありません', 422);
     const body = `【${tourName} 全${total.rows[0].count}公演 データまとめ📊】\n\n▶️ 演奏回数ランキング\n${lineList(rows.rows.slice(0, 3), (row, i) => `${['🥇', '🥈', '🥉'][i]}「${row.title}」… ${row.cnt}回`)}\n\n全セトリ詳細はこちら👇\n${APP_URL}\n\n#UVERworld`;
     return { body, keyPart: `tour_stats:${tourName}:${new Date().toISOString().slice(0, 10)}` };
 }
@@ -116,7 +124,7 @@ router.get('/', async (req, res) => {
         }
         const result = await db.query(`SELECT sp.*, l.date AS live_date, l.venue AS live_venue, l.tour_name AS live_tour_name FROM social_posts sp LEFT JOIN lives l ON l.id = sp.live_id ${where} ORDER BY sp.created_at DESC LIMIT 100`, params);
         res.json(result.rows);
-    } catch (err) { console.error('[social-posts] list error:', err); res.status(500).json({ message: '投稿候補の取得に失敗しました' }); }
+    } catch (err) { console.error('[social-posts] list error: details suppressed'); res.status(500).json({ message: '投稿候補の取得に失敗しました' }); }
 });
 
 router.post('/generate', async (req, res) => {
@@ -132,7 +140,7 @@ router.post('/generate', async (req, res) => {
         const key = crypto.createHash('sha256').update(`x:${generated.keyPart}`).digest('hex');
         const result = await db.query(`INSERT INTO social_posts (platform, post_type, live_id, body, idempotency_key, created_by) VALUES ('x', $1, $2, $3, $4, $5) ON CONFLICT (idempotency_key) DO UPDATE SET body = EXCLUDED.body, updated_at = NOW() RETURNING *`, [postType, generated.liveId || null, generated.body.slice(0, 280), key, req.user.user_id || req.user.id]);
         res.status(201).json(result.rows[0]);
-    } catch (err) { console.error('[social-posts] generate error:', err); res.status(err.statusCode || 500).json({ message: err.statusCode ? err.message : '投稿候補の生成に失敗しました' }); }
+    } catch (err) { console.error('[social-posts] generate error: details suppressed'); res.status(err instanceof PostGenerationError ? err.statusCode : 500).json({ message: err instanceof PostGenerationError ? err.message : '投稿候補の生成に失敗しました' }); }
 });
 
 router.patch('/:id', async (req, res) => {
@@ -148,7 +156,7 @@ router.patch('/:id', async (req, res) => {
         const result = await db.query(`UPDATE social_posts SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${params.length} AND status IN ('draft', 'approved') RETURNING *`, params);
         if (!result.rows.length) return res.status(404).json({ message: '編集可能な投稿候補が見つかりません' });
         res.json(result.rows[0]);
-    } catch (err) { console.error('[social-posts] update error:', err); res.status(500).json({ message: '投稿候補の更新に失敗しました' }); }
+    } catch (err) { console.error('[social-posts] update error: details suppressed'); res.status(500).json({ message: '投稿候補の更新に失敗しました' }); }
 });
 
 router.post('/:id/publish', async (req, res) => {
@@ -174,7 +182,7 @@ router.post('/:id/publish', async (req, res) => {
         res.json(result.rows[0]);
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error('[social-posts] publish error:', err);
+        console.error('[social-posts] publish error: details suppressed');
         res.status(500).json({ message: '投稿済みへの更新に失敗しました' });
     } finally {
         client.release();

@@ -51,7 +51,7 @@ async function runDailyDraftGeneration() {
         const draft = await createOnThisDayDraft();
         console.log(draft ? `[SocialPosts] Created On This Day draft #${draft.id}` : '[SocialPosts] No new On This Day draft');
     } catch (err) {
-        console.error('[SocialPosts] Daily draft generation failed:', err.message);
+        console.error('[SocialPosts] Daily draft generation failed: details suppressed');
     }
 }
 

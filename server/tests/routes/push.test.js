@@ -11,7 +11,8 @@ jest.mock('../../utils/pushNotification', () => ({
 const request = require('supertest');
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const { saveSubscription } = require('../../utils/pushNotification');
+const db = require('../../db');
+const { saveSubscription, removeSubscription } = require('../../utils/pushNotification');
 const pushRouter = require('../../routes/push');
 
 const app = express();
@@ -31,6 +32,7 @@ function subscribe(token) {
 describe('POST /api/push/subscribe', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        db.query.mockResolvedValue({ rows: [{ id: 27, role: 'admin', session_version: 0 }] });
     });
 
     // JWT は { user_id, role } で発行される。
@@ -72,5 +74,47 @@ describe('POST /api/push/subscribe', () => {
 
         expect(res.statusCode).toBe(400);
         expect(saveSubscription).not.toHaveBeenCalled();
+    });
+});
+
+describe('Push APIのログ保護', () => {
+    const marker = 'private-subscription@example.invalid Bearer fixture-token';
+    let errorSpy;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        db.query.mockResolvedValue({ rows: [{ id: 27, role: 'admin', session_version: 0 }] });
+        errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(marker);
+        errorSpy.mockRestore();
+    });
+
+    it('購読保存の失敗詳細をログと応答に出さない', async () => {
+        saveSubscription.mockRejectedValueOnce(new Error(marker));
+        const res = await subscribe(null);
+        expect(res.statusCode).toBe(500);
+        expect(errorSpy).toHaveBeenCalledWith('Subscribe error: details suppressed');
+        expect(JSON.stringify(res.body)).not.toContain(marker);
+    });
+
+    it('購読削除の失敗詳細をログと応答に出さない', async () => {
+        removeSubscription.mockRejectedValueOnce(new Error(marker));
+        const res = await request(app).post('/api/push/unsubscribe').send({ endpoint: marker });
+        expect(res.statusCode).toBe(500);
+        expect(errorSpy).toHaveBeenCalledWith('Unsubscribe error: details suppressed');
+        expect(JSON.stringify(res.body)).not.toContain(marker);
+    });
+
+    it('管理者による通知要求のDB失敗詳細を出さない', async () => {
+        db.query.mockResolvedValueOnce({ rows: [{ id: 27, role: 'admin', session_version: 0 }] })
+            .mockRejectedValueOnce(new Error(marker));
+        const token = jwt.sign({ user_id: 27, role: 'admin' }, process.env.JWT_SECRET);
+        const res = await request(app).post('/api/push/notify-live').set('token', token).send({ liveId: 10 });
+        expect(res.statusCode).toBe(500);
+        expect(errorSpy).toHaveBeenCalledWith('Live notification error: details suppressed');
+        expect(JSON.stringify(res.body)).not.toContain(marker);
     });
 });

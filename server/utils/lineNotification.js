@@ -146,26 +146,26 @@ async function sendLineMessage(messageText, label) {
         };
 
         const req = https.request(options, (res) => {
-            let body = '';
-            res.on('data', (chunk) => body += chunk);
             res.on('end', () => {
                 if (res.statusCode >= 200 && res.statusCode < 300) {
                     console.log(`[LINE] ${label}を送信しました。`);
                 } else {
-                    console.error(`[LINE] 通知失敗 (status: ${res.statusCode}):`, body);
+                    console.error(`[LINE] 通知失敗 (status: ${res.statusCode}): 詳細は非表示`);
                 }
             });
+            // 応答本文は保存せず、ストリームだけ消費する。
+            res.resume();
         });
 
-        req.on('error', (err) => {
-            console.error('[LINE] 通知送信中にエラーが発生しました:', err.message);
+        req.on('error', () => {
+            console.error('[LINE] 通知送信中にエラーが発生しました: 詳細は非表示');
         });
 
         req.write(data);
         req.end();
 
     } catch (err) {
-        console.error('[LINE] 通知処理中に致命的なエラーが発生しました:', err.message);
+        console.error('[LINE] 通知処理中に致命的なエラーが発生しました: 詳細は非表示');
     }
 }
 

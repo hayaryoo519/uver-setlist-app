@@ -1,19 +1,6 @@
 const router = require('express').Router();
 const db = require('../db');
-const { authorize } = require('../middleware/authorization');
-const jwt = require('jsonwebtoken');
-
-// 共通: トークンがあれば currentUserId を取得（任意認証）
-const getOptionalUserId = (req) => {
-    const token = req.header('token');
-    if (!token) return null;
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        return decoded.user_id;
-    } catch {
-        return null;
-    }
-};
+const { authorize, getOptionalUserId } = require('../middleware/authorization');
 
 // POST /api/follows/:userId — フォロー/アンフォロー トグル
 router.post('/:userId', authorize, async (req, res) => {
@@ -52,7 +39,7 @@ router.post('/:userId', authorize, async (req, res) => {
             return res.json({ following: true });
         }
     } catch (err) {
-        console.error('Toggle follow error:', err.message);
+        console.error('[follows] Toggle failed');
         res.status(500).send('Server Error');
     }
 });
@@ -73,7 +60,7 @@ router.delete('/:userId', authorize, async (req, res) => {
         );
         res.json({ following: false });
     } catch (err) {
-        console.error('Unfollow error:', err.message);
+        console.error('[follows] Removal failed');
         res.status(500).send('Server Error');
     }
 });
@@ -91,7 +78,7 @@ router.get('/my/followers', authorize, async (req, res) => {
         `, [userId]);
         res.json(result.rows);
     } catch (err) {
-        console.error('My followers error:', err.message);
+        console.error('[follows] Followers listing failed');
         res.status(500).send('Server Error');
     }
 });
@@ -109,7 +96,7 @@ router.get('/my/following', authorize, async (req, res) => {
         `, [userId]);
         res.json(result.rows);
     } catch (err) {
-        console.error('My following error:', err.message);
+        console.error('[follows] Following listing failed');
         res.status(500).send('Server Error');
     }
 });
@@ -126,7 +113,7 @@ router.get('/my/stats', authorize, async (req, res) => {
         `, [userId]);
         res.json(result.rows[0]);
     } catch (err) {
-        console.error('My follow stats error:', err.message);
+        console.error('[follows] Own stats fetch failed');
         res.status(500).send('Server Error');
     }
 });
@@ -134,13 +121,14 @@ router.get('/my/stats', authorize, async (req, res) => {
 // GET /api/follows/stats/:userId — 特定ユーザーのフォロー統計（認証任意）
 router.get('/stats/:userId', async (req, res) => {
     const userId        = parseInt(req.params.userId, 10);
-    const currentUserId = getOptionalUserId(req);
+    let currentUserId;
 
     if (isNaN(userId)) {
         return res.status(400).json({ message: '無効なユーザーIDです' });
     }
 
     try {
+        currentUserId = await getOptionalUserId(req);
         const result = await db.query(`
             SELECT
                 (SELECT COUNT(*) FROM user_follows WHERE follower_id  = $1)::int AS following_count,
@@ -155,7 +143,7 @@ router.get('/stats/:userId', async (req, res) => {
         `, [userId, currentUserId]);
         res.json(result.rows[0]);
     } catch (err) {
-        console.error('Follow stats error:', err.message);
+        console.error('[follows] Public stats fetch failed');
         res.status(500).send('Server Error');
     }
 });

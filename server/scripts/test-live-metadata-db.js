@@ -127,7 +127,10 @@ async function main() {
         INSERT INTO corrections(description, suggested_data, admin_note) VALUES ('PRIVATE_SENTINEL', '{"private":"PRIVATE_SENTINEL"}', 'PRIVATE_SENTINEL');
     `);
     }
+    const seedAccount = () => pool.query("INSERT INTO users(id,email,username,password) VALUES (1,'fixture@example.invalid','Fixture User','fixture-only')");
     anonymize(); // 033/034がないバックアップをSQLが扱えることも実DBで確認。
+    assert.equal((await pool.query('SELECT * FROM users')).rowCount, 0);
+    await seedAccount(); // 消去済み本番ユーザーではなく独立した架空actor。
     if (fullSchema) {
         for (const table of ['user_spotify_tokens', 'user_google_tokens', 'playlist_history', 'raw_setlists', 'social_posts']) {
             assert.equal((await pool.query(`SELECT * FROM ${table}`)).rowCount, 0, `${table} must not be copied into verification DBs`);
@@ -180,7 +183,9 @@ async function main() {
     assert.equal(allSanitized.live_artist_history.length, 0);
     passed('Sanitization removes originals/notes/unknown keys/histories and preserves public state and links');
 
-    // SQL失敗時に、先行したユーザー匿名化等も単一トランザクションで巻き戻す。
+    assert.equal(allSanitized.users.length, 0);
+    await seedAccount();
+    // SQL失敗時に、先行したユーザー全除去等も単一トランザクションで巻き戻す。
     await pool.query("UPDATE users SET username = 'PRIVATE_ROLLBACK'; CREATE FUNCTION reject_sanitize() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'fixture failure'; END $$; CREATE TRIGGER reject_sanitize BEFORE UPDATE ON live_metadata FOR EACH ROW EXECUTE FUNCTION reject_sanitize()");
     if (fullSchema) await pool.query(`
         INSERT INTO user_spotify_tokens(user_id, access_token, refresh_token_encrypted, expires_at)
@@ -197,6 +202,7 @@ async function main() {
     await pool.query('DROP TRIGGER reject_sanitize ON live_metadata; DROP FUNCTION reject_sanitize()');
     anonymize();
     passed('psql SQL error is nonzero and rolls back the complete anonymization transaction');
+    await seedAccount();
 
     // db.js/.envを読み込まず、ルートをテスト所有Poolだけへ接続する。
     // --real-authでは認可も実コード、それ以外ではfixture認可を使う。

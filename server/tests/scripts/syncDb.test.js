@@ -19,7 +19,7 @@ beforeEach(() => {
         createdb: 'exit "${CREATE_FAIL:-0}"',
         zcat: 'printf "synthetic input"; exit "${DECOMPRESS_FAIL:-0}"',
         pg_restore: 'while IFS= read -r line; do :; done; if [ "${RESTORE_SIGNAL:-0}" = 1 ]; then kill -TERM "$PPID"; fi; exit "${RESTORE_FAIL:-0}"',
-        psql: 'printf "target_override_state %s:%s:%s\\n" "${PGSERVICE+set}" "${PGSERVICEFILE+set}" "${PGHOSTADDR+set}" >> "$TEST_COMMAND_LOG"; exit "${SQL_FAIL:-0}"',
+        psql: 'printf "target_override_state %s:%s:%s\\n" "${PGSERVICE+set}" "${PGSERVICEFILE+set}" "${PGHOSTADDR+set}" >> "$TEST_COMMAND_LOG"; for arg in "$@"; do if [[ "$arg" == --file=* ]]; then file="${arg#--file=}"; fi; done; grep -q public_live_tags "$file" && printf "sql_includes_metadata yes\\n" >> "$TEST_COMMAND_LOG"; if [ "${SQL_SIGNAL:-0}" = 1 ]; then kill -TERM "$PPID"; fi; exit "${SQL_FAIL:-0}"',
     };
     for (const [name, body] of Object.entries(bodies)) {
         const file = path.join(bin, name);
@@ -47,8 +47,8 @@ describe('検証DB同期の失敗時保護', () => {
         expect(result.status).toBe(0);
         expect(result.commands.filter(command => command.startsWith('dropdb'))).toHaveLength(1);
         expect(result.commands.find(command => command.startsWith('psql'))).toContain('-X --set=ON_ERROR_STOP=1 --single-transaction');
-        expect(result.commands.find(command => command.startsWith('psql'))).toContain('sync/anonymize.sql');
-        expect(result.commands.find(command => command.startsWith('pg_restore'))).toContain('--exit-on-error --single-transaction');
+        expect(result.commands).toContain('sql_includes_metadata yes');
+        expect(result.commands.find(command => command.startsWith('pg_restore'))).toContain('--exit-on-error --no-owner --no-privileges --file=-');
         expect(result.stdout).toContain('successfully completed');
     });
     it('公開/ワーカー停止の確認なしではDB変更しない', () => {
@@ -72,22 +72,22 @@ describe('検証DB同期の失敗時保護', () => {
         const result = run({ APP_ENV: 'production' });
         expect(result.status).not.toBe(0); expect(result.commands).toEqual([]);
     });
-    it.each(['SQL_FAIL', 'RESTORE_FAIL', 'DECOMPRESS_FAIL'])('%sでも生DBを残さず成功と報告しない', flag => {
+    it.each(['SQL_FAIL', 'RESTORE_FAIL', 'DECOMPRESS_FAIL'])('%sで成功と報告せず生成失敗時は既存DBを維持する', flag => {
         const result = run({ [flag]: '1' });
         expect(result.status).not.toBe(0);
-        expect(result.commands.filter(command => command.startsWith('dropdb'))).toEqual([
+        expect(result.commands.filter(command => command.startsWith('dropdb'))).toEqual(flag === 'SQL_FAIL' ? [
             'dropdb --if-exists uver_setlist_staging', 'dropdb --if-exists --force uver_setlist_staging',
-        ]);
+        ] : []);
         expect(result.stdout).not.toContain('successfully completed');
         if (flag !== 'SQL_FAIL') expect(result.commands.some(command => command.startsWith('psql'))).toBe(false);
     });
-    it.each(['DROP_FAIL', 'CREATE_FAIL'])('%sで復元を開始しない', flag => {
+    it.each(['DROP_FAIL', 'CREATE_FAIL'])('%sで生成済みSQLをDBへ実行しない', flag => {
         const result = run({ [flag]: '1' });
         expect(result.status).not.toBe(0);
-        expect(result.commands.some(command => command.startsWith('pg_restore'))).toBe(false);
+        expect(result.commands.some(command => command.startsWith('psql'))).toBe(false);
     });
     it('シグナルでも匿名化前DBを安全側へ削除する', () => {
-        const result = run({ RESTORE_SIGNAL: '1' });
+        const result = run({ SQL_SIGNAL: '1' });
         expect(result.status).not.toBe(0);
         expect(result.commands).toContain('dropdb --if-exists --force uver_setlist_staging');
         expect(result.stdout).not.toContain('successfully completed');

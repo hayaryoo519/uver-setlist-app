@@ -86,7 +86,7 @@ router.post('/', authorize, async (req, res) => {
         });
 
     } catch (err) {
-        console.error('[CORRECTIONS] Error creating correction:', err);
+        console.error('[CORRECTIONS] Error creating correction: details suppressed');
         res.status(500).json({ message: 'サーバーエラーが発生しました' });
     }
 });
@@ -177,7 +177,7 @@ router.get('/', authorize, adminCheck, async (req, res) => {
         });
 
     } catch (err) {
-        console.error('[CORRECTIONS] Error fetching corrections:', err);
+        console.error('[CORRECTIONS] Error fetching corrections: details suppressed');
         res.status(500).json({ message: 'サーバーエラーが発生しました' });
     }
 });
@@ -207,7 +207,7 @@ router.get('/stats', authorize, adminCheck, async (req, res) => {
         });
 
     } catch (err) {
-        console.error('[CORRECTIONS] Error fetching stats:', err);
+        console.error('[CORRECTIONS] Error fetching stats: details suppressed');
         res.status(500).json({ message: 'サーバーエラーが発生しました' });
     }
 });
@@ -257,7 +257,7 @@ router.patch('/:id', authorize, adminCheck, async (req, res) => {
         });
 
     } catch (err) {
-        console.error('[CORRECTIONS] Error updating correction:', err);
+        console.error('[CORRECTIONS] Error updating correction: details suppressed');
         res.status(500).json({ message: 'サーバーエラーが発生しました' });
     }
 });
@@ -281,7 +281,7 @@ router.delete('/:id', authorize, adminCheck, async (req, res) => {
         res.json({ success: true, message: '修正依頼を削除しました' });
 
     } catch (err) {
-        console.error('[CORRECTIONS] Error deleting correction:', err);
+        console.error('[CORRECTIONS] Error deleting correction: details suppressed');
         res.status(500).json({ message: 'サーバーエラーが発生しました' });
     }
 });

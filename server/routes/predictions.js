@@ -1,13 +1,12 @@
 const router = require('express').Router();
 const db = require('../db');
-const { authorize } = require('../middleware/authorization');
+const { authorize, getOptionalUserId } = require('../middleware/authorization');
 const { isLiveClosed } = require('../utils/date');
-const jwt = require('jsonwebtoken');
 
 // 0. GET Predictable Lives (Portal)
 router.get('/lives', async (req, res) => {
     try {
-        const currentUserId = req.header('token') ? (jwt.decode(req.header('token'))?.user_id || null) : null;
+        const currentUserId = await getOptionalUserId(req);
         
         const result = await db.query(`
             SELECT 
@@ -30,18 +29,19 @@ router.get('/lives', async (req, res) => {
 
         res.json(livesWithStatus);
     } catch (err) {
-        console.error('Fetch predictable lives error:', err);
-        res.status(500).json({ message: 'Server Error', error: err.message, stack: err.stack });
+        console.error('Fetch predictable lives error: details suppressed');
+        res.status(500).json({ message: 'Server Error', error: 'Internal Server Error', stack: null });
     }
 });
 
 // 1. GET All Predictions (Ranking & My Page Alias)
 // Query params: live_id, sort (popular | new), mine (true)
 // Logic for fetching predictions
-const fetchPredictions = async (req, res) => {
+const fetchPredictions = async (req, res, mineOnly = false) => {
     try {
-        let { live_id, sort, mine } = req.query;
-        const currentUserId = req.header('token') ? (jwt.decode(req.header('token'))?.user_id || null) : null;
+        let { live_id, sort } = req.query;
+        const mine = mineOnly ? 'true' : req.query.mine;
+        const currentUserId = await getOptionalUserId(req);
 
         // 1. If live_id is not provided, and we are not explicitly requesting 'mine', find the most recent/upcoming live
         if (!live_id && mine !== 'true') {
@@ -120,24 +120,23 @@ const fetchPredictions = async (req, res) => {
 
         res.json(resultsWithStatus);
     } catch (err) {
-        console.error('Fetch predictions error:', err);
-        res.status(500).json({ message: 'Server Error', error: err.message, stack: err.stack });
+        console.error('Fetch predictions error: details suppressed');
+        res.status(500).json({ message: 'Server Error', error: 'Internal Server Error', stack: null });
     }
 };
 
-router.get('/', fetchPredictions);
+router.get('/', (req, res) => fetchPredictions(req, res));
 
 // Alias for My Page
 router.get('/me', authorize, (req, res) => {
-    req.query.mine = 'true';
-    fetchPredictions(req, res);
+    fetchPredictions(req, res, true);
 });
 
 // 2. GET Single Prediction Detail
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const currentUserId = req.header('token') ? (jwt.decode(req.header('token'))?.user_id || null) : null;
+        const currentUserId = await getOptionalUserId(req);
 
         const predResult = await db.query(`
             SELECT 
@@ -174,7 +173,7 @@ router.get('/:id', async (req, res) => {
             songs: songsResult.rows
         });
     } catch (err) {
-        console.error('Fetch prediction detail error:', err.message);
+        console.error('Fetch prediction detail error: details suppressed');
         res.status(500).send('Server Error');
     }
 });
@@ -249,7 +248,7 @@ router.post('/', authorize, async (req, res) => {
                 prediction_id: existing.rows[0]?.id,
             });
         }
-        console.error('Create prediction error:', err.message);
+        console.error('Create prediction error: details suppressed');
         res.status(500).send('Server Error');
     } finally {
         client.release();
@@ -301,7 +300,7 @@ router.put('/:id', authorize, async (req, res) => {
         res.json(updated.rows[0]);
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error('Update prediction error:', err.message);
+        console.error('Update prediction error: details suppressed');
         res.status(500).send('Server Error');
     } finally {
         client.release();
@@ -326,7 +325,7 @@ router.delete('/:id', authorize, async (req, res) => {
 
         res.status(200).json({ message: 'Prediction deleted successfully' });
     } catch (err) {
-        console.error('Delete prediction error:', err.message);
+        console.error('Delete prediction error: details suppressed');
         res.status(500).send('Server Error');
     }
 });
@@ -359,7 +358,7 @@ router.post('/:id/like', authorize, async (req, res) => {
 
         res.json({ liked });
     } catch (err) {
-        console.error('Toggle like error:', err.message);
+        console.error('Toggle like error: details suppressed');
         res.status(500).send('Server Error');
     }
 });

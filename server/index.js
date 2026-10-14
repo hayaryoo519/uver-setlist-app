@@ -15,6 +15,10 @@ if (!process.env.JWT_SECRET) {
     process.exit(1);
 }
 
+// Availability remains independent of email readiness; release checks verify it separately.
+try { require('./utils/emailConfiguration').getEmailConfiguration(); }
+catch (err) { console.error('Email delivery configuration invalid'); }
+
 // CORS: ALLOWED_ORIGINS 環境変数でドメインを制限（未設定時は全許可）
 const allowedOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
@@ -54,10 +58,7 @@ app.use(helmet({
 app.use(express.json());
 
 // Request logging middleware
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    next();
-});
+app.use(require('./middleware/requestLogging'));
 
 app.get('/api/ping', (req, res) => res.send('pong'));
 
@@ -95,14 +96,7 @@ app.get(/^(?!\/api).+/, (req, res) => {
 });
 
 // Global error handler
-app.use((err, req, res, next) => {
-    console.error('Server Error:', err);
-    res.status(500).json({
-        message: 'Internal Server Error',
-        error: err.message,
-        stack: process.env.NODE_ENV === 'production' ? null : err.stack
-    });
-});
+app.use(require('./middleware/errorHandler'));
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

@@ -58,15 +58,16 @@ async function installRealAuthFixture(pool, app, expectedDataDirectory) {
         const forged = `${pieces[0]}.${forgedPayload}.${pieces[2]}`;
         const expired = jwt.sign({ user_id: 1, role: 'admin', exp: 1 }, secret);
         const invalidSignature = jwt.sign({ user_id: 1, role: 'admin' }, crypto.randomBytes(32).toString('hex'));
-        for (const token of [null, user.token, forged, expired, invalidSignature]) {
-            for (const [target, method, body] of [
+        const protectedEndpoints = [
                 ['/api/lives/1/metadata', 'GET'],
                 ['/api/lives/metadata-review', 'GET'],
                 ['/api/live-artists', 'GET'],
                 ['/api/lives/1/metadata', 'PATCH', { revision: 3, patch: { country: { code: 'US' } } }],
                 ['/api/live-artists', 'POST', { name: 'Prohibited Fixture Artist', aliases: [] }],
                 ['/api/live-artists/10', 'PATCH', { name: 'Prohibited Fixture Rename', aliases: [], revision: 0 }],
-            ]) {
+        ];
+        for (const token of [null, user.token, forged, expired, invalidSignature]) {
+            for (const [target, method, body] of protectedEndpoints) {
                 const response = await fetch(url + target, { method, headers: { 'Content-Type': 'application/json', ...(token ? { token } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
                 assert.equal(response.status, 403, `${method} ${target} must reject unauthorized access`);
                 const payload = await response.json();
@@ -77,6 +78,24 @@ async function installRealAuthFixture(pool, app, expectedDataDirectory) {
         }
         assert.deepEqual(await snapshot(), before, 'Denied requests must not mutate metadata/dictionary/relations/history');
         passed('Actual authorization: missing/user/forged/expired/wrong-signature tokens denied on six endpoints without disclosure or DB mutation');
+
+        const denyCurrentAccount = async sessionExpired => {
+            for (const [target, method, body] of protectedEndpoints) {
+                const denied = await fetch(url + target, { method, headers: { token: admin.token, 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) });
+                assert.equal(denied.status, 403);
+                const payload = await denied.json(); assert.deepEqual(Object.keys(payload), ['message']);
+                assert.equal(payload.message.startsWith('認証されていません'), sessionExpired);
+            }
+            assert.deepEqual(await snapshot(), before, 'Current account denial must not mutate metadata');
+        };
+        await pool.query("UPDATE users SET role='user' WHERE id=1");
+        await denyCurrentAccount(false); // 署名済みJWTの古いadmin claimを信用しない。
+        await pool.query("UPDATE users SET role='admin', session_version=session_version+1 WHERE id=1");
+        await denyCurrentAccount(true);
+        await pool.query('UPDATE users SET session_version=session_version-1, deleted_at=NOW() WHERE id=1');
+        await denyCurrentAccount(true);
+        await pool.query('UPDATE users SET deleted_at=NULL WHERE id=1');
+        passed('Current account authorization: role downgrade, revoked session and deleted user denied on six endpoints');
 
         const refreshedResponse = await login('admin@fixture.invalid');
         assert.equal(refreshedResponse.status, 200);

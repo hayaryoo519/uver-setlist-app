@@ -67,11 +67,12 @@ async function sendNotificationToAll(payload) {
             );
             sent++;
         } catch (error) {
-            console.error(`Push failed for ${sub.endpoint}:`, error.statusCode);
+            const status = Number.isInteger(error.statusCode) && error.statusCode >= 100 && error.statusCode <= 599 ? error.statusCode : 'unknown';
+            console.error('Push failed (status):', status);
             // 410 Gone or 404 = 購読が無効
             if (error.statusCode === 410 || error.statusCode === 404) {
                 await removeSubscription(sub.endpoint);
-                console.log(`Removed invalid subscription: ${sub.endpoint}`);
+                console.log('Removed invalid subscription');
             }
             failed++;
         }
@@ -98,7 +99,7 @@ async function notifyNewLive(live) {
             });
         }
     } catch (e) {
-        console.error('Date parsing error:', e);
+        console.error('Date parsing error: details suppressed');
     }
 
     return notifyAdmins({
@@ -124,7 +125,8 @@ async function sendToSubscriptions(subscriptions, payload) {
             );
             sent++;
         } catch (error) {
-            console.error(`Push failed for ${sub.endpoint}:`, error.statusCode);
+            const status = Number.isInteger(error.statusCode) && error.statusCode >= 100 && error.statusCode <= 599 ? error.statusCode : 'unknown';
+            console.error('Push failed (status):', status);
             if (error.statusCode === 410 || error.statusCode === 404) {
                 await removeSubscription(sub.endpoint);
             }
@@ -171,7 +173,7 @@ async function notifyAdmins({ title, body, url = '/admin', type = 'admin_alert' 
         console.log(`[Push] 管理者通知: ${stats.sent} 件送信 / ${stats.failed} 件失敗`);
         return stats;
     } catch (err) {
-        console.error('[Push] 管理者通知に失敗しました:', err.message);
+        console.error('[Push] 管理者通知に失敗しました: 詳細は非表示');
         return { sent: 0, failed: 0 };
     }
 }

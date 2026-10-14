@@ -1,34 +1,33 @@
 -- 検証DB専用。sync-db.shからON_ERROR_STOP/単一トランザクションで実行する。
 -- 必須の既存テーブルがない/SQLが失敗した場合は同期全体を失敗させる。
-UPDATE public.users SET
-    email = 'dummy_' || id || '@example.com',
-    username = 'user_' || id,
-    password = 'anonymized_hash',
-    verification_token = NULL,
-    reset_password_token = NULL,
-    reset_password_expires = NULL;
-
 TRUNCATE TABLE public.security_logs CASCADE;
-TRUNCATE TABLE public.push_subscriptions CASCADE;
 TRUNCATE TABLE public.collector_logs CASCADE;
 
-UPDATE public.corrections SET
-    description = '（非公開）',
-    suggested_data = NULL,
-    admin_note = NULL;
+-- devのユーザー全除去を維持する。hash/期限/pending email等の新列も行ごと除去。
+-- actor FKを持つ追加情報履歴も同じTRUNCATEに含め、未知依存では失敗させる。
+DO $sanitize_accounts$
+DECLARE
+    table_name TEXT;
+    private_tables TEXT[] := ARRAY['public.users', 'public.corrections', 'public.push_subscriptions'];
+BEGIN
+    FOREACH table_name IN ARRAY ARRAY[
+        'user_spotify_tokens', 'user_google_tokens', 'playlist_history',
+        'attendance', 'user_follows', 'predictions', 'prediction_songs', 'prediction_likes',
+        'raw_setlists', 'social_posts', 'live_metadata_history', 'live_artist_history'
+    ] LOOP
+        IF to_regclass(format('public.%I', table_name)) IS NOT NULL THEN
+            private_tables := array_append(private_tables, format('public.%I', table_name));
+        END IF;
+    END LOOP;
+    EXECUTE 'TRUNCATE TABLE ' || array_to_string(private_tables, ', ') || ' RESTART IDENTITY';
+END;
+$sanitize_accounts$;
 
 -- 古いバックアップにない任意テーブルだけスキップする。
 -- OAuth資格情報/個人の外部プレイリスト履歴/未公開下書き/送信キューは持ち出さない。
 -- CASCADEしない: 将来の未知の依存で失敗したら全体を巻き戻し、公開停止を継続する。
 DO $sanitize_integrations$
-DECLARE
-    table_name TEXT;
 BEGIN
-    FOREACH table_name IN ARRAY ARRAY['user_spotify_tokens', 'user_google_tokens', 'playlist_history', 'raw_setlists', 'social_posts'] LOOP
-        IF to_regclass(format('public.%I', table_name)) IS NOT NULL THEN
-            EXECUTE format('TRUNCATE TABLE public.%I RESTART IDENTITY', table_name);
-        END IF;
-    END LOOP;
     IF EXISTS (SELECT 1 FROM information_schema.columns AS columns
                WHERE columns.table_schema = 'public' AND columns.table_name = 'lives' AND columns.column_name = 'import_metadata') THEN
         UPDATE public.lives SET import_metadata = NULL;

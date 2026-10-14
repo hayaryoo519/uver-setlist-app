@@ -1,7 +1,6 @@
 const router = require('express').Router();
 const db = require('../db');
-const jwt = require('jsonwebtoken');
-const { authorize, adminCheck } = require('../middleware/authorization');
+const { authorize, adminCheck, getCurrentUser } = require('../middleware/authorization');
 const { normalizeSongTitle } = require('../utils/songTranslations');
 
 // GET All Songs (for search/autocomplete)
@@ -12,13 +11,7 @@ router.get('/', async (req, res) => {
 
         let isAdmin = false;
         if (include_deleted === 'true') {
-            try {
-                const token = req.header('token');
-                if (token) {
-                    const payload = jwt.verify(token, process.env.JWT_SECRET);
-                    isAdmin = payload.role === 'admin';
-                }
-            } catch (_) { /* 無効なトークンは非管理者として扱う */ }
+            isAdmin = (await getCurrentUser(req.header('token')))?.role === 'admin';
             if (!isAdmin) {
                 return res.status(403).json({ message: 'アクセス拒否：管理者権限が必要です' });
             }
@@ -43,8 +36,8 @@ router.get('/', async (req, res) => {
         const result = await db.query(query, params);
         res.json(result.rows);
     } catch (err) {
-        console.error('API Error:', err);
-        res.status(500).json({ message: 'Server Error', error: err.message });
+        console.error('API Error: details suppressed');
+        res.status(500).json({ message: 'Server Error', error: 'Internal Server Error' });
     }
 });
 
@@ -192,7 +185,7 @@ router.get('/:id/stats', async (req, res) => {
 
         res.json(responseData);
     } catch (err) {
-        console.error(err.message);
+        console.error('Song stats error: details suppressed');
         res.status(500).send("Server Error");
     }
 });
@@ -352,8 +345,8 @@ router.get('/:id/performance-timeline', async (req, res) => {
             yearlyData,
         });
     } catch (err) {
-        console.error('[performance-timeline] Error:', err.message);
-        res.status(500).json({ message: 'Server Error', error: err.message });
+        console.error('[performance-timeline] Error: details suppressed');
+        res.status(500).json({ message: 'Server Error', error: 'Internal Server Error' });
     }
 });
 
@@ -366,7 +359,7 @@ router.post('/', authorize, adminCheck, async (req, res) => {
         const title = normalizeSongTitle(rawTitle);
 
         // DEBUG: Log translation attempt
-        console.log(`[Song Translation] Input: "${rawTitle}" -> Output: "${title}"${rawTitle !== title ? ' (TRANSLATED)' : ''}`);
+        console.log('[Song Translation] Title normalized');
 
         // Check duplicate using the normalized title
         const check = await db.query("SELECT * FROM songs WHERE title = $1", [title]);
@@ -394,7 +387,7 @@ router.post('/', authorize, adminCheck, async (req, res) => {
 
         res.json(newSong.rows[0]);
     } catch (err) {
-        console.error(err.message);
+        console.error('Song creation error: details suppressed');
         res.status(500).send("Server Error");
     }
 });
@@ -416,7 +409,7 @@ router.put('/:id', authorize, adminCheck, async (req, res) => {
 
         res.json(updateSong.rows[0]);
     } catch (err) {
-        console.error(err.message);
+        console.error('Song update error: details suppressed');
         res.status(500).send("Server Error");
     }
 });
@@ -436,7 +429,7 @@ router.delete('/:id', authorize, adminCheck, async (req, res) => {
 
         res.json("Song deleted");
     } catch (err) {
-        console.error(err.message);
+        console.error('Song deletion error: details suppressed');
         res.status(500).json({ message: "Server Error" });
     }
 });
@@ -456,7 +449,7 @@ router.patch('/:id/restore', authorize, adminCheck, async (req, res) => {
 
         res.json(result.rows[0]);
     } catch (err) {
-        console.error(err.message);
+        console.error('Song restoration error: details suppressed');
         res.status(500).json({ message: "Server Error" });
     }
 });
@@ -478,7 +471,7 @@ router.patch('/:id/spotify', authorize, adminCheck, async (req, res) => {
 
         res.json(updateSong.rows[0]);
     } catch (err) {
-        console.error(err.message);
+        console.error('Spotify track update error: details suppressed');
         res.status(500).send("Server Error");
     }
 });

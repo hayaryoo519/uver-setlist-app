@@ -13,7 +13,7 @@ describe('認証失敗ログの資格情報保護', () => {
             await authorize(req, res, next);
             expect(res.status).toHaveBeenCalledWith(403);
             expect(next).not.toHaveBeenCalled();
-            expect(warning).toHaveBeenCalledWith('[AUTH] No token provided.');
+            expect(warning).toHaveBeenCalledWith('[AUTH] No token provided');
             expect(JSON.stringify(warning.mock.calls)).not.toContain('PRIVATE_COOKIE_FIXTURE');
             expect(JSON.stringify(warning.mock.calls)).not.toContain('PRIVATE_AUTHORIZATION_FIXTURE');
         } finally { warning.mockRestore(); }

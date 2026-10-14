@@ -39,4 +39,19 @@ describe('Feed API', () => {
             [1, 20, 0]
         );
     });
+
+    it('DBエラーの入力値をログと応答に出さない', async () => {
+        const marker = 'private-feed@example.invalid Bearer fixture-token';
+        const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        try {
+            db.query.mockRejectedValueOnce(new Error(marker));
+            const res = await request(app).get('/api/feed');
+            expect(res.statusCode).toBe(500);
+            expect(res.text).toBe('Server Error');
+            expect(errorSpy).toHaveBeenCalledWith('Feed error: details suppressed');
+            expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(marker);
+        } finally {
+            errorSpy.mockRestore();
+        }
+    });
 });

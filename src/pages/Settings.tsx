@@ -36,6 +36,7 @@ function Settings() {
             formData.email !== currentUser?.email ||
             formData.is_public !== (currentUser?.is_public !== false);
         const isPasswordChanged = passwordData.newPassword.length > 0;
+        const isEmailChanged = formData.email !== currentUser?.email;
 
         if (!isProfileChanged && !isPasswordChanged) {
             setMessage({ text: '変更箇所がありません', type: 'info' });
@@ -43,6 +44,13 @@ function Settings() {
         }
 
         const payload: Record<string, string | boolean> = { ...formData };
+        if (isEmailChanged) {
+            if (!passwordData.currentPassword) {
+                setMessage({ text: 'メールアドレスを変更するには現在のパスワードを入力してください', type: 'error' });
+                return;
+            }
+            payload.currentPassword = passwordData.currentPassword;
+        }
 
         if (isPasswordChanged) {
             if (!passwordData.currentPassword) {
@@ -63,8 +71,14 @@ function Settings() {
 
         const res = await updateUser(payload);
         if (res.success) {
-            setMessage({ text: '設定を更新しました', type: 'success' });
             setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+            if (isPasswordChanged) {
+                alert(res.message || 'パスワードを変更しました。再度ログインしてください。');
+                navigate('/login');
+                return;
+            }
+            if (isEmailChanged) setFormData(prev => ({ ...prev, email: currentUser?.email || '' }));
+            setMessage({ text: isEmailChanged ? (res.message || '確認メールを依頼しました。確認が済むまで現在のメールアドレスを使ってください。') : '設定を更新しました', type: 'success' });
         } else {
             setMessage({ text: res.message || '更新に失敗しました', type: 'error' });
         }
@@ -148,7 +162,7 @@ function Settings() {
                                 type="password"
                                 value={passwordData.currentPassword}
                                 onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
-                                placeholder="現在のパスワード（変更する場合のみ）"
+                                placeholder="現在のパスワード（メール・パスワード変更時）"
                             />
                         </div>
                         <div className="form-group">

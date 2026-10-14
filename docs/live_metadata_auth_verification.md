@@ -1,5 +1,7 @@
 # 通知リンクの認証後復帰
 
+最新dev統合後は現在のDB role/session_version/deleted_atを照合する認可も維持し、実認証14/Worker＋本番生成物23項目成功（[統合記録](./live_metadata_dev_integration.md)）。以下の旧13項目等は統合前の履歴。
+
 ## 修正した経路
 
 未ログインまたはページ読み込み時にJWT期限切れを検出した場合、`ProtectedRoute` はRouter stateに遷移元locationを渡してログイン画面へ進む。これは既存の挙動。

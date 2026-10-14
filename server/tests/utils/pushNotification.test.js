@@ -10,7 +10,7 @@ process.env.VAPID_PRIVATE_KEY = 'test-private-key';
 
 const webpush = require('web-push');
 const db = require('../../db');
-const { notifyAdmins, notifyNewLive } = require('../../utils/pushNotification');
+const { notifyAdmins, notifyNewLive, sendNotificationToAll } = require('../../utils/pushNotification');
 
 const ADMIN_SUBS = [
     { endpoint: 'https://push.example/admin1', p256dh: 'k1', auth: 'a1' },
@@ -100,5 +100,69 @@ describe('notifyNewLive', () => {
         expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
         const payload = JSON.parse(webpush.sendNotification.mock.calls[0][1]);
         expect(payload.data).toEqual({ url: '/admin?tab=lives&metadata=10', type: 'new_live' });
+    });
+});
+
+describe('通知ログの機密情報保護', () => {
+    const marker = 'private-push@example.invalid/token';
+    const subscription = { endpoint: `https://push.example/${marker}`, p256dh: marker, auth: marker };
+    let logSpy;
+    let errorSpy;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        db.query.mockResolvedValue({ rows: [subscription] });
+    });
+
+    afterEach(() => {
+        expect(JSON.stringify([...logSpy.mock.calls, ...errorSpy.mock.calls])).not.toContain(marker);
+        logSpy.mockRestore();
+        errorSpy.mockRestore();
+    });
+
+    it.each([
+        ['全員', sendNotificationToAll, 410],
+        ['全員', sendNotificationToAll, 404],
+        ['管理者', notifyAdmins, 410],
+        ['管理者', notifyAdmins, 404],
+    ])('%sへの送信失敗でも購読URLを出さず無効な購読を削除する', async (_label, send, statusCode) => {
+        webpush.sendNotification.mockRejectedValueOnce(Object.assign(new Error(marker), { statusCode, body: marker }));
+
+        const stats = await send({ title: 'T', body: 'B' });
+
+        expect(stats).toEqual({ sent: 0, failed: 1 });
+        expect(errorSpy).toHaveBeenCalledWith('Push failed (status):', statusCode);
+        expect(db.query).toHaveBeenCalledWith('DELETE FROM push_subscriptions WHERE endpoint = $1', [subscription.endpoint]);
+    });
+
+    it.each([
+        ['全員', sendNotificationToAll, 503, 503],
+        ['管理者', notifyAdmins, 503, 503],
+        ['全員', sendNotificationToAll, marker, 'unknown'],
+        ['管理者', notifyAdmins, marker, 'unknown'],
+    ])('%sへの一時的な送信失敗で購読を保持し診断を限定する', async (_label, send, statusCode, diagnosticStatus) => {
+        webpush.sendNotification.mockRejectedValueOnce(Object.assign(new Error(marker), { statusCode }));
+
+        expect(await send({ title: 'T', body: 'B' })).toEqual({ sent: 0, failed: 1 });
+        expect(errorSpy).toHaveBeenCalledWith('Push failed (status):', diagnosticStatus);
+        expect(db.query.mock.calls.some(([sql]) => sql.includes('DELETE'))).toBe(false);
+    });
+
+    it('管理者購読のDB取得失敗を固定ログにする', async () => {
+        db.query.mockRejectedValueOnce(new Error(marker));
+
+        expect(await notifyAdmins({ title: 'T', body: 'B' })).toEqual({ sent: 0, failed: 0 });
+        expect(errorSpy).toHaveBeenCalledWith('[Push] 管理者通知に失敗しました: 詳細は非表示');
+    });
+
+    it('無効な購読のDB削除失敗も管理者通知から詳細を出さない', async () => {
+        webpush.sendNotification.mockRejectedValueOnce(Object.assign(new Error(marker), { statusCode: 410 }));
+        // 最初の取得は成功し、次の削除だけ失敗させる。
+        db.query.mockReset().mockResolvedValueOnce({ rows: [subscription] }).mockRejectedValueOnce(new Error(marker));
+
+        expect(await notifyAdmins({ title: 'T', body: 'B' })).toEqual({ sent: 0, failed: 0 });
+        expect(errorSpy).toHaveBeenCalledWith('[Push] 管理者通知に失敗しました: 詳細は非表示');
     });
 });
