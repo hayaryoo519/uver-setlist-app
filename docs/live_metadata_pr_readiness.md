@@ -3,7 +3,8 @@
 ## 現在の状態
 
 - dev向け[Draft PR #242](https://github.com/hayaryoo519/uver-setlist-app/pull/242)を公開済み。同期保護・機能・検証を目的別commitとして同じPRでレビューする。
-- `c571fa2f`の[Actions](https://github.com/hayaryoo519/uver-setlist-app/actions/runs/38571130062)で全3ジョブ成功。PG16.15/Ubuntu/Node24でbackend726件（Linuxのadmin suite込み）、合成browser18、旧schema7項目、統合23項目。
+- `c571fa2f`に続き、独立レビュー修正後の`a201d4cb`も[Actions](https://github.com/hayaryoo519/uver-setlist-app/actions/runs/38577262475)全3ジョブ成功。
+- 最新dev `b18313ad`（PR #243の依存セキュリティ更新）をfeatureへ取り込んだ`2e80441c`でfresh npm ci後にbackend745/frontend229/browser18/所有PG18統合23が成功。依存更新後の最新head CIはPR checksで確認する。
 - 既存環境操作、dev merge/push、Release公開は未実施。Draft/CI成功は配備承認ではない。
 - [独立AI静的レビュー](./live_metadata_independent_review.md)の3指摘を44e71a59で修正し、8回帰テストを追加。backend730/frontend229/所有PG18統合23は成功。別の新規Codexによる44e71a59のフォローアップ静的レビューで3件解消を確認。最新head CIは[PR checks](https://github.com/hayaryoo519/uver-setlist-app/pull/242/checks)で確認する。
 - 人間のレビュー/配備判断と[Staging受け入れ計画](./live_metadata_staging_acceptance.md)の承認・実確認は残る。共演候補の自動抽出等が未完了なのでIssue #109を自動closeしない。

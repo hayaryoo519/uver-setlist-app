@@ -32,6 +32,8 @@
 - 本物のdumpによる同期一貫試験、実Push配送/OSクリック、過去配備bundle/実キャッシュ、全機密監査は未実施。
 - c571fa2fのCI成功を44e71a59の検証結果として流用しない。修正後の最新head結果は[PR checks](https://github.com/hayaryoo519/uver-setlist-app/pull/242/checks)で対象SHAと併せて確認する。
 
+その後のdev PR #243取り込み（2e80441c）はroot/server lockfileと回帰テストだけの追加。fresh npm ci後にbackend745/56 suites、frontend229/29 files、browser18、所有PG18統合23、型/bash構文/差分チェックが成功した。これは実装担当の追加検証であり、44e71a59の静的レビューを依存関係全体の監査へ拡張するものではない。
+
 ## フォローアップ
 
 44e71a59bde71f0eed5cbad8106c08dda96a3ef0の4ファイルと共通projection/関連呼び出しを、別の新規Codexプロセスでread-only再レビューした。

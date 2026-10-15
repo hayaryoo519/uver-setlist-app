@@ -2,6 +2,9 @@
 
 ## 対象
 
+最新の統合はorigin/dev `b18313ad`（brace-expansion更新PR #243）をfeatureへ取り込んだ`2e80441c`。追加の変更はroot/server lockfileとセキュリティ回帰テストのみで、競合なし。
+以下の37110394統合記録も履歴として保持する。
+
 origin/dev `37110394`（Axios更新PR #241まで）をfeatureへ統合。
 030〜032の認証schema/現在のDB権限照合/session_version/ログ保護/メール変更/UI/依存パッチを保持し、追加情報は033/034。
 既存環境・本番バックアップを使わず、既存migrationのSQLは変更していない。
@@ -39,9 +42,19 @@ featureブランチをpushし、dev向け[Draft PR #242](https://github.com/haya
 Ubuntu/Node24/PostgreSQL16.15でbackend726件（admin suite込み）、合成browser18ケース、旧schema7項目、実認証/Worker/本番生成物23項目を確認。
 初回CIのserver-onlyブラウザ依存とPG起動を修正した。詳細は[CI記録](./live_metadata_ci.md)。
 
+## PR #243取り込み後の再検証
+
+root/serverを更新lockfileからfresh npm ci（rootはlegacy-peer-deps）し直した。
+
+- backend **745 tests / 56 suites**成功（既知Windows依存admin suiteはローカル除外）。
+- frontend **229 tests / 29 files**、型チェック、合成browser **18 cases**、bash構文、差分チェック成功。
+- 所有PG18の実認証/SQL/PC-mobile Chromium/native Worker/現行2build Workbox統合 **23項目成功**。
+- 033/034の番号衝突なし。最新devに対する配備workflow差分は持ち込まない。
+- 取り込み前のa201d4cbでは[Actions run 38577262475](https://github.com/hayaryoo519/uver-setlist-app/actions/runs/38577262475)が全3ジョブ成功。依存更新後の最新headは[PR checks](https://github.com/hayaryoo519/uver-setlist-app/pull/242/checks)で再確認する。
+
 ## 残件
 
-- npm ci時点のaudit指摘：root17（low1/moderate7/high9）、server25（moderate21/high4）。直接依存のdevパッチは維持したが全指摘解消とは扱わない。audit fix --forceは実行していない。
+- 最新fresh npm ci時点のaudit指摘：root16（low1/moderate7/high8）、server24（moderate21/high3）。37110394統合時はroot17/server25だった。devのパッチは維持したが全指摘解消とは扱わない。audit fix --forceは実行していない。
 - [独立AIレビュー](./live_metadata_independent_review.md)の3指摘は44e71a59で修正済み。追加8テストを含むbackend730、frontend229、所有PG18統合23は成功。別の新規Codexによる44e71a59のフォローアップ静的レビューで3件解消を確認。最新head CIは[PR checks](https://github.com/hayaryoo519/uver-setlist-app/pull/242/checks)を参照。
 - 人間のレビュー/配備判断、[Staging受け入れ計画](./live_metadata_staging_acceptance.md)の承認と実環境確認。
 - 全機密監査/実同期/実環境schema/実Push配送/OSクリック/旧配備bundleは未確認。

@@ -4,6 +4,9 @@
 既存のpush(main/dev)・pull_request(main/dev)イベントで実行する。CI構成はcommit `898cefb0` に含む。dev向け[Draft PR #242](https://github.com/hayaryoo519/uver-setlist-app/pull/242)を公開済み。
 SHA `c571fa2f` の[Actions run 38571130062](https://github.com/hayaryoo519/uver-setlist-app/actions/runs/38571130062)で全3ジョブ成功を確認した。backendはLinuxのadmin suite込み726 tests/56 suites、frontendも成功。
 
+修正/独立AI再レビュー後の`a201d4cb`でも[Actions run 38577262475](https://github.com/hayaryoo519/uver-setlist-app/actions/runs/38577262475)の全3ジョブ成功を確認。
+その後devのPR #243（b18313ad）をfeatureへ取り込み、fresh npm ci後にローカルbackend745/frontend229/browser18/PG18統合23が成功した。依存更新後の最新headは[PR checks](https://github.com/hayaryoo519/uver-setlist-app/pull/242/checks)で確認する。
+
 ## 実行内容
 
 - GitHub-hosted Ubuntu 24.04、Node 24。
