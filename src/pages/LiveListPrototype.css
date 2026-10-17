@@ -1173,6 +1173,15 @@
     margin-bottom: 12px;
 }
 
+/* PCでは常時表示の種別ボタンと同じチップを重複させない。
+   モバイルは絞り込みパネルを閉じても解除できるよう残す。 */
+@media (min-width: 1025px) {
+    .active-filter-chips .filter-chip-type,
+    .active-filter-chips.types-only {
+        display: none;
+    }
+}
+
 .filter-chip {
     display: inline-flex;
     align-items: center;
