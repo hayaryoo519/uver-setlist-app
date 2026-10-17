@@ -108,7 +108,7 @@ async function verifyMetadataBrowser({ root, temp, pool, httpServer, freePort, p
                 await page.getByPlaceholder('ツアー名・会場・共演者で検索').fill('ＦＡ');
                 const card = page.locator('a[href="/live/1"]:visible');
                 await expect(card).toContainText('Renamed Artist');
-                await expect(card).toContainText('開催国：KR');
+                await expect(card).toContainText('海外公演：韓国');
                 assert(!(await page.locator('body').innerText()).includes(note));
                 // 公開APIの実応答でも管理メモを返さない。
                 const publicRows = await page.evaluate(async () => (await fetch('/api/lives')).json());

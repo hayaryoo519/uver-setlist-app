@@ -19,6 +19,9 @@ test('詳細条件は初期表示で折りたたみ、閉じても適用中表�
   const toggle = page.getByRole('button', { name: /詳細フィルター/ }).filter({ visible: true });
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(visibleLabel(page, '開催国')).toHaveCount(0);
+  await expect(card(page, 43).getByLabel('公演属性')).toHaveCount(0); // JPだけの公演は補足なし。
+  await expect(card(page, 45)).toContainText('海外公演：韓国');
+  await expect(card(page, 44).getByText('対バン', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'FES', exact: true }).filter({ visible: true })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('compact-filters-default.png'), fullPage: true });
   await toggle.focus(); await page.keyboard.press('Enter');

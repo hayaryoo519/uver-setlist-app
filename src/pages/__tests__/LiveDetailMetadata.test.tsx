@@ -20,8 +20,8 @@ const setup = () => render(<MemoryRouter initialEntries={['/live/42']}><Routes><
 describe('ライブ詳細の有効追加情報', () => {
     it('APIの有効タグ・確認済み国・対象メンバーを表示する', () => {
         setup();
-        expect(screen.getByText('海外公演')).toBeInTheDocument();
-        expect(screen.getByText('開催国：KR')).toBeInTheDocument();
+        expect(screen.getByText('海外公演：韓国')).toBeInTheDocument();
+        expect(screen.queryByText('海外公演', { exact: true })).not.toBeInTheDocument();
         expect(screen.getByText('生誕祭：TAKUYA∞')).toBeInTheDocument();
     });
     it('空タグ・未確認情報からバッジを生成せず、正式名称は保持する', () => {
