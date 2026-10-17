@@ -65,10 +65,14 @@ Production Actions の自動バックアップでディスクを圧迫しない�
 
 本番のバックアップファイルを、検証環境の PostgreSQL コンテナに流し込みます。
 
+**実データ同期の再開は未承認です。** 以下は運用手順の説明であって、全機密情報監査・実環境確認・実行承認の完了ではありません。
+
 ### 実行コマンド
 スクリプトがあるディレクトリで、Staging専用の接続情報を指定して実行します。先に「4. メンテナンス中の実行手順」に従ってStagingアプリを停止し、並行するデプロイ・同期がないことを確認します。
 
 ```bash
+APP_ENV=staging \
+STAGING_OFFLINE_ACK=1 \
 STAGING_DB_NAME=uver_setlist_staging \
 PGHOST=127.0.0.1 \
 PGPORT=54325 \
@@ -79,7 +83,7 @@ PGPASSWORD=postgres \
 
 ### 注意点・工夫したポイント
 - **所有者エラーの回避**: `pg_restore` に `--no-owner --no-privileges` を使用しているため、本番（`<server-user>`）と検証（`postgres`）でユーザー名が異なっていても同期可能です。
-- **TCP接続の強制**: `PGHOST=127.0.0.1` を指定することで、Dockerのポートマッピング経由での接続を確実にします。
+- **TCP接続の強制**: 単一TCPのPGHOST/PGPORTと単純識別子のSTAGING_DB_NAMEを明示します。PGSERVICE/PGSERVICEFILE/PGHOSTADDRの上書きは無効化し、公開/全ワーカー停止のSTAGING_OFFLINE_ACK=1も必須です。
 - **別端末からの接続**: 検証DBのホスト公開はIPv4 localhost限定です。直接LAN接続せず、SSHトンネル経由で接続してください。コンテナ内からは従来どおり `db-staging:5432` を使います。
 - **自動匿名化**: 同期完了後、以下の処理が自動で実行されます。
   - `users` テーブルを空にし、所有する連番をリセット。本番ユーザーのID・管理者権限・登録/削除時刻・公開設定・認証情報を保持しません。関連テーブルと同じTRUNCATE文で処理し、想定外の外部キー参照はCASCADEで消さず同期失敗にします。
@@ -87,7 +91,9 @@ PGPASSWORD=postgres \
   - `security_logs`, `push_subscriptions`, `collector_logs` 等の機密テーブルのクリア。
   - `user_spotify_tokens`, `user_google_tokens`, `playlist_history` のクリア。アクセストークン・暗号化された更新トークン・本番ユーザーのプレイリストIDを残しません。連携導入前のバックアップでこれらのテーブルが存在しない場合は、そのテーブルのみスキップします。同期後の外部連携はStaging専用設定と検証用アカウントでやり直してください。
   - `attendance`, `user_follows`, `predictions`, `prediction_songs`, `prediction_likes`, `raw_setlists`, `social_posts` のクリア。参戦・フォロー・いいねの関連、予想タイトル、OCR本文/JSON/画像URL、収集元URL、投稿候補/エラーを本番から持ち込みません。導入前のバックアップは存在するテーブルだけを処理します。外部キーで関連するテーブルを一括処理し、想定外の依存はCASCADEで削除せず同期失敗にします。
+  - 033/034の追加情報は既知の公開タグ/手動設定・辞書・共演関連だけを保持し、原文/取得元snapshot/分類メモ/未知JSON/変更履歴を除去。lives.import_metadataもNULLにします。導入前のバックアップでは該当表だけをスキップします。この処理は表が存在する場合だけ適用し、機能schemaを新規導入しません。分離した変更範囲・検証境界は [同期保護PR](./staging_sync_guards.md) を参照。
 - **未加工データの非公開**: 復元SQLと匿名化を1つのトランザクションで実行し、匿名化成功後にだけコミットします。別のDB接続から復元途中の未加工データは読めません。これはDBの可視性の制御であり、HTTPアクセスの遮断やメンテナンス画面の自動設定ではありません。
+- **中断時保護**: 未完了の再作成済みDBはEXIT/INT/TERM時にdropdb --forceで削除します。削除も失敗した場合はSAFETY CLEANUP FAILEDで生データ残存を警告し、停止を維持します。PG13以降のclientが必要です。SIGKILL/停電ではtrapを保証しません。
 - **失敗時の停止**: SQL生成に失敗した場合は既存DBを変更しません。復元・匿名化のSQLエラーは非ゼロで終了し、ロールバック後に同期先DBを削除します。DB再作成時に接続中などで削除できなければ、復元には進みません。異常終了時もアプリを自動再開しません。
 - **一時SQLの保護**: 復元SQLは秘密値を含むため、権限600の一時ファイルに生成し、終了時に削除します。圧縮前のSQLを置ける容量が必要です。強制終了（SIGKILL）やホスト停止では削除されないことがあるため、再開前に担当者が残存ファイルを確認します。実行ログやSQLを公開Issueへ貼らないでください。
 - **未対応の範囲**: バックアップ原本の保護、匿名化対象の網羅性、Staging専用の外部連携設定は別途確認が必要です。この変更だけで安全な同期全体が完成したとは扱わず、実データを使った同期はまだ実施しません。
@@ -123,6 +129,8 @@ docker compose exec app-staging npm run migrate
 ---
 
 ## 4. メンテナンス中の実行手順
+
+公開アクセスと全ワーカーを止め、STAGING_OFFLINE_ACK=1を指定します。Basic認証だけでは十分ではありません。停止/再開はscriptが自動実行しません。
 
 1. Stagingのデプロイ完了を待ち、同期中にdev push・別の同期・アプリ再起動を実行しないよう調整します。
 2. `~/apps/uver-setlist-staging` で `docker compose stop app-staging` を実行し、`docker compose ps --status running app-staging` に稼働中アプリがないことを確認します。DBコンテナは停止しません。
