@@ -1,3 +1,6 @@
+import type { LiveTag } from '../utils/liveText'
+import type { PublicLiveMetadata } from './liveMetadata'
+
 // ライブ種別
 export type LiveType = 'ONEMAN' | 'HALL' | 'ARENA' | 'LIVEHOUSE' | 'FESTIVAL' | 'EVENT'
 
@@ -24,6 +27,9 @@ export interface Live {
   venue: string
   type: LiveType
   special_note: string | null
+  /** 公開APIの有効タグ。旧APIでは取得時のテキスト判定へフォールバックする。 */
+  tags?: LiveTag[]
+  metadata?: PublicLiveMetadata
   setlist?: SetlistEntry[]
   attended_at?: string
   created_at?: string

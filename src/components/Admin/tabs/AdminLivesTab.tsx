@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Loader, Plus, Search, Edit2, Trash2, ArrowUpDown, Check, ChevronUp, ChevronDown, ListMusic, BellRing, X } from 'lucide-react';
 import { useLives } from '../../../hooks/queries/useLives';
 import { useQueryClient } from '@tanstack/react-query';
@@ -6,6 +6,20 @@ import { queryKeys } from '../../../lib/queryKeys';
 import { apiClient } from '../../../lib/apiClient';
 import type { Live } from '../../../types/api';
 import SetlistEditor from '../SetlistEditor';
+import LiveMetadataEditor from '../LiveMetadataEditor';
+import { useAdminMetadataReview, METADATA_REVIEW_QUERY_KEY } from '../../../hooks/queries/useAdminMetadataReview';
+import { METADATA_REVIEW_FILTERS, REVIEW_FIELD_LABELS, matchesMetadataReview } from '../../../utils/liveMetadataReview';
+import type { MetadataReviewFilter } from '../../../utils/liveMetadataReview';
+import type { MetadataReviewSummary } from '../../../types/liveMetadata';
+
+function ReviewStatus({ summary }: { summary?: MetadataReviewSummary }) {
+    if (!summary) return <span>レビュー情報未取得</span>;
+    const labels = [];
+    if (summary.hasUnconfirmed) labels.push(`未確認：${summary.unconfirmedFields.map(field => REVIEW_FIELD_LABELS[field]).join('・')}`);
+    if (summary.countryConflict !== 'none') labels.push(summary.countryConflict === 'confirmed' ? '取得元不一致（開催国確定済み）' : '取得元不一致（開催国未確定）');
+    if (summary.needsClassificationReview) labels.push('分類検討');
+    return <div>{labels.length ? labels.map(label => <div key={label}>{label}</div>) : '適用項目の未確認なし'}</div>;
+}
 
 const emptyLiveForm = { tour_name: '', title: '', date: '', venue: '', type: 'ONEMAN', special_note: '', starts_at: '', collect_after: '', timezone: 'Asia/Tokyo' };
 
@@ -24,9 +38,17 @@ const toDateTimeLocal = (value?: string | null, timezone = 'Asia/Tokyo') => {
 
 type SetlistStatusFilter = 'ALL' | 'NORMAL' | 'UNKNOWN_SETLIST';
 
-const AdminLivesTab = ({ initialEditId }: { initialEditId?: number }) => {
+const AdminLivesTab = ({ initialEditId, initialMetadataId, initialReviewFilter = 'ALL', metadataNotificationRevision = 0 }: {
+    initialEditId?: number; initialMetadataId?: number; initialReviewFilter?: MetadataReviewFilter; metadataNotificationRevision?: number;
+}) => {
     const { data: lives = [], isLoading } = useLives({ include_setlists: true });
     const queryClient = useQueryClient();
+    const { data: reviewRows = [], isPending: reviewPending, isError: reviewError, isFetching: reviewFetching, refetch: refetchReview } = useAdminMetadataReview();
+    const reviewUnavailable = reviewPending || reviewError;
+    const reviewIndex = useMemo(() => new Map(reviewRows.map(summary => [summary.liveId, summary])), [reviewRows]);
+    const [reviewFilter, setReviewFilter] = useState<MetadataReviewFilter>(initialReviewFilter);
+    const handledDeepLink = useRef<string | null>(null);
+    const handledNotification = useRef(metadataNotificationRevision);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [yearFilter, setYearFilter] = useState('ALL');
@@ -41,10 +63,19 @@ const AdminLivesTab = ({ initialEditId }: { initialEditId?: number }) => {
     const [editingLive, setEditingLive] = useState<Live | null>(null);
     const [liveFormData, setLiveFormData] = useState(emptyLiveForm);
 
+    const [metadataLive, setMetadataLive] = useState<Live | null>(null);
     const [showSetlistEditor, setShowSetlistEditor] = useState(false);
     const [selectedLiveForSetlist, setSelectedLiveForSetlist] = useState<Live | null>(null);
 
-    const invalidateLives = () => queryClient.invalidateQueries({ queryKey: queryKeys.lives.all });
+    const invalidateLives = () => Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.lives.all }),
+        queryClient.invalidateQueries({ queryKey: METADATA_REVIEW_QUERY_KEY }),
+    ]);
+    const reviewCounts = useMemo(() => Object.fromEntries(METADATA_REVIEW_FILTERS.map(filter => [filter.id,
+        lives.filter(live => matchesMetadataReview(reviewIndex.get(live.id), filter.id)).length,
+    ])), [lives, reviewIndex]);
+    const missingReviews = lives.filter(live => !reviewIndex.has(live.id)).length;
+    useEffect(() => { setReviewFilter(initialReviewFilter); }, [initialReviewFilter, metadataNotificationRevision]);
 
     const uniqueYears = useMemo(() => {
         const years = lives.map(l => new Date(l.date).getFullYear());
@@ -71,6 +102,7 @@ const AdminLivesTab = ({ initialEditId }: { initialEditId?: number }) => {
         } else if (setlistStatusFilter === 'UNKNOWN_SETLIST') {
             items = items.filter(l => l.setlist_status === 'UNKNOWN_SETLIST');
         }
+        if (reviewFilter !== 'ALL') items = reviewUnavailable ? [] : items.filter(live => matchesMetadataReview(reviewIndex.get(live.id), reviewFilter));
         items.sort((a, b) => {
             const aVal = (a as any)[sortConfig.key] || '';
             const bVal = (b as any)[sortConfig.key] || '';
@@ -82,15 +114,36 @@ const AdminLivesTab = ({ initialEditId }: { initialEditId?: number }) => {
             return sortConfig.direction === 'asc' ? r : -r;
         });
         return items;
-    }, [lives, searchTerm, yearFilter, setlistStatusFilter, sortConfig]);
+    }, [lives, searchTerm, yearFilter, setlistStatusFilter, sortConfig, reviewFilter, reviewUnavailable, reviewIndex]);
 
-    // Deep link: open edit modal when initialEditId is provided
+    // 絞り込みで非表示になった公演を一括削除の選択に残さない。
     useEffect(() => {
-        if (initialEditId && lives.length > 0) {
-            const live = lives.find(l => l.id === initialEditId);
-            if (live) openEditLive(live);
+        const visible = new Set(processed.map(live => live.id));
+        setSelectedIds(previous => {
+            const next = previous.filter(id => visible.has(id));
+            return next.length === previous.length ? previous : next;
+        });
+    }, [processed]);
+
+    // データ再取得で閉じたモーダルを再び開かない。別リンクは現在の編集を閉じてから扱う。
+    useEffect(() => {
+        const id = initialMetadataId || initialEditId;
+        const key = id ? `${initialMetadataId ? 'metadata' : 'edit'}:${id}:${metadataNotificationRevision}` : null;
+        const newNotification = handledNotification.current !== metadataNotificationRevision;
+        handledNotification.current = metadataNotificationRevision;
+        if (!key) { handledDeepLink.current = null; return; }
+        if (metadataLive || showLiveModal || showSetlistEditor) {
+            // 通知をキューに残さず消費する。入力を保持し、閉じた直後にも再開しない。
+            if (newNotification) handledDeepLink.current = key;
+            return;
         }
-    }, [initialEditId, lives]);
+        if (handledDeepLink.current === key) return;
+        const live = lives.find(item => item.id === id);
+        if (!live) return;
+        handledDeepLink.current = key;
+        if (initialMetadataId) setMetadataLive(live);
+        else openEditLive(live);
+    }, [initialEditId, initialMetadataId, metadataNotificationRevision, lives, metadataLive, showLiveModal, showSetlistEditor]);
 
     const toggleSort = (key: string) =>
         setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
@@ -227,6 +280,24 @@ const AdminLivesTab = ({ initialEditId }: { initialEditId?: number }) => {
                 </select>
             </div>
 
+            <section aria-label="追加情報レビューの絞り込み" style={{ marginBottom: '20px' }}>
+                <label>追加情報レビュー（絞り込み前の件数）
+                    <select aria-label="追加情報レビュー" style={{ padding: '8px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff', margin: '0 10px' }} value={reviewFilter} onChange={event => setReviewFilter(event.target.value as MetadataReviewFilter)}>
+                        {METADATA_REVIEW_FILTERS.map(filter => <option key={filter.id} value={filter.id} disabled={filter.id !== 'ALL' && reviewUnavailable}>
+                            {filter.label}（{filter.id === 'ALL' ? lives.length : reviewUnavailable ? '—' : reviewCounts[filter.id]}）
+                        </option>)}
+                    </select>
+                </label>
+                <button type="button" disabled={reviewFetching} onClick={() => { void invalidateLives(); }}>一覧とレビュー情報を更新</button>
+                {reviewPending && <p role="status">レビュー情報を読み込み中…</p>}
+                {reviewError && <div role="alert">レビュー情報を取得できません。未確認件数を0件とは扱いません。
+                    <button type="button" disabled={reviewFetching} onClick={() => { void refetchReview(); }}>レビュー情報を再取得</button>
+                </div>}
+                {!reviewUnavailable && reviewFetching && <p role="status">レビュー情報を更新中（表示は前回取得時点）…</p>}
+                {!reviewUnavailable && missingReviews > 0 && <p role="status">レビュー情報未取得の公演が{missingReviews}件あります。一覧とレビュー情報を更新してください。</p>}
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>未取得の公演は未確認等の件数に含めません。開催国は全公演、生誕祭の対象は生誕祭、共演者は対バン公演で未確認を判定します。取得元不一致は開催国を確定しても残して表示します。年度・文字・セトリ条件とはANDです。</p>
+            </section>
+            {initialMetadataId && !lives.some(live => live.id === initialMetadataId) && <p role="alert">リンク先の公演が一覧にありません。一覧を更新して確認してください。</p>}
             <div className="table-container">
                 <table className="admin-table">
                     <thead>
@@ -240,6 +311,7 @@ const AdminLivesTab = ({ initialEditId }: { initialEditId?: number }) => {
                             <th className="sortable-th" onClick={() => toggleSort('tour_name')}><div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>Tour Name<SortIcon key="tour_name" /></div></th>
                             <th className="sortable-th" onClick={() => toggleSort('venue')}><div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>Venue<SortIcon key="venue" /></div></th>
                             <th style={{ width: '80px', textAlign: 'center' }}>Setlist</th>
+                            <th>追加情報レビュー</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -273,9 +345,13 @@ const AdminLivesTab = ({ initialEditId }: { initialEditId?: number }) => {
                                         <X size={16} color="#475569" />
                                     )}
                                 </td>
+                                <td aria-label={`${live.tour_name}のレビュー状態`} style={{ fontSize: '0.8rem', minWidth: '150px' }}>
+                                    <ReviewStatus summary={reviewUnavailable ? undefined : reviewIndex.get(live.id)} />
+                                </td>
                                 <td style={{ width: '180px' }}>
                                     <div className="actions-wrapper">
                                         <button onClick={() => openEditLive(live)} className="action-btn" title="Edit Live" style={{ color: '#fbbf24' }}><Edit2 size={18} /></button>
+                                        <button onClick={() => setMetadataLive(live)} className="action-btn" title="追加情報を確認・修正" aria-label={`${live.tour_name}の追加情報を確認・修正`} style={{ color: '#7dd3fc' }}>属性</button>
                                         <button onClick={() => openSetlistEditor(live)} className="action-btn" title="Edit Setlist" style={{ color: '#3b82f6' }}><ListMusic size={18} /></button>
                                         <button onClick={() => {
                                             const d = new Date(live.date);
@@ -288,10 +364,22 @@ const AdminLivesTab = ({ initialEditId }: { initialEditId?: number }) => {
                                 </td>
                             </tr>
                         ))}
-                        {lives.length === 0 && <tr><td colSpan={6} className="empty-cell">No lives registered yet.</td></tr>}
+                        {processed.length === 0 && <tr><td colSpan={7} className="empty-cell">{lives.length === 0 ? 'No lives registered yet.' : reviewFilter !== 'ALL' && reviewUnavailable ? 'レビュー情報が未取得のため、この条件での一覧は表示できません。' : '条件に一致する公演はありません。'}</td></tr>}
                     </tbody>
                 </table>
             </div>
+
+            {metadataLive && (
+                <LiveMetadataEditor key={metadataLive.id} liveId={metadataLive.id} liveTitle={metadataLive.tour_name}
+                    onClose={() => setMetadataLive(null)} onSaved={() => {
+                        void invalidateLives();
+                        void queryClient.invalidateQueries({ queryKey: ['live'],
+                            predicate: query => String(query.queryKey[1]) === String(metadataLive.id) });
+                    }} onArtistSaved={() => {
+                        void invalidateLives();
+                        void queryClient.invalidateQueries({ queryKey: ['live'] });
+                    }} />
+            )}
 
             {/* Live Edit/Add Modal */}
             {showLiveModal && (

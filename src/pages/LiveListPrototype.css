@@ -1219,6 +1219,49 @@
     border: 1px solid rgba(139, 92, 246, 0.3);
 }
 
+.semantic-filters {
+    margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+}
+
+.semantic-filter-hint {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.semantic-filter-group {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+}
+
+.semantic-filter-group legend {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 6px;
+}
+
+.semantic-filter-group .type-filter-pills {
+    flex-wrap: wrap;
+}
+
+.type-pill-tag.active,
+.filter-chip-tag {
+    background: rgba(56, 189, 248, 0.12);
+    color: #7dd3fc;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.type-pill-tag:focus-visible {
+    outline: 2px solid #7dd3fc;
+    outline-offset: 2px;
+}
+
 .filter-chip-song {
     background: rgba(99, 102, 241, 0.12);
     color: #818cf8;

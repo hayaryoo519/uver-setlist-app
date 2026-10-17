@@ -3,6 +3,7 @@ import { apiClient } from '../../lib/apiClient'
 import { queryKeys } from '../../lib/queryKeys'
 import { STALE_TIMES } from '../../lib/queryClient'
 import type { Live, LivesParams } from '../../types/api'
+import { withLiveTags } from '../../utils/liveText'
 
 const buildLivesUrl = (params: Omit<LivesParams, 'enabled'> = {}): string => {
   const searchParams = new URLSearchParams()
@@ -30,7 +31,10 @@ export const useLives = (params: LivesParams = {}) => {
   const { enabled, ...queryParams } = params
   return useQuery({
     queryKey: queryKeys.lives.filtered(queryParams as Record<string, unknown>),
-    queryFn: () => apiClient.get<Live[]>(buildLivesUrl(queryParams)),
+    queryFn: async () => {
+      const data = await apiClient.get<Live[]>(buildLivesUrl(queryParams))
+      return Array.isArray(data) ? data.map(withLiveTags) : []
+    },
     staleTime: STALE_TIMES.lives,
     select: filterValidLives,
     enabled: enabled !== false,
@@ -40,7 +44,7 @@ export const useLives = (params: LivesParams = {}) => {
 export const useLiveDetail = (id: number | string | undefined) =>
   useQuery({
     queryKey: queryKeys.lives.detail(id),
-    queryFn: () => apiClient.get<Live>(`/api/lives/${id}`),
+    queryFn: async () => withLiveTags(await apiClient.get<Live>(`/api/lives/${id}`)),
     staleTime: STALE_TIMES.lives,
     enabled: !!id,
   })

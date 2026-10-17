@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import AuthLayout from '../components/Auth/AuthLayout';
+import { safeReturnTo } from '../utils/authReturnTo';
 import { Mail, Lock, ArrowRight, Loader } from 'lucide-react';
 
 const Login = () => {
@@ -16,7 +17,7 @@ const Login = () => {
     const location = useLocation();
 
     // 遷移元ページの情報を取得
-    const fromPage = location.state?.from || '/mypage';
+    const fromPage = safeReturnTo(location.state?.from ?? new URLSearchParams(location.search).get('returnTo'));
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();

@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import AuthLayout from '../components/Auth/AuthLayout';
+import { safeReturnTo } from '../utils/authReturnTo';
 import { Mail, Lock, User, ArrowRight, Loader, CheckCircle, Eye, EyeOff } from 'lucide-react';
 
 const Signup = () => {
@@ -17,7 +18,7 @@ const Signup = () => {
     const { showToast } = useToast();
     const navigate = useNavigate();
     const location = useLocation();
-    const fromPage = location.state?.from || '/mypage';
+    const fromPage = safeReturnTo(location.state?.from);
 
     const [verificationSent, setVerificationSent] = useState(false);
 

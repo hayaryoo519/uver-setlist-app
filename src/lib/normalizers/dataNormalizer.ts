@@ -1,4 +1,5 @@
 import { Live, Song, SetlistEntry } from '../../types/api';
+import { withLiveTags } from '../../utils/liveText';
 
 /**
  * ライブデータの正規化を行う。
@@ -15,6 +16,7 @@ export function normalizeLive(raw: any): Live {
             venue: 'Unknown Venue',
             type: 'HALL',
             special_note: null,
+            tags: [],
             setlist: []
         };
     }
@@ -24,7 +26,7 @@ export function normalizeLive(raw: any): Live {
         console.warn('[Normalization] Potentially malformed live data detected:', raw);
     }
 
-    return {
+    return withLiveTags({
         id: Number(raw.id) || 0,
         tour_name: raw.tour_name || raw.title || 'Unknown Tour',
         title: raw.title || null,
@@ -32,6 +34,8 @@ export function normalizeLive(raw: any): Live {
         venue: raw.venue || 'Unknown Venue',
         type: raw.type || 'HALL',
         special_note: raw.special_note || null,
+        tags: raw.tags,
+        metadata: raw.metadata,
         setlist: Array.isArray(raw.setlist) ? raw.setlist.map(normalizeSetlistEntry) : [],
         attended_at: raw.attended_at ? safeDate(raw.attended_at) : undefined,
         created_at: raw.created_at ? safeDate(raw.created_at) : undefined,
@@ -40,7 +44,7 @@ export function normalizeLive(raw: any): Live {
         is_closed: !!raw.is_closed,
         has_predicted: !!raw.has_predicted,
         my_prediction_id: raw.my_prediction_id || null
-    };
+    });
 }
 
 /**

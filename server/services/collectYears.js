@@ -1,6 +1,8 @@
 const axios = require('axios');
 const db = require('../db');
 const { getJob, updateJob } = require('./collectJob');
+const { buildSetlistCandidates, saveMetadataCandidates } = require('./liveMetadataCandidates');
+const festivalPattern = new RegExp(require('../utils/liveTagRules.json').patterns.festival);
 const { normalizeVenueName, normalizeSongTitle: translateSongTitle } = require('../utils/songTranslations');
 
 // DB の normalized_title カラム用キー（小文字 + 空白正規化）
@@ -48,7 +50,10 @@ async function upsertLive(client, setlist, setlistStatus) {
     const venue = normalizeVenueName(rawVenue);
     const tourName = setlist.tour?.name || setlist.info || '';
     const sfmId = setlist.id;
-    const liveType = detectLiveType(rawVenue);
+    // 単件取り込みと同じ辞書で、取得元が明示するフェスだけを既存種別へ反映する。
+    const isFestival = [setlist.tour?.name, setlist.info].some(value =>
+        typeof value === 'string' && festivalPattern.test(value.normalize('NFKC').toLowerCase()));
+    const liveType = isFestival ? 'FESTIVAL' : detectLiveType(rawVenue);
 
     const result = await client.query(`
         INSERT INTO lives (date, venue, tour_name, type, setlistfm_id, setlist_status)
@@ -57,7 +62,9 @@ async function upsertLive(client, setlist, setlistStatus) {
         RETURNING id
     `, [dateStr, venue, tourName, liveType, sfmId, setlistStatus]);
 
-    return result.rows[0]?.id || null;
+    if (result.rows[0]) return { id: result.rows[0].id, created: true };
+    const existing = await client.query('SELECT id FROM lives WHERE setlistfm_id = $1', [sfmId]);
+    return { id: existing.rows[0]?.id || null, created: false };
 }
 
 async function upsertSong(client, rawTitle) {
@@ -116,8 +123,10 @@ async function collectYear(year, apiKey, jobId) {
                 const flatSongs = (setlist.sets?.set || []).flatMap(s => s.song || []).filter(s => s.name);
                 const setlistStatus = flatSongs.length === 0 ? 'UNKNOWN_SETLIST' : 'NORMAL';
 
-                const liveId = await upsertLive(client, setlist, setlistStatus);
-                if (!liveId) {
+                const candidates = buildSetlistCandidates(setlist);
+                const { id: liveId, created } = await upsertLive(client, setlist, setlistStatus);
+                if (liveId) await saveMetadataCandidates(client, liveId, candidates);
+                if (!created) {
                     await client.query('COMMIT');
                     const job = getJob(jobId);
                     updateJob(jobId, { totalSkipped: (job?.totalSkipped || 0) + 1 });

@@ -6,6 +6,7 @@ import { useLiveDetail } from '../hooks/queries/useLives';
 import CorrectionModal from '../components/CorrectionModal';
 import { AlertTriangle, Tag, MapPin, Check, Plus, Star, Music, Sparkles, LogIn, ArrowLeft } from 'lucide-react';
 import SEO from '../components/SEO';
+import LiveMetadataBadges from '../components/LiveMetadataBadges';
 import SpotifyPlaylistButton from '../components/Spotify/SpotifyPlaylistButton';
 import YoutubePlaylistButton from '../components/Youtube/YoutubePlaylistButton';
 import { Youtube as YoutubeIcon } from 'lucide-react';
@@ -150,6 +151,7 @@ function LiveDetail() {
                             </div>
                         )}
                     </div>
+                    <LiveMetadataBadges tags={live.tags} metadata={live.metadata} />
                 </header>
 
                 <div className="setlist bg-slate-800/20 rounded-3xl p-4 md:p-8 border border-slate-800/50">

@@ -99,7 +99,7 @@ describe('notifyNewLive', () => {
         expect(sql).toContain("u.role = 'admin'");
         expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
         const payload = JSON.parse(webpush.sendNotification.mock.calls[0][1]);
-        expect(payload.data).toEqual({ url: '/live/10', type: 'new_live' });
+        expect(payload.data).toEqual({ url: '/admin?tab=lives&metadata=10', type: 'new_live' });
     });
 });
 

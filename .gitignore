@@ -39,6 +39,10 @@ User*.json
 # Coverage reports
 coverage/
 
+# Playwright reports / traces / screenshots (may contain session data)
+/test-results/
+/playwright-report/
+
 # Development/Debug Scripts (temporary)
 server/check_*.js
 server/debug_*.js
