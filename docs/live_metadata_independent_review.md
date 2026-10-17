@@ -40,4 +40,4 @@
 3指摘すべての解消と、今回の差分に追加のactionable defectが見つからないことを確認。明示空タグ、別snapshot、手動設定、認可/revision/ロック/監査transaction/rollback/release/公開privacyの静的確認も報告された。
 再レビュー担当もファイル変更・テスト・DB/runtime検証を行っていない。局所的な静的レビュー結果を、全機密監査や人間の承認の代用にしない。
 [Staging受け入れ計画](./live_metadata_staging_acceptance.md)は作成済みだが、実環境接続/配備/試験書込み/配送は未承認・未実施。
-重大な追加指摘がある場合は修正と再確認を先に行い、Draftを維持する。
+この時点ではDraft維持としていた。その後ユーザーが同期保護の分離・Ready化を承認し、別の人間レビュー担当者はいないと指定した。[分離/本人チェック手順](./live_metadata_pr_split.md)に従い、分離後のCIを確認してReady化する。これはmerge/配備承認ではない。重大な追加指摘がある場合は修正と再確認を先に行う。

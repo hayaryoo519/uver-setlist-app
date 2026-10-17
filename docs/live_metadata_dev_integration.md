@@ -1,5 +1,10 @@
 # 最新dev統合の確認
 
+## 分離後の状態
+
+ユーザー判断で同期保護をdev向け[PR #244](https://github.com/hayaryoo519/uver-setlist-app/pull/244)へ分離し、#242は一時的に同期保護ブランチをbaseとする。Ready化は承認済み、別の人間レビュー担当者は不在。CI確認後にReady化するが、merge/配備は行わない。[分離記録](./live_metadata_pr_split.md)を参照。
+以下の「同じPR/dev向けDraft」は分離前の検証履歴として保持する。
+
 ## 対象
 
 最新の統合はorigin/dev `b18313ad`（brace-expansion更新PR #243）をfeatureへ取り込んだ`2e80441c`。追加の変更はroot/server lockfileとセキュリティ回帰テストのみで、競合なし。

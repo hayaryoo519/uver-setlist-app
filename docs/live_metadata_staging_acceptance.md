@@ -2,7 +2,9 @@
 
 ## 状態と操作境界
 
-[Draft PR #242](https://github.com/hayaryoo519/uver-setlist-app/pull/242)の受け入れ計画。**この文書は実行承認・実確認の記録ではない。**
+[PR #242](https://github.com/hayaryoo519/uver-setlist-app/pull/242)の受け入れ計画。**この文書は実行承認・実確認の記録ではない。**
+ユーザー判断で同期保護をdev向けPR #244へ分離し、#242は一時的にそのブランチをbaseとする。[分離手順](./live_metadata_pr_split.md)に従い、#244のマージを別途判断した後だけ#242をdevへ戻す。Ready化は承認済みだが、どちらのmerge/配備も未承認。
+別の人間レビュー担当者はおらず、本人の確認と独立AI静的レビュー/CIを区別する。外部の人間レビューがなければ進められない、という架空の前提は置かない。
 `c571fa2f`の[CI](https://github.com/hayaryoo519/uver-setlist-app/actions/runs/38571130062)は全3ジョブ成功。その後の[独立AIレビュー](./live_metadata_independent_review.md)の3指摘をコード候補`44e71a59`で修正し、別プロセスの静的再レビューで解消を確認。修正後の最新headの[PR checks](https://github.com/hayaryoo519/uver-setlist-app/pull/242/checks)を確認する。
 PG16.15/Ubuntu/Node24の旧schema7項目・統合23項目、合成browser18ケースは既存Stagingの試験ではない。
 
@@ -17,7 +19,7 @@ PG16.15/Ubuntu/Node24の旧schema7項目・統合23項目、合成browser18ケ�
 |---|---|---|
 | PR/CI | baseがdev、確認SHAとheadが一致、最新headの3ジョブ成功 | c571fa2fで成功。head更新時は再確認 |
 | 独立レビュー | 指摘/根拠/対象外を記録し、重大指摘を解消または明示的に判断 | AI静的レビューの3指摘は修正・再確認済み。人間の判断は未承認 |
-| 範囲 | 機能/認証復帰/同期保護/検証を同じPRで扱う合意。共演自動抽出・import全体atomic化等の未完了を保持 | 承認待ち |
+| 範囲 | 同期保護#244と機能#242を分離し、依存順を守る。共演自動抽出・import全体atomic化等の未完了を保持 | 分離・Ready化をユーザー承認。merge/配備は未承認 |
 | スキーマ | 030〜032と033/034の番号衝突なし。適用済みSQLを変更しない。対象環境の適用履歴・既存同名表・ロック影響を確認 | 静的確認済み、実環境未確認 |
 | 運用 | 競合する配備/同期がない時間帯、復旧担当、機能確認担当を確定 | 未確認 |
 | 試験データ/配送 | 専用検証アカウント/架空公演を限定し、メール/Push/OAuth/収集等が本番や既存利用者へ作用しない | 未確認 |

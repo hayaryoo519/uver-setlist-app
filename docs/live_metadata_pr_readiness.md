@@ -2,6 +2,11 @@
 
 ## 現在の状態
 
+**ユーザー判断で同期保護を[PR #244](https://github.com/hayaryoo519/uver-setlist-app/pull/244)へ分離。** #244はdev向け、#242は一時的に同期保護ブランチをbaseとする。[分離/依存順と一人開発の確認手順](./live_metadata_pr_split.md)を参照。
+ユーザーはReady化を承認し、別の人間レビュー担当者はいないと指定した。分離後のCI成功を確認してReady化する。人間の承認reviewを捏造せず、dev merge/配備/実データ同期は別判断とする。
+
+以下の「dev向け/同じPR」の記録は分離前の状態。
+
 - dev向け[Draft PR #242](https://github.com/hayaryoo519/uver-setlist-app/pull/242)を公開済み。同期保護・機能・検証を目的別commitとして同じPRでレビューする。
 - `c571fa2f`に続き、独立レビュー修正後の`a201d4cb`も[Actions](https://github.com/hayaryoo519/uver-setlist-app/actions/runs/38577262475)全3ジョブ成功。
 - 最新dev `b18313ad`（PR #243の依存セキュリティ更新）をfeatureへ取り込んだ`2e80441c`でfresh npm ci後にbackend745/frontend229/browser18/所有PG18統合23が成功。依存更新後の最新head CIはPR checksで確認する。

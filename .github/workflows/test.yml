@@ -4,7 +4,8 @@ on:
   push:
     branches: [ main, dev ]
   pull_request:
-    branches: [ main, dev ]
+    # #244分離中の#242仮baseでも同じ隔離CIを実行。devへ戻す際に整理する。
+    branches: [ main, dev, hayaryoo519/fix-issue196-sync-guards ]
 
 jobs:
   test-backend:

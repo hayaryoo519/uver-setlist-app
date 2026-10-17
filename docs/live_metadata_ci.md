@@ -1,7 +1,8 @@
 # 追加情報検証のCI
 
 `.github/workflows/test.yml` に `test-live-metadata-integration` ジョブを追加。
-既存のpush(main/dev)・pull_request(main/dev)イベントで実行する。CI構成はcommit `898cefb0` に含む。dev向け[Draft PR #242](https://github.com/hayaryoo519/uver-setlist-app/pull/242)を公開済み。
+push(main/dev)・pull_request(main/dev)イベントで実行する。同期保護をPR #244へ分離している間は、#242の一時base `hayaryoo519/fix-issue196-sync-guards` へのpull_requestも明示的に対象へ追加する。push対象と配備workflowは広げない。イベント対象を回帰テストで固定し、#244のmerge後にdevへretargetする際は仮base設定も見直す。
+CI構成はcommit `898cefb0` に含む。分離前はdev向け[PR #242](https://github.com/hayaryoo519/uver-setlist-app/pull/242)を公開済み。
 SHA `c571fa2f` の[Actions run 38571130062](https://github.com/hayaryoo519/uver-setlist-app/actions/runs/38571130062)で全3ジョブ成功を確認した。backendはLinuxのadmin suite込み726 tests/56 suites、frontendも成功。
 
 修正/独立AI再レビュー後の`a201d4cb`でも[Actions run 38577262475](https://github.com/hayaryoo519/uver-setlist-app/actions/runs/38577262475)の全3ジョブ成功を確認。
@@ -36,7 +37,7 @@ PG16を選んだ理由はリポジトリのdocker-compose.yml/docker-compose.loc
 実JWT/実API/SQL/Worker統合試験のtrace/ブラウザストレージ/tempクラスタ/ログをartifactへ保存しない。
 合成reportであっても、CIを実アカウント/実データへ変更した場合は同じ公開方針を流用しない。
 
-ジョブの権限/環境/secrets非参照/検証コマンド/artifact制限をYAML読み込みの2ユニットテストで固定した。
+ジョブの権限/環境/secrets非参照/検証コマンド/artifact制限・仮baseイベント対象をYAML読み込みの3ユニットテストで固定した。
 既存のバックエンド/フロント単体ジョブやデプロイワークフローは変更していない。
 
 ## 残件

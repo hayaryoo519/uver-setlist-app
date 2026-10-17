@@ -4,6 +4,10 @@ const yaml = require('js-yaml');
 const workflow = yaml.load(fs.readFileSync(path.resolve(__dirname, '../../../.github/workflows/test.yml'), 'utf8'));
 const job = workflow.jobs['test-live-metadata-integration'];
 describe('追加情報CIの隔離方針', () => {
+    it('同期保護の仮baseでもPR検証を継続し、push対象はmain/devから広げない', () => {
+        expect(workflow.on.pull_request.branches).toEqual(['main', 'dev', 'hayaryoo519/fix-issue196-sync-guards']);
+        expect(workflow.on.push.branches).toEqual(['main', 'dev']);
+    });
     it('GitHub-hosted runner/読み取り権限/明示PG16だけで動かし、秘密情報を参照しない', () => {
         expect(job['runs-on']).toBe('ubuntu-24.04');
         expect(job.permissions).toEqual({ contents: 'read' });
