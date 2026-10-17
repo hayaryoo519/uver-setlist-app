@@ -40,6 +40,7 @@ describe('LiveList 属性フィルター', () => {
         fireEvent.click(toggle);
         expect(toggle).toHaveAttribute('aria-expanded', 'true');
         expect(screen.getByLabelText('開催国')).toBeInTheDocument();
+        expect(screen.queryByText(/同じ分類内/)).not.toBeInTheDocument();
         expect(document.getElementById(toggle.getAttribute('aria-controls')!)).toBeInTheDocument();
         fireEvent.click(toggle);
         expect(screen.queryByLabelText('開催国')).not.toBeInTheDocument();

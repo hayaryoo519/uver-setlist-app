@@ -111,7 +111,6 @@ const LiveList = () => {
                 <ChevronDown size={14} aria-hidden="true" />
             </button>
             {isAdvancedFilterOpen && <div id={`advanced-live-filters-${view}`} className="semantic-filters">
-            <p className="semantic-filter-hint">同じ分類内は「いずれか」、分類間は「すべて」に一致</p>
             {LIVE_TAG_GROUPS.map(group => (
                 <fieldset key={group.id} className="semantic-filter-group">
                     <legend>{group.label}</legend>
