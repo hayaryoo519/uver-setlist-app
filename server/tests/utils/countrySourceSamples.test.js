@@ -16,8 +16,8 @@ describe('offline public country-source proposals (not an import or confirmation
                 expect(['www.uverworld.jp', '1chancefes.com']).toContain(new URL(url).hostname);
             }
             if (sample.proposedCountryCode !== null) {
-                expect(sample.eventMatch).toBe('date_title_venue');
-                expect(['explicit_country_name', 'official_event_address', 'official_event_location']).toContain(sample.countryEvidence.kind);
+                expect(['date_title_venue', 'date_tour_venue_alias_reviewed_for_this_sample']).toContain(sample.eventMatch);
+                expect(['explicit_country_name', 'official_event_address', 'official_event_location', 'official_event_prefecture']).toContain(sample.countryEvidence.kind);
                 expect(sample.sources).toContain(sample.countryEvidence.url);
                 if (sample.countryEvidence.kind === 'explicit_country_name') {
                     expect(sample.countryEvidence.excerpt).toContain(sample.countryEvidence.countryName);
@@ -25,7 +25,9 @@ describe('offline public country-source proposals (not an import or confirmation
                     const evidence = sample.countryEvidence;
                     const values = evidence.kind === 'official_event_address'
                         ? [evidence.address.prefecture, evidence.address.city, evidence.address.street, evidence.address.postalCode]
-                        : [evidence.prefecture, evidence.city, sample.recordedVenue];
+                        : evidence.kind === 'official_event_prefecture'
+                            ? [sample.date.replaceAll('-', '.'), evidence.prefecture, evidence.officialVenue]
+                            : [evidence.prefecture, evidence.city, sample.recordedVenue];
                     for (const value of values) {
                         expect(typeof value).toBe('string');
                         expect(value.length).toBeGreaterThan(0);
@@ -63,11 +65,15 @@ describe('offline public country-source proposals (not an import or confirmation
         expect(sample.reviewStatus).toBe('unapproved');
     });
 
-    test('venue-alias/tour match still needs review and does not default to Japan', () => {
-        const unresolved = proposals.samples.filter(sample => sample.countryEvidence === null);
-        expect(unresolved).toHaveLength(1);
-        expect(unresolved[0].key).toBe('winter-2025-12-31');
-        expect(unresolved[0].proposedCountryCode).toBeNull();
-        expect(unresolved[0].eventMatch).toBe('date_only_venue_alias_and_tour_review');
+    test('2025 year-end proposal is specific to the event, not a global venue-alias rule', () => {
+        const sample = proposals.samples.find(sample => sample.key === 'winter-2025-12-31');
+        expect(sample.proposedCountryCode).toBe('JP');
+        expect(sample.countryEvidence.kind).toBe('official_event_prefecture');
+        expect(sample.countryEvidence.tour).toContain(sample.recordedTour);
+        expect(sample.countryEvidence.venueMatchNote).toContain(sample.recordedVenue);
+        expect(sample.countryEvidence.venueMatchNote).toContain('A館');
+        expect(sample).not.toHaveProperty('proposedVenue');
+        expect(sample.reviewStatus).toBe('unapproved');
+        expect(proposals.samples.every(entry => entry.proposedCountryCode !== null)).toBe(true);
     });
 });

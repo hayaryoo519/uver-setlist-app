@@ -57,16 +57,24 @@
       "date": "2025-12-31",
       "recordedTour": "WINTER TOUR \"BOOM GOES THE WORLD\"",
       "recordedVenue": "マリンメッセ福岡",
-      "eventMatch": "date_only_venue_alias_and_tour_review",
+      "eventMatch": "date_tour_venue_alias_reviewed_for_this_sample",
       "sources": [
         "https://www.uverworld.jp/schedule/list/2025/12/",
         "https://www.uverworld.jp/schedule/detail/3063",
         "https://www.uverworld.jp/feature/2025_live"
       ],
-      "proposedCountryCode": null,
-      "countryEvidence": null,
+      "proposedCountryCode": "JP",
+      "countryEvidence": {
+        "kind": "official_event_prefecture",
+        "url": "https://www.uverworld.jp/feature/2025_live",
+        "tour": "UVERworld 2025 WINTER TOUR \"BOOM GOES THE WORLD\"",
+        "excerpt": "2025.12.31 Wed 福岡県 マリンメッセ福岡A館 15:00 OPEN / 16:00 START",
+        "prefecture": "福岡県",
+        "officialVenue": "マリンメッセ福岡A館",
+        "venueMatchNote": "公開記録はマリンメッセ福岡。ユーザーが略称『マリメ』と説明。同日・同ツアーの公式詳細と特設日程を照合。A館という細部は公開記録に未反映。"
+      },
       "reviewStatus": "unapproved",
-      "remainingChecks": ["公式はマリンメッセ福岡A館、記録はマリンメッセ福岡。会場対応を確認する", "公式特設ページと記録のツアー名の対応確認", "国の根拠となる出典確認"]
+      "remainingChecks": ["保存先の公演IDとrevisionの確認", "国だけを確定するための操作承認と管理者認証。会場名・A館情報は変更しない"]
     },
     {
       "key": "unser-2019-12-31",
