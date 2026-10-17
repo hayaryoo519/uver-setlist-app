@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Live } from '../types/api';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, MapPin, Calendar, Check, Plus, ArrowRight, Loader, Filter, X, Music } from 'lucide-react';
+import { Search, MapPin, Calendar, Check, Plus, ArrowRight, Loader, Filter, X, Music, ChevronDown } from 'lucide-react';
 import { useAttendance } from '../hooks/useAttendance';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
@@ -10,11 +10,14 @@ import { MEMBERS, PARTICIPANT_ROLES } from '../types/liveMetadata';
 import { useLives } from '../hooks/queries/useLives';
 import { useSongs } from '../hooks/queries/useSongs';
 import { DISCOGRAPHY } from '../data/discography';
-import { getDisplaySubtitle, LIVE_TAG_GROUPS, LIVE_TAGS, matchesLiveTags } from '../utils/liveText';
+import { getDisplaySubtitle, LIVE_TAGS, matchesLiveTags } from '../utils/liveText';
+import { countryName } from '../utils/countryName';
 import type { LiveTag } from '../utils/liveText';
 import './LiveListPrototype.css';
 
 const normalizeArtistSearch = (value: string) => value.normalize('NFKC').toLowerCase().trim().replace(/\s+/g, ' ');
+// 表示のまとまりは検索ルールの分類（LIVE_TAG_GROUPS）とは独立させる。
+const FEATURE_TAGS = LIVE_TAGS.filter(tag => tag.id !== 'vs' && tag.id !== 'overseas');
 
 const LiveList = () => {
     const { currentUser } = useAuth();
@@ -45,6 +48,7 @@ const LiveList = () => {
     };
     const [filters, setFilters] = useState(initialFilters);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
 
     const { addLive, removeLive, isAttended } = useAttendance();
 
@@ -82,9 +86,6 @@ const LiveList = () => {
             ? current.filter(t => t !== tag) : [...current, tag] });
     };
 
-    const countryOptions = useMemo(() => [...new Set(lives
-        .filter(live => live.metadata?.country.status === 'confirmed')
-        .map(live => live.metadata?.country.code).filter((code): code is string => !!code))].sort(), [lives]);
     const artistOptions = useMemo(() => {
         const artists = new Map<number, string>();
         lives.forEach(live => {
@@ -94,55 +95,75 @@ const LiveList = () => {
     }, [lives]);
     const selectedArtistName = artistOptions.find(artist => String(artist.id) === filters.artistId)?.name;
     const selectedRoleName = PARTICIPANT_ROLES.find(role => role.id === filters.participantRole)?.label;
-    const countryLabel = filters.countryCode === 'unconfirmed' ? '開催国未確認' : `開催国：${filters.countryCode}`;
+    const countryLabel = filters.countryCode === 'unconfirmed' ? '開催国未確認'
+        : `開催地：${filters.countryCode === 'JP' ? '日本' : countryName(filters.countryCode)}`;
     const selectedMemberName = MEMBERS.find(member => member.id === filters.memberId)?.label;
+    const locationValue = filters.countryCode === 'JP' ? 'JP'
+        : (/^[A-Z]{2}$/.test(filters.countryCode) || filters.tags?.includes('overseas')) ? 'overseas' : '';
+    const showMemberFilter = filters.tags?.includes('birthday') || !!filters.memberId;
+    const changeLocation = (value: '' | 'JP' | 'overseas') => {
+        const tags = (filters.tags || []).filter((tag: LiveTag) => tag !== 'overseas');
+        handleFilterChange({ ...filters, tags: value === 'overseas' ? [...tags, 'overseas'] : tags,
+            countryCode: value === 'overseas' ? '' : value });
+    };
+    const renderTagButton = (tag: (typeof LIVE_TAGS)[number]) => (
+        <button key={tag.id} type="button" className={`type-pill type-pill-tag ${filters.tags?.includes(tag.id) ? 'active' : ''}`}
+            aria-pressed={!!filters.tags?.includes(tag.id)} onClick={() => toggleTag(tag.id)}>{tag.label}</button>
+    );
 
-    const renderTagFilters = () => (
-        <div className="semantic-filters">
-            <p className="semantic-filter-hint">同じ分類内は「いずれか」、分類間は「すべて」に一致</p>
-            {LIVE_TAG_GROUPS.map(group => (
-                <fieldset key={group.id} className="semantic-filter-group">
-                    <legend>{group.label}</legend>
-                    <div className="type-filter-pills">
-                        {group.tags.map(tag => (
-                            <button key={tag.id} type="button"
-                                className={`type-pill type-pill-tag ${filters.tags?.includes(tag.id) ? 'active' : ''}`}
-                                aria-pressed={!!filters.tags?.includes(tag.id)}
-                                onClick={() => toggleTag(tag.id)}>{tag.label}</button>
-                        ))}
-                    </div>
-                </fieldset>
-            ))}
-            <label className="semantic-filter-group">開催国
-                <select className="song-filter-select" value={filters.countryCode || ''}
-                    onChange={event => handleFilterChange({ ...filters, countryCode: event.target.value })}>
-                    <option value="">すべての開催国</option>
-                    <option value="unconfirmed">開催国未確認</option>
-                    {countryOptions.map(code => <option key={code} value={code}>{code}</option>)}
-                </select>
-            </label>
-            <label className="semantic-filter-group">生誕祭の対象メンバー
-                <select className="song-filter-select" value={filters.memberId || ''}
-                    onChange={event => handleFilterChange({ ...filters, memberId: event.target.value })}>
-                    <option value="">すべての対象メンバー</option>
-                    {MEMBERS.map(member => <option key={member.id} value={member.id}>{member.label}</option>)}
-                </select>
-            </label>
-            <label className="semantic-filter-group">共演アーティスト
-                <select className="song-filter-select" value={filters.artistId || ''}
-                    onChange={event => handleFilterChange({ ...filters, artistId: event.target.value })}>
-                    <option value="">すべての共演アーティスト</option>
-                    {artistOptions.map(artist => <option key={artist.id} value={artist.id}>{artist.name}</option>)}
-                </select>
-            </label>
-            <label className="semantic-filter-group">共演の役割
-                <select className="song-filter-select" value={filters.participantRole || ''}
-                    onChange={event => handleFilterChange({ ...filters, participantRole: event.target.value })}>
-                    <option value="">すべての役割</option>
-                    {PARTICIPANT_ROLES.map(role => <option key={role.id} value={role.id}>{role.label}</option>)}
-                </select>
-            </label>
-        </div>
+    const advancedFilterCount = (filters.tags?.length || 0) + (filters.countryCode ? 1 : 0)
+        + (filters.memberId ? 1 : 0) + (filters.artistId ? 1 : 0) + (filters.participantRole ? 1 : 0);
+    const renderTagFilters = (view: 'desktop' | 'mobile') => (
+        <section className="advanced-filter-section">
+            <button type="button" className="advanced-filter-toggle"
+                aria-expanded={isAdvancedFilterOpen}
+                aria-controls={isAdvancedFilterOpen ? `advanced-live-filters-${view}` : undefined}
+                onClick={() => setIsAdvancedFilterOpen(open => !open)}>
+                詳細フィルター{' '}
+                {advancedFilterCount > 0 && <span className="advanced-filter-count">{advancedFilterCount}件適用中</span>}
+                <ChevronDown size={14} aria-hidden="true" />
+            </button>
+            {isAdvancedFilterOpen && <div id={`advanced-live-filters-${view}`} className="semantic-filters">
+            <fieldset className="semantic-filter-group">
+                <legend>公演の特徴</legend>
+                <div className="type-filter-pills">{FEATURE_TAGS.map(renderTagButton)}</div>
+                {showMemberFilter && <label className="semantic-filter-field">生誕祭の対象メンバー
+                    <select className="song-filter-select" value={filters.memberId || ''}
+                        onChange={event => handleFilterChange({ ...filters, memberId: event.target.value })}>
+                        <option value="">指定なし</option>
+                        {MEMBERS.map(member => <option key={member.id} value={member.id}>{member.label}</option>)}
+                    </select>
+                </label>}
+            </fieldset>
+            <fieldset className="semantic-filter-group">
+                <legend>共演</legend>
+                <div className="type-filter-pills">{LIVE_TAGS.filter(tag => tag.id === 'vs').map(renderTagButton)}</div>
+                <label className="semantic-filter-field">共演アーティスト
+                    <select className="song-filter-select" value={filters.artistId || ''}
+                        onChange={event => handleFilterChange({ ...filters, artistId: event.target.value })}>
+                        <option value="">指定なし</option>
+                        {artistOptions.map(artist => <option key={artist.id} value={artist.id}>{artist.name}</option>)}
+                    </select>
+                </label>
+                <label className="semantic-filter-field">相手の出演形態
+                    <select className="song-filter-select" value={filters.participantRole || ''}
+                        onChange={event => handleFilterChange({ ...filters, participantRole: event.target.value })}>
+                        <option value="">指定なし</option>
+                        {PARTICIPANT_ROLES.map(role => <option key={role.id} value={role.id}>{role.label}</option>)}
+                    </select>
+                </label>
+            </fieldset>
+            <fieldset className="semantic-filter-group">
+                <legend>開催地</legend>
+                <div className="type-filter-pills">
+                    <button type="button" className={`type-pill type-pill-tag ${locationValue === 'JP' ? 'active' : ''}`}
+                        aria-pressed={locationValue === 'JP'} onClick={() => changeLocation(locationValue === 'JP' ? '' : 'JP')}>日本</button>
+                    <button type="button" className={`type-pill type-pill-tag ${locationValue === 'overseas' ? 'active' : ''}`}
+                        aria-pressed={locationValue === 'overseas'} onClick={() => changeLocation(locationValue === 'overseas' ? '' : 'overseas')}>海外</button>
+                </div>
+            </fieldset>
+            </div>}
+        </section>
     );
 
     const clearAllFilters = () => {
@@ -216,7 +237,7 @@ const LiveList = () => {
     // フィルターなし全期間 → 年別グループ表示
     const showGroupedView = !selectedYear && !filters.text && !filters.types?.length && !filters.tags?.length && !filters.songIds?.length && !filters.countryCode && !filters.memberId && !filters.artistId && !filters.participantRole;
 
-    const activeFilterCount = (filters.types?.length || 0) + (filters.tags?.length || 0) + (filters.songIds?.length || 0) + (filters.countryCode ? 1 : 0) + (filters.memberId ? 1 : 0) + (filters.artistId ? 1 : 0) + (filters.participantRole ? 1 : 0);
+    const activeFilterCount = (filters.types?.length || 0) + (filters.songIds?.length || 0) + advancedFilterCount;
 
     const selectedSongName = useMemo(() => {
         if (!filters.songIds?.length) return null;
@@ -424,7 +445,7 @@ const LiveList = () => {
                                     </select>
                                 </div>
                             </div>
-                            <div className="desktop-only">{renderTagFilters()}</div>
+                            <div className="desktop-only">{renderTagFilters('desktop')}</div>
                         </header>
 
                         {/* モバイル年タブ */}
@@ -458,7 +479,6 @@ const LiveList = () => {
                         {/* モバイル絞込パネル */}
                         {isFilterOpen && (
                             <div className="mobile-filter-panel mobile-only">
-                                {renderTagFilters()}
                                 <div className="type-filter-pills">
                                     {(['ONEMAN', 'FESTIVAL', 'EVENT'] as const).map(t => (
                                         <button
@@ -482,6 +502,7 @@ const LiveList = () => {
                                         {songOptions}
                                     </select>
                                 </div>
+                                {renderTagFilters('mobile')}
                             </div>
                         )}
 

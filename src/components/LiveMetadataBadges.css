@@ -1,0 +1,25 @@
+.live-metadata-notes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.6;
+}
+
+.live-metadata-notes li {
+    display: inline;
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+.live-metadata-notes li:not(:first-child)::before {
+    content: '·';
+    margin-right: 12px;
+    color: #64748b;
+}
