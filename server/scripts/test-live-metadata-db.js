@@ -252,7 +252,9 @@ async function main() {
     passed('Real API SQL: metadata lock/revision conflict, Unicode alias search, dictionary update, review summary');
 
     // 国のみを確定する練習は、所有する合成DB/実APIで実施。実StagingのID・tokenを使わない。
-    const beforeCountryOnly = (await pool.query('SELECT id, title, tour_name, venue FROM lives WHERE id IN (2,3,4) ORDER BY id')).rows;
+    const liveFields = fullSchema ? 'id, title, tour_name, venue' : 'id, title, tour_name, special_note';
+    const countryOnlyLives = () => pool.query(`SELECT ${liveFields} FROM lives WHERE id IN (2,3,4) ORDER BY id`);
+    const beforeCountryOnly = (await countryOnlyLives()).rows;
     const collaboratorsBefore = (await pool.query('SELECT * FROM live_collaborators ORDER BY live_id, artist_id, role')).rows;
     const unreviewed = await Promise.all([2, 3].map(async id => {
         const result = await get(`/api/lives/${id}/metadata`);
@@ -289,7 +291,7 @@ async function main() {
         assert.deepEqual(history.rows[0].after_state.overrides.country, { code });
         if (realAuth) assert.equal(history.rows[0].actor_id, 1);
     }
-    assert.deepEqual((await pool.query('SELECT id, title, tour_name, venue FROM lives WHERE id IN (2,3,4) ORDER BY id')).rows, beforeCountryOnly);
+    assert.deepEqual((await countryOnlyLives()).rows, beforeCountryOnly);
     assert.deepEqual((await pool.query('SELECT * FROM live_collaborators ORDER BY live_id, artist_id, role')).rows, collaboratorsBefore);
     assert.deepEqual((await get('/api/lives/4/metadata').then(result => result.json())).effective.country, { code: 'JP', status: 'confirmed' });
     passed('Synthetic country-only review: JP/KR manual PATCH, unchanged candidates/other lives/roles, audit actor and stale revision 409');
