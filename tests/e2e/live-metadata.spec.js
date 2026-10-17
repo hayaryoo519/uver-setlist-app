@@ -26,6 +26,12 @@ test('詳細条件は初期表示で折りたたみ、閉じても適用中表�
   await page.screenshot({ path: testInfo.outputPath('compact-filters-default.png'), fullPage: true });
   await toggle.focus(); await page.keyboard.press('Enter');
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  for (const name of ['公演の特徴', '共演', '開催地']) {
+    await expect(page.getByRole('group', { name, exact: true }).filter({ visible: true })).toBeVisible();
+  }
+  await expect(visibleLabel(page, '生誕祭の対象メンバー')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '海外公演', exact: true })).toHaveCount(0);
+  await page.screenshot({ path: testInfo.outputPath('grouped-filters-open.png'), fullPage: true });
   await visibleLabel(page, '開催国').selectOption('KR');
   await toggle.focus(); await page.keyboard.press('Space');
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -34,6 +40,33 @@ test('詳細条件は初期表示で折りたたみ、閉じても適用中表�
   await page.getByRole('button', { name: '開催国フィルターを解除' }).click();
   await expect(toggle).not.toContainText('適用中');
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await assertClean(state);
+});
+
+test('開催地を一本化して切り替え、生誕祭は対象未確認のままでも探せる', async ({ page, isMobile }) => {
+  const state = await installMetadataFixture(page);
+  await page.goto('/lives'); await publicFilters(page, isMobile);
+  const location = visibleLabel(page, '開催国');
+  await location.selectOption('overseas');
+  await expect(card(page, 45)).toBeVisible();
+  await expect(card(page, 43)).toHaveCount(0);
+  await expect(card(page, 42)).toHaveCount(0);
+  await location.selectOption('JP');
+  await expect(card(page, 43)).toBeVisible();
+  await expect(card(page, 44)).toBeVisible();
+  await expect(card(page, 45)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /詳細フィルター/ }).filter({ visible: true })).toContainText('1件適用中');
+  await location.selectOption('unconfirmed');
+  await expect(card(page, 42)).toBeVisible();
+  await expect(card(page, 43)).toHaveCount(0);
+  await location.selectOption('');
+  await page.getByRole('button', { name: '生誕祭', exact: true }).filter({ visible: true }).click();
+  await expect(card(page, 42)).toBeVisible();
+  const member = visibleLabel(page, '生誕祭の対象メンバー');
+  await member.selectOption('takuya');
+  await expect(card(page, 42)).toHaveCount(0); // 候補メンバーを確定扱いしない。
+  await member.selectOption('');
+  await expect(card(page, 42)).toBeVisible();
   await assertClean(state);
 });
 
@@ -116,9 +149,10 @@ test('合成取り込み→レビュー保存→公開検索→再取得で手�
   await publicFilters(page, isMobile);
   await page.getByPlaceholder('ツアー名・会場・共演者で検索').fill('ＦＡ');
   await visibleLabel(page, '開催国').selectOption('KR');
+  await page.getByRole('button', { name: '生誕祭', exact: true }).filter({ visible: true }).click();
   await visibleLabel(page, '生誕祭の対象メンバー').selectOption('takuya');
   await visibleLabel(page, '共演アーティスト').selectOption('10');
-  await visibleLabel(page, '共演の役割').selectOption('co_headliner');
+  await visibleLabel(page, '相手の出演形態').selectOption('co_headliner');
   await expect(card(page, 42)).toBeVisible();
   await expect(card(page, 44)).toHaveCount(0);
   await expect(card(page, 45)).toHaveCount(0);
@@ -129,7 +163,7 @@ test('合成取り込み→レビュー保存→公開検索→再取得で手�
   await page.reload();
   await publicFilters(page, isMobile);
   await visibleLabel(page, '共演アーティスト').selectOption('10');
-  await visibleLabel(page, '共演の役割').selectOption('co_headliner');
+  await visibleLabel(page, '相手の出演形態').selectOption('co_headliner');
   await visibleLabel(page, '開催国').selectOption('KR');
   await expect(card(page, 42)).toBeVisible();
   expect(state.metadata.get(42).overrides).toEqual(saved);
@@ -143,7 +177,7 @@ test('アーティストと役割を同じ関連に一致させ、モバイル�
   const state = await installMetadataFixture(page);
   await page.goto('/lives'); await publicFilters(page, isMobile);
   await visibleLabel(page, '共演アーティスト').selectOption('10');
-  await visibleLabel(page, '共演の役割').selectOption('guest');
+  await visibleLabel(page, '相手の出演形態').selectOption('guest');
   await expect(card(page, 45)).toBeVisible();
   await expect(card(page, 44)).toHaveCount(0); // 別アーティストのguestを拾わない。
   await expect(card(page, 42)).toHaveCount(0); // 原文から共演者を確定しない。

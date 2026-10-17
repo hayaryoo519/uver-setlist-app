@@ -2,12 +2,8 @@ import type { LiveTag } from '../utils/liveText';
 import { LIVE_TAGS } from '../utils/liveText';
 import { MEMBERS, PARTICIPANT_ROLES } from '../types/liveMetadata';
 import type { PublicLiveMetadata } from '../types/liveMetadata';
+import { countryName } from '../utils/countryName';
 import './LiveMetadataBadges.css';
-
-function countryName(code: string) {
-    try { return new Intl.DisplayNames(['ja'], { type: 'region' }).of(code) || code; }
-    catch { return code; }
-}
 
 /** 公開用の有効情報のみ表示。候補・管理メモ・原文は受け取らない。 */
 export default function LiveMetadataBadges({ tags = [], metadata }: {

@@ -10,8 +10,8 @@ vi.mock('../../hooks/useAttendance', () => ({ useAttendance: () => ({
 vi.mock('../../components/SEO', () => ({ default: () => null }));
 vi.mock('../../hooks/queries/useSongs', () => ({ useSongs: () => ({ data: [] }) }));
 vi.mock('../../hooks/queries/useLives', () => ({ useLives: () => ({ isLoading: false, data: [
-    { id: 1, date: '2020-12-21', tour_name: 'Tour A', title: '男祭り 生誕祭', type: 'ONEMAN', venue: 'Tokyo', tags: ['mens', 'birthday'], metadata: { country: { code: 'JP', status: 'confirmed' }, members: { ids: ['shintaro'], status: 'confirmed' }, participants: { status: 'confirmed', items: [{ artistId: 10, name: 'Fixture Artist', aliases: ['FA'], role: 'co_headliner' }, { artistId: 11, name: 'Other Artist', aliases: ['OA'], role: 'guest' }] } } },
-    { id: 2, date: '2020-12-25', tour_name: 'Tour B', title: '女祭り Xmas', type: 'EVENT', venue: 'Tokyo', tags: ['womens', 'christmas'] },
+    { id: 1, date: '2020-12-21', tour_name: 'Tour A', title: '男祭り 生誕祭', type: 'ONEMAN', venue: 'Tokyo', tags: ['mens', 'birthday', 'vs'], metadata: { country: { code: 'JP', status: 'confirmed' }, members: { ids: ['shintaro'], status: 'confirmed' }, participants: { status: 'confirmed', items: [{ artistId: 10, name: 'Fixture Artist', aliases: ['FA'], role: 'co_headliner' }, { artistId: 11, name: 'Other Artist', aliases: ['OA'], role: 'guest' }] } } },
+    { id: 2, date: '2020-12-25', tour_name: 'Tour B', title: '女祭り Xmas', type: 'EVENT', venue: 'Tokyo', tags: ['womens', 'christmas', 'vs'] },
     { id: 3, date: '2020-08-01', tour_name: 'Solid named event', title: null, type: 'FESTIVAL', venue: 'Tokyo', tags: [] },
     { id: 4, date: '2020-09-01', tour_name: 'Overseas Show', title: null, type: 'ONEMAN', venue: 'Seoul', tags: ['birthday', 'overseas'], metadata: { country: { code: 'KR', status: 'confirmed' }, members: { ids: ['takuya'], status: 'confirmed' }, participants: { status: 'confirmed', items: [{ artistId: 10, name: 'Fixture Artist', aliases: ['FA'], role: 'guest' }] } } },
 ] }) }));
@@ -41,6 +41,10 @@ describe('LiveList 属性フィルター', () => {
         expect(toggle).toHaveAttribute('aria-expanded', 'true');
         expect(screen.getByLabelText('開催国')).toBeInTheDocument();
         expect(screen.queryByText(/同じ分類内/)).not.toBeInTheDocument();
+        for (const name of ['公演の特徴', '共演', '開催地']) expect(screen.getByRole('group', { name })).toBeInTheDocument();
+        expect(document.querySelectorAll('.semantic-filters > fieldset')).toHaveLength(3);
+        expect(screen.queryByRole('button', { name: '海外公演' })).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('生誕祭の対象メンバー')).not.toBeInTheDocument();
         expect(document.getElementById(toggle.getAttribute('aria-controls')!)).toBeInTheDocument();
         fireEvent.click(toggle);
         expect(screen.queryByLabelText('開催国')).not.toBeInTheDocument();
@@ -98,16 +102,77 @@ describe('LiveList 属性フィルター', () => {
         expect(screen.queryByRole('button', { name: '男祭りフィルターを解除' })).not.toBeInTheDocument();
     });
 
-    it('海外タグと確認済み開催国・対象メンバーで絞り込める', () => {
+    it('海外全体・個別の国・国内を一つの選択欄で切り替え、重複条件を残さない', () => {
         setup();
-        fireEvent.click(screen.getByRole('button', { name: '海外公演' }));
-        expect(hasLive(4)).toBe(true);
-        expect(hasLive(1)).toBe(false);
-        fireEvent.change(screen.getByLabelText('開催国'), { target: { value: 'KR' } });
-        fireEvent.change(screen.getByLabelText('生誕祭の対象メンバー'), { target: { value: 'takuya' } });
-        expect(screen.getByRole('heading', { name: '検索結果 (1)' })).toBeInTheDocument();
+        const location = screen.getByLabelText('開催国');
+        fireEvent.change(location, { target: { value: 'overseas' } });
+        expect(hasLive(4)).toBe(true); expect(hasLive(1)).toBe(false); expect(hasLive(2)).toBe(false);
+        fireEvent.change(location, { target: { value: 'KR' } });
+        expect(screen.getByRole('button', { name: '詳細フィルター 1件適用中' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: '海外公演フィルターを解除' })).not.toBeInTheDocument();
+        expect(screen.getByRole('option', { name: '韓国' })).toBeInTheDocument();
+        fireEvent.change(location, { target: { value: 'JP' } });
+        expect(hasLive(1)).toBe(true); expect(hasLive(4)).toBe(false); expect(hasLive(2)).toBe(false);
         fireEvent.click(screen.getByRole('button', { name: '開催国フィルターを解除' }));
-        expect(screen.getByLabelText('開催国')).toHaveValue('');
+        expect(location).toHaveValue('');
+        for (const id of [1, 2, 3, 4]) expect(hasLive(id)).toBe(true);
+    });
+
+    it('復元された海外+国の条件は維持し、開催地を選び直した時だけ一本化する', () => {
+        setup({ tags: ['overseas'], countryCode: 'KR' });
+        expect(screen.getByLabelText('開催国')).toHaveValue('KR');
+        expect(screen.getByRole('button', { name: '詳細フィルター 2件適用中' })).toBeInTheDocument();
+        expect(hasLive(4)).toBe(true);
+        fireEvent.change(screen.getByLabelText('開催国'), { target: { value: 'JP' } });
+        expect(hasLive(1)).toBe(true); expect(hasLive(4)).toBe(false);
+        expect(screen.getByRole('button', { name: '詳細フィルター 1件適用中' })).toBeInTheDocument();
+    });
+
+    it('取得結果にない国の復元条件も選択欄とチップから見失わせない', () => {
+        setup({ countryCode: 'US' });
+        expect(screen.getByLabelText('開催国')).toHaveValue('US');
+        expect(screen.getByText('開催地：アメリカ合衆国')).toBeInTheDocument();
+        expect(screen.getByText('条件に一致するライブが見つかりません')).toBeInTheDocument();
+    });
+
+    it('海外全体の選択も閉じたままチップで解除できる', () => {
+        setup({ tags: ['overseas'] }, false);
+        expect(hasLive(4)).toBe(true); expect(hasLive(1)).toBe(false);
+        fireEvent.click(screen.getByRole('button', { name: '海外公演フィルターを解除' }));
+        expect(hasLive(1)).toBe(true);
+        expect(screen.getByRole('button', { name: '詳細フィルター' })).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('生誕祭を選ぶと対象メンバーを指定でき、タグを外しても有効なメンバー条件は隠さない', () => {
+        setup();
+        expect(screen.queryByLabelText('生誕祭の対象メンバー')).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: '生誕祭' }));
+        fireEvent.change(screen.getByLabelText('生誕祭の対象メンバー'), { target: { value: 'takuya' } });
+        expect(hasLive(4)).toBe(true); expect(hasLive(1)).toBe(false);
+        fireEvent.click(screen.getByRole('button', { name: '生誕祭' }));
+        expect(screen.getByLabelText('生誕祭の対象メンバー')).toHaveValue('takuya');
+        expect(hasLive(4)).toBe(true); expect(hasLive(1)).toBe(false);
+        fireEvent.change(screen.getByLabelText('生誕祭の対象メンバー'), { target: { value: '' } });
+        expect(screen.queryByLabelText('生誕祭の対象メンバー')).not.toBeInTheDocument();
+    });
+
+    it('メンバーだけの復元条件も表示し、記念日タグを暗黙に追加して検索を広げない', () => {
+        setup({ memberId: 'takuya', tags: ['christmas'] });
+        expect(screen.getByLabelText('生誕祭の対象メンバー')).toHaveValue('takuya');
+        expect(screen.getByText('条件に一致するライブが見つかりません')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: '生誕祭' })).toHaveAttribute('aria-pressed', 'false');
+        fireEvent.click(screen.getByRole('button', { name: 'クリスマスフィルターを解除' }));
+        expect(hasLive(4)).toBe(true); expect(hasLive(1)).toBe(false);
+    });
+
+    it('相手が未確認の対バンも探せ、相手の出演形態を指定した時だけ確認済み関係に絞る', () => {
+        setup();
+        fireEvent.click(screen.getByRole('button', { name: '対バン' }));
+        expect(hasLive(1)).toBe(true); expect(hasLive(2)).toBe(true);
+        fireEvent.change(screen.getByLabelText('相手の出演形態'), { target: { value: 'co_headliner' } });
+        expect(hasLive(1)).toBe(true); expect(hasLive(2)).toBe(false);
+        fireEvent.click(screen.getByRole('button', { name: '共演役割フィルターを解除' }));
+        expect(hasLive(2)).toBe(true);
     });
 
     it('開催国未確認を国内・海外と区別し、対象メンバー未確認も除外する', () => {
@@ -117,11 +182,12 @@ describe('LiveList 属性フィルター', () => {
         expect(hasLive(4)).toBe(false);
         expect(hasLive(2)).toBe(true);
         expect(hasLive(3)).toBe(true);
+        fireEvent.click(screen.getByRole('button', { name: '生誕祭' }));
         fireEvent.change(screen.getByLabelText('生誕祭の対象メンバー'), { target: { value: 'takuya' } });
         expect(screen.getByText('条件に一致するライブが見つかりません')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'フィルターをクリア' }));
         expect(screen.getByLabelText('開催国')).toHaveValue('');
-        expect(screen.getByLabelText('生誕祭の対象メンバー')).toHaveValue('');
+        expect(screen.queryByLabelText('生誕祭の対象メンバー')).not.toBeInTheDocument();
     });
 
     it('モバイルの開催国選択もデスクトップと共有する', () => {
@@ -138,11 +204,11 @@ describe('LiveList 属性フィルター', () => {
         fireEvent.change(screen.getByLabelText('共演アーティスト'), { target: { value: '10' } });
         expect(hasLive(1)).toBe(true);
         expect(hasLive(4)).toBe(true);
-        fireEvent.change(screen.getByLabelText('共演の役割'), { target: { value: 'guest' } });
+        fireEvent.change(screen.getByLabelText('相手の出演形態'), { target: { value: 'guest' } });
         expect(hasLive(1)).toBe(false); // 別アーティストのゲスト出演を混同しない。
         expect(hasLive(4)).toBe(true);
         fireEvent.click(screen.getByRole('button', { name: '共演役割フィルターを解除' }));
-        expect(screen.getByLabelText('共演の役割')).toHaveValue('');
+        expect(screen.getByLabelText('相手の出演形態')).toHaveValue('');
         expect(hasLive(1)).toBe(true);
     });
 

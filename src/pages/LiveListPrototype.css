@@ -1257,9 +1257,11 @@
 
 .semantic-filters {
     margin-top: 12px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px 20px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.85fr);
+    gap: 20px;
+    padding: 16px 0;
+    border-top: 1px solid rgba(148, 163, 184, 0.16);
 }
 
 .semantic-filter-group {
@@ -1270,9 +1272,46 @@
 }
 
 .semantic-filter-group legend {
+    padding: 0;
     font-size: 12px;
+    font-weight: 600;
+    color: #cbd5e1;
+    margin-bottom: 10px;
+}
+
+.semantic-filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 12px;
     color: #94a3b8;
-    margin-bottom: 6px;
+    font-size: 12px;
+}
+
+.semantic-filter-group > .semantic-filter-field:first-of-type {
+    margin-top: 0;
+}
+
+.semantic-filter-group > .type-filter-pills + .semantic-filter-field {
+    margin-top: 12px;
+}
+
+.semantic-filter-field .song-filter-select {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+@media (max-width: 1100px) {
+    .semantic-filters {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 16px;
+    }
+
+    .semantic-filter-group + .semantic-filter-group {
+        padding-top: 14px;
+        border-top: 1px solid rgba(148, 163, 184, 0.12);
+    }
 }
 
 .semantic-filter-group .type-filter-pills {
