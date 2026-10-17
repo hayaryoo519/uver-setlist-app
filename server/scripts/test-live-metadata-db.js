@@ -269,6 +269,7 @@ async function main() {
         ["DELETE FROM live_artists WHERE id=10", ['23503', '23001']],
     ]) await assert.rejects(pool.query(sql), error => (Array.isArray(code) ? code : [code]).includes(error.code));
     passed('Collaborator FK, duplicate-role, role CHECK and referenced-artist deletion constraints');
+    if (fullSchema) await require('./verify-live-country-audit').verifyCountryAudit({ root, pool, connection, dataDirectory: data, passed });
     if (browserVerification) await require('./verify-live-metadata-browser').verifyMetadataBrowser({ root, temp, pool, httpServer, freePort, passed, workerVerification });
     if (builtWorkerVerification) await require('./verify-built-metadata-worker').verifyBuiltWorker({ root, temp, pool, app, httpServer, passed });
     console.log(`All ${checkpoints.length} disposable PostgreSQL checkpoints passed. No application database used.`);
