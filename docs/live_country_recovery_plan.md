@@ -70,6 +70,21 @@ env -u PGSERVICE -u PGSERVICEFILE -u PGHOSTADDR \
 
 集計結果だけで次の作業規模を判断する。原文や管理画面の全JSONを共有する必要はない。
 
+## 元データの追加集計
+
+`scripts/audit/live-country-source-coverage.sql` で以下のJSONだけを対象に、国情報の回収余地を件数で調べる。
+
+- `live_metadata.candidates.original`
+- `live_metadata.candidates.sources.*.original`
+- `lives.import_metadata`
+- `raw_setlists.parsed_json`（公演未関連の下書きも別区分）
+
+再帰的な `countryCode` / `country.code` キーの存在と、値が英字2桁の形式かを調べる。
+原文やコード値は出力しない。自由記述・`raw_text`・管理メモ・会場名・タイムゾーンは検索しない。
+キーがあってもnull/不正形式ならコードありに数えない。英字2桁でもISO辞書・出典の正しさは保証しない。
+同じ公演の複数下書きは文書件数と公演件数を分ける。未解析下書きは別件数にして、JSONがないだけで原文もないと誤認しない。
+この追加SQLもREAD ONLY/ROLLBACK・DB名制限・timeoutを持ち、既存SQLと同じ接続条件/承認範囲で使う。
+
 ## 補完は診断とは分離する（未実装・未実行）
 
 1. 既存の手動確定国は上書きしない。
@@ -85,6 +100,7 @@ env -u PGSERVICE -u PGSERVICEFILE -u PGHOSTADDR \
 
 全schemaモードの `server/scripts/test-live-metadata-db.js` に診断SQLの検証を追加した。
 所有data_directoryとloopback/非アプリポートを確認したクラスタ内だけに、独立したfixture DBを作る。
-16件の合成データで分類・出力の最小化・前後データ一致・対象外DB名の拒否を検証し、DBを削除する。
-通常モードの旧schema7項目はそのまま、全schema/実認証モードには診断の1項目を追加する。
+16件の合成公演で分類・出力の最小化・前後データ一致・対象外DB名の拒否を検証し、DBを削除する。
+追加集計はネストした国情報・null/不正形式・不正sources型・複数/未関連/未解析下書き・自由記述から推測しないことも検証する。
+通常モードの旧schema7項目はそのまま、全schema/実認証モードには診断の2項目を追加する。
 実環境に接続せずにSQLの動作を再現できるが、実環境の候補件数を確定するものではない。
