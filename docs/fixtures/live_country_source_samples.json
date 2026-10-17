@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-17",
+  "scope": "offline-public-source-proposals",
+  "applied": false,
+  "samples": [
+    {
+      "key": "xmf-2026-10-04",
+      "date": "2026-10-04",
+      "recordedTour": "Xnterstellar Music Festival 2026",
+      "recordedVenue": "韓国・仁川パラダイスシティ",
+      "eventMatch": "date_title_venue",
+      "sources": [
+        "https://www.uverworld.jp/schedule/list/2026/10/",
+        "https://www.uverworld.jp/schedule/detail/3223"
+      ],
+      "proposedCountryCode": "KR",
+      "countryEvidence": {
+        "kind": "explicit_country_name",
+        "url": "https://www.uverworld.jp/schedule/detail/3223",
+        "countryName": "韓国",
+        "excerpt": "会場 韓国・仁川パラダイスシティ"
+      },
+      "reviewStatus": "unapproved",
+      "remainingChecks": ["管理者による出典と候補の承認", "保存先の公演IDとrevisionの確認"]
+    },
+    {
+      "key": "1chance-2026-09-27",
+      "date": "2026-09-27",
+      "recordedTour": "WANIMA pre. 1CHANCE FESTIVAL 2026",
+      "recordedVenue": "熊本県農業公園 カントリーパーク",
+      "eventMatch": "date_title_venue",
+      "sources": [
+        "https://www.uverworld.jp/schedule/list/2026/09/",
+        "https://www.uverworld.jp/schedule/detail/3193",
+        "https://1chancefes.com/"
+      ],
+      "proposedCountryCode": null,
+      "countryEvidence": null,
+      "reviewStatus": "unapproved",
+      "remainingChecks": ["国の根拠となる出典確認（今回は国名の直接表記を確認できていない）", "会場の住所を国の根拠として扱う場合の検証方針と承認"]
+    },
+    {
+      "key": "winter-2025-12-31",
+      "date": "2025-12-31",
+      "recordedTour": "WINTER TOUR \"BOOM GOES THE WORLD\"",
+      "recordedVenue": "マリンメッセ福岡",
+      "eventMatch": "date_only_venue_alias_and_tour_review",
+      "sources": [
+        "https://www.uverworld.jp/schedule/list/2025/12/",
+        "https://www.uverworld.jp/schedule/detail/3063",
+        "https://www.uverworld.jp/feature/2025_live"
+      ],
+      "proposedCountryCode": null,
+      "countryEvidence": null,
+      "reviewStatus": "unapproved",
+      "remainingChecks": ["公式はマリンメッセ福岡A館、記録はマリンメッセ福岡。会場対応を確認する", "公式特設ページと記録のツアー名の対応確認", "国の根拠となる出典確認"]
+    },
+    {
+      "key": "unser-2019-12-31",
+      "date": "2019-12-31",
+      "recordedTour": "UNSER TOUR",
+      "recordedVenue": "マリンメッセ福岡",
+      "eventMatch": "date_title_venue",
+      "sources": [
+        "https://www.uverworld.jp/schedule/list/2019/12/",
+        "https://www.uverworld.jp/schedule/detail/1760",
+        "https://www.uverworld.jp/feature/2019_livetour"
+      ],
+      "proposedCountryCode": null,
+      "countryEvidence": null,
+      "reviewStatus": "unapproved",
+      "remainingChecks": ["国の根拠となる出典確認（今回は国名の直接表記を確認できていない）", "過去の公演時点と会場の対応を維持する"]
+    }
+  ]
+}
