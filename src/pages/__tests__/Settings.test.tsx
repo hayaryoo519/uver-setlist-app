@@ -12,7 +12,7 @@ describe('account settings after a credential change', () => {
   beforeEach(() => {
     updateUser.mockReset().mockResolvedValue({ success: true, message: '新しいパスワードで再度ログインしてください。' })
     vi.mocked(useAuth).mockReturnValue({
-      currentUser: { id: 1, username: 'fixture-user', email: 'fake@example.invalid', role: 'user' },
+      currentUser: { id: 1, username: 'fixture-user', email: 'fake@example.invalid', role: 'user', email_verified: true, created_at: '2020-01-01' },
       updateUser, deleteAccount: vi.fn(), login: vi.fn(), register: vi.fn(), logout: vi.fn(),
     })
     vi.spyOn(window, 'alert').mockImplementation(() => {})

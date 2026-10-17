@@ -20,6 +20,30 @@ describe('useLives', () => {
     )
   })
 
+  it('取得時に属性を生成し、再取得で変更を反映する', async () => {
+    let title = '男祭り 生誕祭'
+    server.use(http.get('/api/lives', () => HttpResponse.json([
+      { ...mockLives[0], title, special_note: 'Christmas', type: 'FESTIVAL' },
+    ])))
+    const { result } = renderHook(() => useLives(), { wrapper: createWrapper() })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data![0].tags).toEqual(['mens', 'birthday', 'christmas'])
+    title = '女祭り'
+    await result.current.refetch()
+    await waitFor(() => expect(result.current.data![0].tags).toEqual(['womens', 'christmas']))
+  })
+
+  it('APIの明示的な空タグと有効情報を再判定で上書きしない', async () => {
+    const metadata = { country: { code: 'KR', status: 'confirmed' }, members: { ids: ['takuya'], status: 'confirmed' } }
+    server.use(http.get('/api/lives', () => HttpResponse.json([
+      { ...mockLives[0], title: '男祭り 生誕祭', tags: [], metadata },
+    ])))
+    const { result } = renderHook(() => useLives(), { wrapper: createWrapper() })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data![0].tags).toEqual([])
+    expect(result.current.data![0].metadata).toEqual(metadata)
+  })
+
   it('日付が不正なライブはフィルタリングされる', async () => {
     server.use(
       http.get('/api/lives', () =>
@@ -119,6 +143,15 @@ describe('useLiveDetail', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data?.id).toBe(1)
     expect(result.current.data?.tour_name).toBe(mockLives[0].tour_name)
+  })
+
+  it('詳細取得でも同じ属性生成処理を使用する', async () => {
+    server.use(http.get('/api/lives/1', () => HttpResponse.json({
+      ...mockLives[0], title: '生誕祭', special_note: 'ACOUSTIC',
+    })))
+    const { result } = renderHook(() => useLiveDetail(1), { wrapper: createWrapper() })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data?.tags).toEqual(['birthday'])
   })
 
   it('id が undefined のときフェッチしない', () => {

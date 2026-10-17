@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { apiClient } from '../lib/apiClient';
 import type { AuthUser } from '../types/api';
+import { loginRedirectUrl } from '../utils/authReturnTo';
 
 type AuthResult = { success: boolean; message?: string }
 
@@ -89,7 +90,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     localStorage.removeItem('user');
                     setCurrentUser(null);
                     alert('セッションの有効期限が切れました。再度ログインしてください。');
-                    window.location.href = '/login';
+                    window.location.href = loginRedirectUrl(window.location.pathname + window.location.search + window.location.hash);
                 }
             }
 

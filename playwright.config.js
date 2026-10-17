@@ -22,6 +22,8 @@ const webServer = [
 
 export default defineConfig({
   testDir: './tests/e2e',
+  // 合成metadata suiteはバックエンドを起動しない専用configで実行する。
+  testIgnore: '**/live-metadata.spec.js',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
