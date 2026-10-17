@@ -79,10 +79,16 @@
         "https://www.uverworld.jp/schedule/detail/1760",
         "https://www.uverworld.jp/feature/2019_livetour"
       ],
-      "proposedCountryCode": null,
-      "countryEvidence": null,
+      "proposedCountryCode": "JP",
+      "countryEvidence": {
+        "kind": "official_event_location",
+        "url": "https://www.uverworld.jp/feature/2019_livetour",
+        "excerpt": "12月31日(火) 福岡県福岡市 マリンメッセ福岡",
+        "prefecture": "福岡県",
+        "city": "福岡市"
+      },
       "reviewStatus": "unapproved",
-      "remainingChecks": ["国の根拠となる出典確認（今回は国名の直接表記を確認できていない）", "過去の公演時点と会場の対応を維持する"]
+      "remainingChecks": ["保存先の公演IDとrevisionの確認", "国だけを確定するための操作承認と管理者認証"]
     }
   ]
 }
