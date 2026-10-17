@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Live } from '../types/api';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, MapPin, Calendar, Check, Plus, ArrowRight, Loader, Filter, X, Music } from 'lucide-react';
+import { Search, MapPin, Calendar, Check, Plus, ArrowRight, Loader, Filter, X, Music, ChevronDown } from 'lucide-react';
 import { useAttendance } from '../hooks/useAttendance';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
@@ -45,6 +45,7 @@ const LiveList = () => {
     };
     const [filters, setFilters] = useState(initialFilters);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
 
     const { addLive, removeLive, isAttended } = useAttendance();
 
@@ -97,8 +98,19 @@ const LiveList = () => {
     const countryLabel = filters.countryCode === 'unconfirmed' ? '開催国未確認' : `開催国：${filters.countryCode}`;
     const selectedMemberName = MEMBERS.find(member => member.id === filters.memberId)?.label;
 
-    const renderTagFilters = () => (
-        <div className="semantic-filters">
+    const advancedFilterCount = (filters.tags?.length || 0) + (filters.countryCode ? 1 : 0)
+        + (filters.memberId ? 1 : 0) + (filters.artistId ? 1 : 0) + (filters.participantRole ? 1 : 0);
+    const renderTagFilters = (view: 'desktop' | 'mobile') => (
+        <section className="advanced-filter-section">
+            <button type="button" className="advanced-filter-toggle"
+                aria-expanded={isAdvancedFilterOpen}
+                aria-controls={isAdvancedFilterOpen ? `advanced-live-filters-${view}` : undefined}
+                onClick={() => setIsAdvancedFilterOpen(open => !open)}>
+                詳細フィルター{' '}
+                {advancedFilterCount > 0 && <span className="advanced-filter-count">{advancedFilterCount}件適用中</span>}
+                <ChevronDown size={14} aria-hidden="true" />
+            </button>
+            {isAdvancedFilterOpen && <div id={`advanced-live-filters-${view}`} className="semantic-filters">
             <p className="semantic-filter-hint">同じ分類内は「いずれか」、分類間は「すべて」に一致</p>
             {LIVE_TAG_GROUPS.map(group => (
                 <fieldset key={group.id} className="semantic-filter-group">
@@ -142,7 +154,8 @@ const LiveList = () => {
                     {PARTICIPANT_ROLES.map(role => <option key={role.id} value={role.id}>{role.label}</option>)}
                 </select>
             </label>
-        </div>
+            </div>}
+        </section>
     );
 
     const clearAllFilters = () => {
@@ -216,7 +229,7 @@ const LiveList = () => {
     // フィルターなし全期間 → 年別グループ表示
     const showGroupedView = !selectedYear && !filters.text && !filters.types?.length && !filters.tags?.length && !filters.songIds?.length && !filters.countryCode && !filters.memberId && !filters.artistId && !filters.participantRole;
 
-    const activeFilterCount = (filters.types?.length || 0) + (filters.tags?.length || 0) + (filters.songIds?.length || 0) + (filters.countryCode ? 1 : 0) + (filters.memberId ? 1 : 0) + (filters.artistId ? 1 : 0) + (filters.participantRole ? 1 : 0);
+    const activeFilterCount = (filters.types?.length || 0) + (filters.songIds?.length || 0) + advancedFilterCount;
 
     const selectedSongName = useMemo(() => {
         if (!filters.songIds?.length) return null;
@@ -424,7 +437,7 @@ const LiveList = () => {
                                     </select>
                                 </div>
                             </div>
-                            <div className="desktop-only">{renderTagFilters()}</div>
+                            <div className="desktop-only">{renderTagFilters('desktop')}</div>
                         </header>
 
                         {/* モバイル年タブ */}
@@ -458,7 +471,6 @@ const LiveList = () => {
                         {/* モバイル絞込パネル */}
                         {isFilterOpen && (
                             <div className="mobile-filter-panel mobile-only">
-                                {renderTagFilters()}
                                 <div className="type-filter-pills">
                                     {(['ONEMAN', 'FESTIVAL', 'EVENT'] as const).map(t => (
                                         <button
@@ -482,6 +494,7 @@ const LiveList = () => {
                                         {songOptions}
                                     </select>
                                 </div>
+                                {renderTagFilters('mobile')}
                             </div>
                         )}
 

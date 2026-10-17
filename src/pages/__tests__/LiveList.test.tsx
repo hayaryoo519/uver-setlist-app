@@ -16,16 +16,56 @@ vi.mock('../../hooks/queries/useLives', () => ({ useLives: () => ({ isLoading: f
     { id: 4, date: '2020-09-01', tour_name: 'Overseas Show', title: null, type: 'ONEMAN', venue: 'Seoul', tags: ['birthday', 'overseas'], metadata: { country: { code: 'KR', status: 'confirmed' }, members: { ids: ['takuya'], status: 'confirmed' }, participants: { status: 'confirmed', items: [{ artistId: 10, name: 'Fixture Artist', aliases: ['FA'], role: 'guest' }] } } },
 ] }) }));
 
-const setup = (filters = {}) => render(
-    <MemoryRouter initialEntries={[{ pathname: '/lives', state: { filters } }]}>
-        <LiveList />
-    </MemoryRouter>,
-);
+const setup = (filters = {}, openAdvanced = true) => {
+    const result = render(
+        <MemoryRouter initialEntries={[{ pathname: '/lives', state: { filters } }]}>
+            <LiveList />
+        </MemoryRouter>,
+    );
+    if (openAdvanced) fireEvent.click(screen.getByRole('button', { name: /詳細フィルター/ }));
+    return result;
+};
 
 // CSSによる表示制御はjsdomで適用されないため、カードはPC/モバイル両方存在する。
 const hasLive = (id: number) => !!document.querySelector(`a[href="/live/${id}"]`);
 
 describe('LiveList 属性フィルター', () => {
+    it('初期表示は詳細条件を隠し、開閉ボタンで必要なときだけ表示する', () => {
+        setup({}, false);
+        const toggle = screen.getByRole('button', { name: '詳細フィルター' });
+        expect(toggle).toHaveAttribute('aria-expanded', 'false');
+        expect(screen.queryByLabelText('開催国')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: '男祭り' })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'FES' })).toBeInTheDocument();
+        fireEvent.click(toggle);
+        expect(toggle).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByLabelText('開催国')).toBeInTheDocument();
+        expect(document.getElementById(toggle.getAttribute('aria-controls')!)).toBeInTheDocument();
+        fireEvent.click(toggle);
+        expect(screen.queryByLabelText('開催国')).not.toBeInTheDocument();
+    });
+
+    it('復元された詳細条件は閉じていても件数・チップ・結果に反映され、そのまま解除できる', () => {
+        setup({ tags: ['birthday'], countryCode: 'KR' }, false);
+        const toggle = screen.getByRole('button', { name: '詳細フィルター 2件適用中' });
+        expect(toggle).toHaveAttribute('aria-expanded', 'false');
+        expect(hasLive(4)).toBe(true); expect(hasLive(1)).toBe(false);
+        fireEvent.click(screen.getByRole('button', { name: '開催国フィルターを解除' }));
+        expect(screen.getByRole('button', { name: '詳細フィルター 1件適用中' })).toBeInTheDocument();
+        expect(hasLive(1)).toBe(true);
+        fireEvent.click(screen.getByRole('button', { name: '生誕祭フィルターを解除' }));
+        expect(screen.getByRole('button', { name: '詳細フィルター' })).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('詳細条件を折りたたんでも選択を保持し、開き直すと編集できる', () => {
+        setup();
+        fireEvent.change(screen.getByLabelText('開催国'), { target: { value: 'KR' } });
+        fireEvent.click(screen.getByRole('button', { name: /詳細フィルター/ }));
+        expect(hasLive(4)).toBe(true); expect(hasLive(1)).toBe(false);
+        expect(screen.queryByLabelText('開催国')).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: /詳細フィルター/ }));
+        expect(screen.getByLabelText('開催国')).toHaveValue('KR');
+    });
     it('属性選択で年別表示から検索結果に切り替え、階層内OR・階層間ANDで絞る', () => {
         setup();
         fireEvent.click(screen.getByRole('button', { name: '男祭り' }));

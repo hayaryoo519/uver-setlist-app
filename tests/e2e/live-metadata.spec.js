@@ -5,11 +5,34 @@ const visibleLabel = (page, name) => page.getByRole('combobox', { name, exact: t
 const card = (page, id) => page.locator(`a[href="/live/${id}"]:visible`);
 async function publicFilters(page, isMobile) {
   if (isMobile) await page.getByRole('button', { name: '絞り込みフィルター' }).click();
+  await page.getByRole('button', { name: /詳細フィルター/ }).filter({ visible: true }).click();
 }
 async function assertClean(state) {
   expect(state.unexpected).toEqual([]);
   expect(state.pageErrors).toEqual([]);
 }
+
+test('詳細条件は初期表示で折りたたみ、閉じても適用中表示と解除を維持する', async ({ page, isMobile }, testInfo) => {
+  const state = await installMetadataFixture(page);
+  await page.goto('/lives');
+  if (isMobile) await page.getByRole('button', { name: '絞り込みフィルター' }).click();
+  const toggle = page.getByRole('button', { name: /詳細フィルター/ }).filter({ visible: true });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(visibleLabel(page, '開催国')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'FES', exact: true }).filter({ visible: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('compact-filters-default.png'), fullPage: true });
+  await toggle.focus(); await page.keyboard.press('Enter');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await visibleLabel(page, '開催国').selectOption('KR');
+  await toggle.focus(); await page.keyboard.press('Space');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(toggle).toContainText('1件適用中');
+  await expect(visibleLabel(page, '開催国')).toHaveCount(0);
+  await page.getByRole('button', { name: '開催国フィルターを解除' }).click();
+  await expect(toggle).not.toContainText('適用中');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await assertClean(state);
+});
 
 for (const [session, target] of [
   ['anonymous', '/admin?tab=lives&metadata=42'],

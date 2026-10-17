@@ -1219,6 +1219,42 @@
     border: 1px solid rgba(139, 92, 246, 0.3);
 }
 
+.advanced-filter-section {
+    margin-top: 12px;
+}
+
+.advanced-filter-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 8px;
+    background: transparent;
+    color: #cbd5e1;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.advanced-filter-toggle:hover {
+    background: rgba(148, 163, 184, 0.08);
+}
+
+.advanced-filter-toggle:focus-visible {
+    outline: 2px solid #7dd3fc;
+    outline-offset: 3px;
+}
+
+.advanced-filter-toggle[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+}
+
+.advanced-filter-count {
+    color: #7dd3fc;
+    font-weight: 600;
+}
+
 .semantic-filters {
     margin-top: 12px;
     display: flex;
