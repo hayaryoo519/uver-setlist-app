@@ -86,12 +86,6 @@ const LiveList = () => {
             ? current.filter(t => t !== tag) : [...current, tag] });
     };
 
-    const countryOptions = useMemo(() => [...new Set([
-        ...lives.filter(live => live.metadata?.country.status === 'confirmed')
-            .map(live => live.metadata?.country.code).filter((code): code is string => !!code),
-        // 保存済み条件の国が現在の取得結果になくても、選択を見失わせない。
-        ...(/^[A-Z]{2}$/.test(filters.countryCode) ? [filters.countryCode] : []),
-    ])].filter(code => code !== 'JP').sort(), [lives, filters.countryCode]);
     const artistOptions = useMemo(() => {
         const artists = new Map<number, string>();
         lives.forEach(live => {
@@ -102,11 +96,12 @@ const LiveList = () => {
     const selectedArtistName = artistOptions.find(artist => String(artist.id) === filters.artistId)?.name;
     const selectedRoleName = PARTICIPANT_ROLES.find(role => role.id === filters.participantRole)?.label;
     const countryLabel = filters.countryCode === 'unconfirmed' ? '開催国未確認'
-        : `開催地：${filters.countryCode === 'JP' ? '国内（日本）' : countryName(filters.countryCode)}`;
+        : `開催地：${filters.countryCode === 'JP' ? '日本' : countryName(filters.countryCode)}`;
     const selectedMemberName = MEMBERS.find(member => member.id === filters.memberId)?.label;
-    const locationValue = filters.countryCode || (filters.tags?.includes('overseas') ? 'overseas' : '');
+    const locationValue = filters.countryCode === 'JP' ? 'JP'
+        : (/^[A-Z]{2}$/.test(filters.countryCode) || filters.tags?.includes('overseas')) ? 'overseas' : '';
     const showMemberFilter = filters.tags?.includes('birthday') || !!filters.memberId;
-    const changeLocation = (value: string) => {
+    const changeLocation = (value: '' | 'JP' | 'overseas') => {
         const tags = (filters.tags || []).filter((tag: LiveTag) => tag !== 'overseas');
         handleFilterChange({ ...filters, tags: value === 'overseas' ? [...tags, 'overseas'] : tags,
             countryCode: value === 'overseas' ? '' : value });
@@ -160,17 +155,12 @@ const LiveList = () => {
             </fieldset>
             <fieldset className="semantic-filter-group">
                 <legend>開催地</legend>
-                <label className="semantic-filter-field">開催国
-                    <select className="song-filter-select" value={locationValue} onChange={event => changeLocation(event.target.value)}>
-                        <option value="">指定なし</option>
-                        <option value="JP">国内（日本）</option>
-                        <option value="overseas">海外（国指定なし）</option>
-                        {countryOptions.length > 0 && <optgroup label="海外の国">
-                            {countryOptions.map(code => <option key={code} value={code}>{countryName(code)}</option>)}
-                        </optgroup>}
-                        <option value="unconfirmed">開催国未確認</option>
-                    </select>
-                </label>
+                <div className="type-filter-pills">
+                    <button type="button" className={`type-pill type-pill-tag ${locationValue === 'JP' ? 'active' : ''}`}
+                        aria-pressed={locationValue === 'JP'} onClick={() => changeLocation(locationValue === 'JP' ? '' : 'JP')}>日本</button>
+                    <button type="button" className={`type-pill type-pill-tag ${locationValue === 'overseas' ? 'active' : ''}`}
+                        aria-pressed={locationValue === 'overseas'} onClick={() => changeLocation(locationValue === 'overseas' ? '' : 'overseas')}>海外</button>
+                </div>
             </fieldset>
             </div>}
         </section>

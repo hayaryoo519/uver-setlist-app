@@ -17,8 +17,10 @@ test('詳細条件は初期表示で折りたたみ、閉じても適用中表�
   await page.goto('/lives');
   if (isMobile) await page.getByRole('button', { name: '絞り込みフィルター' }).click();
   const toggle = page.getByRole('button', { name: /詳細フィルター/ }).filter({ visible: true });
+  const japan = page.getByRole('button', { name: '日本', exact: true }).filter({ visible: true });
+  const overseas = page.getByRole('button', { name: '海外', exact: true }).filter({ visible: true });
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  await expect(visibleLabel(page, '開催国')).toHaveCount(0);
+  await expect(japan).toHaveCount(0);
   await expect(card(page, 43).getByLabel('公演属性')).toHaveCount(0); // JPだけの公演は補足なし。
   await expect(card(page, 45)).toContainText('海外公演：韓国');
   await expect(card(page, 44).getByText('対バン', { exact: true })).toHaveCount(0);
@@ -29,37 +31,48 @@ test('詳細条件は初期表示で折りたたみ、閉じても適用中表�
   for (const name of ['公演の特徴', '共演', '開催地']) {
     await expect(page.getByRole('group', { name, exact: true }).filter({ visible: true })).toBeVisible();
   }
+  await expect(japan).toHaveAttribute('aria-pressed', 'false');
+  await expect(overseas).toHaveAttribute('aria-pressed', 'false');
+  await expect(visibleLabel(page, '開催国')).toHaveCount(0);
   await expect(visibleLabel(page, '生誕祭の対象メンバー')).toHaveCount(0);
   await expect(page.getByRole('button', { name: '海外公演', exact: true })).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath('grouped-filters-open.png'), fullPage: true });
-  await visibleLabel(page, '開催国').selectOption('KR');
+  await overseas.focus(); await page.keyboard.press('Space');
+  await expect(overseas).toHaveAttribute('aria-pressed', 'true');
   await toggle.focus(); await page.keyboard.press('Space');
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(toggle).toContainText('1件適用中');
-  await expect(visibleLabel(page, '開催国')).toHaveCount(0);
-  await page.getByRole('button', { name: '開催国フィルターを解除' }).click();
+  await expect(japan).toHaveCount(0);
+  await page.getByRole('button', { name: '海外公演フィルターを解除' }).click();
   await expect(toggle).not.toContainText('適用中');
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await assertClean(state);
 });
 
-test('開催地を一本化して切り替え、生誕祭は対象未確認のままでも探せる', async ({ page, isMobile }) => {
+test('日本と海外の二択を切り替え・解除でき、国や生誕メンバーの候補を確定扱いしない', async ({ page, isMobile }) => {
   const state = await installMetadataFixture(page);
   await page.goto('/lives'); await publicFilters(page, isMobile);
-  const location = visibleLabel(page, '開催国');
-  await location.selectOption('overseas');
+  const japan = page.getByRole('button', { name: '日本', exact: true }).filter({ visible: true });
+  const overseas = page.getByRole('button', { name: '海外', exact: true }).filter({ visible: true });
+  await overseas.click();
   await expect(card(page, 45)).toBeVisible();
   await expect(card(page, 43)).toHaveCount(0);
   await expect(card(page, 42)).toHaveCount(0);
-  await location.selectOption('JP');
+  await japan.focus(); await page.keyboard.press('Enter');
+  await expect(japan).toHaveAttribute('aria-pressed', 'true');
+  await expect(overseas).toHaveAttribute('aria-pressed', 'false');
   await expect(card(page, 43)).toBeVisible();
   await expect(card(page, 44)).toBeVisible();
   await expect(card(page, 45)).toHaveCount(0);
+  await expect(card(page, 42)).toHaveCount(0);
   await expect(page.getByRole('button', { name: /詳細フィルター/ }).filter({ visible: true })).toContainText('1件適用中');
-  await location.selectOption('unconfirmed');
+  await japan.click();
+  await expect(japan).toHaveAttribute('aria-pressed', 'false');
+  await expect(card(page, 42)).toBeVisible(); // 未選択時は未確認公演も含める。
+  await expect(card(page, 45)).toBeVisible();
+  await overseas.click(); await overseas.click();
+  await expect(overseas).toHaveAttribute('aria-pressed', 'false');
   await expect(card(page, 42)).toBeVisible();
-  await expect(card(page, 43)).toHaveCount(0);
-  await location.selectOption('');
   await page.getByRole('button', { name: '生誕祭', exact: true }).filter({ visible: true }).click();
   await expect(card(page, 42)).toBeVisible();
   const member = visibleLabel(page, '生誕祭の対象メンバー');
@@ -148,7 +161,7 @@ test('合成取り込み→レビュー保存→公開検索→再取得で手�
   await page.goto('/lives');
   await publicFilters(page, isMobile);
   await page.getByPlaceholder('ツアー名・会場・共演者で検索').fill('ＦＡ');
-  await visibleLabel(page, '開催国').selectOption('KR');
+  await page.getByRole('button', { name: '海外', exact: true }).filter({ visible: true }).click();
   await page.getByRole('button', { name: '生誕祭', exact: true }).filter({ visible: true }).click();
   await visibleLabel(page, '生誕祭の対象メンバー').selectOption('takuya');
   await visibleLabel(page, '共演アーティスト').selectOption('10');
@@ -164,7 +177,7 @@ test('合成取り込み→レビュー保存→公開検索→再取得で手�
   await publicFilters(page, isMobile);
   await visibleLabel(page, '共演アーティスト').selectOption('10');
   await visibleLabel(page, '相手の出演形態').selectOption('co_headliner');
-  await visibleLabel(page, '開催国').selectOption('KR');
+  await page.getByRole('button', { name: '海外', exact: true }).filter({ visible: true }).click();
   await expect(card(page, 42)).toBeVisible();
   expect(state.metadata.get(42).overrides).toEqual(saved);
   await card(page, 42).click();
