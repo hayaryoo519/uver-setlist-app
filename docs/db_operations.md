@@ -91,7 +91,7 @@ PGPASSWORD=postgres \
   - `security_logs`, `push_subscriptions`, `collector_logs` 等の機密テーブルのクリア。
   - `user_spotify_tokens`, `user_google_tokens`, `playlist_history` のクリア。アクセストークン・暗号化された更新トークン・本番ユーザーのプレイリストIDを残しません。連携導入前のバックアップでこれらのテーブルが存在しない場合は、そのテーブルのみスキップします。同期後の外部連携はStaging専用設定と検証用アカウントでやり直してください。
   - `attendance`, `user_follows`, `predictions`, `prediction_songs`, `prediction_likes`, `raw_setlists`, `social_posts` のクリア。参戦・フォロー・いいねの関連、予想タイトル、OCR本文/JSON/画像URL、収集元URL、投稿候補/エラーを本番から持ち込みません。導入前のバックアップは存在するテーブルだけを処理します。外部キーで関連するテーブルを一括処理し、想定外の依存はCASCADEで削除せず同期失敗にします。
-  - 033/034の追加情報は既知の公開タグ/手動設定・辞書・共演関連だけを保持し、原文/取得元snapshot/分類メモ/未知JSON/変更履歴を除去。lives.import_metadataもNULLにします。導入前のバックアップでは該当表だけをスキップします。詳細は [追加情報DB検証](./live_metadata_db_verification.md) を参照。
+  - 033/034の追加情報は既知の公開タグ/手動設定・辞書・共演関連だけを保持し、原文/取得元snapshot/分類メモ/未知JSON/変更履歴を除去。lives.import_metadataもNULLにします。導入前のバックアップでは該当表だけをスキップします。この処理は表が存在する場合だけ適用し、機能schemaを新規導入しません。分離した変更範囲・検証境界は [同期保護PR](./staging_sync_guards.md) を参照。
 - **未加工データの非公開**: 復元SQLと匿名化を1つのトランザクションで実行し、匿名化成功後にだけコミットします。別のDB接続から復元途中の未加工データは読めません。これはDBの可視性の制御であり、HTTPアクセスの遮断やメンテナンス画面の自動設定ではありません。
 - **中断時保護**: 未完了の再作成済みDBはEXIT/INT/TERM時にdropdb --forceで削除します。削除も失敗した場合はSAFETY CLEANUP FAILEDで生データ残存を警告し、停止を維持します。PG13以降のclientが必要です。SIGKILL/停電ではtrapを保証しません。
 - **失敗時の停止**: SQL生成に失敗した場合は既存DBを変更しません。復元・匿名化のSQLエラーは非ゼロで終了し、ロールバック後に同期先DBを削除します。DB再作成時に接続中などで削除できなければ、復元には進みません。異常終了時もアプリを自動再開しません。
