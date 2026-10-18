@@ -49,6 +49,62 @@ test('詳細条件は初期表示で折りたたみ、閉じても適用中表�
   await assertClean(state);
 });
 
+test('種別の選択をPCで重複表示せず、モバイルでは閉じたパネルのチップから解除できる', async ({ page, isMobile }, testInfo) => {
+  const state = await installMetadataFixture(page);
+  await page.goto('/lives');
+  if (isMobile) await page.getByRole('button', { name: '絞り込みフィルター' }).click();
+  await page.getByRole('button', { name: 'ワンマン', exact: true }).filter({ visible: true }).click();
+  await page.getByRole('button', { name: 'FES', exact: true }).filter({ visible: true }).click();
+  await page.getByRole('button', { name: 'EVENT', exact: true }).filter({ visible: true }).click();
+  if (isMobile) await page.getByRole('button', { name: '絞り込みフィルター' }).click();
+  const typeChips = page.locator('.active-filter-chips .filter-chip-type:visible');
+  const heading = page.getByRole('heading', { name: /検索結果/ });
+  await expect(heading).toBeVisible();
+  await expect(typeChips).toHaveCount(isMobile ? 3 : 0);
+  if (!isMobile) await expect(page.locator('.active-filter-chips')).toBeHidden();
+  await page.screenshot({ path: testInfo.outputPath('type-chips-no-duplicate.png') });
+  if (isMobile) {
+    await page.getByRole('button', { name: '絞り込みフィルター' }).click();
+    await expect(typeChips).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'FES', exact: true }).filter({ visible: true })).toBeVisible();
+    await page.getByRole('button', { name: '絞り込みフィルター' }).click();
+    await expect(typeChips).toHaveCount(3);
+    await typeChips.filter({ hasText: 'FES' }).getByRole('button').click();
+    await expect(typeChips).toHaveCount(2);
+    await expect(heading).toBeVisible();
+  } else {
+    await page.getByRole('button', { name: /詳細フィルター/ }).filter({ visible: true }).click();
+    await page.getByRole('button', { name: '生誕祭', exact: true }).filter({ visible: true }).click();
+    await page.getByRole('button', { name: /詳細フィルター/ }).filter({ visible: true }).click();
+    await expect(page.locator('.active-filter-chips .filter-chip-tag:visible')).toHaveCount(1);
+    await expect(typeChips).toHaveCount(0);
+    const chip = await page.locator('.active-filter-chips .filter-chip-tag').boundingBox();
+    const result = await heading.boundingBox();
+    expect(chip && result && chip.y + chip.height <= result.y).toBe(true);
+  }
+  await assertClean(state);
+});
+
+test('1024/1025pxの境界でも種別チップは操作できて重複しない', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'デスクトップのviewport遷移のみを検証');
+  const state = await installMetadataFixture(page);
+  await page.setViewportSize({ width: 1025, height: 850 });
+  await page.goto('/lives');
+  await page.getByRole('button', { name: 'FES', exact: true }).filter({ visible: true }).click();
+  const typeChips = page.locator('.active-filter-chips .filter-chip-type:visible');
+  await expect(typeChips).toHaveCount(0);
+  await page.setViewportSize({ width: 1024, height: 850 });
+  await expect(typeChips).toHaveCount(1);
+  await page.getByRole('button', { name: '絞り込みフィルター' }).click();
+  await expect(typeChips).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'FES', exact: true }).filter({ visible: true })).toBeVisible();
+  await page.getByRole('button', { name: '絞り込みフィルター' }).click();
+  await expect(typeChips).toHaveCount(1);
+  await page.setViewportSize({ width: 1025, height: 850 });
+  await expect(typeChips).toHaveCount(0);
+  await assertClean(state);
+});
+
 test('日本と海外の二択を切り替え・解除でき、国や生誕メンバーの候補を確定扱いしない', async ({ page, isMobile }) => {
   const state = await installMetadataFixture(page);
   await page.goto('/lives'); await publicFilters(page, isMobile);
@@ -182,7 +238,7 @@ test('合成取り込み→レビュー保存→公開検索→再取得で手�
   expect(state.metadata.get(42).overrides).toEqual(saved);
   await card(page, 42).click();
   await expect(page).toHaveURL(/\/live\/42$/);
-  await expect(page.getByText('対バン相手：Fixture Artist', { exact: true })).toBeVisible();
+  await expect(page.getByText('対バン相手：Fixture Artist', { exact: true }).filter({ visible: true })).toBeVisible();
   await assertClean(state);
 });
 

@@ -525,9 +525,9 @@ const LiveList = () => {
                             <div className="filtered-list-container">
                                 {/* アクティブフィルターチップ */}
                                 {activeFilterCount > 0 && (
-                                    <div className="active-filter-chips">
+                                    <div className={`active-filter-chips ${activeFilterCount === (filters.types?.length || 0) ? 'types-only' : ''} ${isFilterOpen ? 'type-controls-visible' : ''}`}>
                                         {(filters.types || []).map((t: string) => (
-                                            <span key={t} className={`filter-chip filter-chip-${t.toLowerCase()}`}>
+                                            <span key={t} className={`filter-chip filter-chip-type filter-chip-${t.toLowerCase()}`}>
                                                 {t === 'FESTIVAL' ? 'FES' : t === 'EVENT' ? 'EVENT' : 'ワンマン'}
                                                 <button onClick={() => toggleType(t)}><X size={10} /></button>
                                             </span>
