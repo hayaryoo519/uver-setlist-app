@@ -64,6 +64,11 @@ test('種別の選択をPCで重複表示せず、モバイルでは閉じたパ
   if (!isMobile) await expect(page.locator('.active-filter-chips')).toBeHidden();
   await page.screenshot({ path: testInfo.outputPath('type-chips-no-duplicate.png') });
   if (isMobile) {
+    await page.getByRole('button', { name: '絞り込みフィルター' }).click();
+    await expect(typeChips).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'FES', exact: true }).filter({ visible: true })).toBeVisible();
+    await page.getByRole('button', { name: '絞り込みフィルター' }).click();
+    await expect(typeChips).toHaveCount(3);
     await typeChips.filter({ hasText: 'FES' }).getByRole('button').click();
     await expect(typeChips).toHaveCount(2);
     await expect(heading).toBeVisible();
@@ -77,6 +82,26 @@ test('種別の選択をPCで重複表示せず、モバイルでは閉じたパ
     const result = await heading.boundingBox();
     expect(chip && result && chip.y + chip.height <= result.y).toBe(true);
   }
+  await assertClean(state);
+});
+
+test('1024/1025pxの境界でも種別チップは操作できて重複しない', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'デスクトップのviewport遷移のみを検証');
+  const state = await installMetadataFixture(page);
+  await page.setViewportSize({ width: 1025, height: 850 });
+  await page.goto('/lives');
+  await page.getByRole('button', { name: 'FES', exact: true }).filter({ visible: true }).click();
+  const typeChips = page.locator('.active-filter-chips .filter-chip-type:visible');
+  await expect(typeChips).toHaveCount(0);
+  await page.setViewportSize({ width: 1024, height: 850 });
+  await expect(typeChips).toHaveCount(1);
+  await page.getByRole('button', { name: '絞り込みフィルター' }).click();
+  await expect(typeChips).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'FES', exact: true }).filter({ visible: true })).toBeVisible();
+  await page.getByRole('button', { name: '絞り込みフィルター' }).click();
+  await expect(typeChips).toHaveCount(1);
+  await page.setViewportSize({ width: 1025, height: 850 });
+  await expect(typeChips).toHaveCount(0);
   await assertClean(state);
 });
 

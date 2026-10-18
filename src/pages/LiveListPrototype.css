@@ -1182,6 +1182,13 @@
     }
 }
 
+@media (max-width: 1024px) {
+    .active-filter-chips.type-controls-visible .filter-chip-type,
+    .active-filter-chips.type-controls-visible.types-only {
+        display: none;
+    }
+}
+
 .filter-chip {
     display: inline-flex;
     align-items: center;
