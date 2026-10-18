@@ -106,7 +106,7 @@ env -u PGSERVICE -u PGSERVICEFILE -u PGHOSTADDR \
 この結果を受け、4公演の公開出典を読み取り専用で照合した。国名が明記されたKR候補1件と、公演ごとの公式所在地を確認したJP候補3件（1CHANCE・2019年末・2025年末）。2025年末はユーザーの略称説明を受け、公式一覧/詳細と同ツアーの特設ページの当該日程を突き合わせた。この1公演のみの提案で、他日程の自動判定や記録の会場名/A館の変更はしない。
 1CHANCEのStaging種別は既にFESTIVALなので変更不要。国だけが補正対象で、住所未確認の他公演への一律適用はしない。
 Stagingの `lives.prefecture` は読み取り専用集計で642公演すべて空と確認し、この列からの国内一括判定も行わない。
-詳細は [公開出典の少数照合](live_country_source_samples.md)、未承認/未適用のJSONサンプル、[Staging個別レビュー手順](live_country_staging_review_runbook.md) を参照。実環境へは保存していない。
+詳細は [公開出典の少数照合](live_country_source_samples.md)、提案時点のJSONサンプル、[Staging個別レビュー手順と2026-10-18の実施記録](live_country_staging_review_runbook.md) を参照。4公演だけStagingで国を確定済み。Productionとその他の公演には保存していない。
 日付・公演名・会場は公演との対応確認に使うだけで、それらから国を推測しない。
 同日複数公演・表記揺れ・出典の不一致は自動決定しない。全件再取り込みや実DBへの候補保存/確定は別途承認が必要。
 

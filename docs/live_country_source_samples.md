@@ -1,4 +1,6 @@
-# 開催国補完：公開出典の少数照合（未承認・未適用）
+# 開催国補完：公開出典の少数照合（提案時点の記録）
+
+2026-10-18に、この4公演だけStagingで国を確定した。実施結果は [Staging個別レビュー記録](live_country_staging_review_runbook.md) を参照。以下の未承認/未適用という記述とJSONは、2026-10-17の**提案時点**を示し、Productionや他公演の国を確定したものではない。
 
 2026-10-17、Stagingの匿名公開GETと公開公式サイトのHTTP GETのみで4公演を調査した。
 DB/候補/確定値の更新、再取り込みジョブ、外部APIキーの使用、本番接続は行っていない。
@@ -25,7 +27,7 @@ Stagingの読み取り専用集計で `lives.prefecture` は全642件NULLと確�
 日本の公演の根拠に必ず国名文字列「日本」が必要とした初回判断は厳しすぎた。
 ただし、会場名だけで国を当てたり、住所未確認の他公演を一律JPにしたりするルールは導入していない。
 匿名公開APIで種別は既にFESTIVAL、国だけがunreviewedと確認。種別の変更は不要で、補正対象は国だけ。
-出典の確認と、実データへの確定操作の承認/管理者認証は別であり、まだ保存はしていない。
+出典の確認と、実データへの確定操作の承認/管理者認証は別であり、この調査時点では保存していなかった。
 
 ### 出典
 
@@ -36,7 +38,7 @@ Stagingの読み取り専用集計で `lives.prefecture` は全642件NULLと確�
 2. 1CHANCE：
    - https://www.uverworld.jp/schedule/list/2026/09/
    - https://www.uverworld.jp/schedule/detail/3193
-   - https://1chancefes.com/ （会場/住所欄をJP候補の根拠に使用。確定操作は未実施）
+   - https://1chancefes.com/ （会場/住所欄をJP候補の根拠に使用）
 3. 2025年末：
    - https://www.uverworld.jp/schedule/list/2025/12/
    - https://www.uverworld.jp/schedule/detail/3063
@@ -53,7 +55,7 @@ HTMLコメントやscript/styleを本文の根拠に含めず、年度の異な�
 
 `docs/fixtures/live_country_source_samples.json` に公開情報だけを記録した。
 **インポート用ファイルではない。** Staging/本番の公演ID・revision・操作者・承認日時・overridesは含めない。
-全件 `reviewStatus=unapproved`、コレクションは `applied=false`。国の提案はKRが1件・JPが3件。いずれも未承認/未適用。
+全件 `reviewStatus=unapproved`、コレクションは `applied=false`。国の提案はKRが1件・JPが3件。これらは提案時点の検証用fixtureであり、後日のStaging確定状態を表さない。
 「国名未確認」は日本ではないという判断ではなく、この調査で採用する国根拠の検証が未完了という意味。
 
 `server/tests/utils/countrySourceSamples.test.js` で、ISO国コード検証と次を確認する。
@@ -67,7 +69,7 @@ HTMLコメントやscript/styleを本文の根拠に含めず、年度の異な�
 
 ## 次の判断
 
-- KR 1例・JP 3例は、操作承認と正規の管理者認証が揃えば候補登録/確定の検証に使える。現時点では未適用。
+- KR 1例・JP 3例はStagingだけ国を確定済み。Productionや別環境へは転記せず、それぞれ出典・公演ID・最新revisionを確認して別途判断する。
 - 他の国内例も**当該公演の公式所在地等に対応する根拠**を確認する。既存の会場名だけから国を当てない。
 - 一般的な「日本」の文字列検索は使わない。「日本武道館」・日本語窓口・スポンサー名・国内外チケット受付などは開催国の根拠ではない。
 - Staging/本番/他環境への適用には公演IDとrevisionの再照合が必要。会場名の省略や同日複数公演を自動で丸めない。
