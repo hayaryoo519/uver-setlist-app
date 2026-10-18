@@ -238,7 +238,7 @@ test('合成取り込み→レビュー保存→公開検索→再取得で手�
   expect(state.metadata.get(42).overrides).toEqual(saved);
   await card(page, 42).click();
   await expect(page).toHaveURL(/\/live\/42$/);
-  await expect(page.getByText('対バン相手：Fixture Artist', { exact: true })).toBeVisible();
+  await expect(page.getByText('対バン相手：Fixture Artist', { exact: true }).filter({ visible: true })).toBeVisible();
   await assertClean(state);
 });
 
