@@ -105,6 +105,30 @@ test('1024/1025pxの境界でも種別チップは操作できて重複しない
   await assertClean(state);
 });
 
+test('架空の楽曲とセットリストで選択・公演絞り込み・解除を確認する', async ({ page, isMobile }, testInfo) => {
+  const state = await installMetadataFixture(page, { withSongs: true });
+  await page.goto('/lives');
+  if (isMobile) await page.getByRole('button', { name: '絞り込みフィルター' }).click();
+  const songSelect = page.locator('.song-filter-select:visible');
+  await expect(songSelect).toBeEnabled();
+  expect(await songSelect.locator('option', { hasText: 'CORE PRIDE' }).count()).toBeGreaterThan(0); // ベスト盤等に同じ楽曲が複数掲載され得る。
+  await songSelect.selectOption('101');
+  await expect(card(page, 43)).toBeVisible();
+  await expect(card(page, 45)).toBeVisible();
+  await expect(card(page, 44)).toHaveCount(0);
+  await expect(page.locator('.filter-chip-song')).toContainText('CORE PRIDE');
+  await page.screenshot({ path: testInfo.outputPath('synthetic-song-filter.png') });
+  await songSelect.selectOption('102');
+  await expect(card(page, 44)).toBeVisible();
+  await expect(card(page, 45)).toBeVisible();
+  await expect(card(page, 43)).toHaveCount(0);
+  await page.locator('.filter-chip-song button').click();
+  await expect(card(page, 43)).toBeVisible();
+  await expect(card(page, 44)).toBeVisible();
+  await expect(page.locator('.filter-chip-song')).toHaveCount(0);
+  await assertClean(state);
+});
+
 test('日本と海外の二択を切り替え・解除でき、国や生誕メンバーの候補を確定扱いしない', async ({ page, isMobile }) => {
   const state = await installMetadataFixture(page);
   await page.goto('/lives'); await publicFilters(page, isMobile);
