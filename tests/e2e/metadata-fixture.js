@@ -6,7 +6,9 @@ const { buildSetlistCandidates } = require('../../server/services/liveMetadataCa
 const { effectiveLiveMetadata } = require('../../server/services/liveMetadataProjection');
 const { metadataReviewSummary } = require('../../server/services/liveMetadataReview');
 
-export async function installMetadataFixture(page, { imported = true, session = 'admin' } = {}) {
+export async function installMetadataFixture(page, { imported = true, session = 'admin', withSongs = false } = {}) {
+  // 楽曲フィルターのプレビュー用。実公演のセットリストを示すものではない。
+  const fixtureSongs = withSongs ? [{ id: 101, title: 'CORE PRIDE' }, { id: 102, title: 'SHAMROCK' }] : [];
   const artist = { id: 10, name: 'Fixture Artist', aliases: ['FA'], revision: 0 };
   const other = { id: 11, name: 'Other Artist', aliases: ['OA'], revision: 0 };
   const raw = { id: 'fixture-import', eventDate: '28-12-2020', tour: { name: 'Fixture Xmas Birthday VS' },
@@ -16,7 +18,10 @@ export async function installMetadataFixture(page, { imported = true, session = 
     { id: 43, tour_name: 'Fixture Festival', type: 'FESTIVAL' },
     { id: 44, tour_name: 'Fixture Mixed Roles', type: 'EVENT' },
     { id: 45, tour_name: 'Fixture Guest', type: 'ONEMAN' },
-  ].map(live => ({ ...live, title: '', date: '2020-12-28', venue: 'Fixture Hall', special_note: '', setlist: [], setlist_status: 'NORMAL' }));
+  ].map(live => ({ ...live, title: '', date: '2020-12-28', venue: 'Fixture Hall', special_note: '',
+    setlist: (withSongs ? { 43: [101], 44: [102], 45: [101, 102] }[live.id] || [] : [])
+      .map((id, position) => ({ ...fixtureSongs.find(song => song.id === id), position: position + 1 })),
+    setlist_status: 'NORMAL' }));
   const metadata = new Map(lives.map(live => [live.id, { live_id: live.id, revision: 1, candidates: { tags: [] }, overrides: { country: { code: 'JP' } } }]));
   metadata.get(44).overrides.participants = { items: [{ artistId: 10, role: 'co_headliner' }, { artistId: 11, role: 'guest' }] };
   metadata.get(45).overrides.participants = { items: [{ artistId: 10, role: 'guest' }] };
@@ -76,7 +81,10 @@ export async function installMetadataFixture(page, { imported = true, session = 
       return json(lives.map(live => { const row = metadata.get(live.id); return metadataReviewSummary(live, row.candidates, row.overrides, row.revision); }));
     }
     if (method === 'GET' && endpoint === '/api/external/setlistfm/search') return json({ setlist: [raw], total: 1, itemsPerPage: 20 });
-    if (method === 'GET' && endpoint === '/api/lives') return json(lives.map(publicLive));
+    if (method === 'GET' && endpoint === '/api/lives') {
+      const selectedIds = (url.searchParams.get('songIds') || '').split(',').filter(Boolean).map(Number);
+      return json(lives.filter(live => !withSongs || selectedIds.every(id => live.setlist.some(song => song.id === id))).map(publicLive));
+    }
     if (method === 'POST' && endpoint === '/api/lives') {
       const body = request.postDataJSON(); state.writes.push({ endpoint, method, body });
       return json(addImported(body), 201);
@@ -112,7 +120,8 @@ export async function installMetadataFixture(page, { imported = true, session = 
         return json(result, existing ? 200 : 201);
       } catch (error) { return json({ message: error.message }, 400); }
     }
-    if (method === 'GET' && ['/api/songs', '/api/users', '/api/corrections', '/api/users/me/lives', '/api/users/me/attended-lives', '/api/users/me/attended_lives'].includes(endpoint)) return json([]);
+    if (method === 'GET' && endpoint === '/api/songs') return json(fixtureSongs);
+    if (method === 'GET' && ['/api/users', '/api/corrections', '/api/users/me/lives', '/api/users/me/attended-lives', '/api/users/me/attended_lives'].includes(endpoint)) return json([]);
     if (method === 'GET' && endpoint === '/api/users/me') return json({ id: 1, role: 'admin', username: 'Fixture Admin' });
     state.unexpected.push(`${method} ${endpoint}`);
     return json({ message: 'Unexpected fixture API; real network blocked' }, 501);
