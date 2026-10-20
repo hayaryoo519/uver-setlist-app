@@ -10,15 +10,17 @@
 | DBスキーマ差分 | devには `030_users_session_version.sql`〜`034_live_artists.sql` の5ファイルが追加されている |
 | 公開APIプレビュー | Productionは公演1081件、根拠48件のうち46件が公演同定できるが、`metadata.country` は公開されていない。2件は表記差で保留 |
 
+開催国以外の変更・設定・migration副作用の内訳は[リリース範囲の棚卸し](live_country_release_scope_inventory.md)を参照。
+
 ## 本番デプロイworkflowの要注意差分
 
 `origin/main...origin/dev` の `.github/workflows/deploy-production.yml` では、**mainにあるDBロールへの一時的な `CREATE ON SCHEMA public` 許可とEXIT trapによるREVOKEのブロックがdev側では削除されている**。mainからdevへ単純にコードを取り込むと、同時に追加されるCREATE TABLE系migrationを本番アプリロールが実行できない可能性がある。現在のProduction DB権限は未確認なので「必ず失敗する」とも「問題なく通る」とも断定しない。
 
-本番Releaseの前に、main側の必要な一時権限付与・確実な取消しを**意図せず削除しない**形にworkflowを調整し、移行権限/失敗時のREVOKEを使い捨てDBまたは適切な検証環境で確認する。既存migrationを書き換えず、スキーマ変更の後方互換性、バックアップ、デプロイ後のsystemd起動時刻/ヘルスを別途確認する。workflowに資格情報の値を出力しない。
+本番Releaseの前に、main側の必要な一時権限付与・確実な取消しを**意図せず削除しない**形にworkflowを調整する。[Draft PR #249](https://github.com/hayaryoo519/uver-setlist-app/pull/249)で復元案と使い捨てDB検証を用意したが、未マージ・実本番権限未確認である。既存migrationを書き換えず、スキーマ変更の後方互換性、バックアップ、デプロイ後のsystemd起動時刻/ヘルスを別途確認する。workflowに資格情報の値を出力しない。
 
 ## Staging画面の利用者確認（2026-10-20）
 
-利用者から、案内したStagingの確認項目（日本/海外フィルターと解除、対象公演の詳細・種別、楽曲/種別/詳細条件のPC・モバイル表示、普段のログイン/参戦記録/マイページ動線）について**問題なし**との報告を受けた。これは利用者による画面受け入れ報告であり、こちらが実機・全動線を再現した結果ではない。確認時のStagingはdev上の既存コードで、Draft PR #246/#249の未マージ変更やProduction用のRelease候補と同一ビルドであるとは主張しない。実Push/OS、Production DB移行権限、公開CDN/過去Worker、監査履歴などはこの報告の範囲外。
+利用者から、案内したStagingの確認項目（日本/海外フィルターと解除、対象公演の詳細・種別、楽曲/種別/詳細条件のPC・モバイル表示、普段のログイン/参戦記録/マイページ動線）について**問題なし**との報告を受けた。これは利用者による画面受け入れ報告であり、こちらが実機・全動線を再現した結果ではない。確認時のStagingはdev上の既存コードで、Draft PR #246/#249/#250の未マージ変更やProduction用のRelease候補と同一ビルドであるとは主張しない。実Push/OS、Production DB移行権限、公開CDN/過去Worker、監査履歴などはこの報告の範囲外。
 
 ## 推奨する順序（未実施）
 
