@@ -11,6 +11,7 @@ jobs:
     steps:
       - name: Deploy to Staging Server
         run: |
+          set -euo pipefail
           cd ~/apps/uver-setlist-staging
           git fetch origin dev
           git checkout dev
