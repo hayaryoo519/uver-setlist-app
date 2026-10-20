@@ -36,6 +36,8 @@ jobs:
         run: npm ci --legacy-peer-deps
       - name: Run frontend tests
         run: npm test -- --run
+      - name: Read-only country preview fixture tests
+        run: node --test scripts/audit/preview-live-country.test.mjs
 
   test-live-metadata-integration:
     # Stagingのpostgres:16系に合わせる。既存サービス/DBには接続しない。

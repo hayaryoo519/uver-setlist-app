@@ -18,7 +18,11 @@ node scripts/audit/preview-live-country.mjs --environment production
 | Staging | 642 | 48件の一意一致 | 一致48件すべて `unreviewed` | なし。ただし管理APIのrevision/監査履歴は未確認 |
 | Production | 1081 | 46件の一意一致 | 公開APIに `metadata.country` がなく46件とも `metadata_unavailable` | 残り2件は公演名または会場の不一致 |
 
-Productionの2例：2019-11-05はStaging由来の公演名「Zepp Sapporo Event」に対しProduction公開名「BIRTHDAY LIVE」（同会場）。2026-08-29は音楽と髭達の公演名の文字幅・会場の空白等が異なる。**自動同一視せず保留**する。Productionの公開APIに国状態がなく、認証なしの `/api/lives/:id/metadata` GETはHTTP 404だった。これはProductionの管理機能やDBスキーマの有無を確定する証拠ではなく、**現在の公開データだけでは国の既存確定・更新可否・revisionを確認できない**という境界である。Productionへのログイン、DB接続、更新、Release publishは行っていない。
+Productionの2例：2019-11-05はStaging由来の公演名「Zepp Sapporo Event」に対しProduction公開名「BIRTHDAY LIVE」（同会場）。2026-08-29は音楽と髭達の公演名の文字幅・会場の空白等が異なる。**自動同一視せず保留**する。Productionの公開APIに国状態がなく、認証なしの `/api/lives/:id/metadata` GETはHTTP 404だった。これは実際に稼働しているProductionのDBスキーマや管理権限を確定する証拠ではなく、**現在の公開データだけでは国の既存確定・更新可否・revisionを確認できない**という境界である。Productionへのログイン、DB接続、更新、Release publishは行っていない。
+
+### 本番コードの読み取り専用確認（2026-10-18）
+
+`origin/main` の `e389c326` と最新公開Release `v1.30.2`（同じcommit）を確認したところ、`server/routes/liveMetadata.js`、`server/migrations/033_live_metadata.sql`、管理UI `LiveMetadataEditor.tsx` は含まれていなかった。公開APIの応答とも整合する。ただし実サーバーの起動コード/適用済みDB migrationを直接照合したわけではない。**本番の国確定作業に先立って、該当機能を含むコードのmainへの取り込み・公開Release・デプロイ検証が別途必要**であり、通常のDB変更の後方互換性と既存の同期ガードをレビューする。PR #246の診断資料のマージやStagingのデータ保存だけでは本番に機能も国も反映されない。
 
 ## 次の停止条件
 
