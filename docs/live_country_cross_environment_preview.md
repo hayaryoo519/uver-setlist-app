@@ -22,7 +22,7 @@ Productionの2例：2019-11-05はStaging由来の公演名「Zepp Sapporo Event�
 
 ### 本番コードの読み取り専用確認（2026-10-18）
 
-`origin/main` の `e389c326` と最新公開Release `v1.30.2`（同じcommit）を確認したところ、`server/routes/liveMetadata.js`、`server/migrations/033_live_metadata.sql`、管理UI `LiveMetadataEditor.tsx` は含まれていなかった。公開APIの応答とも整合する。ただし実サーバーの起動コード/適用済みDB migrationを直接照合したわけではない。**本番の国確定作業に先立って、該当機能を含むコードのmainへの取り込み・公開Release・デプロイ検証が別途必要**であり、通常のDB変更の後方互換性と既存の同期ガードをレビューする。PR #246の診断資料のマージやStagingのデータ保存だけでは本番に機能も国も反映されない。
+`origin/main` の `e389c326` と最新公開Release `v1.30.2`（同じcommit）を確認したところ、`server/routes/liveMetadata.js`、`server/migrations/033_live_metadata.sql`、管理UI `LiveMetadataEditor.tsx` は含まれていなかった。公開APIの応答とも整合する。ただし実サーバーの起動コード/適用済みDB migrationを直接照合したわけではない。**本番の国確定作業に先立って、該当機能を含むコードのmainへの取り込み・公開Release・デプロイ検証が別途必要**であり、通常のDB変更の後方互換性と既存の同期ガードをレビューする。PR #246の診断資料のマージやStagingのデータ保存だけでは本番に機能も国も反映されない。[main/dev差分と本番デプロイworkflowの要注意点](live_country_production_release_preflight.md)を参照。
 
 ## 次の停止条件
 
