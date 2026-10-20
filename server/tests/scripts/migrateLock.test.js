@@ -2,6 +2,9 @@ jest.mock('dotenv', () => ({ config: jest.fn() }));
 jest.mock('pg', () => ({ Pool: jest.fn() }));
 
 const { Pool } = require('pg');
+const fs = require('node:fs');
+const path = require('node:path');
+const yaml = require('js-yaml');
 
 describe('migration advisory lock', () => {
     it('fails the process without applying schema when another runner owns the lock', async () => {
@@ -30,5 +33,13 @@ describe('migration advisory lock', () => {
             process.exitCode = previousExitCode;
             log.mockRestore();
         }
+    });
+
+    it('stops the Staging deploy if build or migration exits nonzero', () => {
+        const workflow = yaml.load(fs.readFileSync(path.resolve(__dirname, '../../../.github/workflows/deploy-staging.yml'), 'utf8'));
+        const script = workflow.jobs.deploy.steps[0].run;
+        expect(script.trimStart().startsWith('set -euo pipefail\n')).toBe(true);
+        expect(script.indexOf('docker compose build')).toBeLessThan(script.indexOf('docker compose run --rm app-staging node server/scripts/migrate.js'));
+        expect(script.indexOf('docker compose run --rm app-staging node server/scripts/migrate.js')).toBeLessThan(script.indexOf('docker compose up -d'));
     });
 });
