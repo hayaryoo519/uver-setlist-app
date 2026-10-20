@@ -1,6 +1,6 @@
 # Productionリリース候補の範囲（読み取り専用棚卸し）
 
-2026-10-21にGit上の `origin/main` (`e389c326`) と `origin/dev` (`88cae715`) を比較。`main..dev` は94 Gitコミット（first-parentでは36件のマージ）、207ファイルの差分。**ローカルの古い `main` との比較ではない。** この時点で本番用の統合候補SHAは作成・配備していない。
+2026-10-21にGit上の `origin/main` (`e389c326`) と `origin/dev` (`88cae715`) を比較。`main..dev` は94 Gitコミット（first-parentでは36件のマージ）、207ファイルの差分。**ローカルの古い `main` との比較ではない。** この時点で本番用の統合候補SHAは作成・配備していない。2026-10-21にPR #250/#249を順にdevへマージ後、`origin/dev` は `0e4efdf1`（mainとの差は101コミット、210ファイル）となった。Productionコードは未変更。
 
 ## 開催国以外に含まれる主な変更
 
@@ -13,12 +13,12 @@
 ## DB・設定上の確認点
 
 - 未リリースのmigration `030`〜`034`。`030`は `users.session_version` をデフォルト0で追加し、`032`はメール変更用カラムを追加する。`031`はハッシュ/期限用カラム追加に加えて、**期限なしの既存verification tokenへ24時間の期限を付与するUPDATEを含む**。既存リンクの扱いと実行時間/ロックをRelease前に評価する。`033/034`は公演メタデータ/アーティスト表を追加する。適用済みSQLは編集しない。
-- 現行のProductionデプロイworkflowは `main` に存在する一時CREATE権限処理を `dev` で失っている。復元案は[Draft PR #249](https://github.com/hayaryoo519/uver-setlist-app/pull/249)。隔離PG18とCIのPG16で権限制限→GRANT→migration 033/034→REVOKEを確認したが、実本番ロールの権限は未確認。
-- migrate runnerのアドバイザリーロック競合で終了コード0になると配備がmigration未適用のまま進む。終了コード1への修正案は[Draft PR #250](https://github.com/hayaryoo519/uver-setlist-app/pull/250)。モック単体テスト/PRの3ジョブは成功。**両PRを合わせた候補のCI・実配備は未実施**。
+- 現行のProductionデプロイworkflowは `main` に存在する一時CREATE権限処理を `dev` で失っている。復元は[PR #249](https://github.com/hayaryoo519/uver-setlist-app/pull/249)でdevへマージ済み。隔離PG18とCIのPG16で権限制限→GRANT→migration 033/034→REVOKEを確認したが、実本番ロールの権限は未確認。
+- migrate runnerのアドバイザリーロック競合で終了コード0になると配備がmigration未適用のまま進む。終了コード1とStaging workflowのfail-fastは[PR #250](https://github.com/hayaryoo519/uver-setlist-app/pull/250)でdevへマージ済み。モック単体テスト/両PR統合状態のCI 3ジョブは成功。Stagingの最終配備[run 39457811351](https://github.com/hayaryoo519/uver-setlist-app/actions/runs/39457811351)も成功したが、Productionへの適用は未実施。
 - devのメール配送設定は本番相当の `NODE_ENV` で有効な送信者/パスワードとHTTPS `APP_URL` を必要とする。サーバー起動は設定不備でも継続するため、pingだけではメール動線の健全性を証明できない。Release前に秘密値を表示せず `server/scripts/check_email_configuration.js` の適用可否を運用担当が確認し、SMTP/実配送は別の安全な手順で判断する。Productionの現在の設定値は取得していない。
 
 ## 次の判断点
 
 1. `dev` の全変更を本番に含めるか、別の最小リリース候補を設計するかを決める。後者もmigration・認証・同期ガードの依存を落とさないよう個別レビューが必要。
-2. #249/#250の採用と、統合した候補SHAのCI/隔離DB・Staging配備/確認を行うかを決める。両PRはDraftのまま、`dev`へのマージはStaging自動配備を起動する。
+2. #249/#250はdevへ統合済みでCIとStaging自動配備も成功。引き続きProductionリリース候補のSHA/範囲をレビューし、本番固有の事前条件を確認する。
 3. 本番固有の権限、migration履歴/ロック、メール設定、バックアップ/復旧と利用時間帯を事前確認。**公開ReleaseとProductionデータ更新はそれぞれ別の明示承認を待つ。** Stagingの画面受け入れ報告は[別記](live_country_production_release_preflight.md)であり、本番設定の証明にはならない。
