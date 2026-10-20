@@ -93,6 +93,7 @@ async function runMigrations() {
 
         if (!lockResult.rows[0].locked) {
             console.error('[ERROR] 別のマイグレーションプロセスが実行中です。終了します。');
+            process.exitCode = 1;
             return;
         }
 
@@ -200,7 +201,11 @@ async function runMigrations() {
 }
 
 // 実行
-runMigrations().catch(err => {
-    console.error('[FATAL] マイグレーション実行エラー:', err);
-    process.exitCode = 1;
-});
+if (require.main === module) {
+    runMigrations().catch(err => {
+        console.error('[FATAL] マイグレーション実行エラー:', err);
+        process.exitCode = 1;
+    });
+}
+
+module.exports = { runMigrations };
