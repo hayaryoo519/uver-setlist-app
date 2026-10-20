@@ -139,8 +139,30 @@ async function main() {
         passed('OAuth credentials, private drafts/import metadata, playlist history and approved publication queue removed');
     }
     passed('Legacy schema without metadata: anonymization succeeds');
+    const metadataMigrations = ['033_live_metadata.sql', '034_live_artists.sql'];
+    if (fullSchema) {
+        // 本番ロールの権限は読まない。所有する使い捨てclusterで、制限ロールと実SQLだけを試す。
+        await pool.query('REVOKE CREATE ON SCHEMA public FROM PUBLIC');
+        await pool.query('CREATE ROLE metadata_migration_fixture LOGIN');
+        await pool.query('GRANT USAGE ON SCHEMA public TO metadata_migration_fixture');
+        await pool.query('GRANT REFERENCES ON TABLE lives, users TO metadata_migration_fixture');
+        const restricted = new Pool({ ...connection, user: 'metadata_migration_fixture' });
+        try {
+            const migration = filename => restricted.query(fs.readFileSync(path.join(root, 'server/migrations', filename), 'utf8'));
+            await assert.rejects(migration(metadataMigrations[0]), error => error.code === '42501');
+            await pool.query('GRANT CREATE ON SCHEMA public TO metadata_migration_fixture');
+            try {
+                for (const filename of metadataMigrations) await migration(filename);
+            } finally {
+                await pool.query('REVOKE CREATE ON SCHEMA public FROM metadata_migration_fixture');
+            }
+            assert.equal((await pool.query("SELECT has_schema_privilege('metadata_migration_fixture', 'public', 'CREATE') AS allowed")).rows[0].allowed, false);
+            await assert.rejects(restricted.query('CREATE TABLE public.fixture_after_revoke (id integer)'), error => error.code === '42501');
+        } finally { await restricted.end(); }
+        passed('Restricted fixture role requires temporary schema CREATE for real 033/034, and REVOKE removes it');
+    }
     for (let repeat = 0; repeat < 2; repeat++) {
-        for (const filename of ['033_live_metadata.sql', '034_live_artists.sql']) {
+        for (const filename of metadataMigrations) {
             await pool.query(fs.readFileSync(path.join(root, 'server/migrations', filename), 'utf8'));
         }
     }
