@@ -37,7 +37,7 @@ jobs:
       - name: Run frontend tests
         run: npm test -- --run
       - name: Read-only country preview fixture tests
-        run: node --test scripts/audit/preview-live-country.test.mjs
+        run: node --test scripts/audit/preview-live-country.check.mjs
 
   test-live-metadata-integration:
     # Stagingのpostgres:16系に合わせる。既存サービス/DBには接続しない。

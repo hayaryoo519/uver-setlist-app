@@ -5,7 +5,7 @@
 `scripts/audit/preview-live-country.mjs` は固定された二つの公開APIに**匿名GETだけ**行い、日付・公演名・会場の厳密な公演対応を出力する。日付だけ、会場だけ、都道府県が会場名に含まれることでは一致にしない。同日別公演がある場合は `ambiguous_public_record` として保留。国が既に確定済みなら `already_confirmed` / `different_confirmed_country` を分ける。公開APIに国の状態がない環境は `metadata_unavailable` とし、「更新可能」と表示しない。`public_unreviewed_match` は公開側の一意対応だけで、管理者レビュー・保存承認・revisionを意味しない。
 
 ```bash
-node --test scripts/audit/preview-live-country.test.mjs
+node --test scripts/audit/preview-live-country.check.mjs
 node scripts/audit/preview-live-country.mjs --environment staging
 node scripts/audit/preview-live-country.mjs --environment production
 # 必要な場合だけ --details を追加。公開IDと非機密の照合状態を表示する。
