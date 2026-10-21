@@ -27,4 +27,4 @@ PR #242は同期ガード作業ブランチへ先にマージされ、そのマ�
 
 1. `dev` の全変更を本番に含めるか、別の最小リリース候補を設計するかを決める。後者もmigration・認証・同期ガードの依存を落とさないよう個別レビューが必要。
 2. #249/#250はdevへ統合済みでCIとStaging自動配備も成功。引き続きProductionリリース候補のSHA/範囲をレビューし、本番固有の事前条件を確認する。
-3. 本番固有の権限、migration履歴/ロック、メール設定、バックアップ/復旧と利用時間帯を事前確認。**公開ReleaseとProductionデータ更新はそれぞれ別の明示承認を待つ。** Stagingの画面受け入れ報告は[別記](live_country_production_release_preflight.md)であり、本番設定の証明にはならない。
+3. [本番運用者の読み取り専用事前確認](live_country_production_operator_preflight.md)で権限、migration履歴/ロック、メール設定、バックアップ/復旧と利用時間帯を確認。**公開ReleaseとProductionデータ更新はそれぞれ別の明示承認を待つ。** Stagingの画面受け入れ報告は[別記](live_country_production_release_preflight.md)であり、本番設定の証明にはならない。
