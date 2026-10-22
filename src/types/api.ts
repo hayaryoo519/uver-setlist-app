@@ -266,6 +266,7 @@ export interface TodayInHistoryLive {
   type: string | null
   song_count: number
   years_ago: number
+  is_milestone: boolean
 }
 
 export interface TodayInHistoryAnniversary {
@@ -278,6 +279,10 @@ export interface TodayInHistoryAnniversary {
 
 export interface TodayInHistoryData {
   date: string
+  /** 表示する公演の日付。当日に公演がなければ前後3日以内の近い日。見つからなければ null */
+  matched_date: string | null
+  /** 当日からのずれ（日）。正は先の日 */
+  offset_days: number | null
   lives: TodayInHistoryLive[]
   anniversaries: TodayInHistoryAnniversary[]
 }

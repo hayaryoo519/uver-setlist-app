@@ -14,6 +14,10 @@ const ANNIVERSARIES = [
     { monthDay: '03-08', type: 'birthday', label: '彰 誕生日' },
 ];
 
+// 当日に公演がない場合に探す日のずれ。同じ距離なら先の日（予告）を優先する
+const NEARBY_OFFSETS = [1, -1, 2, -2, 3, -3];
+const MILESTONE_YEARS = 5;
+
 function anniversariesFor(date) {
     const currentYear = Number(date.slice(0, 4));
     const monthDay = date.slice(5);
@@ -24,26 +28,57 @@ function anniversariesFor(date) {
         ));
 }
 
+function shiftDate(date, days) {
+    const shifted = new Date(`${date}T00:00:00Z`);
+    shifted.setUTCDate(shifted.getUTCDate() + days);
+    return shifted.toISOString().slice(0, 10);
+}
+
+// 節目（5年ごと）の公演を先に、それぞれ新しい順に並べる
+function sortLives(lives) {
+    return [...lives].sort((a, b) =>
+        Number(b.is_milestone) - Number(a.is_milestone) || b.date.localeCompare(a.date) || a.id - b.id
+    );
+}
+
+// 対象日より1年以上前の、同じ月日の公演だけを対象にする
+function livesOn(rows, targetDate) {
+    const targetYear = Number(targetDate.slice(0, 4));
+    return rows
+        .filter(row => row.date.slice(5) === targetDate.slice(5) && Number(row.date.slice(0, 4)) < targetYear)
+        .map(row => {
+            const yearsAgo = targetYear - Number(row.date.slice(0, 4));
+            return {
+                ...row,
+                venue: normalizeVenueName(row.venue),
+                years_ago: yearsAgo,
+                is_milestone: yearsAgo % MILESTONE_YEARS === 0,
+            };
+        });
+}
+
 async function getTodayInHistory({ now = new Date() } = {}) {
-    const { date, monthDay } = jstDateParts(now);
-    const currentYear = Number(date.slice(0, 4));
+    const { date } = jstDateParts(now);
+    const candidates = [0, ...NEARBY_OFFSETS].map(offset => ({ offset, date: shiftDate(date, offset) }));
     const result = await db.query(
         `SELECT l.id, l.date::text AS date, l.title, l.tour_name, l.venue, l.prefecture, l.type,
                 COUNT(sl.id)::int AS song_count
          FROM lives l
          LEFT JOIN setlists sl ON sl.live_id = l.id
-         WHERE TO_CHAR(l.date, 'MM-DD') = $1 AND l.date < $2::date
-         GROUP BY l.id
-         ORDER BY l.date DESC, l.id`,
-        [monthDay, date]
+         WHERE TO_CHAR(l.date, 'MM-DD') = ANY($1::text[]) AND l.date < $2::date
+         GROUP BY l.id`,
+        [candidates.map(candidate => candidate.date.slice(5)), date]
     );
+
+    const match = candidates
+        .map(candidate => ({ ...candidate, lives: livesOn(result.rows, candidate.date) }))
+        .find(candidate => candidate.lives.length > 0);
+
     return {
         date,
-        lives: result.rows.map(row => ({
-            ...row,
-            venue: normalizeVenueName(row.venue),
-            years_ago: currentYear - Number(row.date.slice(0, 4)),
-        })),
+        matched_date: match ? match.date : null,
+        offset_days: match ? match.offset : null,
+        lives: match ? sortLives(match.lives) : [],
         anniversaries: anniversariesFor(date),
     };
 }
