@@ -1,5 +1,7 @@
 # 開催国：Staging／Production共通根拠の公開読み取り専用プレビュー
 
+**更新（2026-10-22）:** Productionに[コードRelease v1.31.0](live_country_production_release_result.md)を配備済み。以下の `metadata_unavailable` / 404 / コード未搭載の観測は**リリース前の履歴**。リリース後は公演1081件すべて国 `unreviewed`、根拠48件中46件が公開上は未確認の一意対応、2件は同定不一致で保留。国データの保存はしていない。
+
 `../scripts/audit/live-country-evidence.json` はイベント固有の公式出典を照合した**48件の提案**（JP 47 / KR 1）。日付・Staging観測時の公演名・会場・国コード・公式出典だけを記録し、Staging/Productionの公演ID、revision、管理用候補、トークン、管理メモ、原文を含めない。既存の根拠調査は [2019年](live_country_2019_2021_source_review.md)、[2022年](live_country_2022_2023_source_review.md)、[2024・2025年](live_country_2024_2025_source_review.md)、[公式ツアー日程](live_country_tour_schedule_batch.md)、[2026年](live_country_next_source_review.md) を参照。
 
 `scripts/audit/preview-live-country.mjs` は固定された二つの公開APIに**匿名GETだけ**行い、日付・公演名・会場の厳密な公演対応を出力する。日付だけ、会場だけ、都道府県が会場名に含まれることでは一致にしない。同日別公演がある場合は `ambiguous_public_record` として保留。国が既に確定済みなら `already_confirmed` / `different_confirmed_country` を分ける。公開APIに国の状態がない環境は `metadata_unavailable` とし、「更新可能」と表示しない。`public_unreviewed_match` は公開側の一意対応だけで、管理者レビュー・保存承認・revisionを意味しない。
@@ -26,4 +28,4 @@ Productionの2例：2019-11-05はStaging由来の公演名「Zepp Sapporo Event�
 
 ## 次の停止条件
 
-このプレビューの一致件数を一括PATCH対象にはしない。Stagingでも保存前に、各公演の管理APIで最新revision、既存の手動国、他属性、候補・出典を再確認し、書き込み範囲の明示承認が必要。保存する場合も国だけを1件ずつrevision付きPATCHし、409や不一致で停止する。Productionはまず必要なコードのリリース状況を別途確認し、Production固有の公演/出典/既存設定を再照合して**別の承認**を得る。StagingのIDやrevisionを転記せず、Stagingで保存した国がProductionへ伝播すると主張しない。
+このプレビューの一致件数を一括PATCH対象にはしない。Stagingでも保存前に、各公演の管理APIで最新revision、既存の手動国、他属性、候補・出典を再確認し、書き込み範囲の明示承認が必要。保存する場合も国だけを1件ずつrevision付きPATCHし、409や不一致で停止する。Productionは配備済みコード・migration履歴/権限を独立して確認し、Production固有の公演/出典/既存設定を再照合して**別の承認**を得る。StagingのIDやrevisionを転記せず、Stagingで保存した国がProductionへ伝播すると主張しない。

@@ -1,5 +1,7 @@
 # Productionリリース候補の範囲（読み取り専用棚卸し）
 
+**更新（2026-10-22）:** この文書は候補決定前の棚卸し。dev全体を[PR #251](https://github.com/hayaryoo519/uver-setlist-app/pull/251)でmainに取り込み、[v1.31.0をProductionへ配備](live_country_production_release_result.md)した。国データ更新は行っていない。
+
 2026-10-21にGit上の `origin/main` (`e389c326`) と `origin/dev` (`88cae715`) を比較。`main..dev` は94 Gitコミット（first-parentでは36件のマージ）、207ファイルの差分。**ローカルの古い `main` との比較ではない。** この時点で本番用の統合候補SHAは作成・配備していない。2026-10-21にPR #250/#249を順にdevへマージ後、`origin/dev` は `0e4efdf1`（mainとの差は101コミット、210ファイル）となった。Productionコードは未変更。
 
 ## 開催国以外に含まれる主な変更

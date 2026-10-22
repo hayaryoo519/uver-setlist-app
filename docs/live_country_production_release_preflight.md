@@ -1,5 +1,7 @@
 # 開催国機能のProductionコードリリース：読み取り専用差分確認
 
+**更新（2026-10-22）:** 以下はリリース前の差分・判断記録。現在は[Release v1.31.0配備結果](live_country_production_release_result.md)を参照。`main=e389c326` / `dev=88cae715` は比較時点のSHAであり、現在値ではない。
+
 2026-10-20、Gitの `origin/main` / `origin/dev` と最新公開Releaseを読み取り専用で比較した。**mainへのマージ、Release公開、Production接続・データ更新は行っていない。** 実サーバーの起動時刻やDB権限は未確認。
 
 | 対象 | 観測値 |
