@@ -113,7 +113,7 @@ const LiveList = () => {
 
     const advancedFilterCount = (filters.tags?.length || 0) + (filters.countryCode ? 1 : 0)
         + (filters.memberId ? 1 : 0) + (filters.artistId ? 1 : 0) + (filters.participantRole ? 1 : 0);
-    const renderTagFilters = (view: 'desktop' | 'mobile') => (
+    const renderTagFilters = (view: 'desktop' | 'mobile', resultCount: number) => (
         <section className="advanced-filter-section">
             <button type="button" className="advanced-filter-toggle"
                 aria-expanded={isAdvancedFilterOpen}
@@ -161,6 +161,9 @@ const LiveList = () => {
                     <button type="button" className={`type-pill type-pill-tag ${locationValue === 'overseas' ? 'active' : ''}`}
                         aria-pressed={locationValue === 'overseas'} onClick={() => changeLocation(locationValue === 'overseas' ? '' : 'overseas')}>海外</button>
                 </div>
+                {locationValue && <p className="location-filter-feedback" role="status">
+                    現在の条件：{resultCount}件。開催国未確認の公演は日本・海外に含めません。
+                </p>}
             </fieldset>
             </div>}
         </section>
@@ -445,7 +448,7 @@ const LiveList = () => {
                                     </select>
                                 </div>
                             </div>
-                            <div className="desktop-only">{renderTagFilters('desktop')}</div>
+                            <div className="desktop-only">{renderTagFilters('desktop', filteredLives.length)}</div>
                         </header>
 
                         {/* モバイル年タブ */}
@@ -502,7 +505,7 @@ const LiveList = () => {
                                         {songOptions}
                                     </select>
                                 </div>
-                                {renderTagFilters('mobile')}
+                                {renderTagFilters('mobile', filteredLives.length)}
                             </div>
                         )}
 
