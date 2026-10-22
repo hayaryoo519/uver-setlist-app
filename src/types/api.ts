@@ -253,3 +253,31 @@ export interface SongPerformanceTimelineData {
   consecutiveYears: number | null    // 最長連続披露年数
   yearlyData: YearlyPerformanceEntry[]
 }
+
+// ---- 今日のUVER史 ----
+
+export interface TodayInHistoryLive {
+  id: number
+  date: string
+  title: string | null
+  tour_name: string | null
+  venue: string | null
+  prefecture: string | null
+  type: string | null
+  song_count: number
+  years_ago: number
+}
+
+export interface TodayInHistoryAnniversary {
+  type: 'formation' | 'debut' | 'birthday'
+  label: string
+  description?: string
+  year?: number
+  years?: number
+}
+
+export interface TodayInHistoryData {
+  date: string
+  lives: TodayInHistoryLive[]
+  anniversaries: TodayInHistoryAnniversary[]
+}
