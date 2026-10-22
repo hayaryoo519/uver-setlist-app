@@ -1,15 +1,23 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Live } from '../types/api';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, MapPin, Calendar, Check, Plus, ArrowRight, Loader, Filter, X, Music } from 'lucide-react';
+import { Search, MapPin, Calendar, Check, Plus, ArrowRight, Loader, Filter, X, Music, ChevronDown } from 'lucide-react';
 import { useAttendance } from '../hooks/useAttendance';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
+import LiveMetadataBadges from '../components/LiveMetadataBadges';
+import { MEMBERS, PARTICIPANT_ROLES } from '../types/liveMetadata';
 import { useLives } from '../hooks/queries/useLives';
 import { useSongs } from '../hooks/queries/useSongs';
 import { DISCOGRAPHY } from '../data/discography';
-import { getDisplaySubtitle } from '../utils/liveText';
+import { getDisplaySubtitle, LIVE_TAGS, matchesLiveTags } from '../utils/liveText';
+import { countryName } from '../utils/countryName';
+import type { LiveTag } from '../utils/liveText';
 import './LiveListPrototype.css';
+
+const normalizeArtistSearch = (value: string) => value.normalize('NFKC').toLowerCase().trim().replace(/\s+/g, ' ');
+// 表示のまとまりは検索ルールの分類（LIVE_TAG_GROUPS）とは独立させる。
+const FEATURE_TAGS = LIVE_TAGS.filter(tag => tag.id !== 'vs' && tag.id !== 'overseas');
 
 const LiveList = () => {
     const { currentUser } = useAuth();
@@ -18,17 +26,29 @@ const LiveList = () => {
     const selectedYear = searchParams.get('year');
     const navigate = useNavigate();
 
+    const restoredFilters = location.state?.filters || {};
+    const restoredTags: string[] = Array.isArray(restoredFilters.tags) ? restoredFilters.tags : [];
     const initialFilters = {
         text: '',
         venue: '',
         songIds: [] as number[],
         startDate: '',
         endDate: '',
-        types: [] as string[],
-        ...location.state?.filters,
+        countryCode: '',
+        memberId: '',
+        artistId: '',
+        participantRole: '',
+        ...restoredFilters,
+        // 試作時のフェスタグは既存種別へ移し、廃止タグを残さない。
+        types: [...new Set<string>([
+            ...(Array.isArray(restoredFilters.types) ? restoredFilters.types : []),
+            ...(restoredTags.includes('festival') ? ['FESTIVAL'] : []),
+        ])],
+        tags: LIVE_TAGS.filter(tag => restoredTags.includes(tag.id)).map(tag => tag.id),
     };
     const [filters, setFilters] = useState(initialFilters);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
 
     const { addLive, removeLive, isAttended } = useAttendance();
 
@@ -60,8 +80,94 @@ const LiveList = () => {
         handleFilterChange({ ...filters, types: newTypes });
     };
 
+    const toggleTag = (tag: LiveTag) => {
+        const current: LiveTag[] = filters.tags || [];
+        handleFilterChange({ ...filters, tags: current.includes(tag)
+            ? current.filter(t => t !== tag) : [...current, tag] });
+    };
+
+    const artistOptions = useMemo(() => {
+        const artists = new Map<number, string>();
+        lives.forEach(live => {
+            if (live.metadata?.participants?.status === 'confirmed') live.metadata.participants.items.forEach(item => artists.set(item.artistId, item.name));
+        });
+        return [...artists.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+    }, [lives]);
+    const selectedArtistName = artistOptions.find(artist => String(artist.id) === filters.artistId)?.name;
+    const selectedRoleName = PARTICIPANT_ROLES.find(role => role.id === filters.participantRole)?.label;
+    const countryLabel = filters.countryCode === 'unconfirmed' ? '開催国未確認'
+        : `開催地：${filters.countryCode === 'JP' ? '日本' : countryName(filters.countryCode)}`;
+    const selectedMemberName = MEMBERS.find(member => member.id === filters.memberId)?.label;
+    const locationValue = filters.countryCode === 'JP' ? 'JP'
+        : (/^[A-Z]{2}$/.test(filters.countryCode) || filters.tags?.includes('overseas')) ? 'overseas' : '';
+    const showMemberFilter = filters.tags?.includes('birthday') || !!filters.memberId;
+    const changeLocation = (value: '' | 'JP' | 'overseas') => {
+        const tags = (filters.tags || []).filter((tag: LiveTag) => tag !== 'overseas');
+        handleFilterChange({ ...filters, tags: value === 'overseas' ? [...tags, 'overseas'] : tags,
+            countryCode: value === 'overseas' ? '' : value });
+    };
+    const renderTagButton = (tag: (typeof LIVE_TAGS)[number]) => (
+        <button key={tag.id} type="button" className={`type-pill type-pill-tag ${filters.tags?.includes(tag.id) ? 'active' : ''}`}
+            aria-pressed={!!filters.tags?.includes(tag.id)} onClick={() => toggleTag(tag.id)}>{tag.label}</button>
+    );
+
+    const advancedFilterCount = (filters.tags?.length || 0) + (filters.countryCode ? 1 : 0)
+        + (filters.memberId ? 1 : 0) + (filters.artistId ? 1 : 0) + (filters.participantRole ? 1 : 0);
+    const renderTagFilters = (view: 'desktop' | 'mobile') => (
+        <section className="advanced-filter-section">
+            <button type="button" className="advanced-filter-toggle"
+                aria-expanded={isAdvancedFilterOpen}
+                aria-controls={isAdvancedFilterOpen ? `advanced-live-filters-${view}` : undefined}
+                onClick={() => setIsAdvancedFilterOpen(open => !open)}>
+                詳細フィルター{' '}
+                {advancedFilterCount > 0 && <span className="advanced-filter-count">{advancedFilterCount}件適用中</span>}
+                <ChevronDown size={14} aria-hidden="true" />
+            </button>
+            {isAdvancedFilterOpen && <div id={`advanced-live-filters-${view}`} className="semantic-filters">
+            <fieldset className="semantic-filter-group">
+                <legend>公演の特徴</legend>
+                <div className="type-filter-pills">{FEATURE_TAGS.map(renderTagButton)}</div>
+                {showMemberFilter && <label className="semantic-filter-field">生誕祭の対象メンバー
+                    <select className="song-filter-select" value={filters.memberId || ''}
+                        onChange={event => handleFilterChange({ ...filters, memberId: event.target.value })}>
+                        <option value="">指定なし</option>
+                        {MEMBERS.map(member => <option key={member.id} value={member.id}>{member.label}</option>)}
+                    </select>
+                </label>}
+            </fieldset>
+            <fieldset className="semantic-filter-group">
+                <legend>共演</legend>
+                <div className="type-filter-pills">{LIVE_TAGS.filter(tag => tag.id === 'vs').map(renderTagButton)}</div>
+                <label className="semantic-filter-field">共演アーティスト
+                    <select className="song-filter-select" value={filters.artistId || ''}
+                        onChange={event => handleFilterChange({ ...filters, artistId: event.target.value })}>
+                        <option value="">指定なし</option>
+                        {artistOptions.map(artist => <option key={artist.id} value={artist.id}>{artist.name}</option>)}
+                    </select>
+                </label>
+                <label className="semantic-filter-field">相手の出演形態
+                    <select className="song-filter-select" value={filters.participantRole || ''}
+                        onChange={event => handleFilterChange({ ...filters, participantRole: event.target.value })}>
+                        <option value="">指定なし</option>
+                        {PARTICIPANT_ROLES.map(role => <option key={role.id} value={role.id}>{role.label}</option>)}
+                    </select>
+                </label>
+            </fieldset>
+            <fieldset className="semantic-filter-group">
+                <legend>開催地</legend>
+                <div className="type-filter-pills">
+                    <button type="button" className={`type-pill type-pill-tag ${locationValue === 'JP' ? 'active' : ''}`}
+                        aria-pressed={locationValue === 'JP'} onClick={() => changeLocation(locationValue === 'JP' ? '' : 'JP')}>日本</button>
+                    <button type="button" className={`type-pill type-pill-tag ${locationValue === 'overseas' ? 'active' : ''}`}
+                        aria-pressed={locationValue === 'overseas'} onClick={() => changeLocation(locationValue === 'overseas' ? '' : 'overseas')}>海外</button>
+                </div>
+            </fieldset>
+            </div>}
+        </section>
+    );
+
     const clearAllFilters = () => {
-        handleFilterChange({ text: '', venue: '', songIds: [], startDate: '', endDate: '', types: [] });
+        handleFilterChange({ text: '', venue: '', songIds: [], startDate: '', endDate: '', types: [], tags: [], countryCode: '', memberId: '', artistId: '', participantRole: '' });
         setSearchParams({});
     };
 
@@ -100,26 +206,38 @@ const LiveList = () => {
             if (selectedYear) {
                 if (new Date(live.date).getFullYear().toString() !== selectedYear) return false;
             }
-            if (filters.text) {
-                const q = filters.text.toLowerCase();
+            if (filters.text.trim()) {
+                const q = filters.text.trim().toLowerCase();
+                const artistQuery = normalizeArtistSearch(filters.text);
                 const venue = typeof live.venue === 'object' ? ((live.venue as any)?.name || '') : (live.venue || '');
                 const tour = typeof live.tour_name === 'object' ? ((live.tour_name as any)?.name || '') : (live.tour_name || '');
                 if (
                     !tour.toLowerCase().includes(q) &&
                     !(live.title || '').toLowerCase().includes(q) &&
                     !venue.toLowerCase().includes(q) &&
-                    !(live.special_note?.toLowerCase() || '').includes(q)
+                    !(live.special_note?.toLowerCase() || '').includes(q) &&
+                    !(live.metadata?.participants?.status === 'confirmed' && live.metadata.participants.items.some(item =>
+                        [item.name, ...item.aliases].some(name => normalizeArtistSearch(name).includes(artistQuery))))
                 ) return false;
             }
             if (filters.types?.length > 0 && !filters.types.includes(live.type)) return false;
+            if (filters.tags?.length && !matchesLiveTags(live.tags || [], filters.tags)) return false;
+            if (filters.countryCode) {
+                const code = live.metadata?.country.status === 'confirmed' ? live.metadata.country.code : null;
+                if (filters.countryCode === 'unconfirmed' ? !!code : code !== filters.countryCode) return false;
+            }
+            if (filters.memberId && (live.metadata?.members.status !== 'confirmed' || !live.metadata.members.ids.includes(filters.memberId))) return false;
+            if ((filters.artistId || filters.participantRole) && (live.metadata?.participants?.status !== 'confirmed' ||
+                !live.metadata.participants.items.some(item => (!filters.artistId || String(item.artistId) === filters.artistId) &&
+                    (!filters.participantRole || item.role === filters.participantRole)))) return false;
             return true;
         });
-    }, [lives, filters.text, filters.types, selectedYear]);
+    }, [lives, filters.text, filters.types, filters.tags, filters.countryCode, filters.memberId, filters.artistId, filters.participantRole, selectedYear]);
 
     // フィルターなし全期間 → 年別グループ表示
-    const showGroupedView = !selectedYear && !filters.text && !filters.types?.length && !filters.songIds?.length;
+    const showGroupedView = !selectedYear && !filters.text && !filters.types?.length && !filters.tags?.length && !filters.songIds?.length && !filters.countryCode && !filters.memberId && !filters.artistId && !filters.participantRole;
 
-    const activeFilterCount = (filters.types?.length || 0) + (filters.songIds?.length || 0);
+    const activeFilterCount = (filters.types?.length || 0) + (filters.songIds?.length || 0) + advancedFilterCount;
 
     const selectedSongName = useMemo(() => {
         if (!filters.songIds?.length) return null;
@@ -189,6 +307,7 @@ const LiveList = () => {
                         </span>
                     )}
                 </h3>
+                <LiveMetadataBadges tags={live.tags} metadata={live.metadata} />
             </div>
             <div className="card-column period-col desktop-only">
                 <label>開催日</label>
@@ -219,6 +338,7 @@ const LiveList = () => {
                         </span>
                     )}
                 </h3>
+                <LiveMetadataBadges tags={live.tags} metadata={live.metadata} />
                 <div className="card-venue-row">
                     <MapPin size={14} />
                     <span>{getVenueName(live.venue)}</span>
@@ -286,7 +406,7 @@ const LiveList = () => {
                                     <Search size={15} className="archive-search-icon" />
                                     <input
                                         type="text"
-                                        placeholder="ツアー名・会場で検索"
+                                        placeholder="ツアー名・会場・共演者で検索"
                                         value={filters.text}
                                         onChange={e => handleFilterChange({ ...filters, text: e.target.value })}
                                         className="archive-search-input"
@@ -325,6 +445,7 @@ const LiveList = () => {
                                     </select>
                                 </div>
                             </div>
+                            <div className="desktop-only">{renderTagFilters('desktop')}</div>
                         </header>
 
                         {/* モバイル年タブ */}
@@ -346,6 +467,8 @@ const LiveList = () => {
                             {/* モバイル絞込ボタン */}
                             <button
                                 className={`mobile-filter-btn mobile-only ${isFilterOpen ? 'active' : ''}`}
+                                aria-label="絞り込みフィルター"
+                                aria-expanded={isFilterOpen}
                                 onClick={() => setIsFilterOpen(v => !v)}
                             >
                                 <Filter size={14} />
@@ -379,6 +502,7 @@ const LiveList = () => {
                                         {songOptions}
                                     </select>
                                 </div>
+                                {renderTagFilters('mobile')}
                             </div>
                         )}
 
@@ -401,13 +525,39 @@ const LiveList = () => {
                             <div className="filtered-list-container">
                                 {/* アクティブフィルターチップ */}
                                 {activeFilterCount > 0 && (
-                                    <div className="active-filter-chips">
+                                    <div className={`active-filter-chips ${activeFilterCount === (filters.types?.length || 0) ? 'types-only' : ''} ${isFilterOpen ? 'type-controls-visible' : ''}`}>
                                         {(filters.types || []).map((t: string) => (
-                                            <span key={t} className={`filter-chip filter-chip-${t.toLowerCase()}`}>
+                                            <span key={t} className={`filter-chip filter-chip-type filter-chip-${t.toLowerCase()}`}>
                                                 {t === 'FESTIVAL' ? 'FES' : t === 'EVENT' ? 'EVENT' : 'ワンマン'}
                                                 <button onClick={() => toggleType(t)}><X size={10} /></button>
                                             </span>
                                         ))}
+                                        {LIVE_TAGS.filter(tag => filters.tags?.includes(tag.id)).map(tag => (
+                                            <span key={tag.id} className="filter-chip filter-chip-tag">
+                                                {tag.label}
+                                                <button aria-label={`${tag.label}フィルターを解除`} onClick={() => toggleTag(tag.id)}><X size={10} /></button>
+                                            </span>
+                                        ))}
+                                        {filters.countryCode && (
+                                            <span className="filter-chip filter-chip-tag">{countryLabel}
+                                                <button aria-label="開催国フィルターを解除" onClick={() => handleFilterChange({ ...filters, countryCode: '' })}><X size={10} /></button>
+                                            </span>
+                                        )}
+                                        {filters.memberId && (
+                                            <span className="filter-chip filter-chip-tag">生誕祭：{selectedMemberName || filters.memberId}
+                                                <button aria-label="対象メンバーフィルターを解除" onClick={() => handleFilterChange({ ...filters, memberId: '' })}><X size={10} /></button>
+                                            </span>
+                                        )}
+                                        {filters.artistId && (
+                                            <span className="filter-chip filter-chip-tag">共演：{selectedArtistName || filters.artistId}
+                                                <button aria-label="共演アーティストフィルターを解除" onClick={() => handleFilterChange({ ...filters, artistId: '' })}><X size={10} /></button>
+                                            </span>
+                                        )}
+                                        {filters.participantRole && (
+                                            <span className="filter-chip filter-chip-tag">{selectedRoleName || filters.participantRole}
+                                                <button aria-label="共演役割フィルターを解除" onClick={() => handleFilterChange({ ...filters, participantRole: '' })}><X size={10} /></button>
+                                            </span>
+                                        )}
                                         {selectedSongName && (
                                             <span className="filter-chip filter-chip-song">
                                                 <Music size={10} aria-hidden="true" /> {selectedSongName}

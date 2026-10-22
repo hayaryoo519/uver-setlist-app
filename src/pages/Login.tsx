@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import AuthLayout from '../components/Auth/AuthLayout';
+import { safeReturnTo } from '../utils/authReturnTo';
 import { Mail, Lock, ArrowRight, Loader } from 'lucide-react';
 
 const Login = () => {
@@ -16,7 +17,7 @@ const Login = () => {
     const location = useLocation();
 
     // 遷移元ページの情報を取得
-    const fromPage = location.state?.from || '/mypage';
+    const fromPage = safeReturnTo(location.state?.from ?? new URLSearchParams(location.search).get('returnTo'));
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -41,6 +42,7 @@ const Login = () => {
     return (
         <AuthLayout title="ログイン" subtitle="UVERworld Setlist Archive へようこそ">
             {error && <div className="auth-error-message">{error}</div>}
+            <Link to="/verify-email" className="auth-link">認証メールが届かない・期限が切れた場合</Link>
             
             <form onSubmit={handleSubmit}>
                 <div className="auth-input-group">

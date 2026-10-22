@@ -1,29 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { authorize, adminCheck } = require('../middleware/authorization');
+const { authorize, adminCheck, getOptionalUserId } = require('../middleware/authorization');
 const { saveSubscription, removeSubscription, getVapidPublicKey, notifyNewLive } = require('../utils/pushNotification');
 
 // 認証ミドルウェア（任意 - 未ログインでも購読はできる）
 //
-// トークンの取り出しと claim 名は middleware/authorization.js の authorize に揃える。
-// JWT は { user_id, role } で発行しているため、decoded.user_id を見ること。
-// 以前は decoded.id を読んでおり、常に undefined になって
-// push_subscriptions.user_id が NULL で保存されていた。
-// その結果、管理者宛ての通知（notifyAdmins）が誰にも届かなかった。
-const authMiddleware = (req, res, next) => {
-    const jwt = require('jsonwebtoken');
-    const token = req.header('token');
-
-    if (!token) {
-        req.userId = null;
-        return next();
-    }
+// 共通の署名検証・現行ユーザー確認で購読者を解決する。
+// 未認証・無効/削除済みアカウントは従来どおり匿名購読とする。
+const authMiddleware = async (req, res, next) => {
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.userId = decoded.user_id ?? null;
-    } catch (err) {
-        req.userId = null;
+        req.userId = await getOptionalUserId(req);
+    } catch (_) {
+        return res.status(503).json({ error: '購読者の認証情報を確認できませんでした' });
     }
     next();
 };
@@ -54,7 +43,7 @@ router.post('/subscribe', authMiddleware, async (req, res) => {
         const result = await saveSubscription(req.userId, subscription);
         res.status(201).json({ message: '購読を登録しました', id: result.id });
     } catch (error) {
-        console.error('Subscribe error:', error);
+        console.error('Subscribe error: details suppressed');
         res.status(500).json({ error: '購読の登録に失敗しました' });
     }
 });
@@ -73,7 +62,7 @@ router.post('/unsubscribe', async (req, res) => {
         await removeSubscription(endpoint);
         res.json({ message: '購読を解除しました' });
     } catch (error) {
-        console.error('Unsubscribe error:', error);
+        console.error('Unsubscribe error: details suppressed');
         res.status(500).json({ error: '購読の解除に失敗しました' });
     }
 });
@@ -96,7 +85,7 @@ router.post('/notify-live', authorize, adminCheck, async (req, res) => {
             details: pushResult
         });
     } catch (err) {
-        console.error(err.message);
+        console.error('Live notification error: details suppressed');
         res.status(500).json({ message: "Server Error" });
     }
 });

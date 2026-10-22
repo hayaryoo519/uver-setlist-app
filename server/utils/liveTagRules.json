@@ -1,0 +1,12 @@
+{
+  "ruleVersion": 1,
+  "patterns": {
+    "mens": "男祭り|男祭|男性限定",
+    "womens": "女祭り|女祭|女性限定",
+    "festival": "フェス|\\bfest(?:ival)?\\b|\\bfes\\b|rock\\s+in\\s+japan|countdown\\s+japan|rising\\s+sun|summer\\s+sonic|イナズマロック|氣志團万博",
+    "vs": "対バン|対ばん|\\bvs\\.?\\b",
+    "birthday": "生誕祭|誕生祭|\\bbirth\\s*day\\b",
+    "christmas": "クリスマス|\\bx[’']?mas\\b|\\bchristmas\\b",
+    "anniversary": "周年|\\banniversary\\b"
+  }
+}

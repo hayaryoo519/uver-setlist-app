@@ -111,7 +111,7 @@ async function calculateConfidence(lines, rawText, source = 'ocr') {
             if (matchRate > 0.7) score += 0.2;
         }
     } catch (e) {
-        console.warn('Confidence計算中のDBチェック失敗:', e);
+        console.warn('Confidence計算中のDBチェック失敗: 詳細は非表示');
     }
 
     // SNS特有の信頼度向上（同一ハッシュの投稿が複数あれば信頼度アップ）
@@ -142,7 +142,7 @@ router.post('/upload', authorize, adminCheck, upload.single('image'), async (req
             return res.status(400).json({ message: '画像ファイルが必要です' });
         }
 
-        console.log(`[Upload] Upload success: ${req.file.filename}`);
+        console.log('[Upload] Upload success');
 
         const imageUrl = `/uploads/${req.file.filename}`;
         const imagePath = req.file.path;
@@ -154,7 +154,7 @@ router.post('/upload', authorize, adminCheck, upload.single('image'), async (req
         const OpenAI = (await import('openai')).default;
         const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-        console.log(`[OCR] OCR request sent for ${req.file.filename}`);
+        console.log('[OCR] OCR request sent');
 
         const visionPrompt = `この画像はライブのセットリストです。
 
@@ -207,7 +207,7 @@ router.post('/upload', authorize, adminCheck, upload.single('image'), async (req
         const hash = generateHash(cleanedLines.join('\n'));
         const confidence = await calculateConfidence(cleanedLines, rawText);
 
-        console.log(`[OCR] Lines: ${cleanedLines.length}, Confidence: ${confidence.toFixed(2)}, Hash: ${hash.substring(0, 8)}...`);
+        console.log(`[OCR] Lines: ${cleanedLines.length}, Confidence: ${confidence.toFixed(2)}`);
 
         // 重複チェック
         const dupCheck = await db.query(
@@ -243,15 +243,15 @@ router.post('/upload', authorize, adminCheck, upload.single('image'), async (req
         );
 
         // LINE通知（非同期・失敗してもレスポンスには影響しない）
-        notifyDraftAdded(result.rows[0]).catch(err => console.error('[LINE] OCRドラフト通知エラー:', err.message));
+        notifyDraftAdded(result.rows[0]).catch(() => console.error('[LINE] OCRドラフト通知エラー: 詳細は非表示'));
 
         res.status(201).json({
             message: '画像からセットリストを抽出しました',
             draft: result.rows[0]
         });
     } catch (err) {
-        console.error('画像OCRエラー:', err);
-        res.status(500).json({ message: 'OCR処理に失敗しました', error: err.message });
+        console.error('画像OCRエラー: 詳細は非表示');
+        res.status(500).json({ message: 'OCR処理に失敗しました', error: 'Internal Server Error' });
     }
 });
 
@@ -279,12 +279,12 @@ router.post('/', authorize, adminCheck, async (req, res) => {
         );
 
         // LINE通知（非同期・失敗してもレスポンスには影響しない）
-        notifyDraftAdded(result.rows[0]).catch(err => console.error('[LINE] 手動ドラフト通知エラー:', err.message));
+        notifyDraftAdded(result.rows[0]).catch(() => console.error('[LINE] 手動ドラフト通知エラー: 詳細は非表示'));
 
         res.status(201).json(result.rows[0]);
     } catch (err) {
-        console.error('ドラフト作成エラー:', err);
-        res.status(500).json({ message: 'サーバーエラー', error: err.message });
+        console.error('ドラフト作成エラー: 詳細は非表示');
+        res.status(500).json({ message: 'サーバーエラー', error: 'Internal Server Error' });
     }
 });
 
@@ -310,8 +310,8 @@ router.get('/', authorize, adminCheck, async (req, res) => {
         const result = await db.query(query, params);
         res.json(result.rows);
     } catch (err) {
-        console.error('ドラフト一覧取得エラー:', err);
-        res.status(500).json({ message: 'サーバーエラー', error: err.message });
+        console.error('ドラフト一覧取得エラー: 詳細は非表示');
+        res.status(500).json({ message: 'サーバーエラー', error: 'Internal Server Error' });
     }
 });
 
@@ -333,8 +333,8 @@ router.get('/:id', authorize, adminCheck, async (req, res) => {
 
         res.json(result.rows[0]);
     } catch (err) {
-        console.error('ドラフト詳細取得エラー:', err);
-        res.status(500).json({ message: 'サーバーエラー', error: err.message });
+        console.error('ドラフト詳細取得エラー: 詳細は非表示');
+        res.status(500).json({ message: 'サーバーエラー', error: 'Internal Server Error' });
     }
 });
 
@@ -398,8 +398,8 @@ router.patch('/:id', authorize, adminCheck, async (req, res) => {
 
         res.json(result.rows[0]);
     } catch (err) {
-        console.error('ドラフト更新エラー:', err);
-        res.status(500).json({ message: 'サーバーエラー', error: err.message });
+        console.error('ドラフト更新エラー: 詳細は非表示');
+        res.status(500).json({ message: 'サーバーエラー', error: 'Internal Server Error' });
     }
 });
 
@@ -418,8 +418,8 @@ router.delete('/:id', authorize, adminCheck, async (req, res) => {
 
         res.json({ message: 'ドラフトを削除しました', id: result.rows[0].id });
     } catch (err) {
-        console.error('ドラフト削除エラー:', err);
-        res.status(500).json({ message: 'サーバーエラー', error: err.message });
+        console.error('ドラフト削除エラー: 詳細は非表示');
+        res.status(500).json({ message: 'サーバーエラー', error: 'Internal Server Error' });
     }
 });
 
@@ -476,7 +476,7 @@ router.post('/:id/parse', authorize, adminCheck, async (req, res) => {
             // GPTが { "setlist": [...] } 形式で返す場合にも対応
             parsedJson = Array.isArray(parsed) ? parsed : (parsed.setlist || parsed.songs || parsed.data || []);
         } catch (parseErr) {
-            console.error('GPTレスポンスのパースエラー:', parseErr);
+            console.error('GPTレスポンスのパースエラー: 詳細は非表示');
             return res.status(500).json({ message: 'GPTの応答をパースできませんでした' });
         }
 
@@ -492,13 +492,13 @@ router.post('/:id/parse', authorize, adminCheck, async (req, res) => {
             usage: completion.usage
         });
     } catch (err) {
-        console.error('GPT整形エラー:', err);
+        console.error('GPT整形エラー: 詳細は非表示');
 
         if (err.message && err.message.includes('API key')) {
             return res.status(500).json({ message: 'OpenAI APIキーが設定されていないか無効です' });
         }
 
-        res.status(500).json({ message: 'GPT整形に失敗しました', error: err.message });
+        res.status(500).json({ message: 'GPT整形に失敗しました', error: 'Internal Server Error' });
     }
 });
 
@@ -601,8 +601,8 @@ router.post('/:id/commit', authorize, adminCheck, async (req, res) => {
 
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error('Commit エラー:', err);
-        res.status(500).json({ message: '確定処理に失敗しました', error: err.message });
+        console.error('Commit エラー: 詳細は非表示');
+        res.status(500).json({ message: '確定処理に失敗しました', error: 'Internal Server Error' });
     } finally {
         client.release();
     }

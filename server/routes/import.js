@@ -28,18 +28,18 @@ router.post('/csv', authorize, adminCheck, upload.single('file'), async (req, re
                 try {
                     await processCSVData(results, res);
                 } catch (err) {
-                    console.error('CSV Processing Error:', err);
-                    res.status(500).json({ message: 'Error processing CSV', error: err.message });
+                    console.error('CSV Processing Error: details suppressed');
+                    res.status(500).json({ message: 'Error processing CSV', error: 'Internal Server Error' });
                 }
             })
             .on('error', (err) => {
-                console.error('CSV Parse Error:', err);
-                res.status(500).json({ message: 'Error parsing CSV', error: err.message });
+                console.error('CSV Parse Error: details suppressed');
+                res.status(500).json({ message: 'Error parsing CSV', error: 'Internal Server Error' });
             });
 
     } catch (err) {
-        console.error('Import Error:', err);
-        res.status(500).json({ message: 'Server Error', error: err.message });
+        console.error('Import Error: details suppressed');
+        res.status(500).json({ message: 'Server Error', error: 'Internal Server Error' });
     }
 });
 

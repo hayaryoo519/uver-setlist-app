@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { apiClient } from '../lib/apiClient';
 import type { AuthUser } from '../types/api';
+import { loginRedirectUrl } from '../utils/authReturnTo';
 
 type AuthResult = { success: boolean; message?: string }
 
@@ -89,7 +90,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     localStorage.removeItem('user');
                     setCurrentUser(null);
                     alert('セッションの有効期限が切れました。再度ログインしてください。');
-                    window.location.href = '/login';
+                    window.location.href = loginRedirectUrl(window.location.pathname + window.location.search + window.location.hash);
                 }
             }
 
@@ -166,10 +167,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const updateUser = async (updatedData: Record<string, unknown>): Promise<AuthResult> => {
         try {
-            const data = await apiClient.put<AuthUser>('/api/users/me', updatedData);
-            localStorage.setItem('user', JSON.stringify(data));
-            setCurrentUser(data);
-            return { success: true };
+            const data = await apiClient.put<AuthUser & { emailChangeRequested?: boolean; message?: string }>('/api/users/me', updatedData);
+            if (updatedData.password) {
+                logout();
+                return { success: true, message: data.emailChangeRequested ? 'パスワードを変更しました。現在のメールアドレスで再度ログインし、変更先メールの確認も完了してください。' : 'パスワードを変更しました。新しいパスワードで再度ログインしてください。' };
+            }
+            const { emailChangeRequested, message, ...user } = data;
+            localStorage.setItem('user', JSON.stringify(user));
+            setCurrentUser(user);
+            return { success: true, ...(emailChangeRequested ? { message } : {}) };
         } catch (error) {
             console.error("Update error:", error);
             return { success: false, message: (error as Error).message };

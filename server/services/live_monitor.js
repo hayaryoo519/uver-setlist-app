@@ -97,7 +97,7 @@ async function notifyCollected(live, runStartedAt, created) {
         );
         drafts = result.rows;
     } catch (err) {
-        console.warn('[Monitor] 通知用のドラフト取得に失敗しました:', err.message);
+        console.warn('[Monitor] 通知用のドラフト取得に失敗しました: details suppressed');
     }
 
     await Promise.all([
@@ -108,7 +108,7 @@ async function notifyCollected(live, runStartedAt, created) {
             type: 'setlist_drafts_collected',
         }),
         notifyDraftsCollected(live, drafts.length > 0 ? drafts : null),
-    ]).catch((err) => console.error('[Monitor] 通知エラー:', err.message));
+    ]).catch(() => console.error('[Monitor] 通知エラー: details suppressed'));
 }
 
 /**
@@ -132,7 +132,7 @@ async function monitor() {
         }
 
         for (const live of lives) {
-            console.log(`[Monitor] Processing live: ${live.tour_name} @ ${live.venue}`);
+            console.log('[Monitor] Processing live');
 
             // 通知はクエリごとではなく公演単位でまとめる（1公演で最大5クエリ投げるため）
             const runStartedAt = new Date();
@@ -141,7 +141,7 @@ async function monitor() {
                 const count = await collector.collect(q, live.id);
                 created += count;
                 if (count > 0) {
-                    console.log(`[Monitor] Found ${count} potential setlists for "${q}"`);
+                    console.log(`[Monitor] Found ${count} potential setlists`);
                 }
             }
 
@@ -152,17 +152,17 @@ async function monitor() {
     } catch (err) {
         // 仕様 §12: レート制限・認証エラーを検知したらその回の収集を打ち切り、リトライしない
         if (err instanceof XCollectorAbortError) {
-            console.warn('[Monitor] X 収集を中断しました:', err.message);
+            console.warn('[Monitor] X 収集を中断しました: details suppressed');
             // Cookie 失効はこの経路で出る。放置すると収集が止まり続けるため必ず通知する
             await notifyAdmins({
                 title: 'X収集を中断しました',
-                body: `${err.message}\nCookie(auth_token / ct0)の失効が疑われます。`,
+                body: '収集の認証・レート制限・CLI設定を確認してください。Cookie(auth_token / ct0)の失効も確認してください。',
                 url: '/admin',
                 type: 'x_collection_aborted',
             });
             return;
         }
-        console.error('[Monitor] Error during live monitoring:', err);
+        console.error('[Monitor] Error during live monitoring: details suppressed');
     }
 }
 

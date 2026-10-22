@@ -6,17 +6,8 @@ import { queryKeys } from '../../../lib/queryKeys';
 import { apiClient } from '../../../lib/apiClient';
 import type { Live } from '../../../types/api';
 
-const MEMBER_BIRTHDAYS: Record<string, string> = {
-    '12-21': 'TAKUYA∞', '11-05': '真太郎', '02-22': '克哉',
-    '03-08': '彰', '02-14': '信人', '09-25': '誠果',
-};
-
-const detectVenueType = (vName: string): string => {
-    if (vName.includes('arena') || vName.includes('dome') || vName.includes('アリーナ') || vName.includes('ドーム')) return 'ARENA';
-    if (vName.includes('zepp') || vName.includes('coast') || vName.includes('hatch') || vName.includes('pit') || vName.includes('ax')) return 'LIVEHOUSE';
-    if (vName.includes('hall') || vName.includes('kaikan') || vName.includes('会館') || vName.includes('ホール')) return 'HALL';
-    return 'ONEMAN';
-};
+import { createSetlistLivePayload, prepareSetlistImport } from '../../../utils/liveImport';
+import { LIVE_TAGS } from '../../../utils/liveText';
 
 const AdminCollectTab = () => {
     const { data: lives = [] } = useLives({ include_setlists: true });
@@ -64,47 +55,9 @@ const AdminCollectTab = () => {
     const processResult = (result: any) => {
         const parts = result.eventDate.split('-');
         const dateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
-        const vName = result.venue.name.toLowerCase();
-        let suggestedType = detectVenueType(vName);
-        let displayTourName = result.tour?.name;
-        let specialNote: string | null = null;
-
-        const month = parseInt(parts[1]);
-        const day = parseInt(parts[0]);
-        const year = parts[2];
-        const monthDay = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const memberName = MEMBER_BIRTHDAYS[monthDay];
-        if (memberName) { specialNote = `${memberName} 生誕祭`; suggestedType = 'EVENT'; }
-
-        if (!displayTourName || !displayTourName.trim()) {
-            if (suggestedType === 'ONEMAN') suggestedType = 'EVENT';
-            if (result.info) {
-                displayTourName = result.info;
-            } else {
-                const fullText = `${result.info || ''} ${result.tour?.name || ''} ${result.venue.name}`;
-                if (vName.includes('makuhari messe') && month === 12 && day >= 28) {
-                    displayTourName = `COUNTDOWN JAPAN ${year.slice(-2)}/${(parseInt(year) + 1).toString().slice(-2)}`; suggestedType = 'FESTIVAL';
-                } else if (fullText.includes('男祭り')) {
-                    specialNote = '男祭り'; displayTourName = `UVERworld 男祭り ${year}`; suggestedType = 'EVENT';
-                } else if (fullText.includes('女祭り')) {
-                    specialNote = '女祭り'; displayTourName = `UVERworld 女祭り ${year}`; suggestedType = 'EVENT';
-                } else if (fullText.toLowerCase().includes('xmas') || fullText.includes('クリスマス')) {
-                    specialNote = 'Xmas'; displayTourName = `UVERworld PREMIUM LIVE on Xmas ${year}`; suggestedType = 'EVENT';
-                } else {
-                    displayTourName = result.tour?.name || `${result.venue.name} Event`;
-                }
-            }
-        } else {
-            const fullText = `${result.info || ''} ${result.venue.name}`;
-            if (!specialNote) {
-                if (fullText.includes('男祭り')) { specialNote = '男祭り'; suggestedType = 'EVENT'; }
-                else if (fullText.includes('女祭り')) { specialNote = '女祭り'; suggestedType = 'EVENT'; }
-                else if (fullText.toLowerCase().includes('xmas') || fullText.includes('クリスマス')) { specialNote = 'Xmas'; suggestedType = 'EVENT'; }
-            }
-        }
-
+        const prepared = prepareSetlistImport(result);
         const existingLive = buildExistingMap(lives).get(`${dateStr}_${result.venue.name.toLowerCase()}`);
-        return { ...result, alreadyImported: !!existingLive, existingLive, tour: { ...result.tour, name: displayTourName }, suggestedType, specialNote };
+        return { ...prepared, alreadyImported: !!existingLive, existingLive };
     };
 
     const handleSearch = async (overrideKeyword?: string) => {
@@ -137,7 +90,7 @@ const AdminCollectTab = () => {
         if (!window.confirm(`Import setlist for ${setlist.eventDate}?`)) return;
         setIsImporting(true);
         try {
-            const liveData = { tour_name: setlist.tour?.name, title: '', date: setlist.eventDate.split('-').reverse().join('-'), venue: setlist.venue.name, type: setlist.suggestedType || 'ONEMAN', special_note: setlist.specialNote || null };
+            const liveData = createSetlistLivePayload(setlist);
             const newLive: any = await apiClient.post('/api/lives', liveData);
             if (setlist.sets?.set) {
                 const songIds: number[] = [];
@@ -159,7 +112,7 @@ const AdminCollectTab = () => {
             if (objects.length === 0) { setImportResultData({ success: 0, failed: 0, message: 'All selected items were already imported.' }); return; }
             for (const setlist of objects) {
                 try {
-                    const liveData = { tour_name: setlist.tour?.name, title: '', date: setlist.eventDate.split('-').reverse().join('-'), venue: setlist.venue.name, type: setlist.suggestedType || 'ONEMAN', special_note: setlist.specialNote || '' };
+                    const liveData = createSetlistLivePayload(setlist);
                     const newLive: any = await apiClient.post('/api/lives', liveData);
                     const songIds: number[] = [];
                     if (setlist.sets?.set) {
@@ -324,6 +277,14 @@ const AdminCollectTab = () => {
                         <div style={{ marginBottom: '20px', padding: '15px', background: 'rgba(15, 23, 42, 0.5)', borderRadius: '8px' }}>
                             <div style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '5px' }}>{previewData.eventDate} @ {previewData.venue.name}</div>
                             <div style={{ color: '#94a3b8' }}>{previewData.tour?.name || 'Unknown Tour'}</div>
+                            <div style={{ marginTop: '12px', fontSize: '0.85rem' }}>
+                                <strong>追加情報候補（未確認）</strong>
+                                <p>属性：{LIVE_TAGS.filter(tag => previewData.metadataCandidates.tags.includes(tag.id)).map(tag => tag.label).join('、') || '該当なし'}</p>
+                                <p>開催国コード：{previewData.metadataCandidates.countryCode || '未取得'}</p>
+                                <p>取得時のツアー名：{previewData.original.tour?.name || '未取得'}</p>
+                                <p>取得時の説明：{previewData.original.info || '未取得'}</p>
+                                <p style={{ color: '#fbbf24' }}>原文・国・出典と属性候補を未確認として保存します。対象メンバー・共演者は自動確定しません。</p>
+                            </div>
                         </div>
                         {previewData.sets?.set?.length > 0 ? previewData.sets.set.map((set: any, si: number) => (
                             <div key={si} style={{ marginBottom: '15px' }}>

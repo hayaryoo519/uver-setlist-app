@@ -181,6 +181,40 @@ describe('xClient', () => {
             await expect(xClient.getPosts('q')).rejects.toThrow(XCollectorAbortError);
         });
 
+        it.each([
+            ['ENOENT', 'ENOENT', '', true],
+            ['認証', undefined, '401 unauthorized', true],
+            ['レート制限', undefined, '429 Too Many Requests', true],
+            ['通常失敗', undefined, 'network unavailable', false],
+        ])('%sのCLI詳細を例外へコピーしない', async (_label, code, diagnostic, abort) => {
+            const marker = 'private-x@example.invalid Bearer fixture-token';
+            mockExecError(Object.assign(new Error(marker), { code, stderr: `${diagnostic} ${marker}`, stdout: marker }));
+            const error = await xClient.getPosts(marker).catch(err => err);
+            expect(error).toBeInstanceOf(Error);
+            expect(error instanceof XCollectorAbortError).toBe(abort);
+            expect(error.message).not.toContain(marker);
+            expect(error.stderr).toBeUndefined();
+            expect(error.stdout).toBeUndefined();
+        });
+
+        it('不正JSONの本文を解析エラーに出さない', async () => {
+            const marker = 'private-json@example.invalid';
+            mockExec(`{"value":"${marker}`);
+            const error = await xClient.getPosts('q').catch(err => err);
+            expect(error.message).toBe('twitter search の JSON 出力を解析できませんでした');
+            expect(error.message).not.toContain(marker);
+        });
+
+        it.each(['unknown-private@example.invalid', 'unauthorized-private@example.invalid'])('失敗コードと本文の機密値を例外へコピーしない', async code => {
+            const marker = 'private-body@example.invalid';
+            mockExec(JSON.stringify({ ok: false, error: { code, message: marker } }));
+            const error = await xClient.getPosts('q').catch(err => err);
+            expect(error).toBeInstanceOf(Error);
+            expect(error instanceof XCollectorAbortError).toBe(code.startsWith('unauthorized'));
+            expect(error.message).not.toContain(code);
+            expect(error.message).not.toContain(marker);
+        });
+
         it('ok:true の実形式から投稿を取り出せること', async () => {
             mockExec(JSON.stringify({
                 ok: true,

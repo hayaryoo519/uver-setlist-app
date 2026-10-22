@@ -4,6 +4,12 @@ const SpotifyService = require('../services/spotifyService');
 const db = require('../db');
 const { encrypt, signState, verifyState } = require('../utils/encryption');
 const axios = require('axios');
+const publicErrors = new Set([
+    'Spotify integration not linked for this user',
+    'Spotify session expired. Please re-link your account.'
+]);
+const getPublicErrorMessage = err => publicErrors.has(err.message)
+    ? err.message : 'Spotify連携の処理に失敗しました。再度お試しください。';
 
 /**
  * Spotify認証URL取得
@@ -26,13 +32,13 @@ router.get('/auth-url', authorize, (req, res) => {
     try {
         const userId = req.user.user_id || req.user.id;
         if (!userId) {
-            console.error('[Spotify] User ID missing in req.user:', req.user);
+            console.error('[Spotify] User identification failed');
             return res.status(401).json({ message: 'User identification failed' });
         }
         const url = `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(signState(userId))}`;
         res.json({ url });
     } catch (err) {
-        console.error('[Spotify] auth-url error:', err.message);
+        console.error('[Spotify] auth-url generation failed');
         res.status(500).json({ message: 'Failed to generate auth URL' });
     }
 });
@@ -98,7 +104,7 @@ router.get('/callback', async (req, res) => {
             </html>
         `);
     } catch (err) {
-        console.error('[Spotify] Callback Error:', err.response?.data || err.message);
+        console.error('[Spotify] Callback failed');
         res.status(500).send('Spotify連携中にエラーが発生しました。再度お試しください。');
     }
 });
@@ -115,7 +121,7 @@ router.get('/status', authorize, async (req, res) => {
         );
         res.json({ linked: result.rows.length > 0 });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: getPublicErrorMessage(err) });
     }
 });
 
@@ -175,7 +181,7 @@ router.post('/create-playlist', authorize, async (req, res) => {
                         await db.query('UPDATE songs SET spotify_track_id = $1 WHERE id = $2', [trackId, song.id]);
                     }
                 } catch (searchErr) {
-                    console.warn(`[Spotify] Failed to search for "${song.title}":`, searchErr.message);
+                    console.warn('[Spotify] Track search failed');
                 }
             }
 
@@ -218,8 +224,8 @@ router.post('/create-playlist', authorize, async (req, res) => {
         });
 
     } catch (err) {
-        console.error('[Spotify] Create Playlist Error:', err.message);
-        res.status(500).json({ message: err.message });
+        console.error('[Spotify] Create playlist failed');
+        res.status(500).json({ message: getPublicErrorMessage(err) });
     }
 });
 
@@ -241,7 +247,7 @@ router.get('/history/:liveId', authorize, async (req, res) => {
             createdAt: r.created_at
         })));
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: getPublicErrorMessage(err) });
     }
 });
 
@@ -266,7 +272,7 @@ router.post('/auto-map-song', authorize, async (req, res) => {
         }
         res.json({ success: false, message: 'No match found' });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: getPublicErrorMessage(err) });
     }
 });
 
@@ -310,7 +316,7 @@ router.post('/auto-map-batch', authorize, async (req, res) => {
 
         res.json({ success: true, results });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: getPublicErrorMessage(err) });
     }
 });
 

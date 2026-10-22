@@ -3,73 +3,102 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
 
-const crypto = require('crypto');
+const { hashToken, createToken } = require('../utils/authTokens');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/email');
-const { loginLimiter, resetLimiter } = require('../middleware/rateLimiter');
+const { loginLimiter, resetLimiter, registerLimiter, verificationLimiter, resetConfirmationLimiter, verificationResendLimiter } = require('../middleware/rateLimiter');
+const { isValidEmail, isValidUsername, isValidLoginPassword, isValidToken, newPasswordError } = require('../utils/authValidation');
+
+const registrationResponse = {
+    message: '登録を受け付けました。登録可能な場合は認証メールが届きます。登録済みの場合はログインまたはパスワード再設定をお試しください。',
+    requireVerification: true
+};
+const resetRequestResponse = { message: '入力したメールアドレスに対応するアカウントがある場合、パスワード再設定用のメールが届きます。' };
+const verificationLifetimeMs = 24 * 60 * 60 * 1000;
+// A valid cost-10 hash keeps unknown-user attempts on the same bcrypt path.
+const dummyPasswordHash = '$2b$10$fFGx1Y4tcVNfQ9S0sTibwuSFDE1jwadFRu2KfHTdtHALo.duP1WvK';
 
 // Register API
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimiter, async (req, res) => {
     try {
-        const { username, email, password, is_public } = req.body;
+        const { username, email, password, is_public } = req.body || {};
 
         // 1. Validate input
-        if (!username || username.trim().length < 2 || username.length > 30) {
+        if (!isValidUsername(username)) {
             return res.status(400).json({ message: "ユーザー名は2文字以上30文字以内で入力してください" });
         }
+        if (!isValidEmail(email)) return res.status(400).json({ message: '有効なメールアドレスを入力してください' });
+        const passwordError = newPasswordError(password);
+        if (passwordError) return res.status(400).json({ message: passwordError });
+        if (is_public !== undefined && typeof is_public !== 'boolean') return res.status(400).json({ message: '公開設定が不正です' });
 
-        // 2. Check if user exists
-        const userCheck = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (userCheck.rows.length > 0) {
-            return res.status(400).json({ message: "このメールアドレスは既に登録されています" });
-        }
-
-        // 2. Hash password
+        // Hash every valid request, including an already registered address.
         const saltRound = 10;
         const salt = await bcrypt.genSalt(saltRound);
         const bcryptPassword = await bcrypt.hash(password, salt);
 
         // 3. Generate verification token
-        const verificationToken = crypto.randomBytes(32).toString('hex');
+        const verification = createToken(verificationLifetimeMs);
 
         // 4. Insert into DB (is_verified default false)
         const isPublic = is_public !== false;
         const newUser = await db.query(
-            "INSERT INTO users (username, email, password, is_verified, verification_token, is_public) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
-            [username, email, bcryptPassword, false, verificationToken, isPublic]
+            "INSERT INTO users (username, email, password, is_verified, verification_token_hash, verification_token_expires, is_public) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (email) DO NOTHING RETURNING id",
+            [username, email, bcryptPassword, false, verification.hash, verification.expires, isPublic]
         );
 
-        // 5. Send Verification Email
-        await sendVerificationEmail(email, verificationToken);
-
-        // Don't return token yet, require verification
-        res.json({
-            message: "登録が完了しました。メールを確認して認証を行ってください。",
-            requireVerification: true
-        });
+        // Delivery latency and failures must not reveal whether the address exists.
+        res.json(registrationResponse);
+        if (newUser.rows.length > 0) {
+            try {
+                await sendVerificationEmail(email, verification.token);
+            } catch (err) {
+                console.error('Register Error: verification email delivery failed');
+            }
+        }
 
     } catch (err) {
-        console.error("Register Error:", err);
+        console.error("Register Error: registration failed");
         res.status(500).json({ message: "サーバーエラーが発生しました" });
     }
 });
 
-// Verify Email API
-router.post('/verify-email', async (req, res) => {
+// Resend without disclosing account state or replacing existing credentials.
+router.post('/resend-verification', verificationResendLimiter, async (req, res) => {
+    const { email } = req.body || {};
+    if (!isValidEmail(email)) return res.status(400).json({ message: '有効なメールアドレスを入力してください' });
+    res.json({ message: '未認証のアカウントがある場合、認証メールが届きます。直前に依頼した場合は1分以上待って再度お試しください。' });
     try {
-        const { token } = req.body;
+        const verification = createToken(verificationLifetimeMs);
+        // Tokens always expire 24 hours after issuance; the expiry encodes the last issuance time.
+        const updated = await db.query(
+            "UPDATE users SET verification_token = NULL, verification_token_hash = $1, verification_token_expires = $2 WHERE email = $3 AND is_verified = FALSE AND deleted_at IS NULL AND (verification_token_expires IS NULL OR verification_token_expires <= $4) RETURNING email",
+            [verification.hash, verification.expires, email, verification.expires - 60000]
+        );
+        if (updated.rows.length > 0) await sendVerificationEmail(updated.rows[0].email, verification.token);
+    } catch (err) {
+        console.error('Verification Resend Error: email processing failed');
+    }
+});
 
-        const user = await db.query("SELECT * FROM users WHERE verification_token = $1", [token]);
+// Verify Email API
+router.post('/verify-email', verificationLimiter, async (req, res) => {
+    try {
+        const { token } = req.body || {};
+        if (!isValidToken(token)) return res.status(400).json({ message: '無効なトークンです' });
+
+        // Consume once, even when two requests arrive before either has completed.
+        const user = await db.query(
+            "UPDATE users SET is_verified = TRUE, verification_token = NULL, verification_token_hash = NULL, verification_token_expires = NULL WHERE (verification_token_hash = $1 OR (verification_token_hash IS NULL AND verification_token = $2)) AND verification_token_expires > $3 AND is_verified = FALSE AND deleted_at IS NULL RETURNING id, username, email, role, session_version",
+            [hashToken(token), token, Date.now()]
+        );
 
         if (user.rows.length === 0) {
             return res.status(400).json({ message: "無効なトークンです" });
         }
 
-        // Update user to verified
-        await db.query("UPDATE users SET is_verified = TRUE, verification_token = NULL WHERE id = $1", [user.rows[0].id]);
-
         // Generate Login Token
         const jwtToken = jwt.sign(
-            { user_id: user.rows[0].id, role: user.rows[0].role },
+            { user_id: user.rows[0].id, role: user.rows[0].role, session_version: user.rows[0].session_version },
             process.env.JWT_SECRET,
             { expiresIn: "1h" }
         );
@@ -77,16 +106,36 @@ router.post('/verify-email', async (req, res) => {
         res.json({ token: jwtToken, user: { id: user.rows[0].id, username: user.rows[0].username, email: user.rows[0].email, role: user.rows[0].role } });
 
     } catch (err) {
-        console.error("Verification Error:", err);
+        console.error("Verification Error: email verification failed");
         res.status(500).json({ message: "サーバーエラーが発生しました" });
+    }
+});
+
+// Confirm the destination before replacing the login address and revoking sessions.
+router.post('/confirm-email-change', verificationLimiter, async (req, res) => {
+    const { token } = req.body || {};
+    if (!isValidToken(token)) return res.status(400).json({ message: '無効または期限切れのリンクです' });
+    try {
+        const updated = await db.query(
+            "UPDATE users AS account SET email = pending_email, is_verified = TRUE, pending_email = NULL, email_change_token_hash = NULL, email_change_token_expires = NULL, email_change_session_version = NULL, verification_token = NULL, verification_token_hash = NULL, verification_token_expires = NULL, reset_password_token = NULL, reset_password_token_hash = NULL, reset_password_expires = NULL, session_version = session_version + 1 WHERE email_change_token_hash = $1 AND email_change_token_expires > $2 AND email_change_session_version = session_version AND pending_email IS NOT NULL AND deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM users other WHERE other.email = account.pending_email AND other.id != account.id) RETURNING id",
+            [hashToken(token), Date.now()]
+        );
+        if (updated.rows.length === 0) return res.status(400).json({ message: '無効または期限切れのリンクです' });
+        res.json({ message: 'メールアドレスを変更しました。新しいメールアドレスでログインしてください。' });
+    } catch (err) {
+        if (err.code === '23505') return res.status(400).json({ message: '無効または期限切れのリンクです' });
+        console.error('Email Change Confirmation Error: confirmation failed');
+        res.status(500).json({ message: 'サーバーエラーが発生しました' });
     }
 });
 
 // Login API
 router.post('/login', loginLimiter, async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password } = req.body || {};
+        if (!isValidEmail(email) || !isValidLoginPassword(password)) return res.status(400).json({ message: 'メールアドレスとパスワードを正しく入力してください' });
         const user = await db.query("SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL", [email]);
+        const validPassword = await bcrypt.compare(password, user.rows[0]?.password || dummyPasswordHash);
 
         if (user.rows.length === 0) {
             // Log failed login attempt - user not found
@@ -94,13 +143,25 @@ router.post('/login', loginLimiter, async (req, res) => {
                 INSERT INTO security_logs (event_type, message, user_email, ip_address)
                 VALUES ($1, $2, $3, $4)
             `, ['login_failed', 'ユーザーが存在しません', email, req.ip]).catch(err => {
-                console.error('Failed to log security event:', err);
+                console.error('Failed to log security event');
             });
 
             return res.status(401).json({ message: "メールアドレスまたはパスワードが間違っています" });
         }
 
-        // Check if verified
+        if (!validPassword) {
+            // Log failed login attempt - invalid password
+            await db.query(`
+                INSERT INTO security_logs (event_type, message, user_email, ip_address)
+                VALUES ($1, $2, $3, $4)
+            `, ['login_failed', 'パスワード不一致', email, req.ip]).catch(err => {
+                console.error('Failed to log security event');
+            });
+
+            return res.status(401).json({ message: "メールアドレスまたはパスワードが間違っています" });
+        }
+
+        // This account-specific guidance is safe only after checking the password.
         if (user.rows[0].is_verified === false) {
             return res.status(401).json({
                 message: "メールアドレスが認証されていません。メールを確認してください。",
@@ -108,42 +169,29 @@ router.post('/login', loginLimiter, async (req, res) => {
             });
         }
 
-        const validPassword = await bcrypt.compare(password, user.rows[0].password);
-        if (!validPassword) {
-            // Log failed login attempt - invalid password
-            await db.query(`
-                INSERT INTO security_logs (event_type, message, user_email, ip_address)
-                VALUES ($1, $2, $3, $4)
-            `, ['login_failed', 'パスワード不一致', email, req.ip]).catch(err => {
-                console.error('Failed to log security event:', err);
-            });
-
-            return res.status(401).json({ message: "メールアドレスまたはパスワードが間違っています" });
-        }
-
         // ログイン成功をセキュリティログに記録
         await db.query(`
             INSERT INTO security_logs (event_type, message, user_email, ip_address)
             VALUES ($1, $2, $3, $4)
         `, ['login_success', 'ログイン成功', email, req.ip]).catch(err => {
-            console.error('Failed to log security event:', err);
+            console.error('Failed to log security event');
         });
 
         const token = jwt.sign(
-            { user_id: user.rows[0].id, role: user.rows[0].role },
+            { user_id: user.rows[0].id, role: user.rows[0].role, session_version: user.rows[0].session_version },
             process.env.JWT_SECRET,
             { expiresIn: "1h" }
         );
         res.json({ token, user: { id: user.rows[0].id, username: user.rows[0].username, email: user.rows[0].email, role: user.rows[0].role } });
     } catch (err) {
-        console.error("Login Error:", err);
+        console.error("Login Error: authentication processing failed");
 
         // Log system error
         await db.query(`
             INSERT INTO security_logs (event_type, message, details)
             VALUES ($1, $2, $3)
-        `, ['error', 'ログイン処理中のエラー', JSON.stringify({ error: err.message })]).catch(e => {
-            console.error('Failed to log error:', e);
+        `, ['error', 'ログイン処理中のエラー', JSON.stringify({ error: 'Authentication processing failed' })]).catch(e => {
+            console.error('Failed to log error');
         });
 
         res.status(500).json({ message: "Internal Server Error" });
@@ -152,41 +200,42 @@ router.post('/login', loginLimiter, async (req, res) => {
 
 // Forgot Password API
 router.post('/forgot-password', resetLimiter, async (req, res) => {
+    const { email } = req.body || {};
+    if (!isValidEmail(email)) return res.status(400).json({ message: '有効なメールアドレスを入力してください' });
+    // Accept before account lookup, so lookup and SMTP timing cannot identify users.
+    res.json(resetRequestResponse);
     try {
-        const { email } = req.body;
-        const user = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        const user = await db.query('SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL', [email]);
 
         if (user.rows.length === 0) {
-            // For security, don't reveal if user exists. 
-            // Just return success message.
-            return res.json({ message: "パスワード再設定用のメールを送信しました。メールをご確認ください。" });
+            return;
         }
 
-        const token = crypto.randomBytes(32).toString('hex');
-        const expires = Date.now() + 3600000; // 1 hour
+        const reset = createToken(3600000); // 1 hour
 
-        await db.query(
-            "UPDATE users SET reset_password_token = $1, reset_password_expires = $2 WHERE id = $3",
-            [token, expires, user.rows[0].id]
+        const updated = await db.query(
+            "UPDATE users SET reset_password_token = NULL, reset_password_token_hash = $1, reset_password_expires = $2 WHERE id = $3 AND deleted_at IS NULL RETURNING id",
+            [reset.hash, reset.expires, user.rows[0].id]
         );
 
-        await sendPasswordResetEmail(email, token);
+        if (updated.rows.length > 0) await sendPasswordResetEmail(email, reset.token);
 
-        res.json({ message: "パスワード再設定用のメールを送信しました。メールをご確認ください。" });
     } catch (err) {
-        console.error("Forgot Password Error:", err);
-        res.status(500).json({ message: "サーバーエラーが発生しました" });
+        console.error("Forgot Password Error: reset email processing failed");
     }
 });
 
 // Reset Password API
-router.post('/reset-password', resetLimiter, async (req, res) => {
+router.post('/reset-password', resetConfirmationLimiter, async (req, res) => {
     try {
-        const { token, password } = req.body;
+        const { token, password } = req.body || {};
+        if (!isValidToken(token)) return res.status(400).json({ message: '無効なトークンです' });
+        const passwordError = newPasswordError(password);
+        if (passwordError) return res.status(400).json({ message: passwordError });
 
         const user = await db.query(
-            "SELECT * FROM users WHERE reset_password_token = $1 AND reset_password_expires > $2",
-            [token, Date.now()]
+            "SELECT * FROM users WHERE (reset_password_token_hash = $1 OR (reset_password_token_hash IS NULL AND reset_password_token = $2)) AND reset_password_expires > $3 AND deleted_at IS NULL",
+            [hashToken(token), token, Date.now()]
         );
 
         if (user.rows.length === 0) {
@@ -198,15 +247,18 @@ router.post('/reset-password', resetLimiter, async (req, res) => {
         const salt = await bcrypt.genSalt(saltRound);
         const bcryptPassword = await bcrypt.hash(password, salt);
 
-        // Update password and clear token
-        await db.query(
-            "UPDATE users SET password = $1, reset_password_token = NULL, reset_password_expires = NULL WHERE id = $2",
-            [bcryptPassword, user.rows[0].id]
+        // Atomically consume the reset token and revoke all previous sessions.
+        const updated = await db.query(
+            "UPDATE users SET password = $1, reset_password_token = NULL, reset_password_token_hash = NULL, reset_password_expires = NULL, pending_email = NULL, email_change_token_hash = NULL, email_change_token_expires = NULL, email_change_session_version = NULL, session_version = session_version + 1 WHERE id = $2 AND (reset_password_token_hash = $3 OR (reset_password_token_hash IS NULL AND reset_password_token = $4)) AND reset_password_expires > $5 AND deleted_at IS NULL RETURNING id",
+            [bcryptPassword, user.rows[0].id, hashToken(token), token, Date.now()]
         );
+        if (updated.rowCount === 0) {
+            return res.status(400).json({ message: "無効または期限切れのトークンです。再度手続きを行ってください。" });
+        }
 
         res.json({ message: "パスワードの再設定が完了しました。新しいパスワードでログインしてください。" });
     } catch (err) {
-        console.error("Reset Password Error:", err);
+        console.error("Reset Password Error: password reset failed");
         res.status(500).json({ message: "サーバーエラーが発生しました" });
     }
 });

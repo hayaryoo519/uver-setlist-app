@@ -29,7 +29,7 @@ const ForgotPassword = () => {
 
     if (submitted) {
         return (
-            <AuthLayout title="メールを確認" subtitle="再設定リンクを送信しました">
+            <AuthLayout title="メールを確認" subtitle="再設定の依頼を受け付けました">
                 <div style={{ textAlign: 'center', padding: '20px' }}>
                     <div style={{ background: 'rgba(34, 197, 94, 0.1)', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
                         <CheckCircle size={40} color="#4ade80" />

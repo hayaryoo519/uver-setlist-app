@@ -39,7 +39,7 @@ router.get('/', authorize, async (req, res) => {
 
         res.json(result.rows);
     } catch (err) {
-        console.error('Feed error:', err.message);
+        console.error('Feed error: details suppressed');
         res.status(500).send('Server Error');
     }
 });

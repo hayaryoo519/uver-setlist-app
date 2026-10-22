@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
                         try {
                             return await db.query(queryStr);
                         } catch (err) {
-                            console.error(`[STATS/ADMIN] Query failed:`, err.message);
+                            console.error('[STATS/ADMIN] Query failed: details suppressed');
                             return { rows: fallbackRows };
                         }
                     };
@@ -116,7 +116,7 @@ router.get('/', async (req, res) => {
                         dailyPredictions:   dailyPredictionsRes.rows,
                     });
                 } catch (err) {
-                    console.error('[/api/stats?admin=true] Error:', err.message);
+                    console.error('[/api/stats?admin=true] Error: details suppressed');
                     return res.status(500).json({ message: 'Server Error' });
                 }
             });
@@ -383,9 +383,8 @@ router.get('/', async (req, res) => {
             songFrequencyMap
         });
     } catch (err) {
-        console.error('[/api/stats] Error:', err.message);
-        console.error(err.stack);
-        res.status(500).json({ message: 'Server Error', error: err.message });
+        console.error('[/api/stats] Error: details suppressed');
+        res.status(500).json({ message: 'Server Error', error: 'Internal Server Error' });
     }
 });
 

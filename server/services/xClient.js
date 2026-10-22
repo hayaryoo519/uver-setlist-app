@@ -142,31 +142,30 @@ async function getPosts(query, limit = DEFAULT_LIMIT) {
     } catch (err) {
         if (err.code === 'ENOENT') {
             throw new XCollectorAbortError(
-                `twitter-cli (${TWITTER_BIN}) が見つかりません。Agent Reach でインストール・設定を確認してください`
+                'twitter-cli が見つかりません。インストール・設定を確認してください'
             );
         }
         if (shouldAbort(err)) {
-            throw new XCollectorAbortError(`X 検索がレート制限／認証エラーで失敗しました: ${err.message}`);
+            throw new XCollectorAbortError('X 検索がレート制限／認証エラーで失敗しました');
         }
-        throw new Error(`twitter search の実行に失敗しました: ${err.message}`);
+        throw new Error('twitter search の実行に失敗しました');
     }
 
     let parsed;
     try {
         parsed = JSON.parse(stdout);
     } catch (err) {
-        throw new Error(`twitter search の JSON 出力を解析できませんでした: ${err.message}`);
+        throw new Error('twitter search の JSON 出力を解析できませんでした');
     }
 
     // twitter-cli は { ok, schema_version, data } 形式。
     // 失敗時は exit 1 になるが、ok:false だけが返る経路も握り潰さないようにする
     if (parsed && parsed.ok === false) {
-        const code = parsed.error?.code ?? 'unknown';
-        const message = parsed.error?.message ?? '(詳細なし)';
+        const code = typeof parsed.error?.code === 'string' ? parsed.error.code : 'unknown';
         if (/rate_limit|unauthorized|forbidden|auth/i.test(code)) {
-            throw new XCollectorAbortError(`X 検索が失敗しました [${code}]: ${message}`);
+            throw new XCollectorAbortError('X 検索がレート制限／認証エラーで失敗しました');
         }
-        throw new Error(`X 検索が失敗しました [${code}]: ${message}`);
+        throw new Error(code === 'not_found' ? 'X 検索が失敗しました [not_found]' : 'X 検索が失敗しました');
     }
 
     return extractTweets(parsed)
