@@ -2,6 +2,7 @@ const router = require('express').Router();
 const db = require('../db');
 const { normalizeVenueName } = require('../utils/songTranslations');
 const { authorize, adminCheck } = require('../middleware/authorization');
+const { getTodayInHistory } = require('../services/todayInHistory');
 
 const formatDate = (dateStr) => {
     if (!dateStr) return '';
@@ -384,6 +385,16 @@ router.get('/', async (req, res) => {
         });
     } catch (err) {
         console.error('[/api/stats] Error: details suppressed');
+        res.status(500).json({ message: 'Server Error', error: 'Internal Server Error' });
+    }
+});
+
+// 今日（JST）と同じ月日の過去ライブと記念日
+router.get('/today-in-history', async (req, res) => {
+    try {
+        res.json(await getTodayInHistory());
+    } catch (err) {
+        console.error('[/api/stats/today-in-history] Error: details suppressed');
         res.status(500).json({ message: 'Server Error', error: 'Internal Server Error' });
     }
 });

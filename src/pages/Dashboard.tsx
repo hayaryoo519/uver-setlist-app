@@ -9,6 +9,7 @@ import AlbumDistribution from '../components/Dashboard/AlbumDistribution';
 import { LatestLiveCard } from '../components/Dashboard/LatestLiveCard';
 import { TourTrends } from '../components/Dashboard/TourTrends';
 import { UpcomingLives } from '../components/Dashboard/UpcomingLives';
+import { TodayInHistory } from '../components/Dashboard/TodayInHistory';
 
 import SEO from '../components/SEO';
 import ErrorBoundary from '../components/common/ErrorBoundary';
@@ -250,6 +251,11 @@ function Dashboard() {
                         <UpcomingLives lives={stats.upcomingLives} />
                     </ErrorBoundary>
                 )}
+
+                {/* Today in UVER History */}
+                <ErrorBoundary>
+                    <TodayInHistory />
+                </ErrorBoundary>
 
                 {/* Current Tour Trends (Compact) */}
                 {stats.currentTour && (

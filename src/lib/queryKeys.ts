@@ -18,6 +18,7 @@ export const queryKeys = {
   },
   stats: {
     global: ['stats', 'global'] as const,
+    todayInHistory: ['stats', 'todayInHistory'] as const,
   },
   follows: {
     myStats: ['follows', 'my', 'stats'] as const,
