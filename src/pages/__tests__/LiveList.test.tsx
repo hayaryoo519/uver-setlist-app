@@ -123,6 +123,21 @@ describe('LiveList 属性フィルター', () => {
         for (const id of [1, 2, 3, 4]) expect(hasLive(id)).toBe(true);
     });
 
+    it('開催地の近くで現在の結果件数と未確認を含めないことを示し、組み合わせ条件にも追従する', () => {
+        setup();
+        const feedback = () => document.querySelector('.desktop-only .location-filter-feedback');
+        expect(feedback()).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: '日本' }));
+        expect(feedback()).toHaveTextContent('現在の条件：1件。開催国未確認の公演は日本・海外に含めません。');
+        fireEvent.click(screen.getByRole('button', { name: 'FES' }));
+        expect(feedback()).toHaveTextContent('現在の条件：0件。開催国未確認の公演は日本・海外に含めません。');
+        fireEvent.click(screen.getByRole('button', { name: '絞り込みフィルター' }));
+        expect(document.querySelector('.mobile-filter-panel .location-filter-feedback')).toHaveTextContent('現在の条件：0件');
+        fireEvent.click(screen.getAllByRole('button', { name: '日本' })[0]);
+        expect(feedback()).toBeNull();
+        expect(document.querySelector('.mobile-filter-panel .location-filter-feedback')).toBeNull();
+    });
+
     it('復元された海外+国の条件は維持し、日本を選び直した時だけ一本化する', () => {
         setup({ tags: ['overseas'], countryCode: 'KR' });
         expect(screen.getByRole('button', { name: '海外' })).toHaveAttribute('aria-pressed', 'true');
