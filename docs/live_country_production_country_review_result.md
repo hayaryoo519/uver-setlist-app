@@ -33,4 +33,4 @@ PR #255を`dev`の`723b449b`へマージ。フロントエンド対象テスト2
 
 - Staging: [PR #257](https://github.com/hayaryoo519/uver-setlist-app/pull/257) を`dev`の`5a3ce77b`へマージ。初回CIのE2Eは旧ボタンを要求して失敗したためテストを修正。修正後のPC/スマホ合成E2Eは25成功/1意図的スキップ、CI 3ジョブ成功、デプロイrun `40071584588`成功。新規ブラウザ両幅で開催地ボタン/説明なし、他のフィルタあり、公開642件（JP3/KR1/未確認638）を確認。
 - Production: v1.31.0の`main`に表示差分のみ適用した[PR #258](https://github.com/hayaryoo519/uver-setlist-app/pull/258)を`d2217d24`へマージ。main CI 3ジョブ成功。GitHub Release `v1.31.1`をこのSHAでpublishし、Production Actions run `40072332378`成功。新DBバックアップ完了、migrationは変更なし、API ping健康チェック通過。新規本番ブラウザPC/スマホ両幅で開催地ボタン/説明なし、他のフィルタあり。公開1081件（JP48/KR2/未確認1031）は変更なし。
-- **未確認:** Productionホストでの `sudo systemctl status uver-setlist` による起動時刻・PID検証は運用者の確認待ち。Production DB履歴の独立SQL監査も未実施。既存PWA利用者には古いService Workerが残る可能性があり、新規ブラウザでの検証と区別する。
+- **運用者確認:** Productionホストでの `systemctl show uver-setlist -p ActiveState -p ActiveEnterTimestamp -p MainPID` の結果は `active`、**2026-10-24 16:00:41 JST**から稼働、**PID 3406539**。今回のProduction Actions runのサービス再起動後、API健康チェック前の時刻と整合する。ゾンビ/旧起動プロセスの懸念はこの時点で解消。Production DB履歴の独立SQL監査は引き続き未実施。既存PWA利用者には古いService Workerが残る可能性があり、新規ブラウザでの検証と区別する。
