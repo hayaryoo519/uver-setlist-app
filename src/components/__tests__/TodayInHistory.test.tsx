@@ -23,7 +23,7 @@ describe('今日のUVER史', () => {
         expect(screen.getByText('7月6日')).toBeInTheDocument();
         expect(screen.getByText('メジャーデビュー記念日（2005年から21年）')).toBeInTheDocument();
         expect(screen.getByRole('link', { name: 'TOUR 3' })).toHaveAttribute('href', '/live/3');
-        expect(screen.getByText('10周年')).toBeInTheDocument();
+        expect(screen.queryByText(/周年/)).not.toBeInTheDocument();
         expect(screen.getByText('10年前 · 2016.07.06')).toBeInTheDocument();
         expect(screen.getByText('20曲')).toBeInTheDocument();
         expect(screen.queryByText(/近い日のUVER史/)).not.toBeInTheDocument();
@@ -64,9 +64,27 @@ describe('今日のUVER史', () => {
             lives: [live(2, '2018-01-16', 8)],
         });
 
-        expect(screen.getByText('今日開催された記録はありません。近い日のUVER史：1月16日（2日後）')).toBeInTheDocument();
+        expect(screen.getByText('今日開催された記録はありません。近い日のUVER史：1月16日（あさって）')).toBeInTheDocument();
+        // 今日時点ではまだ8年に達していないため「8年前」とは表示しない
+        expect(screen.getByText('あさってで8年 · 2018.01.16')).toBeInTheDocument();
+        expect(screen.queryByText(/8年前/)).not.toBeInTheDocument();
         const share = screen.getByRole('link', { name: 'TOUR 2をXでシェア' });
         expect(new URL(share.getAttribute('href') || '').searchParams.get('text')).toContain('1月16日は2018/01/16の「TOUR 2」から8年！');
+    });
+
+    it('近い日が明日・昨日なら「明日で」「昨日で」と表示する', () => {
+        const { unmount } = renderContent({
+            date: '2026-10-25', matched_date: '2026-10-26', offset_days: 1, anniversaries: [],
+            lives: [live(1, '2021-10-26', 5)],
+        });
+        expect(screen.getByText('明日で5年 · 2021.10.26')).toBeInTheDocument();
+        unmount();
+
+        renderContent({
+            date: '2026-10-25', matched_date: '2026-10-24', offset_days: -1, anniversaries: [],
+            lives: [live(2, '2019-10-24', 7)],
+        });
+        expect(screen.getByText('昨日で7年 · 2019.10.24')).toBeInTheDocument();
     });
 
     it('前後にも公演がない日は案内文を表示する', () => {
