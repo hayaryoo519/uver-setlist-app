@@ -15,3 +15,10 @@ Issue #109のコードRelease v1.31.0後、Stagingから公演ID・revision・�
 保留の2日付は**2019-11-05 / 2026-08-29**。公開プレビューでは根拠48件中46件が `already_confirmed`、2件が `identity_mismatch`。表記差を自動的に同一視せず、別レビューまで保存しない。残る1031件にも国の一律JP推定を適用しない。
 
 **監査の境界:** 管理API/公開APIからのrevision・値・非国指紋確認は行ったが、Production DBに別接続して `live_metadata_history` の各行やmigration履歴をSQLで独立監査した結果ではない。管理用候補原文・メモ・トークンは出力/文書化していない。画面上の0件説明改善[Draft PR #255](https://github.com/hayaryoo519/uver-setlist-app/pull/255)は未マージ・未配備で、この国データ確定とは別作業。
+
+## 保留2件の追加読み取り調査（未保存）
+
+- **2019-11-05（Production公開ID 1229）:** Productionは公演名 `BIRTHDAY LIVE`、会場 `Zepp Sapporo`、種別ONEMAN、当日は公開1件。[公式2019特設日程](https://www.uverworld.jp/feature/2019_livetour) は同日 `真太郎 生誕祭`・`ZEPP SAPPORO`・地区 `北海道札幌市` と独立して記載。生誕祭/BIRTHDAY LIVEの対応は強い手掛かりだが、Stagingの `Zepp Sapporo Event` とも公演名が異なるため、管理者による公演同定レビューを省略しない。
+- **2026-08-29（Production公開ID 1268）:** Productionは `音楽と髭達2026 -TIME MACHINE-`、`HARD OFF ECOスタジアム新潟`、種別FESTIVAL、当日は公開1件。[公式公演詳細](https://www.uverworld.jp/schedule/detail/3175) は同日・同イベント・会場（空白等に差がある）と[会場公式](https://www.hardoff-eco-stadium.jp/)へのリンクを記載。会場公式は `〒950-0932 新潟県新潟市中央区長潟570` と明示。表記差を黙って自動正規化せず、個別にイベント同定を確認する。
+
+両公式URL/内容の該当箇所は2026-10-24に再取得した。両件の国は**依然 `unreviewed`**。再調査時にOrcaの管理者セッションは `/login` に移り、認証付きGETは403だったため、既存手動値や最新revisionは再確認できていない。**追加の本番保存は承認・ログイン後の個別管理GETと出典/同定確認まで行わない。**
