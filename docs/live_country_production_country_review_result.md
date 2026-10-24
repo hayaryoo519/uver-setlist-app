@@ -14,7 +14,7 @@ Issue #109のコードRelease v1.31.0後、Stagingから公演ID・revision・�
 
 保留の2日付は**2019-11-05 / 2026-08-29**。公開プレビューでは根拠48件中46件が `already_confirmed`、2件が `identity_mismatch`。表記差を自動的に同一視せず、別レビューまで保存しない。残る1031件にも国の一律JP推定を適用しない。
 
-**監査の境界:** 管理API/公開APIからのrevision・値・非国指紋確認は行ったが、Production DBに別接続して `live_metadata_history` の各行やmigration履歴をSQLで独立監査した結果ではない。管理用候補原文・メモ・トークンは出力/文書化していない。画面上の0件説明改善[PR #255](https://github.com/hayaryoo519/uver-setlist-app/pull/255)は2026-10-24に`dev`へマージ・Stagingに配備したが、**Productionには未配備**。この国データ確定とは別作業。
+**監査の境界:** 管理API/公開APIからのrevision・値・非国指紋確認は行ったが、Production DBに別接続して `live_metadata_history` の各行やmigration履歴をSQLで独立監査した結果ではない。管理用候補原文・メモ・トークンは出力/文書化していない。画面上の0件説明改善[PR #255](https://github.com/hayaryoo519/uver-setlist-app/pull/255)は2026-10-24に`dev`へマージ・Stagingに配備したが、**Productionには配備しなかった**。その後、利用者の判断で開催地フィルタ表示自体を一時撤去した（下記）。この国データ確定とは別作業。
 
 ## 保留2件の追加読み取り調査（未保存）
 
@@ -25,4 +25,12 @@ Issue #109のコードRelease v1.31.0後、Stagingから公演ID・revision・�
 
 ## 国フィルターの結果説明（コードのみ、Production未配備）
 
-PR #255を`dev`の`723b449b`へマージ。フロントエンド対象テスト24件、型チェック、ビルド、GitHub CIの3ジョブ成功。Stagingデプロイrun `40059790715`成功後、公開APIで642件中JP3/KR1/未確認638を確認。新規ブラウザのPC・スマホ幅で「日本」3件・「海外」1件、各選択の近くに現在の件数と未確認を含めない説明が出ることを確認した。直前の`dev`（#253）デプロイrun `39803854233`はAPI起動ヘルスチェックで失敗していたため、**成功したのは今回のrun**であり、前回の失敗を成功扱いしない。Productionは引き続きv1.31.0であり、この表示変更や#253を含む新たなReleaseは未承認・未実施。無関係な#253を持ち込まずに表示変更だけをmainへ戻す[Draft PR #256](https://github.com/hayaryoo519/uver-setlist-app/pull/256)を別途作成し、mainベースの対象テスト24件・型検査・ビルド・CI 3ジョブが成功。**PRは未マージ、Releaseは未publish**。
+PR #255を`dev`の`723b449b`へマージ。フロントエンド対象テスト24件、型チェック、ビルド、GitHub CIの3ジョブ成功。Stagingデプロイrun `40059790715`成功後、公開APIで642件中JP3/KR1/未確認638を確認。新規ブラウザのPC・スマホ幅で「日本」3件・「海外」1件、各選択の近くに現在の件数と未確認を含めない説明が出ることを確認した。直前の`dev`（#253）デプロイrun `39803854233`はAPI起動ヘルスチェックで失敗していたため、**成功したのは今回のrun**であり、前回の失敗を成功扱いしない。この時点でProductionはv1.31.0だった。表示変更だけをmainへ戻す[Draft PR #256](https://github.com/hayaryoo519/uver-setlist-app/pull/256)はCI成功後、開催地フィルタ表示の巻き戻し判断に伴い**クローズ・未配備**。#253の無関係なdev変更はProductionへ持ち込んでいない。
+
+## v1.31.1：公開開催地フィルタ表示の一時撤去
+
+利用者の指示により、日本/海外ボタンとStagingで追加した「開催国未確認」説明を公開アーカイブから撤去。`countryCode`/`overseas`の保存済み条件は厳密な絞り込みと解除可能なチップを維持。国確定値50件、管理画面レビュー、公開メタデータ、認証、DB/API、他のフィルタは維持し、国を一律JPに変更していない。
+
+- Staging: [PR #257](https://github.com/hayaryoo519/uver-setlist-app/pull/257) を`dev`の`5a3ce77b`へマージ。初回CIのE2Eは旧ボタンを要求して失敗したためテストを修正。修正後のPC/スマホ合成E2Eは25成功/1意図的スキップ、CI 3ジョブ成功、デプロイrun `40071584588`成功。新規ブラウザ両幅で開催地ボタン/説明なし、他のフィルタあり、公開642件（JP3/KR1/未確認638）を確認。
+- Production: v1.31.0の`main`に表示差分のみ適用した[PR #258](https://github.com/hayaryoo519/uver-setlist-app/pull/258)を`d2217d24`へマージ。main CI 3ジョブ成功。GitHub Release `v1.31.1`をこのSHAでpublishし、Production Actions run `40072332378`成功。新DBバックアップ完了、migrationは変更なし、API ping健康チェック通過。新規本番ブラウザPC/スマホ両幅で開催地ボタン/説明なし、他のフィルタあり。公開1081件（JP48/KR2/未確認1031）は変更なし。
+- **未確認:** Productionホストでの `sudo systemctl status uver-setlist` による起動時刻・PID検証は運用者の確認待ち。Production DB履歴の独立SQL監査も未実施。既存PWA利用者には古いService Workerが残る可能性があり、新規ブラウザでの検証と区別する。
