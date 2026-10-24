@@ -1334,6 +1334,13 @@
     flex-wrap: wrap;
 }
 
+.location-filter-feedback {
+    margin: 10px 0 0;
+    color: #cbd5e1;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
 .type-pill-tag.active,
 .filter-chip-tag {
     background: rgba(56, 189, 248, 0.12);
