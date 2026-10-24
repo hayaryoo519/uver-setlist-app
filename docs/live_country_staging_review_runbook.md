@@ -1,5 +1,7 @@
 # 開催国：Staging個別レビュー手順と実施記録
 
+**更新（2026-10-24）:** 以下の「Production未変更」は2026-10-18時点のStaging作業記録。Productionでは後日[別の50件レビュー](live_country_production_country_review_result.md)を実施した。両DBのID・revisionを転用していない。
+
 状態：**2026-10-18に承認済みの4公演だけStagingで国を確定。Productionは未変更。**
 以下の手順は追加公演や別環境への操作許可ではない。新たな対象と操作には別途承認が必要。
 対象外の公演、Production、同期、setlist.fm再取得、曲/種別/会場/ツアー/他の属性には手を触れない。

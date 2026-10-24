@@ -1,5 +1,7 @@
 # 開催国機能のProductionコードリリース結果
 
+**更新（2026-10-24）:** リリース直後の「全1081件が国未確認」は下記時点の記録。Productionで公式根拠に基づく50件を個別確定後、**JP48 / KR2 / 未確認1031**。手順と検証境界は[本番国レビュー結果](live_country_production_country_review_result.md)を参照。
+
 2026-10-22、`dev` 全体を[PR #251](https://github.com/hayaryoo519/uver-setlist-app/pull/251)で `main` (`4efe393b11b610889df1b64f674dc2d8aefc0609`) にマージし、[Release v1.31.0](https://github.com/hayaryoo519/uver-setlist-app/releases/tag/v1.31.0)を公開した。国データの追加確定、Staging同期、ProductionへのID/リビジョン転記は行っていない。
 
 - main向けCIのバックエンド・フロントエンド・メタデータ統合3ジョブが成功。mainとStagingで確認済みdevのファイル内容は一致。

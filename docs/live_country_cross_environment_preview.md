@@ -1,6 +1,6 @@
 # 開催国：Staging／Production共通根拠の公開読み取り専用プレビュー
 
-**更新（2026-10-22）:** Productionに[コードRelease v1.31.0](live_country_production_release_result.md)を配備済み。以下の `metadata_unavailable` / 404 / コード未搭載の観測は**リリース前の履歴**。リリース後は公演1081件すべて国 `unreviewed`、根拠48件中46件が公開上は未確認の一意対応、2件は同定不一致で保留。国データの保存はしていない。
+**更新（2026-10-24）:** Productionに[コードRelease v1.31.0](live_country_production_release_result.md)を配備後、[国レビュー50件](live_country_production_country_review_result.md)を個別確定した。現在の公開状態はJP48 / KR2 / 未確認1031。根拠48件中46件は `already_confirmed`、2件は同定不一致で保留。以下の `metadata_unavailable` / 404 / 全件未確認 / コード未搭載の観測は**リリース・国レビュー前の履歴**。
 
 `../scripts/audit/live-country-evidence.json` はイベント固有の公式出典を照合した**48件の提案**（JP 47 / KR 1）。日付・Staging観測時の公演名・会場・国コード・公式出典だけを記録し、Staging/Productionの公演ID、revision、管理用候補、トークン、管理メモ、原文を含めない。既存の根拠調査は [2019年](live_country_2019_2021_source_review.md)、[2022年](live_country_2022_2023_source_review.md)、[2024・2025年](live_country_2024_2025_source_review.md)、[公式ツアー日程](live_country_tour_schedule_batch.md)、[2026年](live_country_next_source_review.md) を参照。
 
