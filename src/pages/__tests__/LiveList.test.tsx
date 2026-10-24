@@ -39,12 +39,13 @@ describe('LiveList 属性フィルター', () => {
         expect(screen.getByRole('button', { name: 'FES' })).toBeInTheDocument();
         fireEvent.click(toggle);
         expect(toggle).toHaveAttribute('aria-expanded', 'true');
-        expect(screen.getByRole('button', { name: '日本' })).toHaveAttribute('aria-pressed', 'false');
-        expect(screen.getByRole('button', { name: '海外' })).toHaveAttribute('aria-pressed', 'false');
+        expect(screen.queryByRole('button', { name: '日本' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: '海外' })).not.toBeInTheDocument();
         expect(screen.queryByLabelText('開催国')).not.toBeInTheDocument();
         expect(screen.queryByText(/同じ分類内/)).not.toBeInTheDocument();
-        for (const name of ['公演の特徴', '共演', '開催地']) expect(screen.getByRole('group', { name })).toBeInTheDocument();
-        expect(document.querySelectorAll('.semantic-filters > fieldset')).toHaveLength(3);
+        for (const name of ['公演の特徴', '共演']) expect(screen.getByRole('group', { name })).toBeInTheDocument();
+        expect(screen.queryByRole('group', { name: '開催地' })).not.toBeInTheDocument();
+        expect(document.querySelectorAll('.semantic-filters > fieldset')).toHaveLength(2);
         expect(screen.queryByRole('button', { name: '海外公演' })).not.toBeInTheDocument();
         expect(screen.queryByLabelText('生誕祭の対象メンバー')).not.toBeInTheDocument();
         expect(document.getElementById(toggle.getAttribute('aria-controls')!)).toBeInTheDocument();
@@ -66,12 +67,12 @@ describe('LiveList 属性フィルター', () => {
 
     it('詳細条件を折りたたんでも選択を保持し、開き直すと編集できる', () => {
         setup();
-        fireEvent.click(screen.getByRole('button', { name: '海外' }));
+        fireEvent.click(screen.getByRole('button', { name: '生誕祭' }));
         fireEvent.click(screen.getByRole('button', { name: /詳細フィルター/ }));
-        expect(hasLive(4)).toBe(true); expect(hasLive(1)).toBe(false);
-        expect(screen.queryByRole('button', { name: '海外' })).not.toBeInTheDocument();
+        expect(hasLive(4)).toBe(true); expect(hasLive(1)).toBe(true); expect(hasLive(2)).toBe(false);
+        expect(screen.queryByRole('button', { name: '生誕祭' })).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: /詳細フィルター/ }));
-        expect(screen.getByRole('button', { name: '海外' })).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByRole('button', { name: '生誕祭' })).toHaveAttribute('aria-pressed', 'true');
     });
     it('属性選択で年別表示から検索結果に切り替え、階層内OR・階層間ANDで絞る', () => {
         setup();
@@ -104,59 +105,35 @@ describe('LiveList 属性フィルター', () => {
         expect(screen.queryByRole('button', { name: '男祭りフィルターを解除' })).not.toBeInTheDocument();
     });
 
-    it('日本と海外を排他的に選び、選択中のボタンを再度押すと全公演に戻す', () => {
+    it('開催地ボタンと未確認説明はPC・モバイルの公開画面に出さない', () => {
         setup();
-        const japan = screen.getByRole('button', { name: '日本' });
-        const overseas = screen.getByRole('button', { name: '海外' });
-        fireEvent.click(overseas);
-        expect(hasLive(4)).toBe(true); expect(hasLive(1)).toBe(false); expect(hasLive(2)).toBe(false);
-        expect(overseas).toHaveAttribute('aria-pressed', 'true'); expect(japan).toHaveAttribute('aria-pressed', 'false');
-        fireEvent.click(japan);
-        expect(hasLive(1)).toBe(true); expect(hasLive(4)).toBe(false); expect(hasLive(2)).toBe(false);
-        expect(japan).toHaveAttribute('aria-pressed', 'true'); expect(overseas).toHaveAttribute('aria-pressed', 'false');
-        expect(screen.getByRole('button', { name: '詳細フィルター 1件適用中' })).toBeInTheDocument();
-        fireEvent.click(japan);
-        expect(japan).toHaveAttribute('aria-pressed', 'false');
-        for (const id of [1, 2, 3, 4]) expect(hasLive(id)).toBe(true);
-        fireEvent.click(overseas); fireEvent.click(overseas);
-        expect(overseas).toHaveAttribute('aria-pressed', 'false');
-        for (const id of [1, 2, 3, 4]) expect(hasLive(id)).toBe(true);
-    });
-
-    it('開催地の近くで現在の結果件数と未確認を含めないことを示し、組み合わせ条件にも追従する', () => {
-        setup();
-        const feedback = () => document.querySelector('.desktop-only .location-filter-feedback');
-        expect(feedback()).toBeNull();
-        fireEvent.click(screen.getByRole('button', { name: '日本' }));
-        expect(feedback()).toHaveTextContent('現在の条件：1件。開催国未確認の公演は日本・海外に含めません。');
-        fireEvent.click(screen.getByRole('button', { name: 'FES' }));
-        expect(feedback()).toHaveTextContent('現在の条件：0件。開催国未確認の公演は日本・海外に含めません。');
         fireEvent.click(screen.getByRole('button', { name: '絞り込みフィルター' }));
-        expect(document.querySelector('.mobile-filter-panel .location-filter-feedback')).toHaveTextContent('現在の条件：0件');
-        fireEvent.click(screen.getAllByRole('button', { name: '日本' })[0]);
-        expect(feedback()).toBeNull();
-        expect(document.querySelector('.mobile-filter-panel .location-filter-feedback')).toBeNull();
+        expect(screen.queryByRole('group', { name: '開催地' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: '日本' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: '海外' })).not.toBeInTheDocument();
+        expect(document.querySelector('.location-filter-feedback')).toBeNull();
+        for (const id of [1, 2, 3, 4]) expect(hasLive(id)).toBe(true);
     });
 
-    it('復元された海外+国の条件は維持し、日本を選び直した時だけ一本化する', () => {
+    it('復元された海外タグと国条件はそれぞれ厳密に適用・解除できる', () => {
         setup({ tags: ['overseas'], countryCode: 'KR' });
-        expect(screen.getByRole('button', { name: '海外' })).toHaveAttribute('aria-pressed', 'true');
         expect(screen.getByText('開催地：韓国')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: '詳細フィルター 2件適用中' })).toBeInTheDocument();
-        expect(hasLive(4)).toBe(true);
-        fireEvent.click(screen.getByRole('button', { name: '日本' }));
-        expect(hasLive(1)).toBe(true); expect(hasLive(4)).toBe(false);
+        expect(hasLive(4)).toBe(true); expect(hasLive(1)).toBe(false);
+        fireEvent.click(screen.getByRole('button', { name: '開催国フィルターを解除' }));
         expect(screen.getByRole('button', { name: '詳細フィルター 1件適用中' })).toBeInTheDocument();
-        expect(screen.queryByText('開催地：韓国')).not.toBeInTheDocument();
+        expect(hasLive(4)).toBe(true); expect(hasLive(1)).toBe(false);
+        fireEvent.click(screen.getByRole('button', { name: '海外公演フィルターを解除' }));
+        for (const id of [1, 2, 3, 4]) expect(hasLive(id)).toBe(true);
     });
 
     it('取得結果にない国の復元条件もチップに残し、解除するまで検索を広げない', () => {
         setup({ countryCode: 'US' });
-        expect(screen.getByRole('button', { name: '海外' })).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.queryByRole('button', { name: '海外' })).not.toBeInTheDocument();
         expect(screen.getByText('開催地：アメリカ合衆国')).toBeInTheDocument();
         expect(screen.getByText('条件に一致するライブが見つかりません')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: '開催国フィルターを解除' }));
-        expect(screen.getByRole('button', { name: '海外' })).toHaveAttribute('aria-pressed', 'false');
+        expect(screen.queryByRole('button', { name: '海外' })).not.toBeInTheDocument();
         expect(hasLive(4)).toBe(true);
     });
 
@@ -202,8 +179,8 @@ describe('LiveList 属性フィルター', () => {
 
     it('復元された未確認条件は日本や海外と誤表示せず、対象メンバー未確認も除外する', () => {
         setup({ countryCode: 'unconfirmed' });
-        expect(screen.getByRole('button', { name: '日本' })).toHaveAttribute('aria-pressed', 'false');
-        expect(screen.getByRole('button', { name: '海外' })).toHaveAttribute('aria-pressed', 'false');
+        expect(screen.queryByRole('button', { name: '日本' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: '海外' })).not.toBeInTheDocument();
         expect(screen.getByText('開催国未確認')).toBeInTheDocument();
         expect(hasLive(1)).toBe(false); expect(hasLive(4)).toBe(false);
         expect(hasLive(2)).toBe(true); expect(hasLive(3)).toBe(true);
@@ -216,24 +193,11 @@ describe('LiveList 属性フィルター', () => {
         expect(hasLive(1)).toBe(true); expect(hasLive(4)).toBe(true);
     });
 
-    it('未確認の保存済み条件もチップから解除でき、その後に日本で絞り込める', () => {
+    it('未確認の保存済み条件もチップから解除でき、全公演に戻る', () => {
         setup({ countryCode: 'unconfirmed' });
         fireEvent.click(screen.getByRole('button', { name: '開催国フィルターを解除' }));
-        expect(hasLive(1)).toBe(true); expect(hasLive(4)).toBe(true);
-        fireEvent.click(screen.getByRole('button', { name: '日本' }));
-        expect(hasLive(1)).toBe(true); expect(hasLive(2)).toBe(false); expect(hasLive(4)).toBe(false);
-    });
-
-    it('モバイルの開催地ボタンもデスクトップと共有する', () => {
-        setup();
-        fireEvent.click(screen.getByRole('button', { name: '絞り込みフィルター' }));
-        fireEvent.click(screen.getAllByRole('button', { name: '海外' })[1]);
-        expect(screen.getAllByRole('button', { name: '海外' })[0]).toHaveAttribute('aria-pressed', 'true');
-        expect(hasLive(4)).toBe(true); expect(hasLive(1)).toBe(false);
-        fireEvent.click(screen.getAllByRole('button', { name: '日本' })[0]);
-        expect(screen.getAllByRole('button', { name: '日本' })[1]).toHaveAttribute('aria-pressed', 'true');
-        expect(screen.getAllByRole('button', { name: '海外' })[1]).toHaveAttribute('aria-pressed', 'false');
-        expect(hasLive(1)).toBe(true); expect(hasLive(4)).toBe(false);
+        for (const id of [1, 2, 3, 4]) expect(hasLive(id)).toBe(true);
+        expect(screen.queryByRole('button', { name: '日本' })).not.toBeInTheDocument();
     });
 
     it('アーティストと役割は同じ共演情報に一致する公演だけを返す', () => {

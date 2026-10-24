@@ -98,14 +98,7 @@ const LiveList = () => {
     const countryLabel = filters.countryCode === 'unconfirmed' ? '開催国未確認'
         : `開催地：${filters.countryCode === 'JP' ? '日本' : countryName(filters.countryCode)}`;
     const selectedMemberName = MEMBERS.find(member => member.id === filters.memberId)?.label;
-    const locationValue = filters.countryCode === 'JP' ? 'JP'
-        : (/^[A-Z]{2}$/.test(filters.countryCode) || filters.tags?.includes('overseas')) ? 'overseas' : '';
     const showMemberFilter = filters.tags?.includes('birthday') || !!filters.memberId;
-    const changeLocation = (value: '' | 'JP' | 'overseas') => {
-        const tags = (filters.tags || []).filter((tag: LiveTag) => tag !== 'overseas');
-        handleFilterChange({ ...filters, tags: value === 'overseas' ? [...tags, 'overseas'] : tags,
-            countryCode: value === 'overseas' ? '' : value });
-    };
     const renderTagButton = (tag: (typeof LIVE_TAGS)[number]) => (
         <button key={tag.id} type="button" className={`type-pill type-pill-tag ${filters.tags?.includes(tag.id) ? 'active' : ''}`}
             aria-pressed={!!filters.tags?.includes(tag.id)} onClick={() => toggleTag(tag.id)}>{tag.label}</button>
@@ -113,7 +106,7 @@ const LiveList = () => {
 
     const advancedFilterCount = (filters.tags?.length || 0) + (filters.countryCode ? 1 : 0)
         + (filters.memberId ? 1 : 0) + (filters.artistId ? 1 : 0) + (filters.participantRole ? 1 : 0);
-    const renderTagFilters = (view: 'desktop' | 'mobile', resultCount: number) => (
+    const renderTagFilters = (view: 'desktop' | 'mobile') => (
         <section className="advanced-filter-section">
             <button type="button" className="advanced-filter-toggle"
                 aria-expanded={isAdvancedFilterOpen}
@@ -152,18 +145,6 @@ const LiveList = () => {
                         {PARTICIPANT_ROLES.map(role => <option key={role.id} value={role.id}>{role.label}</option>)}
                     </select>
                 </label>
-            </fieldset>
-            <fieldset className="semantic-filter-group">
-                <legend>開催地</legend>
-                <div className="type-filter-pills">
-                    <button type="button" className={`type-pill type-pill-tag ${locationValue === 'JP' ? 'active' : ''}`}
-                        aria-pressed={locationValue === 'JP'} onClick={() => changeLocation(locationValue === 'JP' ? '' : 'JP')}>日本</button>
-                    <button type="button" className={`type-pill type-pill-tag ${locationValue === 'overseas' ? 'active' : ''}`}
-                        aria-pressed={locationValue === 'overseas'} onClick={() => changeLocation(locationValue === 'overseas' ? '' : 'overseas')}>海外</button>
-                </div>
-                {locationValue && <p className="location-filter-feedback" role="status">
-                    現在の条件：{resultCount}件。開催国未確認の公演は日本・海外に含めません。
-                </p>}
             </fieldset>
             </div>}
         </section>
@@ -448,7 +429,7 @@ const LiveList = () => {
                                     </select>
                                 </div>
                             </div>
-                            <div className="desktop-only">{renderTagFilters('desktop', filteredLives.length)}</div>
+                            <div className="desktop-only">{renderTagFilters('desktop')}</div>
                         </header>
 
                         {/* モバイル年タブ */}
@@ -505,7 +486,7 @@ const LiveList = () => {
                                         {songOptions}
                                     </select>
                                 </div>
-                                {renderTagFilters('mobile', filteredLives.length)}
+                                {renderTagFilters('mobile')}
                             </div>
                         )}
 
