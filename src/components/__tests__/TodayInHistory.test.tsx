@@ -12,7 +12,7 @@ const live = (id: number, date: string, yearsAgo: number, extra: Partial<TodayIn
     song_count: 20, years_ago: yearsAgo, is_milestone: yearsAgo % 5 === 0, ...extra,
 });
 
-describe('今日のUVER史', () => {
+describe('過去の今日のライブ', () => {
     it('同月同日の過去ライブと記念日を表示する', () => {
         renderContent({
             date: '2026-07-06', matched_date: '2026-07-06', offset_days: 0,
@@ -20,16 +20,18 @@ describe('今日のUVER史', () => {
             anniversaries: [{ type: 'debut', label: 'メジャーデビュー記念日', year: 2005, years: 21 }],
         });
 
-        expect(screen.getByText('7月6日')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /ON THIS DAY/ })).toHaveTextContent('過去の今日のライブ · 7月6日');
         expect(screen.getByText('メジャーデビュー記念日（2005年から21年）')).toBeInTheDocument();
         expect(screen.getByRole('link', { name: 'TOUR 3' })).toHaveAttribute('href', '/live/3');
         expect(screen.queryByText(/周年/)).not.toBeInTheDocument();
         expect(screen.getByText('10年前 · 2016.07.06')).toBeInTheDocument();
         expect(screen.getByText('20曲')).toBeInTheDocument();
-        expect(screen.queryByText(/近い日のUVER史/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/今日のライブ記録はありません/)).not.toBeInTheDocument();
         const share = screen.getByRole('link', { name: 'TOUR 3をXでシェア' });
         expect(share.getAttribute('href')).toContain('https://x.com/intent/post?');
-        expect(new URL(share.getAttribute('href') || '').searchParams.get('text')).toContain('今日は2016/07/06の「TOUR 3」から10年！');
+        const shareText = new URL(share.getAttribute('href') || '').searchParams.get('text');
+        expect(shareText).toContain('今日は2016/07/06の「TOUR 3」から10年！');
+        expect(shareText).toContain('#過去の今日のUVERworld');
     });
 
     it('最初は2件だけ表示し、もっと見るで残りを開く', () => {
@@ -64,7 +66,7 @@ describe('今日のUVER史', () => {
             lives: [live(2, '2018-01-16', 8)],
         });
 
-        expect(screen.getByText('今日開催された記録はありません。近い日のUVER史：1月16日（あさって）')).toBeInTheDocument();
+        expect(screen.getByText('今日のライブ記録はありません。あさって 1月16日の過去のライブ')).toBeInTheDocument();
         // 今日時点ではまだ8年に達していないため「8年前」とは表示しない
         expect(screen.getByText('あさってで8年 · 2018.01.16')).toBeInTheDocument();
         expect(screen.queryByText(/8年前/)).not.toBeInTheDocument();

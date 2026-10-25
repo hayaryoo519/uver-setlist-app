@@ -29,7 +29,7 @@ const liveName = (live: TodayInHistoryLive) => live.tour_name || live.title || '
 // X 投稿画面へ本文を渡すだけで、自動投稿はしない
 const shareUrl = (live: TodayInHistoryLive, data: TodayInHistoryData) => {
     const when = data.offset_days ? `${formatMonthDay(data.matched_date ?? data.date)}は` : '今日は';
-    const text = `${when}${live.date.replace(/-/g, '/')}の「${liveName(live)}」から${live.years_ago}年！\n#UVERworld #今日のUVER史`;
+    const text = `${when}${live.date.replace(/-/g, '/')}の「${liveName(live)}」から${live.years_ago}年！\n#UVERworld #過去の今日のUVERworld`;
     const params = new URLSearchParams({ text, url: `${SITE_URL}/live/${live.id}` });
     return `https://x.com/intent/post?${params.toString()}`;
 };
@@ -85,8 +85,8 @@ export const TodayInHistoryContent = ({ data }: { data: TodayInHistoryData }) =>
         <section aria-labelledby="today-in-history-title" style={{ marginBottom: '50px' }}>
             <h2 id="today-in-history-title" className="section-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <CalendarClock size={20} color="var(--primary-color)" />
-                TODAY IN UVER HISTORY
-                <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: 'normal' }}>{formatMonthDay(data.date)}</span>
+                ON THIS DAY
+                <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: 'normal' }}>過去の今日のライブ · {formatMonthDay(data.date)}</span>
             </h2>
 
             {anniversaries.length > 0 && (
@@ -113,7 +113,7 @@ export const TodayInHistoryContent = ({ data }: { data: TodayInHistoryData }) =>
                 <>
                     {data.offset_days !== 0 && data.offset_days !== null && (
                         <p style={{ color: '#94a3b8', marginBottom: '12px' }}>
-                            今日開催された記録はありません。近い日のUVER史：{formatMonthDay(data.matched_date)}（{formatOffset(data.offset_days)}）
+                            今日のライブ記録はありません。{formatOffset(data.offset_days)} {formatMonthDay(data.matched_date)}の過去のライブ
                         </p>
                     )}
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '16px' }}>

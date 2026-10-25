@@ -10,7 +10,7 @@ const live = (id, date, extra = {}) => ({
     id, date, title: `LIVE ${id}`, tour_name: null, venue: 'Zepp', prefecture: '東京都', type: 'oneman', song_count: 20, ...extra,
 });
 
-describe('今日のUVER史', () => {
+describe('過去の今日のライブ', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });

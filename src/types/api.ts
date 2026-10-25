@@ -254,7 +254,7 @@ export interface SongPerformanceTimelineData {
   yearlyData: YearlyPerformanceEntry[]
 }
 
-// ---- 今日のUVER史 ----
+// ---- 過去の今日のライブ（On This Day） ----
 
 export interface TodayInHistoryLive {
   id: number
