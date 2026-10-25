@@ -270,6 +270,9 @@ curl --fail --silent --show-error http://127.0.0.1:9001/api/ping
 - `backup-db.sh`: 本番 DB のバックアップ取得。
 - `sync-db.sh`: バックアップを検証環境へ反映。
 
+### 定期確認項目
+- **公開 IPv6 の確認**: 本番ホストに公開 IPv6 アドレス（`ip -6 addr show scope global`）が現れたら、IPv6 側の受信制限を確認します。ufw の IPv6 は現在無効で、DOCKER-USER の IPv6 側も未設定です。公開 IPv6 が現れた時点で、IPv4 と同じ公開範囲になっていないかを確認してください。
+
 ---
 
 > [!IMPORTANT]
