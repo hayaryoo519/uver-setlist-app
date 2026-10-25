@@ -15,8 +15,14 @@ const formatMonthDay = (date: string) => {
 const formatOffset = (offset: number) => {
     if (offset === 1) return '明日';
     if (offset === -1) return '昨日';
+    if (offset === 2) return 'あさって';
+    if (offset === -2) return 'おととい';
     return offset > 0 ? `${offset}日後` : `${-offset}日前`;
 };
+
+// 経過年数は公演の月日を基準に数えるため、近い日の公演は「今日」ではなく「その日」で何年になるかを示す
+const yearsLabel = (live: TodayInHistoryLive, offset: number | null) =>
+    offset ? `${formatOffset(offset)}で${live.years_ago}年` : `${live.years_ago}年前`;
 
 const liveName = (live: TodayInHistoryLive) => live.tour_name || live.title || 'LIVE';
 
@@ -38,11 +44,8 @@ const LiveCard = ({ live, data }: { live: TodayInHistoryLive; data: TodayInHisto
             border: live.is_milestone ? '1px solid rgba(251, 191, 36, 0.6)' : '1px solid rgba(255,255,255,0.1)',
         }}
     >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '0.8rem', fontWeight: 'bold', letterSpacing: '1px' }}>
-            {live.is_milestone && (
-                <span style={{ background: '#fbbf24', color: '#000', borderRadius: '4px', padding: '2px 8px' }}>{live.years_ago}周年</span>
-            )}
-            <span style={{ color: '#fbbf24' }}>{live.years_ago}年前 · {live.date.replace(/-/g, '.')}</span>
+        <div style={{ color: '#fbbf24', fontSize: live.is_milestone ? '0.95rem' : '0.8rem', fontWeight: 'bold', letterSpacing: '1px' }}>
+            {yearsLabel(live, data.offset_days)} · {live.date.replace(/-/g, '.')}
         </div>
         <Link to={`/live/${live.id}`} style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', lineHeight: 1.4, textDecoration: 'none' }}>
             {liveName(live)}
