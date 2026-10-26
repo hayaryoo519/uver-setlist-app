@@ -273,6 +273,51 @@ async function main() {
     }
     passed('Real API SQL: metadata lock/revision conflict, Unicode alias search, dictionary update, review summary');
 
+    // 国のみを確定する練習は、所有する合成DB/実APIで実施。実StagingのID・tokenを使わない。
+    const liveFields = fullSchema ? 'id, title, tour_name, venue' : 'id, title, tour_name, special_note';
+    const countryOnlyLives = () => pool.query(`SELECT ${liveFields} FROM lives WHERE id IN (2,3,4) ORDER BY id`);
+    const beforeCountryOnly = (await countryOnlyLives()).rows;
+    const collaboratorsBefore = (await pool.query('SELECT * FROM live_collaborators ORDER BY live_id, artist_id, role')).rows;
+    const unreviewed = await Promise.all([2, 3].map(async id => {
+        const result = await get(`/api/lives/${id}/metadata`);
+        assert.equal(result.status, 200);
+        return result.json();
+    }));
+    assert(unreviewed.every(item => item.effective.country.status === 'unreviewed'));
+    const beforeStates = unreviewed.map(item => ({ candidates: item.candidates, overrides: item.overrides, revision: item.revision }));
+    const countryPatches = [['JP', 2], ['KR', 3]];
+    for (let index = 0; index < countryPatches.length; index++) {
+        const [code, id] = countryPatches[index];
+        const original = beforeStates[index];
+        const response = await patch(`/api/lives/${id}/metadata`, {
+            revision: original.revision, patch: { country: { code } },
+        });
+        assert.equal(response.status, 200);
+        const saved = await response.json();
+        assert.equal(saved.revision, original.revision + 1);
+        assert.deepEqual(saved.candidates, original.candidates);
+        assert.deepEqual(saved.overrides, { ...original.overrides, country: { code } });
+        assert.deepEqual(saved.effective.country, { code, status: 'confirmed' });
+        assert.equal(saved.effective.tags.includes('overseas'), code !== 'JP');
+        const duplicate = await patch(`/api/lives/${id}/metadata`, {
+            revision: original.revision, patch: { country: { code } },
+        });
+        assert.equal(duplicate.status, 409, 'stale revision must not silently retry');
+        const reloaded = await get(`/api/lives/${id}/metadata`);
+        assert.equal(reloaded.status, 200);
+        assert.equal((await reloaded.json()).revision, saved.revision);
+        const history = await pool.query('SELECT operation, before_state, after_state, actor_id FROM live_metadata_history WHERE live_id=$1 ORDER BY id DESC LIMIT 1', [id]);
+        assert.equal(history.rowCount, 1);
+        assert.equal(history.rows[0].operation, 'manual');
+        assert.deepEqual(history.rows[0].before_state.overrides, original.overrides);
+        assert.deepEqual(history.rows[0].after_state.overrides.country, { code });
+        if (realAuth) assert.equal(history.rows[0].actor_id, 1);
+    }
+    assert.deepEqual((await countryOnlyLives()).rows, beforeCountryOnly);
+    assert.deepEqual((await pool.query('SELECT * FROM live_collaborators ORDER BY live_id, artist_id, role')).rows, collaboratorsBefore);
+    assert.deepEqual((await get('/api/lives/4/metadata').then(result => result.json())).effective.country, { code: 'JP', status: 'confirmed' });
+    passed('Synthetic country-only review: JP/KR manual PATCH, unchanged candidates/other lives/roles, audit actor and stale revision 409');
+
     const manualBefore = (await pool.query('SELECT overrides FROM live_metadata WHERE live_id=1')).rows[0].overrides;
     const client = await pool.connect();
     try {
@@ -291,6 +336,7 @@ async function main() {
         ["DELETE FROM live_artists WHERE id=10", ['23503', '23001']],
     ]) await assert.rejects(pool.query(sql), error => (Array.isArray(code) ? code : [code]).includes(error.code));
     passed('Collaborator FK, duplicate-role, role CHECK and referenced-artist deletion constraints');
+    if (fullSchema) await require('./verify-live-country-audit').verifyCountryAudit({ root, pool, connection, dataDirectory: data, passed });
     if (browserVerification) await require('./verify-live-metadata-browser').verifyMetadataBrowser({ root, temp, pool, httpServer, freePort, passed, workerVerification });
     if (builtWorkerVerification) await require('./verify-built-metadata-worker').verifyBuiltWorker({ root, temp, pool, app, httpServer, passed });
     console.log(`All ${checkpoints.length} disposable PostgreSQL checkpoints passed. No application database used.`);
