@@ -15,6 +15,9 @@ const Footer = () => {
                             <AlertTriangle size={14} /> 不具合・データ修正依頼
                         </Link>
                     )}
+                    <Link to="/privacy" className="footer-link">
+                        プライバシー
+                    </Link>
                 </div>
                 <div className="footer-copyright">
                     &copy; {new Date().getFullYear()} UVERworld Setlist Archive. 非公式ファンプロジェクト

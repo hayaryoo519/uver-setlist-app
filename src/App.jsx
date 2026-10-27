@@ -29,6 +29,7 @@ import SetlistPredictionCreate from './pages/SetlistPredictionCreate';
 import SetlistPredictionDetail from './pages/SetlistPredictionDetail';
 import UserProfile from './pages/UserProfile';
 import FollowListPage from './pages/FollowListPage';
+import Privacy from './pages/Privacy';
 import ScrollToTop from './components/ScrollToTop';
 
 import ProtectedRoute from './components/ProtectedRoute';
@@ -87,6 +88,7 @@ function App() {
 
               <Route element={<LayoutRoute />}>
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/privacy" element={<Privacy />} />
                 <Route path="/songs" element={<Songs />} />
                 <Route path="/lives" element={<LiveList />} />
                 <Route path="/live/:id" element={<LiveDetail />} />
