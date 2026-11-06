@@ -157,6 +157,7 @@ describe('scheduleImporter', () => {
                 publishedDate: '2026-09-24',
                 category: 'NEWS',
                 title: 'UVERworld VS シリーズ”UVERworld vs BE:FIRST”',
+                ticketNotice: false,
                 detailUrl: 'https://www.uverworld.jp/news/detail/3231',
             }]);
         });
@@ -571,6 +572,25 @@ describe('scheduleImporter', () => {
                 .toEqual(expect.arrayContaining(['2026-12-26', '日本武道館']));
         });
 
+        it('日程表のない特設リンクを持つフェス告知は本文解析を維持すること', async () => {
+            const list = NEWS_LIST_HTML.replace('【LIVE】UVERworld VS シリーズ”UVERworld vs BE:FIRST”開催決定',
+                '【フェス】TEST FES 2027 出演決定');
+            const detail = `<div class="txt"><p>2027年2月4日</p><p>会場：日本武道館</p>
+                <a href="/feature/fes">詳細</a></div>`;
+            axios.get.mockImplementation(url => Promise.resolve({ data:
+                url.endsWith('/news/') ? list
+                    : url.includes('/news/detail/') ? detail
+                        : url.includes('/feature/') ? '<html>案内ページ</html>' : '<html></html>',
+            }));
+            db.query.mockImplementation(sql => Promise.resolve({ rows:
+                sql.includes('INSERT INTO lives') ? [{ id: 900 }] : [],
+            }));
+            const stats = await importer.importSchedule();
+            expect(stats.created).toBe(1);
+            expect(db.query.mock.calls.find(([sql]) => sql.includes('INSERT INTO lives'))[1])
+                .toEqual(expect.arrayContaining(['2027-02-04', '日本武道館']));
+        });
+
         it('特設リンクのないチケット告知の発売日を公演にしないこと', async () => {
             const ticketList = TOUR_NEWS_LIST_HTML.replace('※チケット先行受付', '※チケット一般発売');
             axios.get.mockImplementation(url => Promise.resolve({ data:
@@ -582,6 +602,21 @@ describe('scheduleImporter', () => {
             db.query.mockResolvedValue({ rows: [] });
             const stats = await importer.importSchedule();
             expect(stats.created).toBe(0);
+            expect(stats.fetched).toBe(0);
+            expect(db.query.mock.calls.some(([sql]) => sql.includes('INSERT INTO lives'))).toBe(false);
+        });
+
+        it('開催決定の後ろにチケットがある見出しでも発売日を公演にしないこと', async () => {
+            const ticketList = TOUR_NEWS_LIST_HTML.replace('※チケット先行受付', '開催決定 チケット先行受付');
+            axios.get.mockImplementation(url => Promise.resolve({ data:
+                url.endsWith('/news/') ? ticketList
+                    : url.includes('/news/detail/')
+                        ? '<div class="txt"><p>受付締切日:2027年1月16日(土)10:00</p></div>'
+                        : '<html></html>',
+            }));
+            db.query.mockResolvedValue({ rows: [] });
+            expect(importer.parseNewsList(ticketList)[0].ticketNotice).toBe(true);
+            const stats = await importer.importSchedule();
             expect(stats.fetched).toBe(0);
             expect(db.query.mock.calls.some(([sql]) => sql.includes('INSERT INTO lives'))).toBe(false);
         });

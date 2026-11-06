@@ -150,6 +150,7 @@ function parseNewsList(html) {
             publishedDate: `${publishedMatch[1]}-${publishedMatch[2]}-${publishedMatch[3]}`,
             category: /フェス|festival/i.test(title) ? 'NEWS_FESTIVAL' : 'NEWS',
             title: title.replace(/^【[^】]+】\s*/, '').replace(/(?:出演|開催)決定.*$/, '').trim(),
+            ticketNotice: /チケット/.test(title),
             detailUrl: `${BASE_URL}/news/detail/${idMatch[1]}`,
         });
     }
@@ -532,14 +533,19 @@ async function importSchedule({ dryRun = false } = {}) {
                 await sleep(DETAIL_INTERVAL_MS);
                 const detailHtml = await fetchHtml(newsEntry.detailUrl);
                 const featureUrls = parseNewsFeatureUrls(detailHtml);
+                let featureHasScheduleList = false;
+                let featureFetchFailed = false;
+                let featureMissingSchedule = false;
                 for (const featureUrl of featureUrls) {
                     try {
                         await sleep(DETAIL_INTERVAL_MS);
                         const featureHtml = await fetchHtml(featureUrl);
                         const featureEntries = parseFeatureSchedule(newsEntry, featureUrl, featureHtml);
                         const scheduleList = featureHtml.match(/<ul[^>]*class="[^"]*scheduleList[^"]*"[^>]*>([\s\S]*?)<\/ul>/i)?.[1] || '';
+                        featureHasScheduleList ||= Boolean(scheduleList);
                         const listedDates = (scheduleList.match(/<span[^>]*class="date"/gi) || []).length;
-                        if (!featureEntries.length || featureEntries.length < listedDates) {
+                        if (!scheduleList) featureMissingSchedule = true;
+                        else if (!featureEntries.length || featureEntries.length < listedDates) {
                             featureParseFailures++;
                             await logToDb('warn', 'Schedule feature parsed incomplete entries', {
                                 url: featureUrl, listedDates, parsed: featureEntries.length,
@@ -550,12 +556,21 @@ async function importSchedule({ dryRun = false } = {}) {
                     } catch (err) {
                         stats.errors++;
                         featureParseFailures++;
+                        featureFetchFailed = true;
                         console.warn(`[Schedule] 特設ページ取得に失敗: ${err.message}`);
                     }
                 }
-                if (!featureUrls.length && !/チケット/.test(newsEntry.title)) {
-                    const parsed = parseNewsDetail(newsEntry, detailHtml);
-                    if (parsed) entries.push(parsed);
+                let parsedNews = null;
+                if (!newsEntry.ticketNotice && (!featureUrls.length || (!featureHasScheduleList && !featureFetchFailed))) {
+                    parsedNews = parseNewsDetail(newsEntry, detailHtml);
+                    if (parsedNews) entries.push(parsedNews);
+                }
+                if (featureMissingSchedule && !parsedNews && !featureHasScheduleList) {
+                    featureParseFailures++;
+                    await logToDb('warn', 'Schedule feature parsed incomplete entries', {
+                        url: featureUrls[0], listedDates: 0, parsed: 0,
+                    });
+                    console.warn('[Schedule] 特設ページの公演抽出が不完全です');
                 }
             } catch (err) {
                 stats.errors++;
