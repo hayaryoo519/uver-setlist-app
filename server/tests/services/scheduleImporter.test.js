@@ -71,6 +71,28 @@ const NEWS_DETAIL_HTML = `
     <p>受付期間：2026年10月01日（木）12:00～</p>
 </div></article>`;
 
+// 公式 /feature/2027_live の scheduleList を公演列だけに縮小した fixture
+const TOUR_NEWS_HTML = `<div class="txt"><p><a href="https://www.uverworld.jp/feature/2027_live">ツアー日程</a></p>
+<p>受付締切日:2026年11月15日(日)23:59まで</p></div>`;
+const TOUR_ROWS = [
+    ['2.4', 'KT Zepp Yokohama', '', '18:30'],
+    ['2.9', 'Zepp Osaka Bayside', '', '18:30'],
+    ['2.14', '松山市民会館 大ホール', '～信人生誕祭～', '18:00'],
+    ['2.22', 'Zepp Fukuoka', '～克哉生誕祭～', '18:30'],
+    ['3.3', 'Zepp Nagoya', '', '18:30'],
+    ['3.8', 'Zepp Haneda', '～彰生誕祭～', '18:30'],
+    ['3.19', '仙台GIGS', '', '18:30'],
+    ['3.25', 'Zepp Sapporo', '', '18:30'],
+];
+const TOUR_FEATURE_HTML = `<ul class="scheduleList"><li><table><tr><td class="venue">会場</td></tr></table></li>
+${TOUR_ROWS.map(([date, venue, note, time]) => `<li><table><tr>
+<td class="venue"><span class="date">${date}</span><span class="venuename">${venue}</span><span class="subTit">${note}</span></td>
+<td class="openstart">17:30<span>OPEN</span> / ${time}<span>START</span></td>
+</tr></table></li>`).join('\n')}</ul>`;
+const TOUR_NEWS_LIST_HTML = `<ul class="newsList clearfix"><li class="clearfix"><a href="/news/detail/3240">
+<p class="date">2026.11.06</p><p class="tit">【LIVE】UVERworld LIVE HOUSE TOUR 2027 ※チケット先行受付</p>
+</a></li></ul>`;
+
 describe('scheduleImporter', () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -184,6 +206,43 @@ describe('scheduleImporter', () => {
                 venue: 'Zepp New Taipei',
                 performanceTitle: 'Zepp New Taipei 単独公演 19:00開演',
             }));
+        });
+    });
+
+    describe('parseFeatureSchedule', () => {
+        const newsEntry = { title: 'UVERworld LIVE HOUSE TOUR 2027 ※先行受付', publishedDate: '2026-11-06' };
+        const url = 'https://www.uverworld.jp/feature/2027_live';
+
+        it('公式特設ページの8公演と生誕祭・開演時刻を抽出すること', () => {
+            const entries = importer.parseFeatureSchedule(newsEntry, url, TOUR_FEATURE_HTML);
+            expect(entries.map(e => [e.date, e.venue])).toEqual([
+                ['2027-02-04', 'KT Zepp Yokohama'], ['2027-02-09', 'Zepp Osaka Bayside'],
+                ['2027-02-14', '松山市民会館 大ホール'], ['2027-02-22', 'Zepp Fukuoka'],
+                ['2027-03-03', 'Zepp Nagoya'], ['2027-03-08', 'Zepp Haneda'],
+                ['2027-03-19', '仙台GIGS'], ['2027-03-25', 'Zepp Sapporo'],
+            ]);
+            expect(entries[2].title).toContain('信人生誕祭');
+            expect(entries[3].title).toContain('克哉生誕祭');
+            expect(entries[5].title).toContain('彰生誕祭');
+            expect(entries[2].performanceTitle).toContain('18:00開演');
+            expect(entries[0].performanceTitle).toContain('18:30開演');
+            expect(new Set(entries.map(e => e.sourceId)).size).toBe(8);
+        });
+
+        it('年表記がない発表でも年越しし、不完全な行を除外すること', () => {
+            const noYear = { title: '冬のツアー', publishedDate: '2026-11-06' };
+            const html = TOUR_FEATURE_HTML.replace('2.9', '13.9');
+            expect(importer.parseFeatureSchedule(noYear, url, html).map(e => e.date)).toEqual([
+                '2027-02-04', '2027-02-14', '2027-02-22', '2027-03-03',
+                '2027-03-08', '2027-03-19', '2027-03-25',
+            ]);
+            expect(importer.parseFeatureSchedule(noYear, url, '<html>構造変更</html>')).toEqual([]);
+        });
+
+        it('ニュースから公式の特設ページだけを選ぶこと', () => {
+            const html = TOUR_NEWS_HTML.replace('</div>', '<a href="https://example.com/feature/other">外部</a></div>');
+            expect(importer.parseNewsFeatureUrls(html)).toEqual([url]);
+            expect(importer.parseNewsList(TOUR_NEWS_LIST_HTML)).toHaveLength(1);
         });
     });
 
@@ -400,6 +459,62 @@ describe('scheduleImporter', () => {
                 'uverworld.jp:news:3231',
                 '2026-12-26T09:00:00.000Z',
             ]));
+        });
+
+        it('特設ページの8公演を取り込み、同日同会場の既存公演は増やさないこと', async () => {
+            axios.get.mockImplementation(url => Promise.resolve({ data:
+                url.endsWith('/news/') ? TOUR_NEWS_LIST_HTML
+                    : url.includes('/news/detail/') ? TOUR_NEWS_HTML
+                        : url.includes('/feature/') ? TOUR_FEATURE_HTML : '<html></html>',
+            }));
+            db.query.mockImplementation((sql, params) => {
+                if (sql.includes('SELECT id, venue, tour_name FROM lives') && params[0] === '2027-02-04') {
+                    return Promise.resolve({ rows: [{ id: 42, venue: 'KT Zepp Yokohama', tour_name: '既存名' }] });
+                }
+                if (sql.includes('INSERT INTO lives')) return Promise.resolve({ rows: [{ id: 900 }] });
+                return Promise.resolve({ rows: [] });
+            });
+            const stats = await importer.importSchedule();
+            expect(stats.fetched).toBe(8);
+            expect(stats.created).toBe(7);
+            expect(stats.skipped).toBe(1);
+            expect(db.query.mock.calls.filter(([sql]) => sql.includes('INSERT INTO lives'))).toHaveLength(7);
+            expect(db.query).toHaveBeenCalledWith(expect.stringContaining('starts_at = COALESCE'),
+                expect.arrayContaining(['uverworld.jp:feature:/feature/2027_live:2027-02-04:ktzeppyokohama', 42]));
+            expect(db.query.mock.calls.some(([sql, params]) => sql.includes('INSERT INTO lives')
+                && params?.includes('2026-11-15'))).toBe(false);
+        });
+
+        it('特設ページの構造変更時にチケット締切日を公演として追加しないこと', async () => {
+            axios.get.mockImplementation(url => Promise.resolve({ data:
+                url.endsWith('/news/') ? TOUR_NEWS_LIST_HTML
+                    : url.includes('/news/detail/') ? TOUR_NEWS_HTML
+                        : '<html>構造変更</html>',
+            }));
+            db.query.mockResolvedValue({ rows: [] });
+            const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+            try {
+                const stats = await importer.importSchedule();
+                expect(stats.created).toBe(0);
+                expect(stats.fetched).toBe(0);
+                expect(warn).toHaveBeenCalledWith('[Schedule] 特設ページから公演を抽出できませんでした');
+            } finally { warn.mockRestore(); }
+        });
+
+        it('特設ページ由来のsource IDで再実行時に8件をスキップすること', async () => {
+            axios.get.mockImplementation(url => Promise.resolve({ data:
+                url.endsWith('/news/') ? TOUR_NEWS_LIST_HTML
+                    : url.includes('/news/detail/') ? TOUR_NEWS_HTML
+                        : url.includes('/feature/') ? TOUR_FEATURE_HTML : '<html></html>',
+            }));
+            db.query.mockImplementation(sql => Promise.resolve({ rows:
+                sql.includes('external_source_id = $1') ? [{ id: 42 }] : [],
+            }));
+            const stats = await importer.importSchedule();
+            expect(stats.skipped).toBe(8);
+            expect(stats.created).toBe(0);
+            expect(db.query.mock.calls.filter(([sql]) => sql.includes('INSERT INTO lives'))).toHaveLength(0);
+            expect(db.query.mock.calls.filter(([sql]) => sql.includes('starts_at = COALESCE'))).toHaveLength(8);
         });
 
         it('ニュース発表と同じ公演が手動登録済みなら二重登録しないこと', async () => {
