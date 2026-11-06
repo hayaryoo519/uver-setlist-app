@@ -141,7 +141,9 @@ function parseNewsList(html) {
         if (!idMatch || !titleMatch || !publishedMatch) continue;
 
         const title = stripTags(titleMatch[1]);
-        if (!LIVE_NEWS_TITLE.test(title) || EXCLUDED_NEWS_TITLE.test(title)) continue;
+        // チケットのみの告知は特設日程を持つ【LIVE】記事に限って候補にする。
+        if (!LIVE_NEWS_TITLE.test(title) || EXCLUDED_NEWS_TITLE.test(title)
+            || (/チケット/.test(title) && !/^【LIVE】/i.test(title))) continue;
 
         entries.push({
             sourceId: `news:${idMatch[1]}`,
@@ -226,7 +228,7 @@ function parseNewsFeatureUrls(html) {
     for (const match of article.matchAll(/href="([^"]+)"/gi)) {
         try {
             const url = new URL(match[1].replace(/&amp;/g, '&'), BASE_URL);
-            if (url.origin === BASE_URL && /^\/feature\/[\w-]+\/?$/.test(url.pathname)) {
+            if (url.origin === BASE_URL && /^\/feature\/(?!ticket_)[\w-]+\/?$/.test(url.pathname)) {
                 urls.add(`${BASE_URL}${url.pathname}`);
             }
         } catch { /* 不正なリンクは取り込まない */ }
@@ -236,13 +238,18 @@ function parseNewsFeatureUrls(html) {
 
 /** 特設ページの scheduleList から、日付・会場・開演が揃った行だけを抽出する。 */
 function parseFeatureSchedule(entry, featureUrl, html) {
-    const list = (html || '').match(/<ul[^>]*class="[^"]*scheduleList[^"]*"[^>]*>([\s\S]*?)<\/ul>/i)?.[1];
-    if (!list) return [];
+    const listMatch = (html || '').match(/<ul[^>]*class="[^"]*scheduleList[^"]*"[^>]*>([\s\S]*?)<\/ul>/i);
+    if (!listMatch) return [];
+    const list = listMatch[1];
+
+    const headings = [...html.slice(0, listMatch.index).matchAll(/<h3[^>]*>([\s\S]*?)<\/h3>/gi)];
+    const heading = stripTags(headings.at(-1)?.[1]);
+    const title = heading || entry.title.replace(/\s*※.*$/, '');
+    const initialYear = Number(title.match(/20\d{2}/)?.[0]);
+    if (!initialYear) return [];
 
     const entries = [];
-    const publishedYear = Number(entry.publishedDate.slice(0, 4));
-    const publishedMonth = Number(entry.publishedDate.slice(5, 7));
-    let year = Number(entry.title.match(/20\d{2}/)?.[0]) || publishedYear;
+    let year = initialYear;
     let previousMonth = 0;
     for (const row of list.match(/<li\b[^>]*>[\s\S]*?<\/li>/gi) || []) {
         const venueCell = row.match(/<td[^>]*class="venue"[^>]*>([\s\S]*?)<\/td>/i)?.[1] || '';
@@ -257,18 +264,16 @@ function parseFeatureSchedule(entry, featureUrl, html) {
         const day = Number(dateMatch[2]);
         if (month < 1 || month > 12) continue;
         let rowYear = year;
-        if (!entry.title.match(/20\d{2}/) && !previousMonth && month < publishedMonth) rowYear++;
-        else if (previousMonth && month < previousMonth) rowYear++;
+        if (previousMonth >= 10 && month <= 3) rowYear++;
         const date = `${rowYear}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const parsedDate = new Date(`${date}T00:00:00Z`);
         if (Number.isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== date) continue;
         year = rowYear;
         previousMonth = month;
-        const title = `${entry.title.replace(/\s*※.*$/, '')}${note ? ` ${note}` : ''}`;
         entries.push({
             sourceId: `feature:${new URL(featureUrl).pathname}:${date}:${venueKey(venue)}`,
-            date, category: 'TOUR', title, venue,
-            performanceTitle: `${title} ${start[1]}:${start[2]}開演`,
+            date, category: 'TOUR', title, venue, specialNote: note || null,
+            performanceTitle: `${title}${note ? ` ${note}` : ''} ${start[1]}:${start[2]}開演`,
             detailUrl: featureUrl,
         });
     }
@@ -479,7 +484,8 @@ async function linkOfficialSource(liveId, entry, performanceTimes, venue = null)
                  import_metadata = COALESCE(import_metadata, '{}'::jsonb) || $2::jsonb,
                  starts_at = COALESCE(starts_at, $3),
                  collect_after = COALESCE(collect_after, $4),
-                 timezone = CASE WHEN timezone = 'Asia/Tokyo' AND $5 <> 'Asia/Tokyo' THEN $5 ELSE timezone END
+                 timezone = CASE WHEN timezone = 'Asia/Tokyo' AND $5 <> 'Asia/Tokyo' THEN $5 ELSE timezone END,
+                 special_note = COALESCE(special_note, $7)
              WHERE id = $6`,
             [
                 `${SOURCE_NAME}:${entry.sourceId}`,
@@ -488,6 +494,7 @@ async function linkOfficialSource(liveId, entry, performanceTimes, venue = null)
                 performanceTimes.collect_after,
                 performanceTimes.timezone,
                 liveId,
+                entry.specialNote || null,
             ]
         );
     });
@@ -501,6 +508,7 @@ async function linkOfficialSource(liveId, entry, performanceTimes, venue = null)
  */
 async function importSchedule({ dryRun = false } = {}) {
     const stats = { fetched: 0, candidates: 0, created: 0, skipped: 0, errors: 0, created_lives: [] };
+    let featureParseFailures = 0;
 
     let entries = [];
     try {
@@ -527,15 +535,25 @@ async function importSchedule({ dryRun = false } = {}) {
                 for (const featureUrl of featureUrls) {
                     try {
                         await sleep(DETAIL_INTERVAL_MS);
-                        const featureEntries = parseFeatureSchedule(newsEntry, featureUrl, await fetchHtml(featureUrl));
-                        if (!featureEntries.length) console.warn('[Schedule] 特設ページから公演を抽出できませんでした');
+                        const featureHtml = await fetchHtml(featureUrl);
+                        const featureEntries = parseFeatureSchedule(newsEntry, featureUrl, featureHtml);
+                        const scheduleList = featureHtml.match(/<ul[^>]*class="[^"]*scheduleList[^"]*"[^>]*>([\s\S]*?)<\/ul>/i)?.[1] || '';
+                        const listedDates = (scheduleList.match(/<span[^>]*class="date"/gi) || []).length;
+                        if (!featureEntries.length || featureEntries.length < listedDates) {
+                            featureParseFailures++;
+                            await logToDb('warn', 'Schedule feature parsed incomplete entries', {
+                                url: featureUrl, listedDates, parsed: featureEntries.length,
+                            });
+                            console.warn('[Schedule] 特設ページの公演抽出が不完全です');
+                        }
                         entries.push(...featureEntries);
                     } catch (err) {
                         stats.errors++;
+                        featureParseFailures++;
                         console.warn(`[Schedule] 特設ページ取得に失敗: ${err.message}`);
                     }
                 }
-                if (!featureUrls.length) {
+                if (!featureUrls.length && !/チケット/.test(newsEntry.title)) {
                     const parsed = parseNewsDetail(newsEntry, detailHtml);
                     if (parsed) entries.push(parsed);
                 }
@@ -554,6 +572,15 @@ async function importSchedule({ dryRun = false } = {}) {
 
     stats.fetched = entries.length;
     console.log(`[Schedule] ${entries.length} 件のライブ関連エントリを取得`);
+
+    if (featureParseFailures && entries.length) {
+        await notifyAdmins({
+            title: '公演情報の取り込みを確認してください',
+            body: '公式特設ページから一部の公演を抽出できませんでした。',
+            url: '/admin',
+            type: 'schedule_import_broken',
+        });
+    }
 
     // スクレイピングのため、先方のHTML構造が変わるとパースが黙って0件になる。
     // ページは取得できているのに1件も取れない状態は異常として記録する
@@ -581,7 +608,8 @@ async function importSchedule({ dryRun = false } = {}) {
                     await linkOfficialSource(
                         sourceLiveId,
                         entry,
-                        parsePerformanceTimes(entry.date, entry.title, null)
+                        parsePerformanceTimes(entry.date, entry.performanceTitle || entry.title, entry.venue),
+                        entry.venue
                     );
                 }
                 stats.skipped++;
@@ -629,13 +657,13 @@ async function importSchedule({ dryRun = false } = {}) {
             // 重複は上の findLiveBySourceId / findExistingLive で防ぐ。
             const inserted = await metadataTransaction(async client => {
                 const result = await client.query(
-                    `INSERT INTO lives (date, venue, tour_name, type, setlist_status, external_source_id, import_metadata, starts_at, collect_after, timezone)
-                     VALUES ($1, $2, $3, $4, 'UNKNOWN_SETLIST', $5, $6, $7, $8, $9)
+                    `INSERT INTO lives (date, venue, tour_name, type, setlist_status, external_source_id, import_metadata, starts_at, collect_after, timezone, special_note)
+                     VALUES ($1, $2, $3, $4, 'UNKNOWN_SETLIST', $5, $6, $7, $8, $9, $10)
                      RETURNING id`,
                     [
                         live.date, live.venue, live.tour_name, live.type, live.external_source_id,
                         JSON.stringify({ source: SOURCE_NAME, source_url: entry.detailUrl, category: entry.category, imported_at: new Date().toISOString() }),
-                        live.starts_at, live.collect_after, live.timezone,
+                        live.starts_at, live.collect_after, live.timezone, entry.specialNote || null,
                     ]
                 );
                 await saveMetadataCandidates(client, result.rows[0].id, buildOfficialCandidates(entry, venue));
