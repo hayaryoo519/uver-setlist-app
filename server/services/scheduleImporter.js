@@ -43,7 +43,7 @@ const USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, l
 // 一覧のカテゴリ。ライブ関連のみ取り込み、TICKET/RELEASE/TV 等は対象外
 const LIVE_CATEGORIES = new Set(['TOUR', 'EVENT']);
 const LIVE_NEWS_TITLE = /(【(?:LIVE|フェス|ライブ|LIVE・対バン)】|出演決定|公演開催決定|VS シリーズ.*開催決定)/i;
-const EXCLUDED_NEWS_TITLE = /(開催についてのご案内|グッズ|チケット|放送|配信)/;
+const EXCLUDED_NEWS_TITLE = /(開催についてのご案内|グッズ|放送|配信)/;
 
 async function logToDb(level, message, details = null) {
     try {
@@ -217,6 +217,62 @@ function parseNewsDetail(entry, html) {
         venue,
         performanceTitle,
     };
+}
+
+/** 日程を本文に持たない発表から、公式サイト内の特設ページだけをたどる。 */
+function parseNewsFeatureUrls(html) {
+    const article = (html || '').match(/<div class="txt">([\s\S]*?)<\/div>/i)?.[1] || '';
+    const urls = new Set();
+    for (const match of article.matchAll(/href="([^"]+)"/gi)) {
+        try {
+            const url = new URL(match[1].replace(/&amp;/g, '&'), BASE_URL);
+            if (url.origin === BASE_URL && /^\/feature\/[\w-]+\/?$/.test(url.pathname)) {
+                urls.add(`${BASE_URL}${url.pathname}`);
+            }
+        } catch { /* 不正なリンクは取り込まない */ }
+    }
+    return [...urls].slice(0, 3);
+}
+
+/** 特設ページの scheduleList から、日付・会場・開演が揃った行だけを抽出する。 */
+function parseFeatureSchedule(entry, featureUrl, html) {
+    const list = (html || '').match(/<ul[^>]*class="[^"]*scheduleList[^"]*"[^>]*>([\s\S]*?)<\/ul>/i)?.[1];
+    if (!list) return [];
+
+    const entries = [];
+    const publishedYear = Number(entry.publishedDate.slice(0, 4));
+    const publishedMonth = Number(entry.publishedDate.slice(5, 7));
+    let year = Number(entry.title.match(/20\d{2}/)?.[0]) || publishedYear;
+    let previousMonth = 0;
+    for (const row of list.match(/<li\b[^>]*>[\s\S]*?<\/li>/gi) || []) {
+        const venueCell = row.match(/<td[^>]*class="venue"[^>]*>([\s\S]*?)<\/td>/i)?.[1] || '';
+        const dateMatch = venueCell.match(/<span[^>]*class="date"[^>]*>\s*(\d{1,2})\.(\d{1,2})\s*<\/span>/i);
+        const venue = stripTags(venueCell.match(/<span[^>]*class="venuename"[^>]*>([\s\S]*?)<\/span>/i)?.[1]);
+        const note = stripTags(venueCell.match(/<span[^>]*class="subTit"[^>]*>([\s\S]*?)<\/span>/i)?.[1]);
+        const timeCell = row.match(/<td[^>]*class="openstart"[^>]*>([\s\S]*?)<\/td>/i)?.[1] || '';
+        const start = stripTags(timeCell).match(/(\d{1,2}):(\d{2})\s*START/i);
+        if (!dateMatch || !venue || !start || Number(start[1]) > 23 || Number(start[2]) > 59) continue;
+
+        const month = Number(dateMatch[1]);
+        const day = Number(dateMatch[2]);
+        if (month < 1 || month > 12) continue;
+        let rowYear = year;
+        if (!entry.title.match(/20\d{2}/) && !previousMonth && month < publishedMonth) rowYear++;
+        else if (previousMonth && month < previousMonth) rowYear++;
+        const date = `${rowYear}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const parsedDate = new Date(`${date}T00:00:00Z`);
+        if (Number.isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== date) continue;
+        year = rowYear;
+        previousMonth = month;
+        const title = `${entry.title.replace(/\s*※.*$/, '')}${note ? ` ${note}` : ''}`;
+        entries.push({
+            sourceId: `feature:${new URL(featureUrl).pathname}:${date}:${venueKey(venue)}`,
+            date, category: 'TOUR', title, venue,
+            performanceTitle: `${title} ${start[1]}:${start[2]}開演`,
+            detailUrl: featureUrl,
+        });
+    }
+    return entries;
 }
 
 // 会場欄に紛れ込みやすい別項目。ここまでを会場名として切り出す
@@ -466,8 +522,23 @@ async function importSchedule({ dryRun = false } = {}) {
         for (const newsEntry of parseNewsList(newsHtml)) {
             try {
                 await sleep(DETAIL_INTERVAL_MS);
-                const parsed = parseNewsDetail(newsEntry, await fetchHtml(newsEntry.detailUrl));
-                if (parsed) entries.push(parsed);
+                const detailHtml = await fetchHtml(newsEntry.detailUrl);
+                const featureUrls = parseNewsFeatureUrls(detailHtml);
+                for (const featureUrl of featureUrls) {
+                    try {
+                        await sleep(DETAIL_INTERVAL_MS);
+                        const featureEntries = parseFeatureSchedule(newsEntry, featureUrl, await fetchHtml(featureUrl));
+                        if (!featureEntries.length) console.warn('[Schedule] 特設ページから公演を抽出できませんでした');
+                        entries.push(...featureEntries);
+                    } catch (err) {
+                        stats.errors++;
+                        console.warn(`[Schedule] 特設ページ取得に失敗: ${err.message}`);
+                    }
+                }
+                if (!featureUrls.length) {
+                    const parsed = parseNewsDetail(newsEntry, detailHtml);
+                    if (parsed) entries.push(parsed);
+                }
             } catch (err) {
                 stats.errors++;
                 console.warn(`[Schedule] ニュース詳細取得に失敗: ${newsEntry.detailUrl} (${err.message})`);
@@ -518,7 +589,7 @@ async function importSchedule({ dryRun = false } = {}) {
             }
 
             let venue = entry.venue || null;
-            if (!entry.sourceId.startsWith('news:')) {
+            if (!venue && !entry.sourceId.startsWith('news:')) {
                 try {
                     await sleep(DETAIL_INTERVAL_MS);
                     venue = parseVenue(await fetchHtml(entry.detailUrl));
@@ -624,6 +695,8 @@ module.exports = {
     parseNextMonthUrl,
     parseNewsList,
     parseNewsDetail,
+    parseNewsFeatureUrls,
+    parseFeatureSchedule,
     parseVenue,
     parseVenueFromTitle,
     parsePerformanceTimes,
