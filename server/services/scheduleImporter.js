@@ -278,6 +278,13 @@ function parseFeatureSchedule(entry, featureUrl, html) {
             detailUrl: featureUrl,
         });
     }
+    const sourceCounts = new Map();
+    for (const item of entries) sourceCounts.set(item.sourceId, (sourceCounts.get(item.sourceId) || 0) + 1);
+    for (const item of entries) {
+        if (sourceCounts.get(item.sourceId) > 1) {
+            item.sourceId += `:${item.performanceTitle.match(/(\d{1,2}:\d{2})開演/)?.[1]}`;
+        }
+    }
     return entries;
 }
 
@@ -331,8 +338,12 @@ function parseVenueFromTitle(title) {
     const timeIndex = value.search(/\s+(?:day\s+|night\s+|open\s+)?\d{1,2}[:：]\d{2}/i);
     if (timeIndex < 0) return null;
 
-    const venue = value.slice(0, timeIndex).trim();
+    const venue = value.slice(0, timeIndex).replace(/[~〜～][^~〜～]{1,20}生誕祭[~〜～]/g, '').trim();
     return venue.length >= 3 ? venue : null;
+}
+
+function parseBirthdayNote(title) {
+    return stripTags(title).match(/[~〜～][^~〜～]{1,20}生誕祭[~〜～]/)?.[0] || null;
 }
 
 /**
@@ -439,25 +450,48 @@ function isSameVenue(a, b) {
 }
 
 /**
- * 手動登録済みの公演と重複しないよう、同日・同会場（または同日・同公演名）でも既存とみなす。
+ * 手動登録済みの公演と重複しないよう、同日・同会場・同時刻
+ * （会場不明なら同公演名・同時刻）の公演を探す。
+ * 同名でも会場表記が一致しない場合や、時刻不明・複数候補は判断を保留する。
  *
  * 会場名もツアー名も表記が揺れるため、正規化したキーで突き合わせる。
  * 実際に「Monster BaSH 2026 / 讃岐まんのう公園」と
  * 「MONSTER baSH 2026 / 香川・国営讃岐まんのう公園」が二重登録された。
  */
-async function findExistingLive(entry, venue) {
+async function findExistingLive(entry, venue, startsAt, listedSourceIds) {
     const sameDate = await db.query(
-        'SELECT id, venue, tour_name FROM lives WHERE date = $1',
+        'SELECT id, venue, tour_name, starts_at, external_source_id FROM lives WHERE date = $1',
         [entry.date]
     );
 
+    const matches = [];
+    let uncertain = false;
     for (const live of sameDate.rows) {
-        if (venue && isSameVenue(venue, live.venue)) return live.id;
-        if (comparisonKey(entry.title) && comparisonKey(entry.title) === comparisonKey(live.tour_name)) {
-            return live.id;
+        const sameVenue = venue && isSameVenue(venue, live.venue);
+        const sameTitle = comparisonKey(entry.title)
+            && comparisonKey(entry.title) === comparisonKey(live.tour_name);
+        if (!sameVenue && !sameTitle) continue;
+        // 現在の一覧に別行として掲載されている場合だけ、別公演と確定できる。
+        // 過去に取り込んだ特設表の会場表記が変わっただけなら旧source IDは一覧にない。
+        const featurePath = entry.sourceId.match(/^feature:(\/feature\/[^:]+):/i)?.[1];
+        const existingSourceId = live.external_source_id;
+        const sameSourceGroup = featurePath
+            ? existingSourceId?.startsWith(`${SOURCE_NAME}:feature:${featurePath}:`)
+            : /^\d+$/.test(entry.sourceId) && existingSourceId?.startsWith(`${SOURCE_NAME}:`)
+                && /^\d+$/.test(existingSourceId.slice(SOURCE_NAME.length + 1));
+        const separatelyListed = sameSourceGroup && listedSourceIds.has(existingSourceId);
+        // 同名の別会場か会場表記揺れかを断定できないため、自動で結び付けたり追加したりしない。
+        if (sameTitle && venue && live.venue && !sameVenue) {
+            if (!separatelyListed) uncertain = true;
+            continue;
         }
+        const existingStart = live.starts_at ? new Date(live.starts_at).toISOString() : null;
+        if (!startsAt || !existingStart) uncertain = true;
+        else if (startsAt === existingStart) matches.push(live.id);
+        else if (!separatelyListed) uncertain = true;
     }
-    return null;
+    if (matches.length === 1 && !uncertain) return { id: matches[0], ambiguous: false };
+    return { id: null, ambiguous: uncertain || matches.length > 1 };
 }
 
 async function metadataTransaction(action) {
@@ -586,6 +620,7 @@ async function importSchedule({ dryRun = false } = {}) {
     }
 
     stats.fetched = entries.length;
+    const listedSourceIds = new Set(entries.map(entry => `${SOURCE_NAME}:${entry.sourceId}`));
     console.log(`[Schedule] ${entries.length} 件のライブ関連エントリを取得`);
 
     if (featureParseFailures && entries.length) {
@@ -643,10 +678,20 @@ async function importSchedule({ dryRun = false } = {}) {
             venue ||= parseVenueFromTitle(entry.title);
             const performanceTimes = parsePerformanceTimes(entry.date, entry.performanceTitle || entry.title, venue);
 
-            const existingId = await findExistingLive(entry, venue);
-            if (existingId) {
-                if (!dryRun) await linkOfficialSource(existingId, entry, performanceTimes, venue);
+            // 月別一覧のタイトルには、特設表で別欄の生誕祭注記が会場名に続いている。
+            if (!entry.specialNote && !entry.sourceId.startsWith('news:') && !entry.sourceId.startsWith('feature:')) {
+                entry.specialNote = parseBirthdayNote(entry.title);
+            }
+
+            const existing = await findExistingLive(entry, venue, performanceTimes.starts_at, listedSourceIds);
+            if (existing.id) {
+                if (!dryRun) await linkOfficialSource(existing.id, entry, performanceTimes, venue);
                 stats.skipped++;
+                continue;
+            }
+            if (existing.ambiguous) {
+                stats.skipped++;
+                await logToDb('warn', 'Schedule entry needs review', { sourceId: entry.sourceId, date: entry.date });
                 continue;
             }
             stats.candidates++;
