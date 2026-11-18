@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-17",
+  "scope": "offline-public-source-proposals",
+  "applied": false,
+  "samples": [
+    {
+      "key": "xmf-2026-10-04",
+      "date": "2026-10-04",
+      "recordedTour": "Xnterstellar Music Festival 2026",
+      "recordedVenue": "韓国・仁川パラダイスシティ",
+      "eventMatch": "date_title_venue",
+      "sources": [
+        "https://www.uverworld.jp/schedule/list/2026/10/",
+        "https://www.uverworld.jp/schedule/detail/3223"
+      ],
+      "proposedCountryCode": "KR",
+      "countryEvidence": {
+        "kind": "explicit_country_name",
+        "url": "https://www.uverworld.jp/schedule/detail/3223",
+        "countryName": "韓国",
+        "excerpt": "会場 韓国・仁川パラダイスシティ"
+      },
+      "reviewStatus": "unapproved",
+      "remainingChecks": ["管理者による出典と候補の承認", "保存先の公演IDとrevisionの確認"]
+    },
+    {
+      "key": "1chance-2026-09-27",
+      "date": "2026-09-27",
+      "recordedTour": "WANIMA pre. 1CHANCE FESTIVAL 2026",
+      "recordedVenue": "熊本県農業公園 カントリーパーク",
+      "recordedType": "FESTIVAL",
+      "eventMatch": "date_title_venue",
+      "sources": [
+        "https://www.uverworld.jp/schedule/list/2026/09/",
+        "https://www.uverworld.jp/schedule/detail/3193",
+        "https://1chancefes.com/"
+      ],
+      "proposedCountryCode": "JP",
+      "countryEvidence": {
+        "kind": "official_event_address",
+        "url": "https://1chancefes.com/",
+        "excerpt": "会場：熊本県農業公園 カントリーパーク 住所：熊本県合志市栄3802－4（〒861-1113）",
+        "address": {
+          "prefecture": "熊本県",
+          "city": "合志市",
+          "street": "栄3802－4",
+          "postalCode": "861-1113"
+        },
+        "interpretation": "公演に対応する主催者の明示住所を根拠とした日本の提案。会場名やタイムゾーンだけによる国推測ではない。"
+      },
+      "reviewStatus": "unapproved",
+      "remainingChecks": ["Stagingの国だけを確定するための操作承認と管理者認証", "保存先の公演IDとrevisionの確認（FESTIVALは変更不要）"]
+    },
+    {
+      "key": "winter-2025-12-31",
+      "date": "2025-12-31",
+      "recordedTour": "WINTER TOUR \"BOOM GOES THE WORLD\"",
+      "recordedVenue": "マリンメッセ福岡",
+      "eventMatch": "date_tour_venue_alias_reviewed_for_this_sample",
+      "sources": [
+        "https://www.uverworld.jp/schedule/list/2025/12/",
+        "https://www.uverworld.jp/schedule/detail/3063",
+        "https://www.uverworld.jp/feature/2025_live"
+      ],
+      "proposedCountryCode": "JP",
+      "countryEvidence": {
+        "kind": "official_event_prefecture",
+        "url": "https://www.uverworld.jp/feature/2025_live",
+        "tour": "UVERworld 2025 WINTER TOUR \"BOOM GOES THE WORLD\"",
+        "excerpt": "2025.12.31 Wed 福岡県 マリンメッセ福岡A館 15:00 OPEN / 16:00 START",
+        "prefecture": "福岡県",
+        "officialVenue": "マリンメッセ福岡A館",
+        "venueMatchNote": "公開記録はマリンメッセ福岡。ユーザーが略称『マリメ』と説明。同日・同ツアーの公式詳細と特設日程を照合。A館という細部は公開記録に未反映。"
+      },
+      "reviewStatus": "unapproved",
+      "remainingChecks": ["保存先の公演IDとrevisionの確認", "国だけを確定するための操作承認と管理者認証。会場名・A館情報は変更しない"]
+    },
+    {
+      "key": "unser-2019-12-31",
+      "date": "2019-12-31",
+      "recordedTour": "UNSER TOUR",
+      "recordedVenue": "マリンメッセ福岡",
+      "eventMatch": "date_title_venue",
+      "sources": [
+        "https://www.uverworld.jp/schedule/list/2019/12/",
+        "https://www.uverworld.jp/schedule/detail/1760",
+        "https://www.uverworld.jp/feature/2019_livetour"
+      ],
+      "proposedCountryCode": "JP",
+      "countryEvidence": {
+        "kind": "official_event_location",
+        "url": "https://www.uverworld.jp/feature/2019_livetour",
+        "excerpt": "12月31日(火) 福岡県福岡市 マリンメッセ福岡",
+        "prefecture": "福岡県",
+        "city": "福岡市"
+      },
+      "reviewStatus": "unapproved",
+      "remainingChecks": ["保存先の公演IDとrevisionの確認", "国だけを確定するための操作承認と管理者認証"]
+    }
+  ]
+}
