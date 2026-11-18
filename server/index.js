@@ -42,11 +42,12 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc:              ["'self'"],
-            scriptSrc:               ["'self'"],
+            // アクセス解析（Umami）のトラッカー。cookie を使わない計測のため読み込みのみ許可する
+            scriptSrc:               ["'self'", 'https://analytics.uver-setlist-archive.org'],
             styleSrc:                ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
             fontSrc:                 ["'self'", 'https://fonts.gstatic.com'],
             imgSrc:                  ["'self'", 'data:', 'https:'],
-            connectSrc:              ["'self'", 'https://api.spotify.com', 'https://accounts.spotify.com', 'https://api.setlist.fm'],
+            connectSrc:              ["'self'", 'https://api.spotify.com', 'https://accounts.spotify.com', 'https://api.setlist.fm', 'https://analytics.uver-setlist-archive.org'],
             frameSrc:                ['https://www.youtube.com', 'https://open.spotify.com'],
             objectSrc:               ["'none'"],
             baseUri:                 ["'self'"],

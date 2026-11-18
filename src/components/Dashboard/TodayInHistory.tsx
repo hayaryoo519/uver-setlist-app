@@ -66,6 +66,7 @@ const LiveCard = ({ live, data }: { live: TodayInHistoryLive; data: TodayInHisto
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={`${liveName(live)}をXでシェア`}
+                data-umami-event="on-this-day-share"
                 style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#94a3b8' }}
             >
                 <Share2 size={14} aria-hidden="true" />
@@ -124,6 +125,7 @@ export const TodayInHistoryContent = ({ data }: { data: TodayInHistoryData }) =>
                             type="button"
                             onClick={() => setExpanded(value => !value)}
                             aria-expanded={expanded}
+                            data-umami-event="on-this-day-toggle"
                             style={{
                                 marginTop: '12px', display: 'flex', alignItems: 'center', gap: '4px', background: 'none',
                                 border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', color: '#cbd5e1', padding: '8px 16px', cursor: 'pointer',
