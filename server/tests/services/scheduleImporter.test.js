@@ -733,6 +733,47 @@ describe('scheduleImporter', () => {
                 expect.arrayContaining(['warn', 'Schedule entry needs review']));
         });
 
+        it('特設表の会場表記が変わっても旧source IDの公演を増やさないこと', async () => {
+            const rows = [];
+            let featureHtml = HANEDA_FEATURE_HTML.replace('Zepp Haneda', 'KT Zepp Yokohama');
+            axios.get.mockImplementation(async url => ({ data: url.endsWith('/news/') ? TOUR_NEWS_LIST_HTML
+                : url.includes('/news/detail/') ? HANEDA_DETAIL_HTML
+                    : url.includes('/feature/') ? featureHtml : '<ul></ul>' }));
+            db.query.mockImplementation(async (sql, params) => {
+                if (sql.includes('WHERE external_source_id = $1')) return { rows: rows.filter(row => row.external_source_id === params[0]) };
+                if (sql.includes('FROM lives WHERE date = $1')) return { rows };
+                if (sql.includes('INSERT INTO lives')) {
+                    const id = rows.length + 1;
+                    rows.push({ id, date: params[0], venue: params[1], tour_name: params[2],
+                        external_source_id: params[4], starts_at: params[6] });
+                    return { rows: [{ id }] };
+                }
+                return { rows: [] };
+            });
+            expect((await importer.importSchedule()).created).toBe(1);
+            featureHtml = featureHtml.replace('KT Zepp Yokohama', 'KT Zepp横浜');
+            const repeated = await importer.importSchedule();
+            expect(repeated.created).toBe(0);
+            expect(repeated.skipped).toBe(1);
+            expect(rows).toHaveLength(1);
+            expect(db.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO collector_logs'),
+                expect.arrayContaining(['warn', 'Schedule entry needs review']));
+        }, 15000);
+
+        it('同会場の手動登録と時刻が違えば昼夜と断定せず保留すること', async () => {
+            axios.get.mockImplementation(async url => ({ data: url.includes('/schedule/list/') ? HANEDA_LIST_HTML : '<ul></ul>' }));
+            db.query.mockImplementation(async sql => ({ rows:
+                sql.includes('FROM lives WHERE date = $1')
+                    ? [{ id: 1, venue: 'Zepp Haneda (TOKYO)', tour_name: 'UVERworld LIVE HOUSE TOUR 2027',
+                        starts_at: '2027-03-08T08:30:00.000Z', external_source_id: null }]
+                    : [],
+            }));
+            const stats = await importer.importSchedule();
+            expect(stats.created).toBe(0);
+            expect(stats.skipped).toBe(1);
+            expect(db.query.mock.calls.some(([sql]) => sql.includes('INSERT INTO lives'))).toBe(false);
+        });
+
         // 出演解禁を知るのがこの機能の目的なので、追加があった時は必ず通知する
         it('新規公演を追加したら管理者へ通知すること', async () => {
             db.query.mockImplementation((sql) =>

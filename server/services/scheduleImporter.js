@@ -458,7 +458,7 @@ function isSameVenue(a, b) {
  * 実際に「Monster BaSH 2026 / 讃岐まんのう公園」と
  * 「MONSTER baSH 2026 / 香川・国営讃岐まんのう公園」が二重登録された。
  */
-async function findExistingLive(entry, venue, startsAt) {
+async function findExistingLive(entry, venue, startsAt, listedSourceIds) {
     const sameDate = await db.query(
         'SELECT id, venue, tour_name, starts_at, external_source_id FROM lives WHERE date = $1',
         [entry.date]
@@ -471,18 +471,24 @@ async function findExistingLive(entry, venue, startsAt) {
         const sameTitle = comparisonKey(entry.title)
             && comparisonKey(entry.title) === comparisonKey(live.tour_name);
         if (!sameVenue && !sameTitle) continue;
-        // 同じ特設表で別の会場行として掲載された公演は、ツアー名が同じでも別公演。
+        // 現在の一覧に別行として掲載されている場合だけ、別公演と確定できる。
+        // 過去に取り込んだ特設表の会場表記が変わっただけなら旧source IDは一覧にない。
         const featurePath = entry.sourceId.match(/^feature:(\/feature\/[^:]+):/i)?.[1];
-        if (featurePath && live.external_source_id?.startsWith(`${SOURCE_NAME}:feature:${featurePath}:`)
-            && venue && live.venue && !sameVenue) continue;
+        const existingSourceId = live.external_source_id;
+        const sameSourceGroup = featurePath
+            ? existingSourceId?.startsWith(`${SOURCE_NAME}:feature:${featurePath}:`)
+            : /^\d+$/.test(entry.sourceId) && existingSourceId?.startsWith(`${SOURCE_NAME}:`)
+                && /^\d+$/.test(existingSourceId.slice(SOURCE_NAME.length + 1));
+        const separatelyListed = sameSourceGroup && listedSourceIds.has(existingSourceId);
         // 同名の別会場か会場表記揺れかを断定できないため、自動で結び付けたり追加したりしない。
         if (sameTitle && venue && live.venue && !sameVenue) {
-            uncertain = true;
+            if (!separatelyListed) uncertain = true;
             continue;
         }
         const existingStart = live.starts_at ? new Date(live.starts_at).toISOString() : null;
         if (!startsAt || !existingStart) uncertain = true;
         else if (startsAt === existingStart) matches.push(live.id);
+        else if (!separatelyListed) uncertain = true;
     }
     if (matches.length === 1 && !uncertain) return { id: matches[0], ambiguous: false };
     return { id: null, ambiguous: uncertain || matches.length > 1 };
@@ -614,6 +620,7 @@ async function importSchedule({ dryRun = false } = {}) {
     }
 
     stats.fetched = entries.length;
+    const listedSourceIds = new Set(entries.map(entry => `${SOURCE_NAME}:${entry.sourceId}`));
     console.log(`[Schedule] ${entries.length} 件のライブ関連エントリを取得`);
 
     if (featureParseFailures && entries.length) {
@@ -676,7 +683,7 @@ async function importSchedule({ dryRun = false } = {}) {
                 entry.specialNote = parseBirthdayNote(entry.title);
             }
 
-            const existing = await findExistingLive(entry, venue, performanceTimes.starts_at);
+            const existing = await findExistingLive(entry, venue, performanceTimes.starts_at, listedSourceIds);
             if (existing.id) {
                 if (!dryRun) await linkOfficialSource(existing.id, entry, performanceTimes, venue);
                 stats.skipped++;
