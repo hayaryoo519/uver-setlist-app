@@ -492,7 +492,7 @@ describe('scheduleImporter', () => {
                         : url.includes('/feature/') ? TOUR_FEATURE_HTML : '<html></html>',
             }));
             db.query.mockImplementation((sql, params) => {
-                if (sql.includes('SELECT id, venue, tour_name, starts_at FROM lives') && params[0] === '2027-02-04') {
+                if (sql.includes('SELECT id, venue, tour_name, starts_at, external_source_id FROM lives') && params[0] === '2027-02-04') {
                     return Promise.resolve({ rows: [{ id: 42, venue: 'KT Zepp Yokohama', tour_name: '既存名', starts_at: '2027-02-04T09:30:00.000Z' }] });
                 }
                 if (sql.includes('INSERT INTO lives')) return Promise.resolve({ rows: [{ id: 900 }] });
@@ -638,7 +638,7 @@ describe('scheduleImporter', () => {
             });
             db.query.mockImplementation((sql) => {
                 if (sql.includes('external_source_id = $1')) return Promise.resolve({ rows: [] });
-                if (sql.includes('SELECT id, venue, tour_name, starts_at FROM lives')) {
+                if (sql.includes('SELECT id, venue, tour_name, starts_at, external_source_id FROM lives')) {
                     return Promise.resolve({ rows: [{ id: 1754, venue: '日本武道館', tour_name: 'UVERworld vs BE:FIRST', starts_at: '2026-12-26T09:00:00.000Z' }] });
                 }
                 return Promise.resolve({ rows: [] });
@@ -670,7 +670,7 @@ describe('scheduleImporter', () => {
         it('同じ日付・会場の公演が既にあればスキップすること', async () => {
             db.query.mockImplementation((sql) => {
                 if (sql.includes('external_source_id = $1')) return Promise.resolve({ rows: [] });
-                if (sql.includes('SELECT id, venue, tour_name, starts_at FROM lives')) {
+                if (sql.includes('SELECT id, venue, tour_name, starts_at, external_source_id FROM lives')) {
                     return Promise.resolve({ rows: [{ id: 5, venue: '石狩湾新港樽川ふ頭横野外特設ステージ', tour_name: '別名義' }] });
                 }
                 return Promise.resolve({ rows: [] });
@@ -693,7 +693,7 @@ describe('scheduleImporter', () => {
             }));
             db.query.mockImplementation((sql) => {
                 if (sql.includes('external_source_id = $1')) return Promise.resolve({ rows: [] });
-                if (sql.includes('SELECT id, venue, tour_name, starts_at FROM lives')) {
+                if (sql.includes('SELECT id, venue, tour_name, starts_at, external_source_id FROM lives')) {
                     return Promise.resolve({ rows: [{ id: 1716, venue: 'KT Zepp Yokohama', tour_name: 'UVERworld LIVE “危ない” TOUR 2026', starts_at: '2026-09-24T09:30:00.000Z' }] });
                 }
                 if (sql.includes('INSERT INTO lives')) return Promise.resolve({ rows: [{ id: 900 }] });
@@ -707,6 +707,30 @@ describe('scheduleImporter', () => {
                 expect.stringContaining('external_source_id = COALESCE'),
                 expect.arrayContaining(['uverworld.jp:3186', 1716])
             );
+        });
+
+        it.each([
+            ['KT Zepp Yokohama', 'KT Zepp横浜'],
+            ['ポートメッセなごや', 'ポートメッセ名古屋'],
+        ])('同名公演の会場表記 %s / %s が一致しなければ要確認にすること', async (officialVenue, registeredVenue) => {
+            const title = `${officialVenue} 17:30/18:30`;
+            const list = HANEDA_LIST_HTML.replace('Zepp Haneda～彰生誕祭～　17:30/18:30', title);
+            axios.get.mockImplementation(url => Promise.resolve({ data:
+                url.includes('/schedule/list/') ? list : '<html></html>',
+            }));
+            db.query.mockImplementation(sql => Promise.resolve({ rows:
+                sql.includes('SELECT id, venue, tour_name, starts_at, external_source_id FROM lives')
+                    ? [{ id: 42, venue: registeredVenue, tour_name: title, starts_at: '2027-03-08T09:30:00.000Z' }]
+                    : [],
+            }));
+
+            expect(importer.isSameVenue(officialVenue, registeredVenue)).toBe(false);
+            const stats = await importer.importSchedule();
+            expect(stats.created).toBe(0);
+            expect(stats.skipped).toBe(1);
+            expect(db.query.mock.calls.some(([sql]) => sql.includes('INSERT INTO lives'))).toBe(false);
+            expect(db.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO collector_logs'),
+                expect.arrayContaining(['warn', 'Schedule entry needs review']));
         });
 
         // 出演解禁を知るのがこの機能の目的なので、追加があった時は必ず通知する
@@ -751,7 +775,7 @@ describe('scheduleImporter', () => {
         it('表記の違う同一会場の公演は既存とみなすこと', async () => {
             db.query.mockImplementation((sql) => {
                 if (sql.includes('external_source_id = $1')) return Promise.resolve({ rows: [] });
-                if (sql.includes('SELECT id, venue, tour_name, starts_at FROM lives')) {
+                if (sql.includes('SELECT id, venue, tour_name, starts_at, external_source_id FROM lives')) {
                     return Promise.resolve({ rows: [{ id: 1714, venue: '石狩湾新港樽川ふ頭横野外特設ステージ', tour_name: 'Rising Sun Rock Fes 2026' }] });
                 }
                 return Promise.resolve({ rows: [] });
@@ -771,7 +795,7 @@ describe('scheduleImporter', () => {
             );
             db.query.mockImplementation((sql) => {
                 if (sql.includes('external_source_id = $1')) return Promise.resolve({ rows: [] });
-                if (sql.includes('SELECT id, venue, tour_name, starts_at FROM lives')) {
+                if (sql.includes('SELECT id, venue, tour_name, starts_at, external_source_id FROM lives')) {
                     return Promise.resolve({ rows: [{ id: 99, venue: null, tour_name: 'RISING SUN ROCK FESTIVAL 2026 in EZO' }] });
                 }
                 if (sql.includes('INSERT INTO lives')) return Promise.resolve({ rows: [{ id: 900 }] });
@@ -955,6 +979,30 @@ describe('scheduleImporter', () => {
             expect(rows.map(row => row.starts_at)).toEqual([
                 '2027-03-08T09:30:00.000Z', '2027-03-08T04:00:00.000Z', '2027-03-08T09:30:00.000Z',
             ]);
+        }, 15000);
+
+        it('同じ特設表の同日別会場はツアー名が同じでも保持すること', async () => {
+            const otherVenueRow = HANEDA_FEATURE_HTML.replace('Zepp Haneda', 'Zepp Osaka Bayside')
+                .match(/<li>[\s\S]*?<\/li>/)[0];
+            const twoVenues = HANEDA_FEATURE_HTML.replace('</ul>', `${otherVenueRow}</ul>`);
+            const rows = [];
+            axios.get.mockImplementation(async url => ({ data: url.endsWith('/news/') ? TOUR_NEWS_LIST_HTML
+                : url.includes('/news/detail/') ? HANEDA_DETAIL_HTML
+                    : url.includes('/feature/') ? twoVenues : '<ul></ul>' }));
+            db.query.mockImplementation(async (sql, params) => {
+                if (sql.includes('WHERE external_source_id = $1')) return { rows: rows.filter(row => row.external_source_id === params[0]) };
+                if (sql.includes('FROM lives WHERE date = $1')) return { rows: rows.filter(row => row.date === params[0]) };
+                if (sql.includes('INSERT INTO lives')) {
+                    const id = rows.length + 1;
+                    rows.push({ id, date: params[0], venue: params[1], tour_name: params[2],
+                        external_source_id: params[4], starts_at: params[6] });
+                    return { rows: [{ id }] };
+                }
+                return { rows: [] };
+            });
+            expect((await importer.importSchedule()).created).toBe(2);
+            expect((await importer.importSchedule()).created).toBe(0);
+            expect(rows.map(row => row.venue)).toEqual(['Zepp Haneda', 'Zepp Osaka Bayside']);
         }, 15000);
 
         it('同日同会場で既存時刻が不明なら自動で結び付けず確認対象にすること', async () => {

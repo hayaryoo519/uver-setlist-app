@@ -451,7 +451,8 @@ function isSameVenue(a, b) {
 
 /**
  * 手動登録済みの公演と重複しないよう、同日・同会場・同時刻
- * （会場不明なら同公演名・同時刻）の公演を探す。時刻不明や複数候補は判断を保留する。
+ * （会場不明なら同公演名・同時刻）の公演を探す。
+ * 同名でも会場表記が一致しない場合や、時刻不明・複数候補は判断を保留する。
  *
  * 会場名もツアー名も表記が揺れるため、正規化したキーで突き合わせる。
  * 実際に「Monster BaSH 2026 / 讃岐まんのう公園」と
@@ -459,7 +460,7 @@ function isSameVenue(a, b) {
  */
 async function findExistingLive(entry, venue, startsAt) {
     const sameDate = await db.query(
-        'SELECT id, venue, tour_name, starts_at FROM lives WHERE date = $1',
+        'SELECT id, venue, tour_name, starts_at, external_source_id FROM lives WHERE date = $1',
         [entry.date]
     );
 
@@ -467,9 +468,18 @@ async function findExistingLive(entry, venue, startsAt) {
     let uncertain = false;
     for (const live of sameDate.rows) {
         const sameVenue = venue && isSameVenue(venue, live.venue);
-        const sameTitle = (!venue || !live.venue) && comparisonKey(entry.title)
+        const sameTitle = comparisonKey(entry.title)
             && comparisonKey(entry.title) === comparisonKey(live.tour_name);
         if (!sameVenue && !sameTitle) continue;
+        // 同じ特設表で別の会場行として掲載された公演は、ツアー名が同じでも別公演。
+        const featurePath = entry.sourceId.match(/^feature:(\/feature\/[^:]+):/i)?.[1];
+        if (featurePath && live.external_source_id?.startsWith(`${SOURCE_NAME}:feature:${featurePath}:`)
+            && venue && live.venue && !sameVenue) continue;
+        // 同名の別会場か会場表記揺れかを断定できないため、自動で結び付けたり追加したりしない。
+        if (sameTitle && venue && live.venue && !sameVenue) {
+            uncertain = true;
+            continue;
+        }
         const existingStart = live.starts_at ? new Date(live.starts_at).toISOString() : null;
         if (!startsAt || !existingStart) uncertain = true;
         else if (startsAt === existingStart) matches.push(live.id);
