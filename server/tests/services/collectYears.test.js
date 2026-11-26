@@ -28,7 +28,7 @@ beforeEach(() => {
     client.query.mockImplementation(async sql => {
         if (sql.includes('INSERT INTO lives')) return { rows: [{ id: 42 }] };
         if (sql.startsWith('SELECT id FROM lives')) return { rows: [{ id: 42 }] };
-        if (sql.includes('SELECT id FROM songs')) return { rows: [{ id: 10 }] };
+        if (sql.includes('SELECT * FROM songs')) return { rows: [{ id: 10, title: 'Fixture Song' }] };
         return { rows: [] };
     });
     db.pool.connect.mockResolvedValue(client);

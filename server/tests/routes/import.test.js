@@ -18,7 +18,7 @@ beforeEach(() => {
     client.query.mockImplementation(async sql => {
         if (sql.startsWith('SELECT id FROM lives')) return { rows: [] };
         if (sql.startsWith('INSERT INTO lives')) return { rows: [{ id: 42 }] };
-        if (sql.startsWith('SELECT id FROM songs')) return { rows: [{ id: 10 }] };
+        if (sql.startsWith('SELECT * FROM songs')) return { rows: [{ id: 10, title: 'Fixture Song' }, { id: 10, title: 'Second Song' }] };
         return { rows: [] };
     });
     db.pool.connect.mockResolvedValue(client);
@@ -55,7 +55,7 @@ describe('CSV ライブ追加/更新の現状確認', () => {
     it('現状はlive_id列より日付・会場で照合し、既存名称を更新してセトリを置換する', async () => {
         client.query.mockImplementation(async sql => {
             if (sql.startsWith('SELECT id FROM lives')) return { rows: [{ id: 7 }] };
-            if (sql.startsWith('SELECT id FROM songs')) return { rows: [{ id: 10 }] };
+            if (sql.startsWith('SELECT * FROM songs')) return { rows: [{ id: 10, title: 'Fixture Song' }] };
             return { rows: [] };
         });
         const res = await upload(`${header}\n${row}`);
@@ -84,7 +84,7 @@ describe('CSV ライブ追加/更新の現状確認', () => {
         client.query.mockImplementation(async sql => {
             if (sql.startsWith('SELECT id FROM lives')) return { rows: [] };
             if (sql.startsWith('INSERT INTO lives')) return { rows: [{ id: 42 }] };
-            if (sql.startsWith('SELECT id FROM songs')) return { rows: [{ id: 10 }] };
+            if (sql.startsWith('SELECT * FROM songs')) return { rows: [{ id: 10, title: 'Fixture Song' }] };
             if (sql.startsWith('INSERT INTO setlists')) throw new Error('fixture write failed');
             return { rows: [] };
         });

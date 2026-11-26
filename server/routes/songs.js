@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const db = require('../db');
 const { authorize, adminCheck, getCurrentUser } = require('../middleware/authorization');
-const { normalizeSongTitle } = require('../utils/songTranslations');
+const { registrationTitle, lockSongRegistration, findSong, identityError } = require('../utils/songIdentity');
 
 // GET All Songs (for search/autocomplete)
 // ?include_deleted=true は管理者トークンが必要
@@ -352,21 +352,22 @@ router.get('/:id/performance-timeline', async (req, res) => {
 
 // CREATE a Song (Admin only)
 router.post('/', authorize, adminCheck, async (req, res) => {
+    let client;
     try {
         const { title: rawTitle, album, release_year, mv_url, author, spotify_track_id, yt_video_id } = req.body;
 
-        // Normalize title (translate Romaji/English to Japanese if applicable)
-        const title = normalizeSongTitle(rawTitle);
-
-        // DEBUG: Log translation attempt
-        console.log('[Song Translation] Title normalized');
-
-        // Check duplicate using the normalized title
-        const check = await db.query("SELECT * FROM songs WHERE title = $1", [title]);
-        if (check.rows.length > 0) {
-            // If exists, update it to include new IDs if they were provided
-            const existing = check.rows[0];
-            const updated = await db.query(
+        const title = registrationTitle(rawTitle);
+        client = await db.pool.connect();
+        await client.query('BEGIN');
+        await lockSongRegistration(client);
+        const raw = registrationTitle(rawTitle, false);
+        const existing = await findSong(client, raw, null, raw === title) || (raw !== title ? await findSong(client, title) : null);
+        if (existing) {
+            // Do not overwrite metadata across a spelling alias or conflicting author.
+            if (existing.title !== title || (author && existing.author && author !== existing.author)) {
+                throw identityError();
+            }
+            const updated = await client.query(
                 `UPDATE songs SET 
                     album = COALESCE($1, album), 
                     release_year = COALESCE($2, release_year), 
@@ -377,31 +378,44 @@ router.post('/', authorize, adminCheck, async (req, res) => {
                  WHERE id = $7 RETURNING *`,
                 [album, release_year, mv_url, author, spotify_track_id, yt_video_id, existing.id]
             );
+            await client.query('COMMIT');
             return res.json(updated.rows[0]);
         }
 
-        const newSong = await db.query(
-            "INSERT INTO songs (title, album, release_year, mv_url, author, spotify_track_id, yt_video_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
-            [title, album, release_year, mv_url, author, spotify_track_id, yt_video_id]
+        const newSong = await client.query(
+            "INSERT INTO songs (title, album, release_year, mv_url, author, spotify_track_id, yt_video_id, normalized_title) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
+            [title, album, release_year, mv_url, author, spotify_track_id, yt_video_id, title.toLowerCase().replace(/\s+/g, ' ').trim()]
         );
 
+        await client.query('COMMIT');
         res.json(newSong.rows[0]);
     } catch (err) {
+        if (client) await client.query('ROLLBACK');
         console.error('Song creation error: details suppressed');
-        res.status(500).send("Server Error");
+        res.status(err.songIdentityStatus || 500).json({ message: err.songIdentityStatus ? 'Song identity requires administrator review' : 'Server Error' });
+    } finally {
+        if (client) client.release();
     }
 });
 
 // UPDATE a Song (Admin only)
 router.put('/:id', authorize, adminCheck, async (req, res) => {
+    let client;
     try {
         const { id } = req.params;
         const { title, album, release_year, mv_url, author, spotify_track_id, yt_video_id } = req.body;
 
-        const updateSong = await db.query(
-            "UPDATE songs SET title = $1, album = $2, release_year = $3, mv_url = $4, author = $5, spotify_track_id = $6, yt_video_id = $7 WHERE id = $8 RETURNING *",
-            [title, album, release_year, mv_url, author, spotify_track_id, yt_video_id, id]
+        const validTitle = registrationTitle(title, false);
+        client = await db.pool.connect();
+        await client.query('BEGIN');
+        await lockSongRegistration(client);
+        const current = await client.query('SELECT title FROM songs WHERE id = $1', [id]);
+        if (current.rows[0]?.title !== validTitle && await findSong(client, validTitle, id)) throw identityError();
+        const updateSong = await client.query(
+            "UPDATE songs SET title = $1::varchar, album = $2, release_year = $3, mv_url = $4, author = $5, spotify_track_id = $6, yt_video_id = $7, normalized_title = CASE WHEN title = $1::varchar THEN normalized_title ELSE $9 END WHERE id = $8 RETURNING *",
+            [validTitle, album, release_year, mv_url, author, spotify_track_id, yt_video_id, id, validTitle.toLowerCase().replace(/\s+/g, ' ').trim()]
         );
+        await client.query('COMMIT');
 
         if (updateSong.rows.length === 0) {
             return res.status(404).json("Song not found");
@@ -409,8 +423,11 @@ router.put('/:id', authorize, adminCheck, async (req, res) => {
 
         res.json(updateSong.rows[0]);
     } catch (err) {
+        if (client) await client.query('ROLLBACK');
         console.error('Song update error: details suppressed');
-        res.status(500).send("Server Error");
+        res.status(err.songIdentityStatus || 500).json({ message: 'Song update failed' });
+    } finally {
+        if (client) client.release();
     }
 });
 
@@ -436,12 +453,19 @@ router.delete('/:id', authorize, adminCheck, async (req, res) => {
 
 // RESTORE a Song (Admin only) — 論理削除を解除
 router.patch('/:id/restore', authorize, adminCheck, async (req, res) => {
+    let client;
     try {
         const { id } = req.params;
-        const result = await db.query(
+        client = await db.pool.connect();
+        await client.query('BEGIN');
+        await lockSongRegistration(client);
+        const target = await client.query('SELECT title FROM songs WHERE id = $1', [id]);
+        if (target.rows[0] && await findSong(client, target.rows[0].title, id)) throw identityError();
+        const result = await client.query(
             "UPDATE songs SET deleted_at = NULL WHERE id = $1 AND deleted_at IS NOT NULL RETURNING *",
             [id]
         );
+        await client.query('COMMIT');
 
         if (result.rowCount === 0) {
             return res.status(404).json("Song not found or not deleted");
@@ -449,8 +473,11 @@ router.patch('/:id/restore', authorize, adminCheck, async (req, res) => {
 
         res.json(result.rows[0]);
     } catch (err) {
+        if (client) await client.query('ROLLBACK');
         console.error('Song restoration error: details suppressed');
-        res.status(500).json({ message: "Server Error" });
+        res.status(err.songIdentityStatus || 500).json({ message: 'Song restoration failed' });
+    } finally {
+        if (client) client.release();
     }
 });
 

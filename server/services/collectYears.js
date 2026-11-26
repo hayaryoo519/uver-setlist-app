@@ -3,12 +3,8 @@ const db = require('../db');
 const { getJob, updateJob } = require('./collectJob');
 const { buildSetlistCandidates, saveMetadataCandidates } = require('./liveMetadataCandidates');
 const festivalPattern = new RegExp(require('../utils/liveTagRules.json').patterns.festival);
-const { normalizeVenueName, normalizeSongTitle: translateSongTitle } = require('../utils/songTranslations');
-
-// DB の normalized_title カラム用キー（小文字 + 空白正規化）
-function makeNormalizedKey(title) {
-    return (title || '').toLowerCase().replace(/\s+/g, ' ').trim();
-}
+const { normalizeVenueName } = require('../utils/songTranslations');
+const { resolveSong, lockSongRegistration } = require('../utils/songIdentity');
 
 async function sleep(ms) {
     return new Promise(r => setTimeout(r, ms));
@@ -68,23 +64,8 @@ async function upsertLive(client, setlist, setlistStatus) {
 }
 
 async function upsertSong(client, rawTitle) {
-    // Setlist.fm のロマ字/英語タイトルを正式タイトルに変換
-    const title = translateSongTitle(rawTitle) || rawTitle;
-    const normalizedTitle = makeNormalizedKey(title);
-
-    const existing = await client.query(
-        'SELECT id FROM songs WHERE normalized_title = $1 LIMIT 1',
-        [normalizedTitle]
-    );
-    if (existing.rows.length) return existing.rows[0].id;
-
-    const result = await client.query(`
-        INSERT INTO songs (title, normalized_title)
-        VALUES ($1, $2)
-        ON CONFLICT (title) DO UPDATE SET normalized_title = EXCLUDED.normalized_title
-        RETURNING id
-    `, [title, normalizedTitle]);
-    return result.rows[0].id;
+    const { song } = await resolveSong(client, rawTitle, true);
+    return song.id;
 }
 
 async function collectYear(year, apiKey, jobId) {
@@ -119,6 +100,7 @@ async function collectYear(year, apiKey, jobId) {
             const client = await db.pool.connect();
             try {
                 await client.query('BEGIN');
+                await lockSongRegistration(client);
 
                 const flatSongs = (setlist.sets?.set || []).flatMap(s => s.song || []).filter(s => s.name);
                 const setlistStatus = flatSongs.length === 0 ? 'UNKNOWN_SETLIST' : 'NORMAL';
