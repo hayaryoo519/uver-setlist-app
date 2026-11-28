@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const db = require('../db');
+const { resolveSong, lockSongRegistration } = require('../utils/songIdentity');
 const { authorize, adminCheck } = require('../middleware/authorization');
 const multer = require('multer');
 const csv = require('csv-parser');
@@ -29,7 +30,7 @@ router.post('/csv', authorize, adminCheck, upload.single('file'), async (req, re
                     await processCSVData(results, res);
                 } catch (err) {
                     console.error('CSV Processing Error: details suppressed');
-                    res.status(500).json({ message: 'Error processing CSV', error: 'Internal Server Error' });
+                    res.status(err.songIdentityStatus || 500).json({ message: 'Error processing CSV', error: err.songIdentityStatus ? 'Song identity requires administrator review' : 'Internal Server Error' });
                 }
             })
             .on('error', (err) => {
@@ -48,6 +49,7 @@ async function processCSVData(rows, res) {
 
     try {
         await client.query('BEGIN');
+        await lockSongRegistration(client);
 
         // Group rows by live (date + venue)
         const livesMap = new Map();
@@ -130,20 +132,9 @@ async function processCSVData(rows, res) {
 
             // Insert songs and setlist
             for (const song of liveData.songs) {
-                // Ensure song exists
-                const checkSong = await client.query('SELECT id FROM songs WHERE title = $1', [song.title]);
-                let songId;
-
-                if (checkSong.rows.length > 0) {
-                    songId = checkSong.rows[0].id;
-                } else {
-                    const insertSong = await client.query(
-                        'INSERT INTO songs (title) VALUES ($1) RETURNING id',
-                        [song.title]
-                    );
-                    songId = insertSong.rows[0].id;
-                    songsAdded++;
-                }
+                const resolved = await resolveSong(client, song.title);
+                const songId = resolved.song.id;
+                if (resolved.created) songsAdded++;
 
                 // Insert setlist entry
                 await client.query(

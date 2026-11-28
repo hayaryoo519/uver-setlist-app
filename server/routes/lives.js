@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const db = require('../db');
+const { resolveSong, lockSongRegistration } = require('../utils/songIdentity');
 const { authorize, adminCheck, getOptionalUserId } = require('../middleware/authorization');
 const { normalizeVenueName } = require('../utils/songTranslations');
 const { notifyNewLive } = require('../utils/pushNotification');
@@ -360,6 +361,7 @@ router.put('/:id/setlist', authorize, adminCheck, async (req, res) => {
 
 // IMPORT Setlist from SetlistFM logic (Admin only)
 router.post('/:id/import-setlist', authorize, adminCheck, async (req, res) => {
+    let client;
     try {
         const { id } = req.params;
         const { songs } = req.body; // Expect array of { title, order } objects from SetlistFM
@@ -368,45 +370,40 @@ router.post('/:id/import-setlist', authorize, adminCheck, async (req, res) => {
             return res.status(400).json({ message: "Invalid songs data" });
         }
 
-        await db.query("BEGIN");
+        client = await db.pool.connect();
+        await client.query("BEGIN");
+        await lockSongRegistration(client);
 
         // 1. Delete existing setlist
-        await db.query("DELETE FROM setlists WHERE live_id = $1", [id]);
+        await client.query("DELETE FROM setlists WHERE live_id = $1", [id]);
 
         // 2. Process each song
         for (const song of songs) {
-            // Check if song exists
-            let songId;
-            const songRes = await db.query("SELECT id FROM songs WHERE title = $1", [song.title]);
-
-            if (songRes.rows.length > 0) {
-                songId = songRes.rows[0].id;
-            } else {
-                // Create new song
-                const newSong = await db.query("INSERT INTO songs (title) VALUES ($1) RETURNING id", [song.title]);
-                songId = newSong.rows[0].id;
-            }
+            const resolved = await resolveSong(client, song.title);
+            const songId = resolved.song.id;
 
             // Insert into setlists
-            await db.query(
+            await client.query(
                 "INSERT INTO setlists (live_id, song_id, position) VALUES ($1, $2, $3)",
                 [id, songId, song.order || 1] // Fallback order if missing, but usually provided
             );
         }
 
         // インポートしたらNORMALに自動更新
-        await db.query(
+        await client.query(
             "UPDATE lives SET setlist_status = 'NORMAL' WHERE id = $1",
             [id]
         );
 
-        await db.query("COMMIT");
+        await client.query("COMMIT");
         res.json({ message: "Setlist imported successfully", count: songs.length });
 
     } catch (err) {
-        await db.query("ROLLBACK");
+        if (client) await client.query("ROLLBACK");
         console.error('[lives] Setlist import failed');
-        res.status(500).json({ message: "Failed to import setlist" });
+        res.status(err.songIdentityStatus || 500).json({ message: "Failed to import setlist" });
+    } finally {
+        if (client) client.release();
     }
 });
 

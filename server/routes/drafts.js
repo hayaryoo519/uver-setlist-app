@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const db = require('../db');
+const { resolveSong, lockSongRegistration } = require('../utils/songIdentity');
 const { authorize, adminCheck } = require('../middleware/authorization');
 const multer = require('multer');
 const path = require('path');
@@ -518,6 +519,7 @@ router.post('/:id/commit', authorize, adminCheck, async (req, res) => {
     const client = await db.pool.connect();
     try {
         await client.query('BEGIN');
+        await lockSongRegistration(client);
 
         // 1. ドラフトをロックして存在確認
         const draftRes = await client.query('SELECT * FROM raw_setlists WHERE id = $1 FOR UPDATE', [id]);
@@ -540,25 +542,8 @@ router.post('/:id/commit', authorize, adminCheck, async (req, res) => {
             const title = (item.title || '').trim();
 
             if (!songId && title) {
-                // タイトルから検索 (全角半角・空白を考慮した正規化)
-                const normalizedTitle = title.toUpperCase().replace(/\s+/g, '').replace(/[！"＃＄％＆'（）＊＋，－．／：；＜＝＞？＠［＼］＾＿｀｛｜｝～]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)).replace(/[ー−―－]/g, '-');
-                
-                // より単純な正規化で再試行
-                const songSearch = await client.query(
-                    "SELECT id FROM songs WHERE UPPER(REPLACE(title, ' ', '')) = UPPER(REPLACE($1, ' ', ''))",
-                    [title]
-                );
-
-                if (songSearch.rows.length > 0) {
-                    songId = songSearch.rows[0].id;
-                } else {
-                    // 新規作成
-                    const newSong = await client.query(
-                        "INSERT INTO songs (title) VALUES ($1) RETURNING id",
-                        [title]
-                    );
-                    songId = newSong.rows[0].id;
-                }
+                const resolved = await resolveSong(client, title);
+                songId = resolved.song.id;
             }
 
             if (songId) {
@@ -602,7 +587,7 @@ router.post('/:id/commit', authorize, adminCheck, async (req, res) => {
     } catch (err) {
         await client.query('ROLLBACK');
         console.error('Commit エラー: 詳細は非表示');
-        res.status(500).json({ message: '確定処理に失敗しました', error: 'Internal Server Error' });
+        res.status(err.songIdentityStatus || 500).json({ message: '確定処理に失敗しました', error: err.songIdentityStatus ? 'Song identity requires administrator review' : 'Internal Server Error' });
     } finally {
         client.release();
     }
